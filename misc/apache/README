@@ -1,0 +1,15 @@
+Apache2 is supported. mod_wsgi is required to run Compass web app. 
+
+On Ubuntu systems (e.g, 12.04), you can install mod_wsgi with
+  sudo aptitude install libapache2-mod-wsgi
+
+The current wsgi config file assumes that the environment variable
+ODS_PROJECT_HOME is set in /etc/apache2/envvars file.You also need
+to make sure mod_rewrite module in apache is enabled. If not, you
+need to run the command: sudo a2enmod rewrite
+
+We also assume that the server host name is ods-server.us.huawei.com.
+
+Restart Apache to get mod_wsgi to work.
+
+sudo service apache2 restart

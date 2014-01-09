@@ -1,0 +1,60 @@
+networking = {
+    'global': {
+        'default_no_proxy': ['127.0.0.1', 'localhost'],
+    },
+    'interfaces': {
+        'management': {
+            'dns_pattern': '%(hostname)s.%(clusterid)s.%(search_path)s',
+            'netmask': '255.255.255.0',
+            'nic': 'eth0',
+            'promisc': 0,
+        },
+        'tenant': {
+            'netmask': '255.255.255.0',
+            'nic': 'eth0',
+            'dns_pattern': 'virtual-%(hostname)s.%(clusterid)s.%(search_path)s',
+            'promisc': 0,
+        },
+        'public': {
+            'netmask': '255.255.255.0',
+            'nic': 'eth1',
+            'dns_pattern': 'floating-%(hostname)s.%(clusterid)s.%(search_path)s',
+            'promisc': 1,
+        },
+        'storage': {
+            'netmask': '255.255.255.0',
+            'nic': 'eth0',
+            'dns_pattern': 'storage-%(hostname)s.%(clusterid)s.%(search_path)s',
+            'promisc': 0,
+        },
+    },
+}
+
+security = {
+    'server_credentials': {
+        'username': 'root',
+        'password': 'huawei',
+    },
+    'console_credentials': {
+        'username': 'admin',
+        'password': 'huawei',
+    },
+    'service_credentials': {
+        'username': 'admin',
+        'password': 'huawei',
+    },
+}
+
+role_assign_policy = {
+    'policy_by_host_numbers': {
+    },
+    'default': {
+        'roles': [],
+        'maxs': {},
+        'mins': {},
+        'default_max': -1,
+        'default_min': 0,
+        'exclusives': [],
+        'bundles': [],
+    },
+}

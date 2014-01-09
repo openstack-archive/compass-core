@@ -1,0 +1,10 @@
+flask
+flask-script
+flask-restful
+flask-sqlalchemy
+celery
+netaddr
+paramiko
+simplejson
+
+

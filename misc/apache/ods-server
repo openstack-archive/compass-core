@@ -1,0 +1,18 @@
+# Apache config for ods server
+#
+# Specify python path if you use virtualenv
+# WSGIPythonHome /home/vagrant/hwtest
+
+<VirtualHost *:80>
+  DocumentRoot /var/www/compass_web
+  RewriteRule ^/$ /ods/ods.html [R=301,L]
+  WSGIScriptAlias /api /var/www/compass/compass.wsgi
+
+<Directory "/var/www/compass_web">
+    Options Indexes FollowSymLinks
+    Order allow,deny
+    Allow from all
+</Directory>
+
+
+</VirtualHost>

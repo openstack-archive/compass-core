@@ -1,0 +1,3 @@
+from compass.config_management.providers.plugins import db_config_provider
+from compass.config_management.providers.plugins import file_config_provider
+from compass.config_management.providers.plugins import mix_config_provider

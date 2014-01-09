@@ -8,11 +8,12 @@
   RewriteRule ^/$ /ods/ods.html [R=301,L]
   WSGIScriptAlias /api /var/www/compass/compass.wsgi
 
-<Directory "/var/www/compass_web">
+  RewriteEngine on
+  RewriteRule ^/$ /ods/ods.html [R]
+
+  <Directory "/var/www/compass_web">
     Options Indexes FollowSymLinks
     Order allow,deny
     Allow from all
-</Directory>
-
-
+  </Directory>
 </VirtualHost>

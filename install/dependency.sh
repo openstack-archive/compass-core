@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo 'Installing Required packages for Compass...'
 
 sudo yum install -y rsyslog ntp iproute openssh-clients python git wget python-setuptools python-netaddr python-flask python-flask-sqlalchemy python-amqplib amqp python-paramiko python-mock mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp python-daemon

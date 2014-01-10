@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 
 ##export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 echo "$ipaddr    $HOSTNAME" >> /etc/hosts

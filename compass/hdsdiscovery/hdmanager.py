@@ -68,9 +68,9 @@ class HDManager:
         """
         # List all vendors in vendors directory -- a directory but hidden
         # under ../vendors
-        all_vendors = [o for o in os.listdir(self.vendors_dir)
+        all_vendors = sorted(o for o in os.listdir(self.vendors_dir)
                        if os.path.isdir(os.path.join(self.vendors_dir, o))
-                       and re.match(r'^[^\.]', o)]
+                       and re.match(r'^[^\.]', o))
 
         logging.debug("[get_vendor]: %s ", all_vendors)
         for vname in all_vendors:

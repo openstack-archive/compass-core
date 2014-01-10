@@ -81,9 +81,10 @@ loadvars()
 echo $NIC
 loadvars NIC "eth0"
 export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
-range=$(echo "$(echo "$ipaddr"|cut -f 1 -d '.').$(echo "$ipaddr"|cut -f 2 -d '.').$(echo "$ipaddr"|cut -f 3 -d '.').100 $(echo "$ipaddr"|cut -f 1 -d '.').$(echo "$ipaddr"|cut -f 2 -d '.').$(echo "$ipaddr"|cut -f 3 -d '.').250")
-loadvars SUBNET $(ipcalc $(ip address| grep "global $NIC" |cut -f 6 -d ' ') -n|cut -f 2 -d '=')
-loadvars OPTION_ROUTER $ipaddr
+export range=$(echo "$(echo "$ipaddr"|cut -f 1 -d '.').$(echo "$ipaddr"|cut -f 2 -d '.').$(echo "$ipaddr"|cut -f 3 -d '.').100 $(echo "$ipaddr"|cut -f 1 -d '.').$(echo "$ipaddr"|cut -f 2 -d '.').$(echo "$ipaddr"|cut -f 3 -d '.').250")
+export ipnet=$(ip address| grep "global $NIC" |cut -f 6 -d ' ')
+loadvars SUBNET $(ipcalc $ipnet -n |cut -f 2 -d '=')/$(ipcalc $ipnet -p |cut -f 2 -d '=')
+loadvars OPTION_ROUTER $(route -n | grep '^0.0.0.0' | xargs | cut -d ' ' -f 2)
 loadvars IP_RANGE "$range"
 loadvars NEXTSERVER $ipaddr
 

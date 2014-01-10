@@ -17,6 +17,7 @@ copygit2dir()
 cd $SCRIPT_DIR
 #export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 
+##SUBNET=${SUBNET:-$(ip address| grep "global $NIC" |cut -f 6 -d ' ')}
 WEB_HOME=${WEB_HOME:-'/tmp/web/'}
 ADAPTER_HOME=${ADAPTER_HOME:-'/tmp/adapter/'}
 copygit2dir $WEB_HOME 'https://github.com/huawei-cloud/compass-web'
@@ -31,10 +32,16 @@ sudo \cp -rf $JS_MVC/. $WEB_HOME/public/
 # update squid conf
 sudo rm /etc/squid/squid.conf 
 sudo cp $COMPASSDIR/misc/squid/squid.conf /etc/squid/
+sudo sed -i "/acl localnet src 10.0.0.0/i\acl localnet src $SUBNET" /etc/squid/squid.conf
 sudo chmod 644 /etc/squid/squid.conf
 sudo mkdir -p /var/squid/cache
 sudo chown -R squid:squid /var/squid
 sudo service squid restart
+
+# update /etc/resolv.conf
+echo "DNS1=$ipaddr" >> /etc/sysconfig/network-scripts/ifcfg-$NIC
+echo "DOMAIN=ods.com" >> /etc/sysconfig/network-scripts/ifcfg-$NIC
+service network restart
 
 # Install net-snmp
 sudo yum install -y net-snmp-utils net-snmp net-snmp-python
@@ -51,7 +58,7 @@ sudo cp -r /var/lib/cobbler/snippets /root/backup/cobbler/
 sudo cp -r /var/lib/cobbler/kickstarts/ /root/backup/cobbler/
 sudo rm -rf /var/lib/cobbler/snippets/*
 sudo cp -r $ADAPTER_HOME/cobbler/snippets/* /var/lib/cobbler/snippets/
-#sudo cp -rf /etc/chef-server/chef-validator.pem /var/lib/cobbler/snippets/chef-validator.pem
+sudo cp -rf /etc/chef-server/chef-validator.pem /var/lib/cobbler/snippets/chef-validator.pem
 sudo chmod 777 /var/lib/cobbler/snippets
 sudo chmod 666 /var/lib/cobbler/snippets/*
 sudo rm /var/lib/cobbler/kickstarts/default.ks
@@ -111,5 +118,5 @@ cd $COMPASSDIR
 sudo python setup.py install
 sudo sed -i "/COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/cobbler_api'" /etc/compass/setting
 sudo sed -i "/CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
-sudo sh /opt/compass/bin/refresh.sh
+sudo sh /opt/compass/bin/refresh.sh --init
 figlet -ctf slant Installation Complete!

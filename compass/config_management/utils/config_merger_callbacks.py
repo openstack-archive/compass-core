@@ -346,12 +346,12 @@ def assign_from_pattern(_upper_ref, _from_key, lower_refs, to_key,
 
 
 def assign_noproxy(_upper_ref, _from_key, lower_refs,
-                   to_key, default=[], hostnames={}, ips={},
-                   **_kwargs):
+                   to_key, default=[], clusterid=1,
+                   hostnames={}, ips={}, **_kwargs):
     """Assign no proxy to hosts."""
     no_proxy_list = deepcopy(default)
     for _, hostname in hostnames.items():
-        no_proxy_list.append(hostname)
+        no_proxy_list.append('%s.%s' % (hostname, clusterid))
 
     for _, ip_addr in ips.items():
         no_proxy_list.append(ip_addr)

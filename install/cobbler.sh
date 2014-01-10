@@ -1,3 +1,6 @@
+#!/bin/bash
+
+
 echo "Installing cobbler related packages"
 sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah  python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart -y
 
@@ -10,7 +13,6 @@ sudo mkdir /root/backup # create backup folder
 sudo cp /etc/ntp.conf /root/backup/
 # update ntp.conf
 sudo sed -i 's/^#server[ \t]\+127.127.1.0/server 127.127.1.0/g' /etc/ntp.conf
-sudo sed -i 's/^#fudge[ \t]\+127.127.1.0[ \t]\+stratum.*$/fudge 127.127.1.0 stratum 8/g' /etc/ntp.conf
 sudo service ntpd restart
 
 # configure xinetd
@@ -35,15 +37,15 @@ sudo cp /etc/cobbler/settings /root/backup/cobbler/
 sudo cp /etc/cobbler/dhcp.template /root/backup/cobbler/
 
 # Dumps the variables to dhcp template
-sudo sed -i "s/subnet 192.168.1.0 netmask 255.255.255.0/subnet $SUBNET netmask 255.255.255.0/g" /etc/cobbler/dhcp.template
+subnet=$(ipcalc $SUBNET -n |cut -f 2 -d '=')
+sudo sed -i "s/subnet 192.168.1.0 netmask 255.255.255.0/subnet $subnet netmask 255.255.255.0/g" /etc/cobbler/dhcp.template
 sudo sed -i "/option routers/c\     option routers             $OPTION_ROUTER;" /etc/cobbler/dhcp.template
 sudo sed -i "/range dynamic-bootp/c\     range dynamic-bootp        $IP_RANGE;" /etc/cobbler/dhcp.template
-sudo sed -i "/next-server/c\     next-server                $NEXTSERVER;" /etc/cobbler/dhcp.template
-sed -i 's/^\([ \t]*\).*fixed-address.*$/\1#pass/g' /etc/cobbler/dhcp.template
-sudo sed -i "/allow bootp/a deny unknown-clients;" /etc/cobbler/dhcp.template
+sudo sed -i 's/^\([ \t]*\).*fixed-address.*$/\1#pass/g' /etc/cobbler/dhcp.template
+sudo sed -i "/allow bootp/a deny unknown-clients;\nlocal-address $ipaddr;" /etc/cobbler/dhcp.template
 
 # Set up other setting options in cobbler/settings
-sudo sed -i "/next_server/c\next_server: $ipaddr" /etc/cobbler/settings
+sudo sed -i "/next_server/c\next_server: $NEXTSERVER" /etc/cobbler/settings
 sudo sed -i "s/server:[ \t]\+127.0.0.1/server: $ipaddr/g" /etc/cobbler/settings
 sudo sed -i 's/manage_dhcp:[ \t]\+0/manage_dhcp: 1/g' /etc/cobbler/settings
 sudo sed -i 's/manage_dns:[ \t]\+0/manage_dns: 1/g' /etc/cobbler/settings
@@ -73,9 +75,9 @@ CBLR_PASSWD=${CBLR_PASSWD:-"cobbler"}
 (echo -n "$CBLR_USER:Cobbler:" && echo -n "$CBLR_USER:Cobbler:$CBLR_PASSWD" | md5sum - | cut -d' ' -f1) >> /etc/cobbler/users.digest
 
 sudo sed -i "s/listen-on[ \t]\+.*;/listen-on port 53 \{ $ipaddr; \};/g" /etc/cobbler/named.template
-sudo sed -i 's/allow-query[ \t]\+.*/allow-query\t{ 127.0.0.0\/8; 10.0.0.0\/8; 192.168.0.0\/16; 172.16.0.0\/12; };/g' /etc/cobbler/named.template
+sudo sed -i "s/allow-query[ \t]\+.*/allow-query\t\{ 127.0.0.0\/8; 10.0.0.0\/8; 192.168.0.0\/16; 172.16.0.0\/12; $subnet; \};/g" /etc/cobbler/named.template
 
-echo "$HOSTNAME A $ipaddr" >> zone.template
+echo "$HOSTNAME IN A $ipaddr" >> /etc/cobbler/zone.template
 
 sudo cp /etc/xinetd.d/rsync /root/backup/
 sudo sed -i 's/disable\([ \t]\+\)=\([ \t]\+\)yes/disable\1=\2no/g' /etc/xinetd.d/rsync

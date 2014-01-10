@@ -62,7 +62,8 @@ CLUSTER_HOST_MERGER = ConfigMerger(
         ),
         ConfigMapping(
             path_list=['/networking/global'],
-            from_upper_keys={'default': 'default_no_proxy'},
+            from_upper_keys={'default': 'default_no_proxy',
+                             'clusterid': 'clusterid'},
             from_lower_keys={'hostnames': '/hostname',
                              'ips': '/networking/interfaces/management/ip'},
             to_key='ignore_proxy',

@@ -22,16 +22,6 @@ exlock_now()        { _lock xn; }  # obtain an exclusive lock immediately or fai
 
 exlock_now || exit 1
 
-### Trap any error code with related filename and line.
-errtrap()
-{
-    FILE=${BASH_SOURCE[1]:-$BASH_SOURCE[0]}
-    echo "[FILE: "$(basename $FILE)", LINE: $1] Error: Command or function exited with status $2"
-}
-
-trap 'errtrap $LINENO $?' ERR
-
-
 ### BEGIN OF SCRIPT ###
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
@@ -41,9 +31,22 @@ echo 0 > /selinux/enforce
 ### Add epel repo
 sudo rpm -Uvh http://download.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm >& /dev/null
 sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
+
+### Trap any error code with related filename and line.
+errtrap()
+{
+    FILE=${BASH_SOURCE[1]:-$BASH_SOURCE[0]}
+    echo "[FILE: "$(basename $FILE)", LINE: $1] Error: Command or function exited with status $2"
+}
+
+trap 'errtrap $LINENO $?' ERR
+
+# Install figlet
 sudo yum -y install figlet >& /dev/null
+
 figlet -ctf slant Compass Installer
 
+# Load variables
 source $DIR/install.conf
 
 loadvars()

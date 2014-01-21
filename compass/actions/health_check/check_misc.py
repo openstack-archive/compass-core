@@ -1,3 +1,5 @@
+"""Miscellaneous Health Check for Compass"""
+
 import os
 import re
 import commands
@@ -5,7 +7,7 @@ import base
 import utils as health_check_utils
 
 class MiscCheck(base.BaseCheck):
-   
+
     NAME = "Miscellaneous Check"
     MISC_MAPPING = {
         "yum"     : "rsyslog ntp iproute openssh-clients python git wget python-setuptools python-netaddr " \
@@ -14,10 +16,10 @@ class MiscCheck(base.BaseCheck):
                    "net-snmp python-daemon".split(" "),
 
         "pip"     : "flask-script flask-restful celery six discover unittest2 chef".replace("-","_").split(" "),
-       
+
         "disable" : "iptables ip6tables".split(" "),
-        
-        "enable"  : "httpd squid xinetd dhcpd named sshd rsyslogd cobblerd ntpd compassd".split(" "), 
+
+        "enable"  : "httpd squid xinetd dhcpd named sshd rsyslogd cobblerd ntpd compassd".split(" "),
     }
 
     def run(self):
@@ -39,6 +41,8 @@ class MiscCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_linux_dependencies(self):
+        """Checks if dependencies are installed"""
+
         print "Checking Linux dependencies....",
         if self.dist in ("centos", "redhat", "fedora", "scientific linux"):
             pkg_type = "yum"
@@ -52,6 +56,13 @@ class MiscCheck(base.BaseCheck):
         eval(method_name)
 
     def check_yum_dependencies(self, pkg_module):
+        """
+        Checks if yum dependencies are installed.
+
+        :param pkg_module  : python yum library
+        :type pkg_module   : python module
+
+        """
         print "Checking Yum dependencies......",
         yum_base = pkg_module.YumBase()
         uninstalled = []
@@ -66,6 +77,8 @@ class MiscCheck(base.BaseCheck):
         return True
 
     def check_pip_dependencies(self):
+        """Checks if required pip packages are installed"""
+
         print "Checking pip dependencies......",
         uninstalled = []
         for module in self.MISC_MAPPING['pip']:
@@ -76,11 +89,13 @@ class MiscCheck(base.BaseCheck):
                 uninstalled.append(module)
 
         if len(uninstalled) != 0:
-            self.set_status(0, "[Miscellaneous Check]Info: Uninstalled pip packages: %s" % ', '.join(item for item in uninstalled)) 
+            self.set_status(0, "[Miscellaneous Check]Info: Uninstalled pip packages: %s" % ', '.join(item for item in uninstalled))
 
         return True
 
     def check_ntp(self):
+        """Validates ntp configuration and service"""
+
         print "Checking NTP......",
         conf_err_msg = health_check_utils.check_path(self.NAME, '/etc/ntp.conf')
         if not conf_err_msg == "":
@@ -88,11 +103,13 @@ class MiscCheck(base.BaseCheck):
 
         serv_err_msg = health_check_utils.check_service_running(self.NAME, 'ntpd')
         if not serv_err_msg == "":
-            self.set_status(0, serv_err_msg) 
+            self.set_status(0, serv_err_msg)
 
         return True
 
     def check_rsyslogd(self):
+        """Validates rsyslogd configuration and service"""
+
         print "Checking rsyslog......",
         conf_err_msg = health_check_utils.check_path(self.NAME, '/etc/rsyslog.conf')
         if not conf_err_msg == "":
@@ -109,6 +126,8 @@ class MiscCheck(base.BaseCheck):
         return True
 
     def check_chkconfig(self):
+        """Check if required services are enabled on the start up"""
+
         print "Checking chkconfig......",
         serv_to_disable = []
         for serv in self.MISC_MAPPING["disable"]:
@@ -116,7 +135,7 @@ class MiscCheck(base.BaseCheck):
                 self.set_status(0, "[Miscellaenous Check]Error: %s is not disabled" % serv)
                 serv_to_disable.append(serv)
         if len(serv_to_disable) != 0:
-            self.set_status(0, "[Miscellaenous Check]Info: You need to disable these services on system start-up: %s" % ", ".join(item for item in serv_to_disable)) 
+            self.set_status(0, "[Miscellaenous Check]Info: You need to disable these services on system start-up: %s" % ", ".join(item for item in serv_to_disable))
 
         serv_to_enable = []
         for serv in self.MISC_MAPPING["enable"]:
@@ -129,6 +148,8 @@ class MiscCheck(base.BaseCheck):
         return True
 
     def check_selinux(self):
+        """Check if SELinux is disabled"""
+
         print "Checking Selinux......",
         f = open("/etc/selinux/config")
         disabled = False
@@ -137,6 +158,6 @@ class MiscCheck(base.BaseCheck):
                 disabled = True
                 break
         if disabled == False:
-            self.set_status(0, "[%s]Selinux is not disabled, please disable it in /etc/selinux/config." % self.NAME) 
+            self.set_status(0, "[%s]Selinux is not disabled, please disable it in /etc/selinux/config." % self.NAME)
 
         return True

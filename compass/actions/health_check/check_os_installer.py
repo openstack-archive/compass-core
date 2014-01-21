@@ -1,3 +1,5 @@
+"""Compass Health Check module for OS Installer"""
+
 import os
 import re
 import xmlrpclib
@@ -5,14 +7,16 @@ import xmlrpclib
 import base
 
 class OsInstallerCheck(base.BaseCheck):
-   
+
     NAME = "OS Installer Check"
     def run(self):
         installer = self.config.OS_INSTALLER
         method_name = 'self.' + installer + '_check()'
         return eval(method_name)
-        
+
     def cobbler_check(self):
+        """Runs cobbler check from xmlrpc client and checks kickstart and snippets"""
+
         try:
             self.remote = xmlrpclib.Server(
                 self.config.COBBLER_INSTALLER_URL,

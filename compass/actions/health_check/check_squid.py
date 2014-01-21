@@ -1,3 +1,5 @@
+"""Health Check module for Squid service"""
+
 import os
 import re
 import commands
@@ -9,7 +11,7 @@ import base
 import utils as health_check_utils
 
 class SquidCheck(base.BaseCheck):
-   
+
     NAME = "Squid Check"
     def run(self):
         self.check_squid_files()
@@ -21,6 +23,8 @@ class SquidCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_squid_files(self):
+        """Validates squid config, cache directory and ownership"""
+
         print "Checking Squid Files......",
         VAR_MAP = { 'match_squid_conf'      : False,
                     'match_squid_cache'     : False,
@@ -58,6 +62,8 @@ class SquidCheck(base.BaseCheck):
         return True
 
     def check_squid_service(self):
+        """Checks if squid is running on port 3128"""
+
         print "Checking Squid service......",
         if not 'squid' in commands.getoutput('ps -ef'):
             self.set_status(0, "[%s]Error: squid service does not seem running" % self.NAME)
@@ -67,4 +73,4 @@ class SquidCheck(base.BaseCheck):
                 self.set_status(0, "[%s]Error: squid is not listening on 3128" % self.NAME)
         except:
             self.set_status(0, "[%s]Error: No service is listening on 3128, squid failed" % self.NAME)
-        return True 
+        return True

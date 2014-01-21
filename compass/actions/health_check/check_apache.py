@@ -1,3 +1,5 @@
+"""Health Check module for Apache service"""
+
 import os
 import re
 import commands
@@ -11,7 +13,7 @@ import logging
 
 class ApacheCheck(base.BaseCheck):
 
-    NAME = "Apache Check" 
+    NAME = "Apache Check"
     def run(self):
         if self.dist in ("centos", "redhat", "fedora", "scientific linux"):
             apache_service = 'httpd'
@@ -25,7 +27,14 @@ class ApacheCheck(base.BaseCheck):
             self.messages.append("[%s]Info: Apache health check has completed. No problems found, all systems go." % self.NAME)
         return (self.code, self.messages)
 
-    def check_apache_conf(self, apache_service): 
+    def check_apache_conf(self, apache_service):
+        """
+        Validates if Apache settings.
+
+        :param apache_service  : service type of apache, os dependent. e.g. httpd or apache2
+        :type apache_service   : string
+
+        """
         print "Checking Apache Config......",
         conf_err_msg = health_check_utils.check_path(self.NAME, '/etc/%s/conf.d/ods-server.conf' % apache_service)
         if not conf_err_msg == "":
@@ -33,11 +42,13 @@ class ApacheCheck(base.BaseCheck):
 
         wsgi_err_msg = health_check_utils.check_path(self.NAME, '/var/www/compass/compass.wsgi')
         if not wsgi_err_msg == "":
-            self.set_status(0, wsg_err_msg)
+            self.set_status(0, wsgi_err_msg)
 
         return True
-        
+
     def check_apache_running(self, apache_service):
+        """Checks if Apache service is running on port 80"""
+
         print "Checking Apache service......",
         serv_err_msg = health_check_utils.check_service_running(self.NAME, apache_service)
         if not serv_err_msg == "":
@@ -52,4 +63,4 @@ class ApacheCheck(base.BaseCheck):
         except:
             self.set_status(0, "[%s]Error: Unable to check localhost:80, Apache is not running or not listening on Port 80" % self.NAME)
 
-        return True 
+        return True

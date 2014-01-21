@@ -1,3 +1,5 @@
+"""Health Check module for Celery"""
+
 import os
 import re
 import commands
@@ -19,6 +21,8 @@ class CeleryCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_compass_celery_setting(self):
+        """Validates Celery settings"""
+
         print "Checking Celery setting......",
         SETTING_MAP = { 'logfile'    :  'CELERY_LOGFILE',
                         'configdir'  :  'CELERYCONFIG_DIR',
@@ -55,15 +59,17 @@ class CeleryCheck(base.BaseCheck):
         return True
 
     def check_celery_backend(self):
+        """Checks if Celery backend is running and configured properly"""
+
         print "Checking Celery Backend......",
         if not 'celeryd' in commands.getoutput('ps -ef'):
             self.set_status(0, "[%s]Error: celeryd is not running" % self.NAME)
             return True
 
         if not os.path.exists('/etc/compass/celeryconfig'):
-            self.set_status(0, "[%s]Error: No celery config file found for Compass" % self.NAME) 
+            self.set_status(0, "[%s]Error: No celery config file found for Compass" % self.NAME)
             return True
-        
+
         try:
             insp = inspect()
             celery_stats = inspect.stats(insp)

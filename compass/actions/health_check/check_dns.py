@@ -1,3 +1,5 @@
+"""Health Check module for DNS service"""
+
 import os
 import re
 import xmlrpclib
@@ -8,7 +10,7 @@ from socket import *
 import base
 
 class DnsCheck(base.BaseCheck):
-   
+
     NAME = "DNS Check"
     def run(self):
         installer = self.config.OS_INSTALLER
@@ -16,6 +18,8 @@ class DnsCheck(base.BaseCheck):
         return eval(method_name)
 
     def check_cobbler_dns(self):
+        """Checks if Cobbler has taken over DNS service"""
+
         try:
             self.remote = xmlrpclib.Server(
                 self.config.COBBLER_INSTALLER_URL,
@@ -35,10 +39,12 @@ class DnsCheck(base.BaseCheck):
         self.check_dns_service()
         print "[Done]"
         if self.code == 1:
-            self.messages.append('[DNS]Info: DNS health check has complated. No problems found, all systems go.') 
+            self.messages.append('[DNS]Info: DNS health check has complated. No problems found, all systems go.')
         return (self.code, self.messages)
 
     def check_cobbler_dns_template(self):
+        """Validates Cobbler's DNS template file"""
+
         print "Checking DNS template......",
         if os.path.exists("/etc/cobbler/named.template"):
             VAR_MAP = { "match_port"   : False,
@@ -55,7 +61,7 @@ class DnsCheck(base.BaseCheck):
                         if not subnet in line:
                             missing_query.append(subnet)
             f.close()
-            
+
             if VAR_MAP["match_port"] == False:
                 self.messages.append('[DNS]Error: named service port and/or IP is misconfigured in /etc/cobbler/named.template')
             if len(missing_query) != 0:
@@ -74,6 +80,8 @@ class DnsCheck(base.BaseCheck):
         return True
 
     def check_dns_service(self):
+        """Checks if DNS is running on port 53"""
+
         print "Checking DNS service......",
         if not 'named' in commands.getoutput('ps -ef'):
             self.set_status(0, "[%s]Error: named service does not seem to be running" % self.NAME)

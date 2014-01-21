@@ -1,3 +1,5 @@
+"""Main Entry Point of Compass Health Check"""
+
 import check_apache as apache
 import check_celery as celery
 import check_dhcp as dhcp

@@ -1,3 +1,5 @@
+"""Base class for Compass Health Check"""
+
 import compass.utils.setting_wrapper as setting
 import utils as health_check_utils
 
@@ -7,7 +9,7 @@ class BaseCheck:
         self.config=setting
         self.code = 1
         self.messages = []
-        self.dist, self.version, self.release = health_check_utils.check_dist()
+        self.dist, self.version, self.release = health_check_utils.get_dist()
 
     def set_status(self, code, message):
         self.code = code

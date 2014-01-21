@@ -1,3 +1,5 @@
+"""Health Check module for TFTP service"""
+
 import os
 import re
 import sys
@@ -10,14 +12,16 @@ import base
 import utils as health_check_utils
 
 class TftpCheck(base.BaseCheck):
-   
+
     NAME = "TFTP Check"
     def run(self):
         installer = self.config.OS_INSTALLER
-        method_name = "self.check_" + installer + "_tftp()" 
+        method_name = "self.check_" + installer + "_tftp()"
         return eval(method_name)
 
     def check_cobbler_tftp(self):
+        """Checks if Cobbler has taken over TFTP service"""
+
         try:
             self.remote = xmlrpclib.Server(
                 self.config.COBBLER_INSTALLER_URL,
@@ -40,8 +44,10 @@ class TftpCheck(base.BaseCheck):
             self.messages.append("[TFTP]Info: tftp service health check has completed. No problems found, all systems go.")
 
         return (self.code, self.messages)
-    
+
     def check_tftp_dir(self):
+        """Validates TFTP directories and configurations"""
+
         print "Checking TFTP directories......",
         if not os.path.exists('/var/lib/tftpboot/'):
             self.set_status(0, "[%s]Error: No tftp-boot libraries found, please check if tftp server is properly installed/managed" % self.NAME)
@@ -49,6 +55,8 @@ class TftpCheck(base.BaseCheck):
         return True
 
     def check_tftp_service(self):
+        """Checks if TFTP is running on port 69"""
+
         print "Checking TFTP services......",
         serv_err_msg = health_check_utils.check_service_running(self.NAME, 'xinetd')
         if not serv_err_msg == "":
@@ -57,5 +65,5 @@ class TftpCheck(base.BaseCheck):
         if 'tftp' != getservbyport(69):
             self.set_status(0, "[%s]Error: tftp doesn't seem to be listening on Port 60." % self.NAME)
 
-        
+
         return True

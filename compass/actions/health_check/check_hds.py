@@ -1,3 +1,5 @@
+"""Health Check module for Hardware Discovery"""
+
 import os
 import re
 
@@ -26,6 +28,13 @@ class HdsCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_yum_snmp(self, pkg_module):
+        """
+        Check if SNMP yum dependencies are installed
+
+        :param pkg_module  : python yum library
+        :type pkg_module   : python module
+
+        """
         print "Checking SNMP Packages......",
         yum_base = pkg_module.YumBase()
         uninstalled = []
@@ -37,11 +46,13 @@ class HdsCheck(base.BaseCheck):
             self.set_status(0, "[%s]Info: Uninstalled packages: %s" % (self.NAME, ', '.join(item for item in uninstalled)))
         return True
 
-    def check_apt_snmp(self):
+    def check_apt_snmp(self, pkg_module):
         ## TODO: add ubuntu package check here
         return None
 
     def check_snmp_mibs(self):
+        """Checks if SNMP MIB files are properly placed"""
+
         print "Checking SNMP MIBs......",
         conf_err_msg = health_check_utils.check_path(self.NAME, '/etc/snmp/snmp.conf')
         if not conf_err_msg == "":

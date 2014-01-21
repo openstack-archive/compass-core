@@ -48,8 +48,13 @@ class BootCLI:
         if len(args) <= 2:
             return None
         elif args[2] in ACTION_MAP[action]:
+<<<<<<< HEAD
             return args[2] 
         return "invalid"        
+=======
+            return args[2]
+        return "invalid"
+>>>>>>> af603ed... Added Health Check and CLI
 
     def run_check(self, module=None):
         if module == None:
@@ -67,7 +72,11 @@ class BootCLI:
 
     def output_check_result(self, result):
         if result == {}:
+<<<<<<< HEAD
             return 
+=======
+            return
+>>>>>>> af603ed... Added Health Check and CLI
         print "\n==============================="
         print "* Compass Health Check Report * \n==============================="
         successful = True

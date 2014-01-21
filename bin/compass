@@ -1,6 +1,0 @@
-#!/usr/bin/python
-
-import sys
-import compass.actions.cli as cli
-
-sys.exit(cli.main())

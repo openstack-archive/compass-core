@@ -1,0 +1,11 @@
+Change-Id: Id2fec0205f219d7436fb2a77b261b39ff167555e
+Verified+2: Jenkins
+Approved+1: Shuo Yang <shuo.yang@huawei.com>
+Code-Review+2: Shuo Yang <shuo.yang@huawei.com>
+Approved+1: Weidong Shao <weidong.shao@huawei.com>
+Code-Review+2: Weidong Shao <weidong.shao@huawei.com>
+Submitted-by: Jenkins
+Submitted-at: Wed, 22 Jan 2014 02:55:06 +0000
+Reviewed-on: https://review.openstack.org/68210
+Project: stackforge/compass-core
+Branch: refs/heads/master

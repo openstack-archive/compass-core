@@ -129,3 +129,10 @@ def flat_lists_with_possibility(lists):
         max_index = list_possibility.index(max(list_possibility))
 
     return output
+
+
+def pretty_print(*contents):
+    if len(contents) == 0:
+        print ""
+    else:
+        print "\n".join(content for content in contents)

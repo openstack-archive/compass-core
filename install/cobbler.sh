@@ -13,7 +13,9 @@ sudo mkdir /root/backup # create backup folder
 sudo cp /etc/ntp.conf /root/backup/
 # update ntp.conf
 sudo sed -i 's/^#server[ \t]\+127.127.1.0/server 127.127.1.0/g' /etc/ntp.conf
-sudo service ntpd restart
+sudo service ntpd stop
+sudo ntpdate 0.centos.pool.ntp.org
+sudo service ntpd start
 
 # configure xinetd
 sudo cp /etc/xinetd.d/tftp /root/backup/
@@ -38,8 +40,10 @@ sudo cp /etc/cobbler/dhcp.template /root/backup/cobbler/
 
 # Dumps the variables to dhcp template
 subnet=$(ipcalc $SUBNET -n |cut -f 2 -d '=')
-sudo sed -i "s/subnet 192.168.1.0 netmask 255.255.255.0/subnet $subnet netmask 255.255.255.0/g" /etc/cobbler/dhcp.template
-sudo sed -i "/option routers/c\     option routers             $OPTION_ROUTER;" /etc/cobbler/dhcp.template
+sudo sed -i "s/subnet 192.168.1.0 netmask 255.255.255.0/subnet $subnet netmask $netmask/g" /etc/cobbler/dhcp.template
+sudo sed -i "/option routers[ \t]\+[a-zA-Z0-9]\+.[a-zA-Z0-9]\+.[a-zA-Z0-9]\+.[a-zA-Z0-9]\+/c\     option routers             $OPTION_ROUTER;" /etc/cobbler/dhcp.template
+sudo sed -i "s/option subnet-mask[ \t]\+255.255.255.0/option subnet-mask         $netmask/g" /etc/cobbler/dhcp.template
+sudo sed -i "/option domain-name-servers/c\	option domain-name-servers	$ipaddr;" /etc/cobbler/dhcp.template
 sudo sed -i "/range dynamic-bootp/c\     range dynamic-bootp        $IP_RANGE;" /etc/cobbler/dhcp.template
 sudo sed -i 's/^\([ \t]*\).*fixed-address.*$/\1#pass/g' /etc/cobbler/dhcp.template
 sudo sed -i "/allow bootp/a deny unknown-clients;\nlocal-address $ipaddr;" /etc/cobbler/dhcp.template
@@ -53,7 +57,8 @@ sudo sed -i 's/manage_tftpd:[ \t]\+0/manage_tftpd: 1/g' /etc/cobbler/settings
 sudo sed -i 's/anamon_enabled:[ \t]\+0/anamon_enabled: 1/g' /etc/cobbler/settings
 sudo sed -i "s/default_name_servers:.*/default_name_servers: \['$ipaddr'\]/g" /etc/cobbler/settings
 sudo sed -i 's/enable_menu:[ \t]\+1/enable_menu: 0/g' /etc/cobbler/settings
-sudo sed -i "s/manage_forward_zones:.*/manage_forward_zones: \['ods.com'\]/g" /etc/cobbler/settings
+domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")
+sudo sed -i "s/manage_forward_zones:.*/manage_forward_zones: \['$domains'\]/g" /etc/cobbler/settings
 sudo sed -i 's/pxe_just_once:[ \t]\+0/pxe_just_once: 1/g' /etc/cobbler/settings
 sudo sed -i "s,^default_password_crypted:[ \t]\+\"\(.*\)\",default_password_crypted: \"$cobbler_passwd\",g" /etc/cobbler/settings
 sudo sed -i 's/^RewriteRule/# RewriteRule/g' /etc/httpd/conf.d/cobbler_web.conf
@@ -75,7 +80,8 @@ CBLR_PASSWD=${CBLR_PASSWD:-"cobbler"}
 (echo -n "$CBLR_USER:Cobbler:" && echo -n "$CBLR_USER:Cobbler:$CBLR_PASSWD" | md5sum - | cut -d' ' -f1) >> /etc/cobbler/users.digest
 
 sudo sed -i "s/listen-on[ \t]\+.*;/listen-on port 53 \{ $ipaddr; \};/g" /etc/cobbler/named.template
-sudo sed -i "s/allow-query[ \t]\+.*/allow-query\t\{ 127.0.0.0\/8; 10.0.0.0\/8; 192.168.0.0\/16; 172.16.0.0\/12; $subnet; \};/g" /etc/cobbler/named.template
+subnet_escaped=$(echo $SUBNET | sed -e 's/[\/&]/\\&/g')
+sudo sed -i "s/allow-query[ \t]\+.*/allow-query\t\{ 127.0.0.0\/8; 10.0.0.0\/8; 192.168.0.0\/16; 172.16.0.0\/12; $subnet_escaped; \};/g" /etc/cobbler/named.template
 
 echo "$HOSTNAME IN A $ipaddr" >> /etc/cobbler/zone.template
 

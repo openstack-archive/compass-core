@@ -43,12 +43,21 @@ trap 'errtrap $LINENO $?' ERR
 
 # Install figlet
 sudo yum -y install figlet >& /dev/null
-
 figlet -ctf slant Compass Installer
+
+while [ $1 ]; do
+  flags=$1
+  param=${flags/'--'/''}
+  var=$(echo $param | cut -d"=" -f1)
+  val=$(echo $param | cut -d"=" -f2)
+  export $var=$val
+  shift
+done
 
 # Load variables
 source $DIR/install.conf
-
+echo $WEB_SOURCE
+echo $ADAPTER_SOURCE
 loadvars()
 {
     varname=${1,,}
@@ -81,8 +90,8 @@ loadvars()
     fi
 }
 
-echo $NIC
 loadvars NIC "eth0"
+export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
 export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 export range=$(echo "$(echo "$ipaddr"|cut -f 1 -d '.').$(echo "$ipaddr"|cut -f 2 -d '.').$(echo "$ipaddr"|cut -f 3 -d '.').100 $(echo "$ipaddr"|cut -f 1 -d '.').$(echo "$ipaddr"|cut -f 2 -d '.').$(echo "$ipaddr"|cut -f 3 -d '.').250")
 export ipnet=$(ip address| grep "global $NIC" |cut -f 6 -d ' ')
@@ -90,7 +99,7 @@ loadvars SUBNET $(ipcalc $ipnet -n |cut -f 2 -d '=')/$(ipcalc $ipnet -p |cut -f 
 loadvars OPTION_ROUTER $(route -n | grep '^0.0.0.0' | xargs | cut -d ' ' -f 2)
 loadvars IP_RANGE "$range"
 loadvars NEXTSERVER $ipaddr
-
+loadvars NAMESERVER_DOMAINS "ods.com"
 
 echo "Install the Dependencies"
 source $DIR/dependency.sh

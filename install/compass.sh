@@ -14,14 +14,34 @@ copygit2dir()
     fi
     git clone $repo $destdir
 }
+copylocal2dir()
+{
+    destdir=$1
+    repo=$2
+    if [ -d $destdir ];then
+        echo "$destdir exists"
+    else
+        mkdir -p $destdir
+    fi
+    sudo \cp -rf $repo/* $destdir
+}
 cd $SCRIPT_DIR
 #export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 
 ##SUBNET=${SUBNET:-$(ip address| grep "global $NIC" |cut -f 6 -d ' ')}
 WEB_HOME=${WEB_HOME:-'/tmp/web/'}
 ADAPTER_HOME=${ADAPTER_HOME:-'/tmp/adapter/'}
-copygit2dir $WEB_HOME 'https://github.com/huawei-cloud/compass-web'
-copygit2dir $ADAPTER_HOME 'https://github.com/huawei-cloud/compass-adapters'
+## copygit2dir $WEB_HOME 'https://github.com/huawei-cloud/compass-web'
+## copygit2dir $ADAPTER_HOME 'https://github.com/huawei-cloud/compass-adapters'
+WEB_SOURCE=${WEB_SOURCE:-'https://github.com/stackforge/compass-web'}
+ADPATER_SOURCE=${ADAPTER_SOURCE:-'https://github.com/stackforge/compass-adapters'}
+if [ $source != local ]; then
+  copygit2dir $WEB_HOME $WEB_SOURCE
+  copygit2dir $ADAPTER_HOME $ADAPTER_SOURCE
+else 
+  copylocal2dir $WEB_HOME $WEB_SOURCE
+  copylocal2dir $ADAPTER_HOME $ADAPTER_SOURCE
+fi
 
 # download dependences
 wget http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip
@@ -90,6 +110,7 @@ sudo \cp -rf $COMPASSDIR/conf/setting /etc/compass/
 sudo \cp -rf $COMPASSDIR/conf/compassd /etc/init.d/
 sudo \cp -rf $COMPASSDIR/bin/*.py /opt/compass/bin/
 sudo \cp -rf $COMPASSDIR/bin/*.sh /opt/compass/bin/
+sudo \cp -rf $COMPASSDIR/bin/compass /usr/bin/
 sudo \cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
 sudo \cp -rf $COMPASSDIR/conf/compassd /usr/bin/
 sudo \cp -rf $WEB_HOME/public/* /var/www/compass_web/

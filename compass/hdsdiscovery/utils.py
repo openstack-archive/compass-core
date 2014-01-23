@@ -4,6 +4,9 @@
 import imp
 import re
 import logging
+import subprocess
+
+from compass.hdsdiscovery.error import TimeoutError
 
 
 def load_module(mod_name, path, host=None, credential=None):
@@ -42,11 +45,17 @@ def ssh_remote_execute(host, username, password, cmd, *args):
     """
     try:
         import paramiko
+        if not cmd:
+            logging.error("[hdsdiscovery][utils][ssh_remote_execute] command"
+                          "is None! Failed!")
+            return None
+
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=username, password=password)
+        client.connect(host, username=username, password=password, timeout=15)
         stdin, stdout, stderr = client.exec_command(cmd)
-        return stdout.readlines()
+        result = stdout.readlines()
+        return result
 
     except ImportError as exc:
         logging.error("[hdsdiscovery][utils][ssh_remote_execute] failed to"
@@ -61,6 +70,9 @@ def ssh_remote_execute(host, username, password, cmd, *args):
         return None
 
     finally:
+        stdin.close()
+        stdout.close()
+        stderr.close()
         client.close()
 
 
@@ -79,17 +91,18 @@ def valid_ip_format(ip_address):
 # Implement snmpwalk and snmpget funtionality
 # The structure of returned dictionary will by tag/iid/value/type
 #################################################################
-AUTH_VERSIONS = {'v1': 1,
-                 'v2c': 2,
-                 'v3': 3}
+AUTH_VERSIONS = {'1': 1,
+                 '2c': 2,
+                 '3': 3}
 
 
-def snmp_walk(host, credential, *args):
+def snmp_walk(host, credential, *args, **kwargs):
     """Impelmentation of snmpwalk functionality
 
     :param host: switch ip
     :param credential: credential to access switch
     :param args: OIDs
+    :param kwargs: key-value pairs
     """
     try:
         import netsnmp
@@ -98,14 +111,14 @@ def snmp_walk(host, credential, *args):
         logging.error("Module 'netsnmp' do not exist! Please install it first")
         return None
 
-    if 'Version' not in credential or 'Community' not in credential:
-        logging.error("[utils] missing 'Version' and 'Community' in %s",
+    if 'version' not in credential or 'community' not in credential:
+        logging.error("[utils] missing 'version' and 'community' in %s",
                       credential)
         return None
 
-    if credential['Version'] in AUTH_VERSIONS:
-        version = AUTH_VERSIONS[credential['Version']]
-        credential['Version'] = version
+    version = None
+    if credential['version'] in AUTH_VERSIONS:
+        version = AUTH_VERSIONS[credential['version']]
 
     varbind_list = []
     for arg in args:
@@ -114,9 +127,17 @@ def snmp_walk(host, credential, *args):
 
     var_list = netsnmp.VarList(*varbind_list)
 
-    res = netsnmp.snmpwalk(var_list, DestHost=host, **credential)
+    netsnmp.snmpwalk(var_list,
+                     DestHost=host,
+                     Version=version,
+                     Community=credential['community'],
+                     **kwargs)
 
     result = []
+    if not var_list:
+        logging.error("[hsdiscovery][utils][snmp_walk] retrived no record!")
+        return result
+
     for var in var_list:
         response = {}
         response['elem_name'] = var.tag
@@ -128,7 +149,7 @@ def snmp_walk(host, credential, *args):
     return result
 
 
-def snmp_get(host, credential, object_type):
+def snmp_get(host, credential, object_type, **kwargs):
     """Impelmentation of snmp get functionality
 
     :param object_type: mib object
@@ -142,19 +163,100 @@ def snmp_get(host, credential, object_type):
         logging.error("Module 'netsnmp' do not exist! Please install it first")
         return None
 
-    if 'Version' not in credential or 'Community' not in credential:
+    if 'version' not in credential or 'community' not in credential:
         logging.error('[uitls][snmp_get] missing keywords in %s for %s',
                       credential, host)
         return None
 
-    if credential['Version'] in AUTH_VERSIONS:
-        version = AUTH_VERSIONS[credential['Version']]
-        credential['Version'] = version
+    version = None
+    if credential['version'] in AUTH_VERSIONS:
+        version = AUTH_VERSIONS[credential['version']]
 
     varbind = netsnmp.Varbind(object_type)
-    res = netsnmp.snmpget(varbind, DestHost=host, **credential)
-    if not res:
-        logging.error('no result found for %s %s', host, credential)
+    res = netsnmp.snmpget(varbind,
+                          DestHost=host,
+                          Version=version,
+                          Community=credential['community'],
+                          **kwargs)
+    if res and res[0]:
+        return res[0]
+
+    logging.info('no result found for %s %s', host, credential)
+    return None
+
+
+SSH_CREDENTIALS = {"username": "", "password": ""}
+SNMP_V2_CREDENTIALS = {"version": "", "community": ""}
+
+
+def is_valid_snmp_v2_credential(credential):
+    if credential.keys() != SNMP_V2_CREDENTIALS.keys():
+        return False
+    if credential['version'] != '2c':
+        logging.error("The value of version in credential is not '2c'!")
+        return False
+    return True
+
+
+def is_valid_ssh_credential(credential):
+    if credential.keys() != SSH_CREDENTIALS.keys():
+        return False
+    return True
+
+
+def snmpget_by_cl(host, credential, oid, timeout=8, retries=3):
+    if not is_valid_snmp_v2_credential(credential):
+        logging.error("[utils][snmpget_by_cl] Credential %s cannot be used "
+                      "for SNMP request!" % credential)
         return None
 
-    return res[0]
+    version = credential['version']
+    community = credential['community']
+    cl = ("snmpget -v %s -c %s -Ob -r %s -t %s %s %s"
+          % (version, community, retries, timeout, host, oid))
+    output = None
+    sub_p = subprocess.Popen(cl, shell=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    output, err = sub_p.communicate()
+
+    if err:
+        logging.error("[snmpget_by_cl] %s", err)
+        raise TimeoutError(err.strip('\n'))
+
+    return output.strip('\n')
+
+
+def snmpwalk_by_cl(host, credential, oid, timeout=5, retries=3):
+    if not is_valid_snmp_v2_credential(credential):
+        logging.error("[utils][snmpwalk_by_cl] Credential %s cannot be used "
+                      "for SNMP request!" % credential)
+        return None
+
+    version = credential['version']
+    community = credential['community']
+    cl = ("snmpwalk -v %s -c %s -Cc -r %s -t %s -Ob %s %s"
+          % (version, community, retries, timeout, host, oid))
+    output = []
+    sub_p = subprocess.Popen(cl, shell=True, stdout=subprocess.PIPE)
+    output, err = sub_p.communicate()
+
+    if err:
+        logging.debug("[snmpwalk_by_cl] %s ", err)
+        raise TimeoutError(err)
+
+    result = []
+    if not output:
+        return result
+
+    output = output.split('\n')
+    for line in output:
+        if not line:
+            continue
+        temp = {}
+        arr = line.split(" ")
+        temp['iid'] = arr[0].split('.', 1)[-1]
+        temp['value'] = arr[-1]
+        result.append(temp)
+
+    return result

@@ -46,7 +46,8 @@ class SwitchList(Resource):
             limit = request.args.get(self.LIMIT, 0, type=int)
 
             if switch_ips and switch_ip_network:
-                error_msg = 'switchIp and switchIpNetwork cannot be combined!'
+                error_msg = ("switchIp and switchIpNetwork cannot be "
+                             "specified at the same time!")
                 return errors.handle_invalid_usage(
                     errors.UserInvalidUsage(error_msg))
 
@@ -62,11 +63,15 @@ class SwitchList(Resource):
                         error_msg = 'SwitchIp format is incorrect!'
                         return errors.handle_invalid_usage(
                             errors.UserInvalidUsage(error_msg))
+
                     switch = session.query(ModelSwitch).filter_by(ip=ip_addr)\
                                                        .first()
                     if switch:
                         switches.append(switch)
                         logging.info('[SwitchList][get] ip %s', ip_addr)
+
+                if limit:
+                    switches = switches[:limit]
 
             elif switch_ip_network:
                 # query all switches which belong to the same network
@@ -91,8 +96,14 @@ class SwitchList(Resource):
                                                   ip_network.prefixlen)
 
                 logging.info('ip_filter is %s', ip_filter)
-                result_set = session.query(ModelSwitch).filter(
-                    ModelSwitch.ip.startswith(ip_filter)).all()
+                result_set = []
+                if limit:
+                    result_set = session.query(ModelSwitch).filter(
+                        ModelSwitch.ip.startswith(ip_filter)).limit(limit)\
+                                                             .all()
+                else:
+                    result_set = session.query(ModelSwitch).filter(
+                        ModelSwitch.ip.startswith(ip_filter)).all()
 
                 for switch in result_set:
                     ip_addr = str(switch.ip)
@@ -100,19 +111,19 @@ class SwitchList(Resource):
                         switches.append(switch)
                         logging.info('[SwitchList][get] ip %s', ip_addr)
 
-                if limit and len(switches) > limit:
-                    switches = switches[:limit]
-
-            elif limit and not switches:
-                switches = session.query(ModelSwitch).limit(limit).all()
-            else:
-                switches = session.query(ModelSwitch).all()
+            if not switch_ips and not switch_ip_network:
+                if limit:
+                    switches = session.query(ModelSwitch).limit(limit).all()
+                else:
+                    switches = session.query(ModelSwitch).all()
 
             for switch in switches:
                 switch_res = {}
                 switch_res['id'] = switch.id
                 switch_res['ip'] = switch.ip
                 switch_res['state'] = switch.state
+                if switch.state != 'under_monitoring':
+                    switch_res['err_msg'] = switch.err_msg
                 switch_res['link'] = {
                     'rel': 'self',
                     'href': '/'.join((self.ENDPOINT, str(switch.id)))}
@@ -203,6 +214,8 @@ class Switch(Resource):
             switch_res['id'] = switch.id
             switch_res['ip'] = switch.ip
             switch_res['state'] = switch.state
+            if switch.state != 'under_monitoring':
+                switch_res['err_msg'] = switch.err_msg
             switch_res['link'] = {
                 'rel': 'self',
                 'href': '/'.join((self.ENDPOINT, str(switch.id)))}
@@ -218,6 +231,12 @@ class Switch(Resource):
         :param switch_id: the unqiue identifier of the switch
         """
         switch = None
+        credential = None
+        logging.debug('PUT a switch request from curl is %s', request.data)
+
+        ip_addr = None
+        switch_res = {}
+
         with database.session() as session:
             switch = session.query(ModelSwitch).filter_by(id=switch_id).first()
             logging.info('PUT switch id is %s: %s', switch_id, switch)
@@ -228,19 +247,15 @@ class Switch(Resource):
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg))
 
-        credential = None
-        logging.debug('PUT a switch request from curl is %s', request.data)
-        json_data = json.loads(request.data)
-        credential = json_data['switch']['credential']
+            json_data = json.loads(request.data)
+            credential = json_data['switch']['credential']
 
-        logging.info('PUT switch id=%s credential=%s(%s)',
-                     switch_id, credential, type(credential))
-        ip_addr = None
-        switch_res = {}
-        with database.session() as session:
-            switch = session.query(ModelSwitch).filter_by(id=switch_id).first()
+            logging.info('PUT switch id=%s credential=%s(%s)',
+                         switch_id, credential, type(credential))
+
             switch.credential = credential
-            switch.state = "not_reached"
+            switch.state = "repolling"
+            switch.err_msg = ""
 
             ip_addr = switch.ip
             switch_res['id'] = switch.id
@@ -276,17 +291,17 @@ class MachineList(Resource):
     def get(self):
         """
         Lists details of machines, optionally filtered by some conditions as
-        the following.
+        the following. According to SwitchConfig, machines with some ports will
+        be filtered.
 
         :param switchId: the unique identifier of the switch
         :param vladId: the vlan ID
         :param port: the port number
         :param limit: the number of records expected to return
         """
-        machines_result = []
         switch_id = request.args.get(self.SWITCHID, type=int)
         vlan = request.args.get(self.VLANID, type=int)
-        port = request.args.get(self.PORT, type=int)
+        port = request.args.get(self.PORT, None)
         limit = request.args.get(self.LIMIT, 0, type=int)
 
         with database.session() as session:
@@ -299,7 +314,7 @@ class MachineList(Resource):
                 filter_clause.append('vlan=%d' % vlan)
 
             if port:
-                filter_clause.append('port=%d' % port)
+                filter_clause.append('port=%s' % port)
 
             if limit < 0:
                 error_msg = 'Limit cannot be less than 0!'
@@ -308,21 +323,15 @@ class MachineList(Resource):
                 )
 
             if filter_clause:
-                if limit:
-                    machines = session.query(ModelMachine)\
-                                      .filter(and_(*filter_clause))\
-                                      .limit(limit).all()
-                else:
-                    machines = session.query(ModelMachine)\
-                                      .filter(and_(*filter_clause)).all()
+                machines = session.query(ModelMachine)\
+                                  .filter(and_(*filter_clause)).all()
             else:
-                if limit:
-                    machines = session.query(ModelMachine).limit(limit).all()
-                else:
-                    machines = session.query(ModelMachine).all()
+                machines = session.query(ModelMachine).all()
 
-            logging.info('all machines: %s', machines)
+            machines_result = []
             for machine in machines:
+                if limit and len(machines_result) == limit:
+                    break
                 machine_res = {}
                 machine_res['switch_ip'] = None if not machine.switch else \
                     machine.switch.ip
@@ -627,11 +636,12 @@ def execute_cluster_action(cluster_id):
         with database.session() as session:
             failed_hosts = []
             for host_id in hosts:
-                host = session.query(ModelClusterHost).filter_by(id=host_id)\
-                                                      .first()
+                host = session.query(ModelClusterHost)\
+                              .filter_by(id=host_id, cluster_id=cluster_id)\
+                              .first()
 
                 if not host:
-                    failed_hosts.append(host)
+                    failed_hosts.append(host_id)
                     continue
 
                 host_res = {
@@ -641,7 +651,7 @@ def execute_cluster_action(cluster_id):
                 removed_hosts.append(host_res)
 
             if failed_hosts:
-                error_msg = 'Cluster hosts do not exist!'
+                error_msg = 'Hosts do not exist! Or not in this cluster'
                 value = {
                     "failedHosts": failed_hosts
                 }
@@ -674,24 +684,43 @@ def execute_cluster_action(cluster_id):
             session.flush()
         return _add_hosts(cluster_id, hosts)
 
-    def _deploy(cluster_id):
+    def _deploy(cluster_id, hosts):
         """Deploy the cluster"""
 
-        deploy_hosts_urls = []
+        deploy_hosts_info = []
+        deploy_cluster_info = {}
         with database.session() as session:
-            cluster_hosts_ids = session.query(ModelClusterHost.id)\
+            if not hosts:
+                # Deploy all hosts in the cluster
+                cluster_hosts = session.query(ModelClusterHost)\
                                        .filter_by(cluster_id=cluster_id).all()
-            if not cluster_hosts_ids:
-                # No host belongs to this cluster
-                error_msg = ('Cannot find any host in cluster id=%s' %
-                             cluster_id)
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
 
-            for elm in cluster_hosts_ids:
-                host_id = str(elm[0])
+                if not cluster_hosts:
+                    # No host belongs to this cluster
+                    error_msg = ('Cannot find any host in cluster id=%s' %
+                                 cluster_id)
+                    return errors.handle_not_exist(
+                        errors.ObjectDoesNotExist(error_msg))
+
+                for host in cluster_hosts:
+                    if not host.mutable:
+                        # The host is not allowed to modified
+                        error_msg = ("The host id=%s is not allowed to be "
+                                     "modified now!") % host.id
+                        return errors.UserInvalidUsage(
+                            errors.UserInvalidUsage(error_msg))
+
+                    hosts.append(host.id)
+
+            deploy_cluster_info["cluster_id"] = int(cluster_id)
+            deploy_cluster_info["url"] = '/clusters/%s/progress' % cluster_id
+
+            for host_id in hosts:
+                host_info = {}
                 progress_url = '/cluster_hosts/%s/progress' % host_id
-                deploy_hosts_urls.append(progress_url)
+                host_info["host_id"] = host_id
+                host_info["url"] = progress_url
+                deploy_hosts_info.append(host_info)
 
             # Lock cluster hosts and its cluster
             session.query(ModelClusterHost).filter_by(cluster_id=cluster_id)\
@@ -699,10 +728,13 @@ def execute_cluster_action(cluster_id):
             session.query(ModelCluster).filter_by(id=cluster_id)\
                                        .update({'mutable': False})
 
-        celery.send_task("compass.tasks.trigger_install", (cluster_id,))
+        celery.send_task("compass.tasks.trigger_install", (cluster_id, hosts))
         return util.make_json_response(
-            202, {"status": "OK",
-                  "deployment": deploy_hosts_urls})
+            202, {"status": "accepted",
+                  "deployment": {
+                      "cluster": deploy_cluster_info,
+                      "hosts": deploy_hosts_info
+                      }})
 
     request_data = None
     with database.session() as session:
@@ -714,7 +746,8 @@ def execute_cluster_action(cluster_id):
                 )
         if not cluster.mutable:
             # The cluster cannot be deploy again
-            error_msg = "The cluster id=%s cannot deploy again!" % cluster_id
+            error_msg = ("The cluster id=%s is not allowed to "
+                         "modified or deployed!" % cluster_id)
             return errors.handle_invalid_usage(
                 errors.UserInvalidUsage(error_msg))
 
@@ -729,7 +762,7 @@ def execute_cluster_action(cluster_id):
         return _remove_hosts(cluster_id, value)
 
     elif 'deploy' in request_data:
-        return _deploy(cluster_id)
+        return _deploy(cluster_id, value)
 
     elif 'replaceAllHosts' in request_data:
         return _replace_all_hosts(cluster_id, value)
@@ -791,6 +824,19 @@ class ClusterHostConfig(Resource):
 
             #Valid if keywords in request_data are all correct
             if 'hostname' in request_data:
+                hostname = request_data['hostname']
+                cluster_id = host.cluster_id
+                test_host = session.query(ModelClusterHost)\
+                                   .filter_by(cluster_id=cluster_id,
+                                              hostname=hostname).first()
+                if test_host:
+                    error_msg = ("Hostname '%s' has been used for other host "
+                                 "in the cluster, cluster ID is %s!"
+                                 % hostname, cluster_id)
+
+                    return errors.handle_invalid_usage(
+                        errors.UserInvalidUsage(error_msg))
+
                 session.query(ModelClusterHost).filter_by(id=host_id)\
                        .update({"hostname": request_data['hostname']})
                 del request_data['hostname']

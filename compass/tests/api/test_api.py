@@ -1,4 +1,3 @@
-import logging
 import simplejson as json
 from copy import deepcopy
 from celery import current_app
@@ -15,6 +14,7 @@ from compass.db.model import ClusterHost
 from compass.db.model import HostState
 from compass.db.model import Adapter
 from compass.db.model import Role
+from compass.db.model import SwitchConfig
 
 
 class ApiTestCase(unittest2.TestCase):
@@ -46,7 +46,7 @@ class ApiTestCase(unittest2.TestCase):
 
 class TestSwtichMachineAPI(ApiTestCase):
 
-    SWITCH_RESP_TPL = {"state": "not_reached",
+    SWITCH_RESP_TPL = {"state": "under_monitoring",
                        "ip": "",
                        "link": {"href": "",
                                 "rel": "self"},
@@ -58,6 +58,7 @@ class TestSwtichMachineAPI(ApiTestCase):
         with database.session() as session:
             test_switch = Switch(ip=self.SWITCH_IP_ADDRESS1)
             test_switch.credential = self.SWITCH_CREDENTIAL
+            test_switch.state = 'under_monitoring'
             session.add(test_switch)
 
     def tearDown(self):
@@ -156,7 +157,6 @@ class TestSwtichMachineAPI(ApiTestCase):
         # Non-exist switch id
         url = '/switches/1000'
         rv = self.app.get(url)
-        logging.info('[test_get_switch_by_id] url %s', url)
         self.assertEqual(rv.status_code, 404)
 
         correct_url = '/switches/1'
@@ -187,6 +187,8 @@ class TestSwtichMachineAPI(ApiTestCase):
         data = {'switch': {'credential': credential}}
         rv = self.app.put(url, data=json.dumps(data))
         self.assertEqual(rv.status_code, 202)
+        self.assertEqual(json.loads(rv.get_data())['switch']['state'],
+                         'repolling')
 
     def test_delete_switch(self):
         url = '/switches/1'
@@ -214,11 +216,31 @@ class TestSwtichMachineAPI(ApiTestCase):
     def test_get_machineList(self):
         #Prepare testing data
         with database.session() as session:
+            switch_config = [
+                SwitchConfig(ip='10.10.10.1', filter_port='6'),
+                SwitchConfig(ip='10.10.10.1', filter_port='7')
+            ]
+            session.add_all(switch_config)
+
             machines = [Machine(mac='00:27:88:0c:01', port='1', vlan='1',
                                 switch_id=1),
                         Machine(mac='00:27:88:0c:02', port='2', vlan='1',
                                 switch_id=1),
                         Machine(mac='00:27:88:0c:03', port='3', vlan='1',
+                                switch_id=1),
+                        Machine(mac='00:27:88:01:04', port='4', vlan='1',
+                                switch_id=1),
+                        Machine(mac='00:27:88:01:05', port='5', vlan='1',
+                                switch_id=1),
+                        Machine(mac='00:27:88:01:06', port='6', vlan='1',
+                                switch_id=1),
+                        Machine(mac='00:27:88:01:07', port='7', vlan='1',
+                                switch_id=1),
+                        Machine(mac='00:27:88:01:08', port='8', vlan='1',
+                                switch_id=1),
+                        Machine(mac='00:27:88:01:09', port='9', vlan='1',
+                                switch_id=1),
+                        Machine(mac='00:27:88:01:10', port='10', vlan='1',
                                 switch_id=1),
                         Machine(mac='00:27:88:0c:04', port='3', vlan='1',
                                 switch_id=2),
@@ -228,13 +250,15 @@ class TestSwtichMachineAPI(ApiTestCase):
                                 switch_id=3)]
             session.add_all(machines)
 
-        testList = [{'url': '/machines', 'expected': 6},
+        testList = [{'url': '/machines', 'expected': 11},
                     {'url': '/machines?limit=3', 'expected': 3},
-                    {'url': '/machines?limit=50', 'expected': 6},
+                    {'url': '/machines?limit=50', 'expected': 11},
                     {'url': '/machines?switchId=1&vladId=1&port=2',
                             'expected': 1},
                     {'url': '/machines?switchId=1&vladId=1&limit=2',
                             'expected': 2},
+                    {'url': '/machines?switchId=1', 'expected': 8},
+                    {'url': '/machines?switchId=1&port=6', 'expected': 1},
                     {'url': '/machines?switchId=4', 'expected': 0}]
 
         for test in testList:
@@ -267,31 +291,33 @@ class TestClusterAPI(ApiTestCase):
                 "ip_end": "192.168.1.200",
                 "netmask": "255.255.255.0",
                 "gateway": "192.168.1.1",
-                "vlan": "",
                 "nic": "eth0",
                 "promisc": 1},
             "tenant": {
                 "ip_start": "192.168.1.100",
                 "ip_end": "192.168.1.200",
                 "netmask": "255.255.255.0",
+                "gateway": "",
                 "nic": "eth1",
                 "promisc": 0},
             "public": {
                 "ip_start": "192.168.1.100",
                 "ip_end": "192.168.1.200",
                 "netmask": "255.255.255.0",
+                "gateway": "",
                 "nic": "eth3",
                 "promisc": 1},
             "storage": {
                 "ip_start": "192.168.1.100",
                 "ip_end": "192.168.1.200",
                 "netmask": "255.255.255.0",
+                "gateway": "",
                 "nic": "eth3",
                 "promisc": 1}},
         "global": {
             "gateway": "192.168.1.1",
             "proxy": "",
-            "ntp_sever": "",
+            "ntp_server": "",
             "nameservers": "8.8.8.8",
             "search_path": "ods.com,ods1.com"}}
 
@@ -357,7 +383,7 @@ class TestClusterAPI(ApiTestCase):
                 Cluster(name="cluster_04")]
             session.add_all(clusters_list)
             session.flush()
-        
+
         url = "/clusters"
         rv = self.app.get(url)
         data = json.loads(rv.get_data())
@@ -371,6 +397,11 @@ class TestClusterAPI(ApiTestCase):
         url = '/clusters/1/security'
         rv = self.app.put(url, data=json.dumps(security))
         self.assertEqual(rv.status_code, 200)
+        with database.session() as session:
+            cluster_security_config = session.query(Cluster.security_config)\
+                                             .filter_by(id=1).first()[0]
+            self.assertDictEqual(self.SECURITY_CONFIG,
+                                 json.loads(cluster_security_config))
 
         # b. Update a non-existing cluster's resource
         url = '/clusters/1000/security'
@@ -383,26 +414,76 @@ class TestClusterAPI(ApiTestCase):
         self.assertEqual(rv.status_code, 400)
 
         # d. Security config is invalid -- some required field is null
-        security['security']['server_credentials']['username'] = None
-        rv = self.app.put(url, data=json.dumps(security))
+        url = "/clusters/1/security"
+        invalid_security = deepcopy(security)
+        invalid_security['security']['server_credentials']['username'] = None
+        rv = self.app.put(url, data=json.dumps(invalid_security))
         self.assertEqual(rv.status_code, 400)
 
         # e. Security config is invalid -- keyword is incorrect
-        security['security']['xxxx'] = {'xxx': 'xxx'}
-        rv = self.app.put(url, data=json.dumps(security))
+        invalid_security = deepcopy(security)
+        invalid_security['security']['xxxx'] = {'xxx': 'xxx'}
+        rv = self.app.put(url, data=json.dumps(invalid_security))
+        self.assertEqual(rv.status_code, 400)
+
+        # f. Security config is invalid -- missing keyword
+        invalid_security = deepcopy(security)
+        del invalid_security["security"]["server_credentials"]
+        rv = self.app.put(url, data=json.dumps(invalid_security))
+        self.assertEqual(rv.status_code, 400)
+
+        # g. Security config is invalid -- missing subkey keyword
+        invalid_security = deepcopy(security)
+        del invalid_security["security"]["server_credentials"]["username"]
+        rv = self.app.put(url, data=json.dumps(invalid_security))
         self.assertEqual(rv.status_code, 400)
 
     def test_put_cluster_networking_resource(self):
-        networking = {"networking" : self.NETWORKING_CONFIG}
+        networking = {"networking": self.NETWORKING_CONFIG}
         url = "/clusters/1/networking"
         rv = self.app.put(url, data=json.dumps(networking))
         self.assertEqual(rv.status_code, 200)
 
+        # Missing some required keyword in interfaces section
+        invalid_config = deepcopy(networking)
+        del invalid_config["networking"]["interfaces"]["management"]["nic"]
+        rv = self.app.put(url, data=json.dumps(invalid_config))
+        self.assertEqual(rv.status_code, 400)
+
+        invalid_config = deepcopy(networking)
+        del invalid_config["networking"]["interfaces"]["management"]
+        rv = self.app.put(url, data=json.dumps(invalid_config))
+        self.assertEqual(rv.status_code, 400)
+
+        invalid_config = deepcopy(networking)
+        invalid_config["networking"]["interfaces"]["xxx"] = {}
+        rv = self.app.put(url, data=json.dumps(invalid_config))
+        self.assertEqual(rv.status_code, 400)
+
+        # Missing some required keyword in global section
+        invalid_config = deepcopy(networking)
+        del invalid_config["networking"]["global"]["gateway"]
+        rv = self.app.put(url, data=json.dumps(invalid_config))
+        self.assertEqual(rv.status_code, 400)
+
+        # Invalid value in interfaces section
+        invalid_config = deepcopy(networking)
+        invalid_config["networking"]["interfaces"]["tenant"]["nic"] = "eth0"
+        rv = self.app.put(url, data=json.dumps(invalid_config))
+        self.assertEqual(rv.status_code, 400)
+
+        # Invalid value in global section
+        invalid_config = deepcopy(networking)
+        invalid_config["networking"]["global"]["nameservers"] = "*.*.*.*,"
+        rv = self.app.put(url, data=json.dumps(invalid_config))
+        self.assertEqual(rv.status_code, 400)
+
     def test_get_cluster_resource(self):
-        # Test only one resource - secuirty as an example
+        # Test  resource
         with database.session() as session:
             cluster = session.query(Cluster).filter_by(id=1).first()
             cluster.security = self.SECURITY_CONFIG
+            cluster.networking = self.NETWORKING_CONFIG
 
         # a. query secuirty config by cluster id
         url = '/clusters/1/security'
@@ -410,6 +491,12 @@ class TestClusterAPI(ApiTestCase):
         data = json.loads(rv.get_data())
         self.assertEqual(rv.status_code, 200)
         self.assertDictEqual(data['security'], self.SECURITY_CONFIG)
+
+        url = '/clusters/1/networking'
+        rv = self.app.get(url)
+        data = json.loads(rv.get_data())
+        self.assertEqual(rv.status_code, 200)
+        self.assertDictEqual(data['networking'], self.NETWORKING_CONFIG)
 
         # b. query a nonsupported resource, return 400
         url = '/clusters/1/xxx'
@@ -428,7 +515,11 @@ class TestClusterAPI(ApiTestCase):
             machines = [Machine(mac='00:27:88:0c:01'),
                         Machine(mac='00:27:88:0c:02'),
                         Machine(mac='00:27:88:0c:03'),
-                        Machine(mac='00:27:88:0c:04')]
+                        Machine(mac='00:27:88:0c:04'),
+                        Machine(mac='00:27:88:0c:05'),
+                        Machine(mac='00:27:88:0c:06'),
+                        Machine(mac='00:27:88:0c:07'),
+                        Machine(mac='00:27:88:0c:08')]
             clusters = [Cluster(name='cluster_02')]
             session.add_all(machines)
             session.add_all(clusters)
@@ -466,32 +557,49 @@ class TestClusterAPI(ApiTestCase):
         request = {'addHosts': [1, 2, 3]}
         rv = self.app.post(url, data=json.dumps(request))
         self.assertEqual(rv.status_code, 200)
-        data = json.loads(rv.get_data())
-        self.assertEqual(len(data['cluster_hosts']), 3)
+        total_hosts = 0
+        with database.session() as session:
+            total_hosts = session.query(func.count(ClusterHost.id))\
+                                 .filter_by(cluster_id=1).scalar()
+            data = json.loads(rv.get_data())
+            self.assertEqual(len(data['cluster_hosts']), total_hosts)
+            self.assertEqual(total_hosts, 3)
 
-        # 4. try to remove some hosts which do not exists
-        request = {'removeHosts': [1, 1000, 1001]}
+        # 4. try to remove some hosts not existing and in different cluster
+        request = {'removeHosts': [1, 2, 3, 1000, 1001]}
         rv = self.app.post(url, data=json.dumps(request))
         self.assertEqual(rv.status_code, 404)
         data = json.loads(rv.get_data())
-        self.assertEqual(len(data['failedHosts']), 2)
+        self.assertEqual(len(data['failedHosts']), 3)
+        with database.session() as session:
+            count = session.query(func.count(ClusterHost.id))\
+                           .filter_by(cluster_id=1).scalar()
+            self.assertEqual(count, 3)
 
         # 5. sucessfully remove requested hosts
-        request = {'removeHosts': [1, 2]}
+        request = {'removeHosts': [2, 3]}
         rv = self.app.post(url, data=json.dumps(request))
         self.assertEqual(rv.status_code, 200)
         data = json.loads(rv.get_data())
         self.assertEqual(len(data['cluster_hosts']), 2)
+        with database.session() as session:
+            count = session.query(func.count(ClusterHost.id))\
+                           .filter_by(cluster_id=1).scalar()
+            self.assertEqual(count, 1)
 
         # 6. Test 'replaceAllHosts' action on cluster_01
-        request = {'replaceAllHosts': [1, 2, 3]}
+        request = {'replaceAllHosts': [5, 6, 7]}
         rv = self.app.post(url, data=json.dumps(request))
         self.assertEqual(rv.status_code, 200)
         data = json.loads(rv.get_data())
         self.assertEqual(len(data['cluster_hosts']), 3)
+        with database.session() as session:
+            count = session.query(func.count(ClusterHost.id))\
+                           .filter_by(cluster_id=1).scalar()
+            self.assertEqual(count, 3)
 
         # 7. Test 'deploy' action on cluster_01
-        request = {'deploy': {}}
+        request = {'deploy': []}
         rv = self.app.post(url, data=json.dumps(request))
         self.assertEqual(rv.status_code, 202)
 
@@ -499,7 +607,7 @@ class TestClusterAPI(ApiTestCase):
         rv = self.app.post(url, data=json.dumps(request))
         self.assertEqual(rv.status_code, 400)
 
-        # 9. Try to deploy cluster_02  which no host
+        # 9. Try to deploy cluster_02 which no host in
         url = '/clusters/2/action'
         with database.session() as session:
             session.query(ClusterHost).filter_by(cluster_id=2)\
@@ -508,6 +616,36 @@ class TestClusterAPI(ApiTestCase):
 
         rv = self.app.post(url, data=json.dumps(request))
         self.assertEqual(rv.status_code, 404)
+
+        # 10. Try to add a new host to cluster_01 and deploy it
+        with database.session() as session:
+            cluster = session.query(Cluster).filter_by(id=1).first()
+            cluster.mutable = True
+
+            hosts = session.query(ClusterHost).filter_by(cluster_id=1).all()
+            for host in hosts:
+                host.mutable = True
+        url = '/clusters/1/action'
+        # add another machine as a new host into cluster_01
+        request = json.dumps({"addHosts": [8]})
+        rv = self.app.post(url, data=request)
+        host_id = json.loads(rv.get_data())["cluster_hosts"][0]["id"]
+
+        deploy_request = json.dumps({"deploy": [host_id]})
+        rv = self.app.post(url, data=deploy_request)
+        self.assertEqual(202, rv.status_code)
+        expected_deploy_result = {
+            "cluster": {
+                "cluster_id": 1,
+                "url": "/clusters/1/progress"
+            },
+            "hosts": [
+                {"host_id": 5,
+                 "url": "/cluster_hosts/5/progress"}
+            ]
+        }
+        data = json.loads(rv.get_data())["deployment"]
+        self.assertDictEqual(expected_deploy_result, data)
 
 
 class ClusterHostAPITest(ApiTestCase):
@@ -526,10 +664,18 @@ class ClusterHostAPITest(ApiTestCase):
             clusters_list = [Cluster(name='cluster_01'),
                              Cluster(name='cluster_02')]
             session.add_all(clusters_list)
-            hosts_list = [ClusterHost(hostname='host_02', cluster_id=1),
-                          ClusterHost(hostname='host_03', cluster_id=1),
-                          ClusterHost(hostname='host_04', cluster_id=2)]
-            host = ClusterHost(hostname='host_01', cluster_id=1)
+            machines_list = [Machine(mac='00:27:88:0c:01'),
+                             Machine(mac='00:27:88:0c:02'),
+                             Machine(mac='00:27:88:0c:03'),
+                             Machine(mac='00:27:88:0c:04')]
+            session.add_all(machines_list)
+
+            hosts_list = [
+                ClusterHost(hostname='host_02', cluster_id=1, machine_id=2),
+                ClusterHost(hostname='host_03', cluster_id=1, machine_id=3),
+                ClusterHost(hostname='host_04', cluster_id=2, machine_id=4)
+            ]
+            host = ClusterHost(hostname='host_01', cluster_id=1, machine_id=1)
             host.config_data = json.dumps(self.test_config_data)
             session.add(host)
             session.add_all(hosts_list)
@@ -556,6 +702,8 @@ class ClusterHostAPITest(ApiTestCase):
         expected_config['hostname'] = 'host_01'
         expected_config['clusterid'] = 1
         expected_config['clustername'] = 'cluster_01'
+        expected_config['networking']['interfaces']['management']['mac'] \
+            = "00:27:88:0c:01"
         self.assertDictEqual(config, expected_config)
 
     def test_clusterHost_put_config(self):
@@ -593,7 +741,6 @@ class ClusterHostAPITest(ApiTestCase):
         url = 'clusterhosts/1/config/ip'
         rv = self.app.delete(url)
         self.assertEqual(200, rv.status_code)
-
         expected_config = deepcopy(self.test_config_data)
         expected_config['networking']['interfaces']['management']['ip'] = ''
         with database.session() as session:
@@ -742,13 +889,229 @@ class TestAdapterAPI(ApiTestCase):
                                "rel": "self"}
                            }
         self.assertDictEqual(execpted_result, data['adapters'][0])
-        
+
         url = '/adapters'
         rv = self.app.get(url)
         data = json.loads(rv.get_data())
         self.assertEqual(200, rv.status_code)
         self.assertEqual(2, len(data['adapters']))
-        
+
+
+class TestAPIWorkFlow(ApiTestCase):
+    CLUSTER_SECURITY_CONFIG = {
+        "security": {
+            "server_credentials": {
+                "username": "admin",
+                "password": "admin"},
+            "service_credentials": {
+                "username": "admin",
+                "password": "admin"},
+            "console_credentials": {
+                "username": "admin",
+                "password": "admin"}
+        }
+    }
+
+    CLUSTER_NETWORKING_CONFIG = {
+        "networking": {
+            "interfaces": {
+                "management": {
+                    "ip_start": "10.120.8.100",
+                    "ip_end": "10.120.8.200",
+                    "netmask": "255.255.255.0",
+                    "gateway": "",
+                    "nic": "eth0",
+                    "promisc": 1
+                },
+                "tenant": {
+                    "ip_start": "192.168.10.100",
+                    "ip_end": "192.168.10.200",
+                    "netmask": "255.255.255.0",
+                    "gateway": "",
+                    "nic": "eth1",
+                    "promisc": 0
+                },
+                "public": {
+                    "ip_start": "12.145.68.100",
+                    "ip_end": "12.145.68.200",
+                    "netmask": "255.255.255.0",
+                    "gateway": "",
+                    "nic": "eth2",
+                    "promisc": 0
+                },
+                "storage": {
+                    "ip_start": "172.29.8.100",
+                    "ip_end": "172.29.8.200",
+                    "netmask": "255.255.255.0",
+                    "gateway": "",
+                    "nic": "eth3",
+                    "promisc": 0
+                }
+            },
+            "global": {
+                "nameservers": "8.8.8.8",
+                "search_path": "ods.com",
+                "gateway": "192.168.1.1",
+                "proxy": "http://127.0.0.1:3128",
+                "ntp_server": "127.0.0.1"
+            }
+        }
+    }
+
+    CLUSTER_PARTITION_CONFIG = {
+        "partition": "/home 20%;"
+    }
+
+    CLUSTERHOST_CONFIG = {
+        "hostname": "",
+        "networking": {
+            "interfaces": {
+                "management": {
+                    "ip": ""
+                }
+            }
+        },
+        "roles": ["base"]
+    }
+
+    def setUp(self):
+        super(TestAPIWorkFlow, self).setUp()
+
+        #Prepare test data
+        with database.session() as session:
+            # Populate switch info to DB
+            switch = Switch(ip="192.168.2.1",
+                            credential={"version": "2c",
+                                        "community": "public"},
+                            vendor="huawei",
+                            state="under_monitoring")
+            session.add(switch)
+
+            # Populate machines info to DB
+            machines = [
+                Machine(mac='00:27:88:0c:a6', port='1', vlan='1', switch_id=1),
+                Machine(mac='00:27:88:0c:a7', port='2', vlan='1', switch_id=1),
+                Machine(mac='00:27:88:0c:a8', port='3', vlan='1', switch_id=1),
+            ]
+
+            session.add_all(machines)
+
+    def tearDown(self):
+        super(TestAPIWorkFlow, self).tearDown()
+
+    def test_work_flow(self):
+        # Polling switch: mock post switch
+        # url = '/switches'
+        # data = {"ip": "192.168.2.1",
+        #         "credential": {"version": "2c", "community": "public"}}
+        # self.app.post(url, json.dumps(data))
+
+        # Get machines once polling switch done. If switch state changed to
+        # "under_monitoring" state.
+        url = '/switches/1'
+        switch_state = "initialized"
+        while switch_state != "under_monitoring":
+            rv = self.app.get(url)
+            switch_state = json.loads(rv.get_data())['switch']['state']
+        url = '/machines?switchId=1'
+        rv = self.app.get(url)
+        self.assertEqual(200, rv.status_code)
+        machines = json.loads(rv.get_data())['machines']
+
+        # Create a Cluster and get cluster id from response
+        url = '/clusters'
+        data = {
+            "cluster": {
+                "name": "cluster_01",
+                "adapter_id": 1
+            }
+        }
+        rv = self.app.post(url, data=json.dumps(data))
+        self.assertEqual(200, rv.status_code)
+        cluster_id = json.loads(rv.get_data())['cluster']['id']
+
+        # Add machines as hosts of the cluster
+        url = '/clusters/%s/action' % cluster_id
+        machines_id = []
+        for m in machines:
+            machines_id.append(m["id"])
+
+        data = {"addHosts": machines_id}
+        rv = self.app.post(url, data=json.dumps(data))
+        self.assertEqual(200, rv.status_code)
+        hosts_info = json.loads(rv.get_data())["cluster_hosts"]
+
+        # Update cluster security configuration
+        url = '/clusters/%s/security' % cluster_id
+        security_config = json.dumps(self.CLUSTER_SECURITY_CONFIG)
+        rv = self.app.put(url, data=security_config)
+        self.assertEqual(200, rv.status_code)
+
+        # Update cluster networking configuration
+        url = '/clusters/%s/networking' % cluster_id
+        networking_config = json.dumps(self.CLUSTER_NETWORKING_CONFIG)
+        rv = self.app.put(url, data=networking_config)
+        self.assertEqual(200, rv.status_code)
+
+        # Update cluster partition configuration
+        url = '/clusters/%s/partition' % cluster_id
+        partition_config = json.dumps(self.CLUSTER_PARTITION_CONFIG)
+        rv = self.app.put(url, data=partition_config)
+        self.assertEqual(200, rv.status_code)
+
+        # Put cluster host config individually
+        hosts_configs = [
+            deepcopy(self.CLUSTERHOST_CONFIG),
+            deepcopy(self.CLUSTERHOST_CONFIG),
+            deepcopy(self.CLUSTERHOST_CONFIG)
+        ]
+        names = ["host_01", "host_02", "host_03"]
+        mgmt_ips = ["10.120.8.100", "10.120.8.101", "10.120.8.102"]
+        for config, name, ip in zip(hosts_configs, names, mgmt_ips):
+            config["hostname"] = name
+            config["networking"]["interfaces"]["management"]["ip"] = ip
+
+        for config, host_info in zip(hosts_configs, hosts_info):
+            host_id = host_info["id"]
+            url = 'clusterhosts/%d/config' % host_id
+            rv = self.app.put(url, data=json.dumps(config))
+            self.assertEqual(200, rv.status_code)
+
+        # deploy the Cluster
+        url = "/clusters/%d/action" % cluster_id
+        data = json.dumps({"deploy": []})
+        self.app.post(url, data=data)
+        self.assertEqual(200, rv.status_code)
+
+        # Verify the final cluster configuration
+        expected_cluster_config = {}
+        expected_cluster_config.update(self.CLUSTER_SECURITY_CONFIG)
+        expected_cluster_config.update(self.CLUSTER_NETWORKING_CONFIG)
+        expected_cluster_config.update(self.CLUSTER_PARTITION_CONFIG)
+        expected_cluster_config["clusterid"] = cluster_id
+        expected_cluster_config["clustername"] = "cluster_01"
+
+        with database.session() as session:
+            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
+            config = cluster.config
+            self.assertDictEqual(config, expected_cluster_config)
+
+            # Verify each host configuration
+            for host_info, excepted in zip(hosts_info, hosts_configs):
+                machine_id = host_info["machine_id"]
+                machine = session.query(Machine).filter_by(id=machine_id)\
+                                                .first()
+                mac = machine.mac
+                excepted["clusterid"] = cluster_id
+                excepted["clustername"] = "cluster_01"
+                excepted["hostid"] = host_info["id"]
+                excepted["networking"]["interfaces"]["management"]["mac"] = mac
+
+                host = session.query(ClusterHost)\
+                              .filter_by(id=host_info["id"]).first()
+                self.maxDiff = None
+                self.assertDictEqual(host.config, excepted)
+
 
 if __name__ == '__main__':
     unittest2.main()

@@ -8,11 +8,21 @@ from sqlalchemy import Float, Enum, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
-
 from compass.utils import util
 
 
 BASE = declarative_base()
+
+
+class SwitchConfig(BASE):
+    __tablename__ = 'switch_config'
+    id = Column(Integer, primary_key=True)
+    ip = Column(String(80), ForeignKey("switch.ip"))
+    filter_port = Column(String(16))
+    __table_args__ = (UniqueConstraint('ip', 'filter_port', name='filter1'), )
+
+    def __init__(self, **kwargs):
+        super(SwitchConfig, self).__init__(**kwargs)
 
 
 class Switch(BASE):
@@ -26,6 +36,7 @@ class Switch(BASE):
     :param state: Enum.'not_reached': polling switch fails or not complete to
                   learn all MAC addresses of devices connected to the switch;
                   'under_monitoring': successfully learn all MAC addresses.
+    :param err_msg: Error message when polling switch failed.
     :param machines: refer to list of Machine connected to the switch.
     """
     __tablename__ = 'switch'
@@ -34,11 +45,12 @@ class Switch(BASE):
     ip = Column(String(80), unique=True)
     credential_data = Column(Text)
     vendor_info = Column(String(256), nullable=True)
-    state = Column(Enum('not_reached', 'under_monitoring',
-                        name='switch_state'))
+    state = Column(Enum('initialized', 'unreachable', 'notsupported',
+                        'repolling', 'under_monitoring', name='switch_state'))
+    err_msg = Column(Text)
 
     def __init__(self, **kwargs):
-        self.state = 'not_reached'
+        self.state = 'initialized'
         super(Switch, self).__init__(**kwargs)
 
     def __repr__(self):
@@ -64,8 +76,6 @@ class Switch(BASE):
         if self.credential_data:
             try:
                 credential = json.loads(self.credential_data)
-                credential = dict(
-                    [(str(k).title(), str(v)) for k, v in credential.items()])
                 return credential
             except Exception as error:
                 logging.error('failed to load credential data %s: %s',
@@ -115,14 +125,16 @@ class Machine(BASE):
     __tablename__ = 'machine'
 
     id = Column(Integer, primary_key=True)
-    mac = Column(String(24), unique=True)
-    port = Column(Integer)
+    mac = Column(String(24))
+    port = Column(String(16))
     vlan = Column(Integer)
     update_timestamp = Column(DateTime, default=datetime.now,
                               onupdate=datetime.now)
     switch_id = Column(Integer, ForeignKey('switch.id',
                                            onupdate='CASCADE',
                                            ondelete='SET NULL'))
+    __table_args__ = (UniqueConstraint('mac', 'vlan', 'switch_id',
+                                       name='unique_1'), )
     switch = relationship('Switch', backref=backref('machines',
                                                     lazy='dynamic'))
 
@@ -361,7 +373,7 @@ class Cluster(BASE):
         util.merge_dict(config, {'networking': self.networking})
         util.merge_dict(config, {'partition': self.partition})
         util.merge_dict(config, {'clusterid': self.id,
-                                'clustername': self.name})
+                                 'clustername': self.name})
         return config
 
     @config.setter
@@ -405,7 +417,7 @@ class ClusterHost(BASE):
     machine_id = Column(Integer, ForeignKey('machine.id',
                                             onupdate='CASCADE',
                                             ondelete='CASCADE'),
-                        nullable=True, unique=True)
+                        nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id',
                                             onupdate='CASCADE',
@@ -413,10 +425,10 @@ class ClusterHost(BASE):
                         nullable=True)
 
     hostname = Column(String)
-    UniqueConstraint('cluster_id', 'hostname', name='unique_1')
-
     config_data = Column(Text)
     mutable = Column(Boolean, default=True)
+    __table_args__ = (UniqueConstraint('cluster_id', 'hostname',
+                                       name='unique_host'),)
 
     cluster = relationship("Cluster", backref=backref('hosts', lazy='dynamic'))
     machine = relationship("Machine", backref=backref('host', uselist=False))

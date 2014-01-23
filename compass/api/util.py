@@ -1,6 +1,4 @@
 """Utils for API usage"""
-import logging
-
 from flask import make_response
 from flask.ext.restful import Api
 
@@ -85,166 +83,172 @@ def is_valid_gateway(ip_addr):
         return False
 
 
+def _is_valid_nameservers(value):
+    if value:
+        nameservers = value.strip(",").split(",")
+        for elem in nameservers:
+            if not is_valid_ip(elem):
+                return False
+    else:
+        return False
+
+    return True
+
+
 def is_valid_security_config(config):
     """Valid the format of security section in config"""
+    outer_format = {
+        "server_credentials": {}, "service_credentials": {},
+        "console_credentials": {}
+    }
+    inner_format = {
+        "username": {}, "password": {}
+    }
+    valid_outter, err = is_valid_keys(outer_format, config, "Security")
+    if not valid_outter:
+        return (False, err)
 
-    security_keys = ['server_credentials', 'service_credentials',
-                     'console_credentials']
-    fields = ['username', 'password']
-    logging.debug('config: %s', config)
-    for key in security_keys:
-        try:
-            content = config[key]
-        except KeyError:
-            error_msg = "Missing '%s' in security config!" % key
-            logging.error(error_msg)
-            raise KeyError(error_msg)
+    for key in config:
+        content = config[key]
+        valid_inner, err = is_valid_keys(inner_format, content, key)
+        if not valid_inner:
+            return (False, err)
 
-        for k in fields:
-            try:
-                value = content[k]
-                if not value:
-                    return False, '%s in %s cannot be null!' % (k, key)
-
-            except KeyError:
-                error_msg = ("Missing '%s' in '%s' section of security config"
-                             % (k, key))
-                logging.error(error_msg)
-                raise KeyError(error_msg)
-
-    return True, 'valid!'
+        for sub_key in content:
+            if not content[sub_key]:
+                return (False, ("The value of %s in %s in security config "
+                                "cannot be None!") % (sub_key, key))
+    return (True, '')
 
 
 def is_valid_networking_config(config):
     """Valid the format of networking config"""
 
-    networking = ['interfaces', 'global']
-
     def _is_valid_interfaces_config(interfaces_config):
         """Valid the format of interfaces section in config"""
+        interfaces_section = {
+            "management": {}, "tenant": {}, "public": {}, "storage": {}
+        }
+        section = {
+            "ip_start": {"req": 1, "validator": is_valid_ip},
+            "ip_end": {"req": 1, "validator": is_valid_ip},
+            "netmask": {"req": 1, "validator": is_valid_netmask},
+            "gateway": {"req": 0, "validator": is_valid_gateway},
+            "nic": {},
+            "promisc": {}
+        }
 
-        expected_keys = ['management', 'tenant', 'public', 'storage']
-        required_fields = ['nic', 'promisc']
-        normal_fields = ['ip_start', 'ip_end', 'netmask']
-        other_fields = ['gateway', 'vlan']
+        # Check if interfaces outer layer keywords
+        is_valid_outer, err = is_valid_keys(interfaces_section,
+                                            interfaces_config, "interfaces")
+        if not is_valid_outer:
+            return (False, err)
 
-        interfaces_keys = interfaces_config.keys()
-        for key in expected_keys:
-            if key not in interfaces_keys:
-                error_msg = "Missing '%s' in interfaces config!" % key
-                return False, error_msg
+        promisc_nics = []
+        nonpromisc_nics = []
 
+        for key in interfaces_config:
             content = interfaces_config[key]
-            for field in required_fields:
-                if field not in content:
-                    error_msg = "Keyword '%s' in interface %s cannot be None!"\
-                                % (field, key)
-                    return False, error_msg
+            is_valid_inner, err = is_valid_keys(section, content, key)
+            if not is_valid_inner:
+                return (False, err)
 
-                value = content[field]
-                if value is None:
-                    error_msg = ("The value of '%s' in '%s' "
-                                 'config cannot be None!' %
-                                 (field, key))
-                    return False, error_msg
+            if content["promisc"] not in [0, 1]:
+                return (False, ("The value of Promisc in %s section of "
+                                "interfaces can only be either 0 or 1!") % key)
+            if not content["nic"]:
+                return (False, ("The NIC in %s cannot be None!") % key)
 
-                if field == 'promisc':
-                    valid_values = [0, 1]
-                    if int(value) not in valid_values:
-                        return (
-                            False,
-                            ('The value of Promisc for interface %s can '
-                             'only be 0/1.bit_length' % key)
-                            )
+            if content["promisc"]:
+                if content["nic"] not in nonpromisc_nics:
+                    promisc_nics.append(content["nic"])
+                    continue
+                else:
+                    return (False,
+                            ("The NIC in %s cannot be assigned in promisc "
+                             "and nonpromisc mode at the same time!" % key))
+            else:
+                if content["nic"] not in promisc_nics:
+                    nonpromisc_nics.append(content["nic"])
+                else:
+                    return (False,
+                            ("The NIC in %s cannot be assigned in promisc "
+                             "and nonpromisc mode at the same time!" % key))
 
-                elif field == 'nic':
-                    if not value.startswith('eth'):
-                        return (
-                            False,
-                            ('The value of nic for interface %s should start'
-                             'with eth' % key)
-                            )
+            # Validate other keywords in the section
+            for sub_key in content:
+                if sub_key == "promisc" or sub_key == "nic":
+                    continue
+                value = content[sub_key]
+                is_required = section[sub_key]["req"]
+                validator = section[sub_key]["validator"]
+                if value:
+                    if validator and not validator(value):
+                        error_msg = "The format of %s in %s is invalid!" % \
+                            (sub_key, key)
+                        return (False, error_msg)
 
-            if not content['promisc']:
-                for field in normal_fields:
-                    value = content[field]
-                    if field == 'netmask' and not is_valid_netmask(value):
-                        return (False, "Invalid netmask format for interface "
-                                " %s: '%s'!" % (key, value))
-                    elif not is_valid_ip(value):
-                        return (False,
-                                "Invalid Ip format for interface %s: '%s'"
-                                % (key, value))
+                elif is_required:
+                    return (False,
+                            ("%s in %s section in interfaces of networking "
+                             "config cannot be None!") % (sub_key, key))
 
-            for field in other_fields:
-                if field in content and field == 'gateway':
-                    value = content[field]
-                    if value and not is_valid_gateway(value):
-                        return False, "Invalid gateway format '%s'" % value
-
-        return True, 'Valid!'
+        return (True, '')
 
     def _is_valid_global_config(global_config):
         """Valid the format of 'global' section in config"""
+        global_section = {
+            "nameservers": {"req": 1, "validator": _is_valid_nameservers},
+            "search_path": {"req": 1, "validator": ""},
+            "gateway": {"req": 1, "validator": is_valid_gateway},
+            "proxy": {"req": 0, "validator": ""},
+            "ntp_server": {"req": 0, "validator": ""}
+        }
+        is_valid_format, err = is_valid_keys(global_section, global_config,
+                                             "global")
+        if not is_valid_format:
+            return (False, err)
 
-        required_fields = ['nameservers', 'search_path', 'gateway']
-        global_keys = global_config.keys()
-        for key in required_fields:
-            if key not in global_keys:
-                error_msg = ("Missing %s in global config of networking config"
-                             % key)
-                return False, error_msg
-
+        for key in global_section:
             value = global_config[key]
-            if not value:
-                error_msg = ("Value of %s in global config cannot be None!" %
-                             key)
-                return False, error_msg
+            is_required = global_section[key]["req"]
+            validator = global_section[key]["validator"]
 
-            if key == 'nameservers':
-                nameservers = [nameserver for nameserver in value.split(',')
-                               if nameserver]
-                for nameserver in nameservers:
-                    if not is_valid_ip(nameserver):
-                        return (
-                            False,
-                            "The nameserver format is invalid! '%s'" % value
-                            )
+            if value:
+                if validator and not validator(value):
+                    return (False, ("The format of %s in global section of "
+                                    "networking config is invalid!") % key)
+            elif is_required:
+                return (False, ("The value of %s in global section of "
+                                "netowrking config cannot be None!") % key)
 
-            elif key == 'gateway' and not is_valid_gateway(value):
-                return False, "The gateway format is invalid! '%s'" % value
+        return (True, '')
 
-        return True, 'Valid!'
+    networking_config = {
+        "interfaces": _is_valid_interfaces_config,
+        "global": _is_valid_global_config
+    }
 
-    #networking_keys = networking.keys()
-    is_valid = False
-    msg = None
-    for nkey in networking:
-        if nkey in config:
-            content = config[nkey]
+    valid_format, err = is_valid_keys(networking_config, config, "networking")
+    if not valid_format:
+        return (False, err)
 
-            if nkey == 'interfaces':
-                is_valid, msg = _is_valid_interfaces_config(content)
-            elif nkey == 'global':
-                is_valid, msg = _is_valid_global_config(content)
+    for key in networking_config:
+        validator = networking_config[key]
+        is_valid, err = validator(config[key])
+        if not is_valid:
+            return (False, err)
 
-            if not is_valid:
-                return is_valid, msg
-
-        else:
-            error_msg = "Missing '%s' in networking config!" % nkey
-            return False, error_msg
-
-    return True, 'valid!'
+    return (True, '')
 
 
 def is_valid_partition_config(config):
     """Valid the configuration format"""
 
     if not config:
-        return False, '%s in partition cannot be null!' % config
+        return (False, '%s in partition cannot be null!' % config)
 
-    return True, 'valid!'
+    return (True, '')
 
 
 def valid_host_config(config):
@@ -308,3 +312,41 @@ def update_dict_value(searchkey, newvalue, dictionary):
             update_dict_value(searchkey, newvalue, dictionary[key])
         else:
             continue
+
+
+def is_valid_keys(expected, input_dict, section=""):
+    excepted_keys = set(expected.keys())
+    input_keys = set(input_dict.keys())
+    if excepted_keys != input_keys:
+        invalid_keys = list(excepted_keys - input_keys) if \
+            len(excepted_keys) > len(input_keys) else\
+            list(input_keys - excepted_keys)
+        error_msg = ("Invalid or missing keywords in the %s "
+                     "section of networking config. Please check these "
+                     "keywords %s") % (section, invalid_keys)
+        return (False, error_msg)
+
+    return (True, "")
+
+
+def is_same_dict_keys(expected_dict, config_dict):
+
+    if not expected_dict or not config_dict:
+        return (False, "The Config cannot be None!")
+
+    if expected_dict.viewkeys() == config_dict.viewkeys():
+        for expected_key, config_key in zip(expected_dict, config_dict):
+            if isinstance(expected_dict[expected_key], str):
+                return (True, "")
+
+            is_same, err = is_same_dict_keys(expected_dict[expected_key],
+                                             config_dict[config_key])
+            if not is_same:
+                return (False, err)
+        return (True, "")
+
+    if len(expected_dict) >= len(config_dict):
+        invalid_list = list(expected_dict.viewkeys() - config_dict.viewkeys())
+    else:
+        invalid_list = list(config_dict.viewkeys() - expected_dict.viewkeys())
+    return (False, "Invalid key(s) %r in the config" % invalid_list)

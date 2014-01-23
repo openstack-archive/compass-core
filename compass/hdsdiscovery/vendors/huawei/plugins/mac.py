@@ -1,111 +1,44 @@
-import subprocess
+import logging
 from compass.hdsdiscovery import utils
-from compass.hdsdiscovery import base
+from compass.hdsdiscovery.base import BaseSnmpMacPlugin
 
 
 CLASS_NAME = "Mac"
 
 
-class Mac(base.BasePlugin):
+class Mac(BaseSnmpMacPlugin):
     """Processes MAC address"""
 
     def __init__(self, host, credential):
-        self.mac_mib_obj = 'HUAWEI-L2MAM-MIB::hwDynFdbPort'
-        self.host = host
-        self.credential = credential
-
-    def process_data(self, oper="SCAN"):
-        """
-        Dynamically call the function according 'oper'
-
-        :param oper: operation of data processing
-        """
-        func_name = oper.lower()
-        return getattr(self, func_name)()
+        super(Mac, self).__init__(host, credential,
+                                  'HUAWEI-L2MAM-MIB::hwDynFdbPort')
 
     def scan(self):
         """
         Implemnets the scan method in BasePlugin class. In this mac module,
         mac addesses were retrieved by snmpwalk commandline.
         """
+        results = utils.snmpwalk_by_cl(self.host, self.credential, self.oid)
 
-        version = self.credential['Version']
-        community = self.credential['Community']
-        if version == 2:
-        # Command accepts 1|2c|3 as version arg
-            version = '2c'
-
-        cmd = 'snmpwalk -v%s -Cc -c %s -O b %s %s' % \
-              (version, community, self.host, self.mac_mib_obj)
-
-        try:
-            sub_p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-            result = []
-            for line in sub_p.stdout.readlines():
-                if not line or line == '\n':
-                    continue
-                temp = {}
-                arr = line.split(" ")
-                temp['iid'] = arr[0].split('.', 1)[-1]
-                temp['value'] = arr[-1]
-                result.append(temp)
-
-            return self._process_mac(result)
-        except:
+        if not results:
+            logging.info("[Huawei][mac] No results returned from SNMP walk!")
             return None
-
-    def _process_mac(self, walk_result):
-        """Get mac addresses from snmpwalk result"""
 
         mac_list = []
 
-        for entity in walk_result:
-
-            iid = entity['iid']
-            ifIndex = entity['value']
-
-            numbers = iid.split('.')
-            mac = self._get_mac_address(numbers, 6)
+        for entity in results:
+            # The format of 'iid' is like '248.192.1.214.34.15.31.1.48'
+            # The first 6 numbers will be the MAC address
+            # The 7th number is its vlan ID
+            numbers = entity['iid'].split('.')
+            mac = self.get_mac_address(numbers[:6])
             vlan = numbers[6]
-            port = self._get_port(ifIndex)
+            port = self.get_port(entity['value'])
 
-            attri_dict_temp = {}
-            attri_dict_temp['port'] = port
-            attri_dict_temp['mac'] = mac
-            attri_dict_temp['vlan'] = vlan
-            mac_list.append(attri_dict_temp)
+            tmp = {}
+            tmp['port'] = port
+            tmp['mac'] = mac
+            tmp['vlan'] = vlan
+            mac_list.append(tmp)
 
         return mac_list
-
-    def _get_port(self, if_index):
-        """Get port number by using snmpget and OID 'IfName'
-
-        :param int if_index:the index of 'IfName'
-        """
-
-        if_name = '.'.join(('ifName', if_index))
-        result = utils.snmp_get(self.host, self.credential, if_name)
-        """result variable will be  like: GigabitEthernet0/0/23"""
-        port = result.split("/")[2]
-        return port
-
-    def _convert_to_hex(self, integer):
-        """Convert the integer from decimal to hex"""
-
-        hex_string = str(hex(int(integer)))[2:]
-        length = len(hex_string)
-        if length == 1:
-            hex_string = str(0) + hex_string
-
-        return hex_string
-
-    # Get Mac address: The first 6th numbers in the list
-    def _get_mac_address(self, iid_numbers, length):
-        """Assemble mac address from the list"""
-
-        mac = ""
-        for index in range(length):
-            num = self._convert_to_hex(iid_numbers[index])
-            mac = ':'.join((mac, num))
-        mac = mac[1:]
-        return mac

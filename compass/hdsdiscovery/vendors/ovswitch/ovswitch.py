@@ -15,20 +15,22 @@ class OVSwitch(base.BaseVendor):
     def __init__(self):
         self.__name = "Open vSwitch"
 
-    def is_this_vendor(self, host, credential):
+    def is_this_vendor(self, host, credential, sys_info):
         """Determine if the hostname is accociated witH this vendor.
 
         :param host: swtich's IP address
         :param credential: credential to access switch
         """
-        if "username" in credential and "password" in credential:
+        if utils.is_valid_ssh_credential(credential):
             user = credential['username']
             pwd = credential['password']
 
         else:
-            logging.error('either username or password key is not in %s',
-                          credential)
+            msg = ("[OVSwitch]The format of credential %r is not for SSH "
+                   "or incorrect Keywords! " % credential)
+            logging.info(msg)
             return False
+
         cmd = "ovs-vsctl -V"
         result = None
         try:

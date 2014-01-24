@@ -4,7 +4,6 @@ import logging
 from compass.db import database
 from compass.db.model import Switch, Machine, SwitchConfig
 from compass.hdsdiscovery.hdmanager import HDManager
-from sqlalchemy.exc import IntegrityError
 
 
 def poll_switch(ip_addr, req_obj='mac', oper="SCAN"):
@@ -75,9 +74,9 @@ def poll_switch(ip_addr, req_obj='mac', oper="SCAN"):
 
     switch_id = switch.id
     filter_ports = session.query(SwitchConfig.filter_port)\
-                          .join(Switch)\
                           .filter(SwitchConfig.ip == Switch.ip)\
                           .filter(Switch.id == switch_id).all()
+    logging.info("***********filter posts are %s********", filter_ports)                      
     if filter_ports:
         #Get all ports from tuples into list
         filter_ports = [i[0] for i in filter_ports]
@@ -89,14 +88,12 @@ def poll_switch(ip_addr, req_obj='mac', oper="SCAN"):
         if port in filter_ports:
             continue
 
-        try:
+        machine = session.query(Machine).filter_by(mac=mac, port=port,
+                                                   switch_id=switch_id).first()
+        if not machine:
             machine = Machine(mac=mac, port=port, vlan=vlan)
             session.add(machine)
             machine.switch = switch
-
-        except IntegrityError as e:
-            logging.debug('The record already exists in db! Error: %s', e)
-            continue
 
     logging.debug('update switch %s state to under monitoring', switch)
     if prev_state != UNDERMONITORING:

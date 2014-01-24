@@ -9,6 +9,7 @@ from compass.api import app, util, errors
 from compass.tasks.client import celery
 from compass.db import database
 from compass.db.model import Switch as ModelSwitch
+from compass.db.model import SwitchConfig
 from compass.db.model import Machine as ModelMachine
 from compass.db.model import Cluster as ModelCluster
 from compass.db.model import ClusterHost as ModelClusterHost
@@ -328,10 +329,25 @@ class MachineList(Resource):
             else:
                 machines = session.query(ModelMachine).all()
 
+            filter_list = session.query(ModelSwitch.id,
+                                        SwitchConfig.filter_port)\
+                                 .filter(ModelSwitch.ip == SwitchConfig.ip)\
+                                 .all()
+            ports_by_id = {}
+            for entry in filter_list:
+                s_id = entry[0]
+                f_port = entry[1]
+                ports_by_id.setdefault(s_id, []).append(f_port)
+
             machines_result = []
             for machine in machines:
                 if limit and len(machines_result) == limit:
                     break
+
+                if machine.switch_id in ports_by_id:
+                    if machine.port in ports_by_id[machine.switch_id]:
+                        continue
+
                 machine_res = {}
                 machine_res['switch_ip'] = None if not machine.switch else \
                     machine.switch.ip

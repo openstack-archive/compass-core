@@ -15,9 +15,14 @@ BASE = declarative_base()
 
 
 class SwitchConfig(BASE):
+    """Swtich Config table.
+       :param id: The unique identifier of the switch config.
+       :param ip: The IP address of the switch.
+       :param filter_port: The port of the switch which need to be filtered.
+    """
     __tablename__ = 'switch_config'
     id = Column(Integer, primary_key=True)
-    ip = Column(String(80), ForeignKey("switch.ip"))
+    ip = Column(String(80))
     filter_port = Column(String(16))
     __table_args__ = (UniqueConstraint('ip', 'filter_port', name='filter1'), )
 
@@ -33,9 +38,18 @@ class Switch(BASE):
     :param vendor_info: the name of the vendor
     :param credential_data: used for accessing and retrieving information
                             from the switch. Store json format as string.
-    :param state: Enum.'not_reached': polling switch fails or not complete to
+    :param state: Enum.'initialized/repolling': polling switch not complete to
                   learn all MAC addresses of devices connected to the switch;
-                  'under_monitoring': successfully learn all MAC addresses.
+                  'unreachable': one of the final state, indicates that the
+                  switch is unreachable at this time, no MAC address could be
+                  retrieved from the switch.
+                  'notsupported': one of the final state, indicates that the
+                  vendor found is not supported yet, no MAC address will be
+                  retrieved from the switch.
+                  'error': one of the final state, indicates that something
+                           wrong happend.
+                  'under_monitoring': one of the final state, indicates that
+                  MAC addresses has been learned successfully from the switch.
     :param err_msg: Error message when polling switch failed.
     :param machines: refer to list of Machine connected to the switch.
     """
@@ -46,7 +60,8 @@ class Switch(BASE):
     credential_data = Column(Text)
     vendor_info = Column(String(256), nullable=True)
     state = Column(Enum('initialized', 'unreachable', 'notsupported',
-                        'repolling', 'under_monitoring', name='switch_state'))
+                        'repolling', 'error', 'under_monitoring',
+                        name='switch_state'))
     err_msg = Column(Text)
 
     def __init__(self, **kwargs):

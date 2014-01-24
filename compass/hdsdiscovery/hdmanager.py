@@ -8,6 +8,7 @@ from compass.hdsdiscovery.error import TimeoutError
 
 UNREACHABLE = 'unreachable'
 NOTSUPPORTED = 'notsupported'
+ERROR = 'error'
 
 
 class HDManager:
@@ -86,13 +87,13 @@ class HDManager:
         # a hostname should also work.
         if not utils.valid_ip_format(host):
             logging.error("host '%s' is not valid IP address!" % host)
-            return (None, "", "Invalid IP address %s!" % host)
+            return (None, ERROR, "Invalid IP address %s!" % host)
 
         if not utils.is_valid_snmp_v2_credential(credential):
             logging.debug("******The credential %s of host %s cannot "
                           "be used for either SNMP v2 or SSH*****",
                           credential, host)
-            return (None, "", "Invalid credential")
+            return (None, ERROR, "Invalid credential")
 
         sys_info, err = self.get_sys_info(host, credential)
         if not sys_info:

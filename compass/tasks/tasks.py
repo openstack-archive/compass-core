@@ -40,14 +40,16 @@ def pollswitch(ip_addr, req_obj='mac', oper="SCAN"):
 
 
 @celery.task(name="compass.tasks.trigger_install")
-def triggerinstall(clusterid):
+def triggerinstall(clusterid, hostids=[]):
     """Deploy the given cluster.
 
     :param clusterid: the id of the cluster to deploy.
     :type clusterid: int
+    :param hostids: the ids of the hosts to deploy.
+    :type hostids: list of int
     """
     with database.session():
-        trigger_install.trigger_install(clusterid)
+        trigger_install.trigger_install(clusterid, hostids)
 
 
 @celery.task(name="compass.tasks.progress_update")

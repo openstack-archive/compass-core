@@ -16,9 +16,10 @@ BASE = declarative_base()
 
 class SwitchConfig(BASE):
     """Swtich Config table.
-       :param id: The unique identifier of the switch config.
-       :param ip: The IP address of the switch.
-       :param filter_port: The port of the switch which need to be filtered.
+
+    :param id: The unique identifier of the switch config.
+    :param ip: The IP address of the switch.
+    :param filter_port: The port of the switch which need to be filtered.
     """
     __tablename__ = 'switch_config'
     id = Column(Integer, primary_key=True)
@@ -61,11 +62,11 @@ class Switch(BASE):
     vendor_info = Column(String(256), nullable=True)
     state = Column(Enum('initialized', 'unreachable', 'notsupported',
                         'repolling', 'error', 'under_monitoring',
-                        name='switch_state'))
+                        name='switch_state'),
+                   default='initialized')
     err_msg = Column(Text)
 
     def __init__(self, **kwargs):
-        self.state = 'initialized'
         super(Switch, self).__init__(**kwargs)
 
     def __repr__(self):
@@ -96,7 +97,7 @@ class Switch(BASE):
                 logging.error('failed to load credential data %s: %s',
                               self.id, self.credential_data)
                 logging.exception(error)
-                return {}
+                raise error
         else:
             return {}
 
@@ -119,8 +120,11 @@ class Switch(BASE):
                 logging.error('failed to dump credential data %s: %s',
                               self.id, value)
                 logging.exception(error)
+                raise error
+
         else:
             self.credential_data = json.dumps({})
+
         logging.debug('switch now is %s', self)
 
 
@@ -149,7 +153,7 @@ class Machine(BASE):
                                            onupdate='CASCADE',
                                            ondelete='SET NULL'))
     __table_args__ = (UniqueConstraint('mac', 'vlan', 'switch_id',
-                                       name='unique_1'), )
+                                       name='unique_machine'),)
     switch = relationship('Switch', backref=backref('machines',
                                                     lazy='dynamic'))
 
@@ -242,7 +246,7 @@ class ClusterState(BASE):
 
     @property
     def clustername(self):
-        'clustername getter'
+        """clustername getter"""
         return self.cluster.name
 
     def __repr__(self):
@@ -299,7 +303,7 @@ class Cluster(BASE):
                 logging.error('failed to load security config %s: %s',
                               self.id, self.partition_config)
                 logging.exception(error)
-                return {}
+                raise error
         else:
             return {}
 
@@ -314,6 +318,7 @@ class Cluster(BASE):
                 logging.error('failed to dump partition config %s: %s',
                               self.id, value)
                 logging.exception(error)
+                raise error
         else:
             self.partition_config = None
 
@@ -327,7 +332,7 @@ class Cluster(BASE):
                 logging.error('failed to load security config %s: %s',
                               self.id, self.security_config)
                 logging.exception(error)
-                return {}
+                raise error
         else:
             return {}
 
@@ -342,6 +347,7 @@ class Cluster(BASE):
                 logging.error('failed to dump security config %s: %s',
                               self.id, value)
                 logging.exception(error)
+                raise error
         else:
             self.security_config = None
 
@@ -355,7 +361,7 @@ class Cluster(BASE):
                 logging.error('failed to load networking config %s: %s',
                               self.id, self.networking_config)
                 logging.exception(error)
-                return {}
+                raise error
         else:
             return {}
 
@@ -370,6 +376,7 @@ class Cluster(BASE):
                 logging.error('failed to dump networking config %s: %s',
                               self.id, value)
                 logging.exception(error)
+                raise error
         else:
             self.networking_config = None
 
@@ -384,6 +391,8 @@ class Cluster(BASE):
                 logging.error('failed to load raw config %s: %s',
                               self.id, self.raw_config)
                 logging.exception(error)
+                raise error
+
         util.merge_dict(config, {'security': self.security})
         util.merge_dict(config, {'networking': self.networking})
         util.merge_dict(config, {'partition': self.partition})
@@ -401,15 +410,18 @@ class Cluster(BASE):
             self.partition = None
             self.raw_config = None
             return
+
         self.security = value.get('security')
         self.networking = value.get('networking')
         self.partition = value.get('partition')
+
         try:
             self.raw_config = json.dumps(value)
         except Exception as error:
             logging.error('failed to dump raw config %s: %s',
                           self.id, value)
             logging.exception(error)
+            raise error
 
 
 class ClusterHost(BASE):
@@ -432,7 +444,7 @@ class ClusterHost(BASE):
     machine_id = Column(Integer, ForeignKey('machine.id',
                                             onupdate='CASCADE',
                                             ondelete='CASCADE'),
-                        nullable=True)
+                        nullable=True, unique=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id',
                                             onupdate='CASCADE',
@@ -463,28 +475,38 @@ class ClusterHost(BASE):
     def config(self):
         """config getter."""
         config = {}
-        if self.config_data:
-            try:
+        try:
+            if self.config_data:
                 config.update(json.loads(self.config_data))
-                config.update({'hostid': self.id, 'hostname': self.hostname})
-                if self.cluster:
-                    config.update({'clusterid': self.cluster.id,
-                                   'clustername': self.cluster.name})
-                if self.machine:
-                    util.merge_dict(
-                        config, {
-                            'networking': {
-                                'interfaces': {
-                                    'management': {
-                                        'mac': self.machine.mac
-                                    }
+
+            config.update({'hostid': self.id, 'hostname': self.hostname})
+            if self.cluster:
+                config.update({'clusterid': self.cluster.id,
+                               'clustername': self.cluster.name})
+
+            if self.machine:
+                util.merge_dict(
+                    config, {
+                        'networking': {
+                            'interfaces': {
+                                'management': {
+                                    'mac': self.machine.mac
                                 }
                             }
-                        })
-            except Exception as error:
-                logging.error('failed to load config %s: %s',
-                              self.hostname, self.config_data)
-                logging.exception(error)
+                        },
+                        'switch_port': self.machine.port,
+                        'vlan': self.machine.vlan,
+                    })
+                if self.machine.switch:
+                    util.merge_dict(
+                        config, {'switch_ip': self.machine.switch.ip})
+
+        except Exception as error:
+            logging.error('failed to load config %s: %s',
+                          self.hostname, self.config_data)
+            logging.exception(error)
+            raise error
+
         return config
 
     @config.setter
@@ -505,6 +527,7 @@ class ClusterHost(BASE):
                 logging.error('failed to dump config %s: %s',
                               self.hostname, value)
                 logging.exception(error)
+                raise error
 
 
 class LogProgressingHistory(BASE):
@@ -561,6 +584,8 @@ class Adapter(BASE):
     name = Column(String, unique=True)
     os = Column(String)
     target_system = Column(String)
+    __table_args__ = (
+        UniqueConstraint('os', 'target_system', name='unique_adapter'),)
 
     def __init__(self, **kwargs):
         super(Adapter, self).__init__(**kwargs)

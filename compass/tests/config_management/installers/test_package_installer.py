@@ -19,10 +19,11 @@ class Dummy2Installer(package_installer.Installer):
 
 class TestInstallerFunctions(unittest2.TestCase):
     def setUp(self):
+        self.installers_backup = package_installer.INSTALLERS
         package_installer.INSTALLERS = {}
 
     def tearDown(self):
-        package_installer.INSTALLERS = {}
+        package_installer.INSTALLERS = self.installers_backup
 
     def test_found_installer(self):
         package_installer.register(DummyInstaller)

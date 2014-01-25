@@ -46,7 +46,7 @@ class Installer(installer.Installer):
 INSTALLERS = {}
 
 
-def get_installer_by_name(name):
+def get_installer_by_name(name, **kwargs):
     """Get package installer by name.
 
     :param name: package installer name.
@@ -60,7 +60,7 @@ def get_installer_by_name(name):
                       name, INSTALLERS)
         raise KeyError('installer name %s is not in package INSTALLERS' % name)
 
-    package_installer = INSTALLERS[name]()
+    package_installer = INSTALLERS[name](**kwargs)
     logging.debug('got package installer %s', package_installer)
     return package_installer
 
@@ -78,10 +78,10 @@ def register(package_installer):
         raise KeyError(
             'package installer %s already registered' % package_installer)
 
-    logging.debug('register package installer: %s', package_installer)
+    logging.info('register package installer: %s', package_installer)
     INSTALLERS[package_installer.NAME] = package_installer
 
 
-def get_installer():
+def get_installer(**kwargs):
     """get default package installer from comapss setting."""
-    return get_installer_by_name(setting.PACKAGE_INSTALLER)
+    return get_installer_by_name(setting.PACKAGE_INSTALLER, **kwargs)

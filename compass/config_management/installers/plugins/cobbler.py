@@ -111,7 +111,7 @@ class Installer(os_installer.Installer):
     """cobbler installer"""
     NAME = 'cobbler'
 
-    def __init__(self, package_installer):
+    def __init__(self, **kwargs):
         # the connection is created when cobbler installer is initialized.
         self.remote_ = xmlrpclib.Server(
             setting.COBBLER_INSTALLER_URL,
@@ -120,7 +120,7 @@ class Installer(os_installer.Installer):
             *setting.COBBLER_INSTALLER_TOKEN)
 
         # cobbler tries to get package related config from package installer.
-        self.package_installer_ = package_installer
+        self.package_installer_ = kwargs['package_installer']
         logging.debug('%s instance created', self)
 
     def __repr__(self):

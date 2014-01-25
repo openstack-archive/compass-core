@@ -23,12 +23,11 @@ class Installer(installer.Installer):
 INSTALLERS = {}
 
 
-def get_installer_by_name(name, package_installer):
+def get_installer_by_name(name, **kwargs):
     """Get os installer by name.
 
     :param name: os installer name.
     :type name: str
-    :param package_installer: package installer instance.
 
     :returns: :instance of subclass of :class:`Installer`
     :raises: KeyError
@@ -38,7 +37,7 @@ def get_installer_by_name(name, package_installer):
                       name, INSTALLERS)
         raise KeyError('os installer name %s is not in os INSTALLERS')
 
-    os_installer = INSTALLERS[name](package_installer)
+    os_installer = INSTALLERS[name](**kwargs)
     logging.debug('got os installer %s', os_installer)
     return os_installer
 
@@ -56,10 +55,10 @@ def register(os_installer):
         raise KeyError(
             'os installer %s is already registered' % os_installer)
 
-    logging.debug('register os installer %s', os_installer)
+    logging.info('register os installer %s', os_installer)
     INSTALLERS[os_installer.NAME] = os_installer
 
 
-def get_installer(package_installer):
+def get_installer(**kwargs):
     """Get default os installer from compass setting."""
-    return get_installer_by_name(setting.OS_INSTALLER, package_installer)
+    return get_installer_by_name(setting.OS_INSTALLER, **kwargs)

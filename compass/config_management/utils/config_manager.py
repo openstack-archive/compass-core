@@ -41,7 +41,10 @@ CLUSTER_HOST_MERGER = ConfigMerger(
         ),
         ConfigMapping(
             path_list=[
-                '/networking/global',
+                '/networking/global/nameservers',
+                '/networking/global/gateway',
+                '/networking/global/proxy',
+                '/networking/global/ntp_server',
                 '/networking/interfaces/*/netmask',
                 '/networking/interfaces/*/nic',
                 '/networking/interfaces/*/promisc',
@@ -56,18 +59,30 @@ CLUSTER_HOST_MERGER = ConfigMerger(
                              'search_path': '/networking/global/search_path'},
             from_lower_keys={'hostname': '/hostname'},
             to_key='dns_alias',
-            value=functools.partial(config_merger_callbacks.assign_from_pattern,
-                                    upper_keys=['search_path', 'clusterid'],
-                                    lower_keys=['hostname'])
+            value=functools.partial(
+                config_merger_callbacks.assign_from_pattern,
+                upper_keys=['search_path', 'clusterid'],
+                lower_keys=['hostname'])
         ),
         ConfigMapping(
             path_list=['/networking/global'],
             from_upper_keys={'default': 'default_no_proxy',
-                             'clusterid': 'clusterid'},
+                             'clusterid': '/clusterid',
+                             'noproxy_pattern': 'noproxy_pattern'},
             from_lower_keys={'hostnames': '/hostname',
                              'ips': '/networking/interfaces/management/ip'},
             to_key='ignore_proxy',
             value=config_merger_callbacks.assign_noproxy
+        ),
+        ConfigMapping(
+            path_list=['/networking/global'],
+            from_upper_keys={'pattern': 'search_path_pattern',
+                             'search_path': 'search_path',
+                             'clusterid': '/clusterid'},
+            to_key='search_path',
+            value=functools.partial(
+                config_merger_callbacks.assign_from_pattern,
+                upper_keys=['search_path', 'clusterid'])
         )])
 
 
@@ -84,7 +99,7 @@ class ConfigManager(object):
         self.package_installer_ = package_installer.get_installer()
         logging.debug('got package installer: %s', self.package_installer_)
         self.os_installer_ = os_installer.get_installer(
-            self.package_installer_)
+            package_installer=self.package_installer_)
         logging.debug('got os installer: %s', self.os_installer_)
 
     def get_adapters(self):

@@ -2,6 +2,7 @@
 import logging
 import os
 import os.path
+import re
 import shutil
 import sys
 
@@ -9,8 +10,11 @@ from flask.ext.script import Manager
 
 from compass.api import app
 from compass.config_management.utils import config_manager
+from compass.config_management.utils import config_reference
 from compass.db import database
-from compass.db.model import Adapter, Role, Switch, Machine, HostState, ClusterState, Cluster, ClusterHost, LogProgressingHistory    
+from compass.db.model import Adapter, Role, Switch, SwitchConfig
+from compass.db.model import Machine, HostState, ClusterState
+from compass.db.model import Cluster, ClusterHost, LogProgressingHistory    
 from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
@@ -24,6 +28,21 @@ flags.add('clusters',
               'clusters to clean, the format is as '
               'clusterid:hostname1,hostname2,...;...'),
           default='')
+flags.add('fake_switches_file',
+          help=(
+              'files for switches and machines '
+              'connected to each switch. each line in the file '
+              'is <switch ip>,<switch port>,<vlan>,<mac>'),
+          default='')
+flags.add('fake_switches_vendor',
+          help='switch vendor used to set fake switch and machines.',
+          default='huawei')
+flags.add('search_config_properties',
+          help='semicomma separated properties to search in config',
+          default='')
+flags.add('print_config_properties',
+          help='semicomma separated config properties to print',
+          default='') 
 
 
 manager = Manager(app, usage="Perform database operations")
@@ -33,6 +52,7 @@ TABLE_MAPPING = {
     'role': Role,
     'adapter': Adapter,
     'switch': Switch,
+    'switch_config': SwitchConfig,
     'machine': Machine,
     'hoststate': HostState,
     'clusterstate': ClusterState,
@@ -52,11 +72,11 @@ def list_config():
 @manager.command
 def createdb():
     "Creates database from sqlalchemy models"
-    if setting.DATABASE_TYPE == 'sqlite':
+    if setting.DATABASE_TYPE == 'file':
         if os.path.exists(setting.DATABASE_FILE):
             os.remove(setting.DATABASE_FILE)
     database.create_db()
-    if setting.DATABASE_TYPE == 'sqlite':
+    if setting.DATABASE_TYPE == 'file':
         os.chmod(setting.DATABASE_FILE, 0777)
 
 @manager.command
@@ -106,6 +126,121 @@ def sync_from_installers():
             for role in roles:
                 session.add(Role(**role))
  
+
+@manager.command
+def sync_switch_configs():
+    """Set switch configs in SwitchConfig table from setting.
+
+    .. note::
+       the switch config is stored in SWITCHES list in setting config.
+       for each entry in the SWITCHES, its type is dict and must contain
+       fields 'switch_ips' and 'filter_ports'.
+       The format of switch_ips is
+       <ip_blocks>.<ip_blocks>.<ip_blocks>.<ip_blocks>.
+       ip_blocks consists of ip_block separated by comma.
+       ip_block can be an integer and a range of integer like xx-xx.
+       The example of switch_ips is like: xxx.xxx.xxx-yyy,xxx-yyy.xxx,yyy
+       The format of filter_ports consists of list of
+       <port_prefix><port_range> separated by comma. port_range can be an
+       integer or a rnage of integer like xx-xx.
+       The example of filter_ports is like: ae1-5,20-40.
+    """
+    if not hasattr(setting, 'SWITCHES') or not setting.SWITCHES:
+        logging.info('no switch configs to set')
+        return
+
+    switch_configs = []
+    port_pat = re.compile(r'(\D*)(\d+(?:-\d+)?)')
+
+    for switch in setting.SWITCHES:
+        ips = []
+        blocks = switch['switch_ips'].split('.')
+        ip_blocks_list = []
+        for block in blocks:
+            ip_blocks_list.append([])
+            sub_blocks = block.split(',')
+            for sub_block in sub_blocks:
+                if not sub_block:
+                    continue
+
+                if '-' in sub_block:
+                    start_block, end_block = sub_block.split('-', 1)
+                    start_block = int(start_block)
+                    end_block = int(end_block)
+                    if start_block > end_block:
+                        continue
+
+                    ip_block = start_block
+                    while ip_block <= end_block:
+                        ip_blocks_list[-1].append(str(ip_block))
+                        ip_block += 1
+
+                else:
+                    ip_blocks_list[-1].append(sub_block)
+
+        ip_prefixes = [[]]
+        for ip_blocks in ip_blocks_list:
+            prefixes = []
+            for ip_block in ip_blocks:
+                for prefix in ip_prefixes:
+                    prefixes.append(prefix + [ip_block])
+
+            ip_prefixes = prefixes
+
+        for prefix in ip_prefixes:
+            if not prefix:
+                continue
+
+            ips.append('.'.join(prefix))
+
+        logging.debug('found switch ips: %s', ips)
+
+        filter_ports = []
+        for port_range in switch['filter_ports'].split(','):
+            if not port_range:
+                continue
+
+            mat = port_pat.match(port_range)
+            if not mat:
+                filter_ports.append(port_range)
+            else:
+                port_prefix = mat.group(1)
+                port_range = mat.group(2)
+                if '-' in port_range:
+                    start_port, end_port = port_range.split('-', 1)
+                    start_port = int(start_port)
+                    end_port = int(end_port)
+                    if start_port > end_port:
+                        continue
+
+                    port = start_port
+                    while port <= end_port:
+                        filter_ports.append('%s%s' % (port_prefix, port))
+                        port += 1
+
+                else:
+                    filter_ports.append('%s%s' % (port_prefix, port_range))
+
+        for ip in ips:
+            for filter_port in filter_ports:
+                switch_configs.append(
+                    {'ip': ip, 'filter_port': filter_port})
+
+    switch_config_tuples = set([])
+    with database.session() as session:
+        session.query(SwitchConfig).delete(synchronize_session='fetch')
+        for switch_config in switch_configs:
+            switch_config_tuple = tuple(switch_config.values())
+            if switch_config_tuple in switch_config_tuples:
+                logging.debug('ignore adding switch config: %s',
+                              switch_config)
+                continue
+            else:
+                logging.debug('add switch config: %s', switch_config)
+                switch_config_tuples.add(switch_config_tuple)
+
+            session.add(SwitchConfig(**switch_config))
+            
 
 def _get_clusters():
     clusters = {}
@@ -212,8 +347,11 @@ def _clean_clusters(clusters):
 
 @manager.command
 def clean_clusters():
-    """delete clusters and hosts.
+    """Delete clusters and hosts.
+
+    .. note::
        The clusters and hosts are defined in --clusters.
+       the clusters flag is as clusterid:hostname1,hostname2,...;...
     """
     clusters = _get_clusters()
     _clean_clusters(clusters)
@@ -289,7 +427,10 @@ def _clean_installation_progress(clusters):
 @manager.command
 def clean_installation_progress():
     """Clean clusters and hosts installation progress.
+
+    .. note::
        The cluster and hosts is defined in --clusters.
+       The clusters flags is as clusterid:hostname1,hostname2,...;...
     """
     clusters = _get_clusters()
     _clean_installation_progress(clusters)
@@ -367,54 +508,217 @@ def _reinstall_hosts(clusters):
 @manager.command
 def reinstall_hosts():
     """Reinstall hosts in clusters.
-       the hosts are defined in --clusters.
+
+    .. note::
+       The hosts are defined in --clusters.
+       The clusters flag is as clusterid:hostname1,hostname2,...;...
     """
     clusters = _get_clusters()
     _reinstall_hosts(clusters)
+    os.system('service rsyslog restart')
 
 
 @manager.command
 def set_fake_switch_machine():
-    """Set fake switches and machines for test."""
-    with database.session() as session:
-        credential = { 'version'    :  'v2c',
-                       'community'  :  'public',
-                     }
-        switches = [ {'ip': '192.168.100.250'},
-                     {'ip': '192.168.100.251'},
-                     {'ip': '192.168.100.252'},
-        ]
-        session.query(Switch).delete()
-        session.query(Machine).delete()
-        ip_switch ={}
-        for item in switches:
-            logging.info('add switch %s', item)     
-            switch = Switch(ip=item['ip'], vendor_info='huawei',
-                            state='under_monitoring')
-            switch.credential = credential
-            session.add(switch)
-            ip_switch[item['ip']] = switch
-        session.flush()
+    """Set fake switches and machines.
 
-        machines = [
-            {'mac': '00:0c:29:32:76:85', 'port':50, 'vlan':1, 'switch_ip':'192.168.100.250'},
-            {'mac': '00:0c:29:fa:cb:72', 'port':51, 'vlan':1, 'switch_ip':'192.168.100.250'},
-            {'mac': '28:6e:d4:64:c7:4a', 'port':1, 'vlan':1, 'switch_ip':'192.168.100.251'},
-            {'mac': '28:6e:d4:64:c7:4c', 'port':2, 'vlan':1, 'switch_ip':'192.168.100.251'},
-            {'mac': '28:6e:d4:46:c4:25', 'port': 40, 'vlan': 1, 'switch_ip': '192.168.100.252'},
-            {'mac': '26:6e:d4:4d:c6:be', 'port': 41, 'vlan': 1, 'switch_ip': '192.168.100.252'},
-            {'mac': '28:6e:d4:62:da:38', 'port': 42, 'vlan': 1, 'switch_ip': '192.168.100.252'},
-            {'mac': '28:6e:d4:62:db:76', 'port': 43, 'vlan': 1, 'switch_ip': '192.168.100.252'},
-        ]
-       
-        for item in machines:
-            logging.info('add machine %s', item)
-            machine = Machine(mac=item['mac'], port=item['port'],
-                              vlan=item['vlan'],
-                              switch_id=ip_switch[item['switch_ip']].id)
+    .. note::
+       --fake_switches_vendor is the vendor name for all fake switches.
+       the default value is 'huawei'
+       --fake_switches_file is the filename which stores all fake switches
+       and fake machines.
+       each line in fake_switches_files presents one machine.
+       the format of each line <switch_ip>,<switch_port>,<vlan>,<mac>.
+    """
+    missing_flags = False
+    if not flags.OPTIONS.fake_switches_vendor:
+        print 'the flag --fake_switches_vendor should be specified'
+        missing_flags = True
+
+    if not flags.OPTIONS.fake_switches_file:
+        print 'the flag --fake_switches_file should be specified.'
+        print 'each line in fake_switches_files presents one machine'
+        print 'the format of each line is <%s>,<%s>,<%s>,<%s>' % (
+            'switch ip as xxx.xxx.xxx.xxx',
+            'switch port as xxx12',
+            'vlan as 1',
+            'mac as xx:xx:xx:xx:xx:xx')
+        missing_flags = True
+
+    if missing_flags:
+        return
+
+    switch_ips = []
+    switch_machines = {}
+    vendor = flags.OPTIONS.fake_switches_vendor
+    credential = { 
+        'version'    :  'v2c',
+        'community'  :  'public',
+    }
+
+    try:
+        with open(flags.OPTIONS.fake_switches_file) as f:
+            for line in f:
+                line = line.strip()
+                switch_ip, switch_port, vlan, mac = line.split(',', 3)
+                if switch_ip not in switch_ips:
+                    switch_ips.append(switch_ip)
+
+                switch_machines.setdefault(switch_ip, []).append({
+                    'mac': mac,
+                    'port': switch_port,
+                    'vlan': int(vlan)
+                })
+
+    except Exception as error:
+        logging.error('failed to parse file %s',
+                      flags.OPTIONS.fake_switches_file)
+        logging.exception(error)
+        return
+
+    with database.session() as session:
+        session.query(Switch).delete(synchronize_session='fetch')
+        session.query(Machine).delete(synchronize_session='fetch')
+        for switch_ip in switch_ips:
+            logging.info('add switch %s', switch_ip)     
+            switch = Switch(ip=switch_ip, vendor_info=vendor,
+                            credential=credential,
+                            state='under_monitoring')
+            logging.debug('add switch %s', switch_ip)
+            session.add(switch)
+
+            machines = switch_machines[switch_ip]
+            for item in machines:
+                logging.debug('add machine %s', item)
+                machine = Machine(**item)
+                machine.switch = switch
+
             session.add(machine)
 
- 
+
+def _get_config_properties():
+    if not flags.OPTIONS.search_config_properties:
+        logging.info('the flag --search_config_properties is not specified.')
+        return {}
+
+    search_config_properties = flags.OPTIONS.search_config_properties
+    config_properties = {}
+    for config_property in search_config_properties.split(';'):
+        if not config_property:
+            continue
+
+        if '=' not in config_property:
+            logging.debug('ignore config property %s '
+                          'since there is no = in it.', config_property)
+            continue
+
+        property_name, property_value = config_property.split('=', 1)
+        config_properties[property_name] = property_value
+
+    logging.debug('get search config properties: %s', config_properties)
+    return config_properties
+
+
+def _get_print_properties():
+    if not flags.OPTIONS.print_config_properties:
+        logging.info('the flag --print_config_properties is not specified.')
+        return []
+
+    print_config_properties = flags.OPTIONS.print_config_properties
+    config_properties = []
+    for config_property in print_config_properties.split(';'):
+        if not config_property:
+            continue
+
+        config_properties.append(config_property)
+
+    logging.debug('get print config properties: %s', config_properties)
+    return config_properties
+
+
+
+def _match_config_properties(config, config_properties):
+    ref = config_reference.ConfigReference(config)
+    for property_name, property_value in config_properties.items():
+        config_value = ref.get(property_name)
+        if config_value is None:
+            return False
+
+        if isinstance(config_value, list):
+            found = False
+            for config_value_item in config_value:
+                if str(config_value_item) == str(property_value):
+                    found = True
+
+            if not found:
+                return False
+
+        else:
+            if not str(config_value) == str(property_value):
+                return False
+
+    return True
+
+
+def _print_config_properties(config, config_properties):
+    ref = config_reference.ConfigReference(config)
+    print_properties = []
+    for property_name in config_properties:
+        config_value = ref.get(property_name)
+        if config_value is None:
+            logging.error('did not found %s in %s',
+                          property_name, config)
+            continue
+
+        print_properties.append('%s=%s' % (property_name, config_value))
+
+    print ';'.join(print_properties)
+
+
+@manager.command
+def search_hosts():
+    """Search hosts by properties.
+
+    .. note::
+       --search_config_properties defines what properties are used to search.
+       the format of search_config_properties is as
+       <property_name>=<property_value>;... If no search properties are set,
+       It will returns properties of all hosts.
+       --print_config_properties defines what properties to print.
+       the format of print_config_properties is as
+       <property_name>;...
+    """
+    config_properties = _get_config_properties()
+    print_properties = _get_print_properties()
+    with database.session() as session:
+        hosts = session.query(ClusterHost).all()
+        for host in hosts:
+            if _match_config_properties(host.config, config_properties):
+                _print_config_properties(host.config, print_properties)
+
+
+@manager.command
+def search_clusters():
+    """Search clusters by properties.
+
+    .. note::
+       --search_config_properties defines what properties are used to search.
+       the format of search_config_properties is as
+       <property_name>=<property_value>;... If no search properties are set,
+       It will returns properties of all hosts.
+       --print_config_properties defines what properties to print.
+       the format of print_config_properties is as
+       <property_name>;...
+    """
+    config_properties = _get_config_properties()
+    print_properties = _get_print_properties()
+    with database.session() as session:
+        clusters = session.query(Cluster).all()
+        for cluster in clusters:
+            if _match_config_properties(cluster.config, config_properties):
+                _print_config_properties(cluster.config, print_properties)
+
+
 if __name__ == "__main__":
     flags.init()
     logsetting.init()

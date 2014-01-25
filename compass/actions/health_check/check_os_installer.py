@@ -37,6 +37,10 @@ class OsInstallerCheck(base.BaseCheck):
             return (self.code, self.messages)
 
         check_result = self.remote.check(self.token)
+
+        for index, message in enumerate(check_result):
+            if "SELinux" in message:
+                check_result.pop(index)
         if len(check_result) != 0:
             self.code = 0
             for error_msg in check_result:

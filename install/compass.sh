@@ -31,11 +31,9 @@ cd $SCRIPT_DIR
 ##SUBNET=${SUBNET:-$(ip address| grep "global $NIC" |cut -f 6 -d ' ')}
 WEB_HOME=${WEB_HOME:-'/tmp/web/'}
 ADAPTER_HOME=${ADAPTER_HOME:-'/tmp/adapter/'}
-## copygit2dir $WEB_HOME 'https://github.com/huawei-cloud/compass-web'
-## copygit2dir $ADAPTER_HOME 'https://github.com/huawei-cloud/compass-adapters'
 WEB_SOURCE=${WEB_SOURCE:-'https://github.com/stackforge/compass-web'}
-ADPATER_SOURCE=${ADAPTER_SOURCE:-'https://github.com/stackforge/compass-adapters'}
-if [ $source != local ]; then
+ADAPTER_SOURCE=${ADAPTER_SOURCE:-'https://github.com/stackforge/compass-adapters'}
+if [ "$source" != "local" ]; then
   copygit2dir $WEB_HOME $WEB_SOURCE
   copygit2dir $ADAPTER_HOME $ADAPTER_SOURCE
 else 
@@ -116,6 +114,8 @@ sudo \cp -rf $COMPASSDIR/conf/compassd /usr/bin/
 sudo \cp -rf $WEB_HOME/public/* /var/www/compass_web/
 sudo chmod +x /etc/init.d/compassd
 sudo chmod +x /usr/bin/compassd
+
+sudo chkconfig compassd on
 
 sudo chmod +x /opt/compass/bin/addcookbooks.py
 sudo chmod +x /opt/compass/bin/adddatabags.py

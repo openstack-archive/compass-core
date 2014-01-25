@@ -270,6 +270,9 @@ def assign_roles_by_host_numbers(upper_ref, from_key, lower_refs, to_key,
     policy_kwargs = deepcopy(default)
     if host_numbers in policy_by_host_numbers:
         util.merge_dict(policy_kwargs, policy_by_host_numbers[host_numbers])
+    else:
+        logging.debug('didnot find policy %s by host numbers %s',
+                      policy_by_host_numbers, host_numbers)
 
     return assign_roles(upper_ref, from_key, lower_refs,
                         to_key, **policy_kwargs)
@@ -346,16 +349,25 @@ def assign_from_pattern(_upper_ref, _from_key, lower_refs, to_key,
 
 
 def assign_noproxy(_upper_ref, _from_key, lower_refs,
-                   to_key, default=[], clusterid=1,
+                   to_key, default=[], clusterid=None,
+                   noproxy_pattern='',
                    hostnames={}, ips={}, **_kwargs):
     """Assign no proxy to hosts."""
     no_proxy_list = deepcopy(default)
-    for _, hostname in hostnames.items():
-        no_proxy_list.append('%s.%s' % (hostname, clusterid))
 
-    for _, ip_addr in ips.items():
-        no_proxy_list.append(ip_addr)
-
+    for lower_key, _ in lower_refs.items():
+        mapping = {
+            'clusterid': clusterid,
+            'hostname': hostnames.get(lower_key, ''),
+            'ip': ips.get(lower_key, '')
+        }
+        try:
+            no_proxy_list.append(noproxy_pattern % mapping)
+        except Exception as error:
+            logging.error('failed to assign %s[%s] = %s %% %s',
+                          lower_key, to_key, noproxy_pattern, mapping)
+            raise error
+ 
     no_proxy = ','.join(no_proxy_list)
     host_no_proxy = {}
     for lower_key, _ in lower_refs.items():

@@ -178,8 +178,8 @@ class Installer(package_installer.Installer):
 
     def _get_databag(self, target_system):
         """get databag."""
-        from chef import DataBag
-        return DataBag(target_system, api=self.api_)
+        import chef
+        return chef.DataBag(target_system, api=self.api_)
 
     def _get_databag_item(self, bag, bag_item_name):
         """get databag item."""

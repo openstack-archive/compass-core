@@ -31,14 +31,19 @@ def main(argv):
             trigger_clusterids  = [cluster.id for cluster in clusters]
         else:
             trigger_clusterids = clusterids
+
         logging.info('trigger installer for clusters: %s',
                      trigger_clusterids)
         for clusterid in trigger_clusterids:
+            hosts = session.query(
+                ClusterHost).filter_by(
+                cluster_id=clsuterid).all()
+            hostids = [host.id for host in hosts]
             if flags.OPTIONS.async:
                 celery.send_task('compass.tasks.trigger_install',
-                                 (clusterid,))
+                                 (clusterid, hostids))
             else:
-                trigger_install.trigger_install(clusterid)
+                trigger_install.trigger_install(clusterid, hostids)
 
 
 if __name__ == '__main__':

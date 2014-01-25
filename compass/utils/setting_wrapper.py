@@ -9,6 +9,7 @@ else:
     SETTING = '/etc/compass/setting'
 
 try:
+    print 'load setting from %s' % SETTING
     execfile(SETTING, globals(), locals())
 except Exception as error:
     logging.exception(error)

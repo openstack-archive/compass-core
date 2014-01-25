@@ -26,7 +26,6 @@ class TestConfigMerger(unittest2.TestCase):
                 },
                 'global': {
                     'search_path': 'ods.com',
-                    'default_no_proxy': ['127.0.0.1', 'localhost'],
                 },
             },
             'clustername': 'cluster1',
@@ -73,8 +72,6 @@ class TestConfigMerger(unittest2.TestCase):
                     },
                     'global': {
                         'search_path': 'ods.com',
-                        'default_no_proxy': ['127.0.0.1', 'localhost'],
-                        'ignore_proxy': '127.0.0.1,localhost,host1,192.168.1.1,host2,192.168.1.50'
                     }
                 },
                 'hostname': 'host1',
@@ -97,8 +94,6 @@ class TestConfigMerger(unittest2.TestCase):
                     },
                     'global': {
                         'search_path': 'ods.com',
-                        'default_no_proxy': ['127.0.0.1', 'localhost'],
-                        'ignore_proxy': '127.0.0.1,localhost,host1,192.168.1.1,host2,192.168.1.50'
                     }
                 },
                 'hostname': 'host2',
@@ -148,15 +143,6 @@ class TestConfigMerger(unittest2.TestCase):
                                         upper_keys=['search_path', 'clustername'],
                                         lower_keys=['hostname'])
             ),
-            config_merger.ConfigMapping(
-                path_list=['/networking/global'],
-                from_upper_keys={'default': 'default_no_proxy',
-                                 'clusterid': '/clusterid'},
-                from_lower_keys={'hostnames': '/hostname',
-                                 'ips': '/networking/interfaces/management/ip'},
-                to_key='ignore_proxy',
-                value=config_merger_callbacks.assign_noproxy
-            )
         ]
         merger = config_merger.ConfigMerger(mappings)
         merger.merge(upper_config, lower_configs)

@@ -705,6 +705,8 @@ class ClusterHostAPITest(ApiTestCase):
         expected_config['clustername'] = 'cluster_01'
         expected_config['networking']['interfaces']['management']['mac'] \
             = "00:27:88:0c:01"
+        expected_config['switch_port'] = ''
+        expected_config['vlan'] = 0
         self.assertDictEqual(config, expected_config)
 
     def test_clusterHost_put_config(self):
@@ -1107,7 +1109,10 @@ class TestAPIWorkFlow(ApiTestCase):
                 excepted["clustername"] = "cluster_01"
                 excepted["hostid"] = host_info["id"]
                 excepted["networking"]["interfaces"]["management"]["mac"] = mac
-
+                excepted['switch_port'] = machine.port
+                excepted['vlan'] = machine.vlan
+                switch = machine.switch
+                excepted['switch_ip'] = switch.ip
                 host = session.query(ClusterHost)\
                               .filter_by(id=host_info["id"]).first()
                 self.maxDiff = None

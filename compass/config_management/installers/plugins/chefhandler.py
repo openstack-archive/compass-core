@@ -104,7 +104,7 @@ class Installer(package_installer.Installer):
     """chef package installer."""
     NAME = 'chef'
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         import chef
         self.installer_url_ = setting.CHEF_INSTALLER_URL
         self.global_databag_name_ = setting.CHEF_GLOBAL_DATABAG_NAME
@@ -178,8 +178,8 @@ class Installer(package_installer.Installer):
 
     def _get_databag(self, target_system):
         """get databag."""
-        from chef import DataBag
-        return DataBag(target_system, api=self.api_)
+        import chef
+        return chef.DataBag(target_system, api=self.api_)
 
     def _get_databag_item(self, bag, bag_item_name):
         """get databag item."""

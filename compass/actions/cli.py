@@ -95,9 +95,11 @@ class BootCLI:
         print "===================="
         if successful is True:
             print "Compass Check completes. No problems found, all systems go"
+            sys.exit(0)
         else:
             print "Compass has ERRORS shown above. Please fix them before " \
                   "deploying!"
+            sys.exit(1)
 
     def run_refresh(self, action=None):
         ## TODO: replace refresh.sh with refresh.py

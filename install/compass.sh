@@ -9,10 +9,27 @@ copygit2dir()
     repo=$2
     if [ -d $destdir ];then
         echo "$destdir exists"
+        cd $destdir
+        git remote set-url origin $repo
+        git remote update
+        git reset --hard
+        git clean -x -f
+        git checkout master
+        git reset --hard remotes/origin/master
+        if [[ -n "$GERRIT_REFSPEC" ]];then
+            git fetch origin $GERRIT_REFSPEC && git checkout FETCH_HEAD
+        fi
+        git clean -x -f
     else
         mkdir -p $destdir
+        git clone $repo $destdir
+        if [[ -n "$GERRIT_REFSPEC" ]];then
+            # project=$(echo $repo|rev|cut -d '/' -f 1|rev)
+            cd $destdir
+            git fetch $repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
+        fi
     fi
-    git clone $repo $destdir
+    cd $SCRIPT_DIR
 }
 copylocal2dir()
 {
@@ -31,8 +48,10 @@ cd $SCRIPT_DIR
 ##SUBNET=${SUBNET:-$(ip address| grep "global $NIC" |cut -f 6 -d ' ')}
 WEB_HOME=${WEB_HOME:-'/tmp/web/'}
 ADAPTER_HOME=${ADAPTER_HOME:-'/tmp/adapter/'}
-WEB_SOURCE=${WEB_SOURCE:-'https://github.com/stackforge/compass-web'}
-ADAPTER_SOURCE=${ADAPTER_SOURCE:-'https://github.com/stackforge/compass-adapters'}
+##WEB_SOURCE=${WEB_SOURCE:-'https://github.com/stackforge/compass-web'}
+WEB_SOURCE=${WEB_SOURCE:-$PROJECT_NAME'/stackforge/compass-web'}
+# ADAPTER_SOURCE=${ADAPTER_SOURCE:-'https://github.com/stackforge/compass-adapters'}
+ADAPTER_SOURCE=${ADAPTER_SOURCE:-$PROJECT_NAME'/stackforge/compass-adapters'}
 if [ "$source" != "local" ]; then
   copygit2dir $WEB_HOME $WEB_SOURCE
   copygit2dir $ADAPTER_HOME $ADAPTER_SOURCE
@@ -42,9 +61,9 @@ else
 fi
 
 # download dependences
-wget http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip
+wget -N http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip
 sudo yum install -y unzip
-sudo unzip $JS_MVC
+sudo unzip -o $JS_MVC
 sudo \cp -rf $JS_MVC/. $WEB_HOME/public/
 
 # update squid conf

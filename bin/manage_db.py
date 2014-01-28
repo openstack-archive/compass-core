@@ -1,10 +1,10 @@
 #!/usr/bin/python
+"""utility binary to manage database."""
 import logging
 import os
 import os.path
 import re
 import shutil
-import sys
 
 from flask.ext.script import Manager
 
@@ -14,7 +14,7 @@ from compass.config_management.utils import config_reference
 from compass.db import database
 from compass.db.model import Adapter, Role, Switch, SwitchConfig
 from compass.db.model import Machine, HostState, ClusterState
-from compass.db.model import Cluster, ClusterHost, LogProgressingHistory    
+from compass.db.model import Cluster, ClusterHost, LogProgressingHistory
 from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
@@ -42,10 +42,10 @@ flags.add('search_config_properties',
           default='')
 flags.add('print_config_properties',
           help='semicomma separated config properties to print',
-          default='') 
+          default='')
 
 
-manager = Manager(app, usage="Perform database operations")
+app_manager = Manager(app, usage="Perform database operations")
 
 
 TABLE_MAPPING = {
@@ -62,14 +62,14 @@ TABLE_MAPPING = {
 }
 
 
-@manager.command
+@app_manager.command
 def list_config():
     "List the configuration"
     for key, value in app.config.items():
         print key, value
 
 
-@manager.command
+@app_manager.command
 def createdb():
     "Creates database from sqlalchemy models"
     if setting.DATABASE_TYPE == 'file':
@@ -79,13 +79,13 @@ def createdb():
     if setting.DATABASE_TYPE == 'file':
         os.chmod(setting.DATABASE_FILE, 0777)
 
-@manager.command
+@app_manager.command
 def dropdb():
     "Drops database from sqlalchemy models"
     database.drop_db()
 
 
-@manager.command
+@app_manager.command
 def createtable():
     """Create database table by --table_name"""
     table_name = flags.OPTIONS.table_name
@@ -94,8 +94,8 @@ def createtable():
     else:
         print '--table_name should be in %s' % TABLE_MAPPING.keys()
 
-              
-@manager.command
+
+@app_manager.command
 def droptable():
     """Drop database table by --talbe_name"""
     table_name = flags.OPTIONS.table_name
@@ -105,9 +105,10 @@ def droptable():
         print '--table_name should be in %s' % TABLE_MAPPING.keys()
 
 
-@manager.command
+@app_manager.command
 def sync_from_installers():
     """set adapters in Adapter table from installers."""
+    # TODO(xiaodong): Move the code to config_manager.
     manager = config_manager.ConfigManager()
     adapters = manager.get_adapters()
     target_systems = set()
@@ -125,9 +126,108 @@ def sync_from_installers():
         for target_system, roles in roles_per_target_system.items():
             for role in roles:
                 session.add(Role(**role))
- 
 
-@manager.command
+
+def _get_switch_ips(switch):
+    """Helper function to get switch ips."""
+    ips = []
+    blocks = switch['switch_ips'].split('.')
+    ip_blocks_list = []
+    for block in blocks:
+        ip_blocks_list.append([])
+        sub_blocks = block.split(',')
+        for sub_block in sub_blocks:
+            if not sub_block:
+                continue
+
+            if '-' in sub_block:
+                start_block, end_block = sub_block.split('-', 1)
+                start_block = int(start_block)
+                end_block = int(end_block)
+                if start_block > end_block:
+                    continue
+
+                ip_block = start_block
+                while ip_block <= end_block:
+                    ip_blocks_list[-1].append(str(ip_block))
+                    ip_block += 1
+
+            else:
+                ip_blocks_list[-1].append(sub_block)
+
+    ip_prefixes = [[]]
+    for ip_blocks in ip_blocks_list:
+        prefixes = []
+        for ip_block in ip_blocks:
+            for prefix in ip_prefixes:
+                prefixes.append(prefix + [ip_block])
+
+        ip_prefixes = prefixes
+
+    for prefix in ip_prefixes:
+        if not prefix:
+            continue
+
+        ips.append('.'.join(prefix))
+
+    logging.debug('found switch ips: %s', ips)
+    return ips
+
+
+def _get_switch_filter_ports(switch):
+    """Helper function to get switch filter ports."""
+    port_pat = re.compile(r'(\D*)(\d+(?:-\d+)?)')
+    filter_ports = []
+    for port_range in switch['filter_ports'].split(','):
+        if not port_range:
+            continue
+
+        mat = port_pat.match(port_range)
+        if not mat:
+            filter_ports.append(port_range)
+        else:
+            port_prefix = mat.group(1)
+            port_range = mat.group(2)
+            if '-' in port_range:
+                start_port, end_port = port_range.split('-', 1)
+                start_port = int(start_port)
+                end_port = int(end_port)
+                if start_port > end_port:
+                    continue
+
+                port = start_port
+                while port <= end_port:
+                    filter_ports.append('%s%s' % (port_prefix, port))
+                    port += 1
+
+            else:
+                filter_ports.append('%s%s' % (port_prefix, port_range))
+
+    logging.debug('filter ports: %s', filter_ports)
+    return filter_ports
+
+
+def _get_switch_config():
+    """Helper function to get switch config."""
+    switch_configs = []
+    if not hasattr(setting, 'SWITCHES') or not setting.SWITCHES:
+        logging.info('no switch configs to set')
+        return switch_configs
+
+    for switch in setting.SWITCHES:
+        ips = _get_switch_ips(switch)
+        filter_ports = _get_switch_filter_ports(switch)
+
+        for ip_addr in ips:
+            for filter_port in filter_ports:
+                switch_configs.append(
+                    {'ip': ip_addr, 'filter_port': filter_port})
+
+    logging.debug('switch configs: %s', switch_configs)
+    return switch_configs
+
+
+@app_manager.command
 def sync_switch_configs():
     """Set switch configs in SwitchConfig table from setting.
 
@@ -145,87 +245,7 @@ def sync_switch_configs():
        integer or a rnage of integer like xx-xx.
        The example of filter_ports is like: ae1-5,20-40.
     """
-    if not hasattr(setting, 'SWITCHES') or not setting.SWITCHES:
-        logging.info('no switch configs to set')
-        return
-
-    switch_configs = []
-    port_pat = re.compile(r'(\D*)(\d+(?:-\d+)?)')
-
-    for switch in setting.SWITCHES:
-        ips = []
-        blocks = switch['switch_ips'].split('.')
-        ip_blocks_list = []
-        for block in blocks:
-            ip_blocks_list.append([])
-            sub_blocks = block.split(',')
-            for sub_block in sub_blocks:
-                if not sub_block:
-                    continue
-
-                if '-' in sub_block:
-                    start_block, end_block = sub_block.split('-', 1)
-                    start_block = int(start_block)
-                    end_block = int(end_block)
-                    if start_block > end_block:
-                        continue
-
-                    ip_block = start_block
-                    while ip_block <= end_block:
-                        ip_blocks_list[-1].append(str(ip_block))
-                        ip_block += 1
-
-                else:
-                    ip_blocks_list[-1].append(sub_block)
-
-        ip_prefixes = [[]]
-        for ip_blocks in ip_blocks_list:
-            prefixes = []
-            for ip_block in ip_blocks:
-                for prefix in ip_prefixes:
-                    prefixes.append(prefix + [ip_block])
-
-            ip_prefixes = prefixes
-
-        for prefix in ip_prefixes:
-            if not prefix:
-                continue
-
-            ips.append('.'.join(prefix))
-
-        logging.debug('found switch ips: %s', ips)
-
-        filter_ports = []
-        for port_range in switch['filter_ports'].split(','):
-            if not port_range:
-                continue
-
-            mat = port_pat.match(port_range)
-            if not mat:
-                filter_ports.append(port_range)
-            else:
-                port_prefix = mat.group(1)
-                port_range = mat.group(2)
-                if '-' in port_range:
-                    start_port, end_port = port_range.split('-', 1)
-                    start_port = int(start_port)
-                    end_port = int(end_port)
-                    if start_port > end_port:
-                        continue
-
-                    port = start_port
-                    while port <= end_port:
-                        filter_ports.append('%s%s' % (port_prefix, port))
-                        port += 1
-
-                else:
-                    filter_ports.append('%s%s' % (port_prefix, port_range))
-
-        for ip in ips:
-            for filter_port in filter_ports:
-                switch_configs.append(
-                    {'ip': ip, 'filter_port': filter_port})
-
+    switch_configs = _get_switch_config()
     switch_config_tuples = set([])
     with database.session() as session:
         session.query(SwitchConfig).delete(synchronize_session='fetch')
@@ -240,9 +260,10 @@ def sync_switch_configs():
                 switch_config_tuples.add(switch_config_tuple)
 
             session.add(SwitchConfig(**switch_config))
-            
+
 
 def _get_clusters():
+    """Helper function to get clusters from flag --clusters."""
     clusters = {}
     logging.debug('get clusters from flag: %s', flags.OPTIONS.clusters)
     for clusterid_and_hostnames in flags.OPTIONS.clusters.split(';'):
@@ -286,10 +307,12 @@ def _get_clusters():
                         hostids.append(host.id)
                 clusters[clusterid] = hostids
 
-    return clusters 
+    return clusters
 
 
 def _clean_clusters(clusters):
+    """Helper function to clean clusters."""
+    # TODO(xiaodong): Move the code to config manager.
     manager = config_manager.ConfigManager()
     logging.info('clean cluster hosts: %s', clusters)
     with database.session() as session:
@@ -297,7 +320,7 @@ def _clean_clusters(clusters):
             cluster = session.query(Cluster).filter_by(id=clusterid).first()
             if not cluster:
                 continue
-           
+
             all_hostids = [host.id for host in cluster.hosts]
             logging.debug('all hosts in cluster %s is: %s',
                           clusterid, all_hostids)
@@ -345,7 +368,7 @@ def _clean_clusters(clusters):
     manager.sync()
 
 
-@manager.command
+@app_manager.command
 def clean_clusters():
     """Delete clusters and hosts.
 
@@ -359,6 +382,8 @@ def clean_clusters():
 
 
 def _clean_installation_progress(clusters):
+    """Helper function to clean installation progress."""
+    # TODO(xiaodong): Move the code to config manager.
     logging.info('clean installation progress for cluster hosts: %s',
                  clusters)
     with database.session() as session:
@@ -371,7 +396,7 @@ def _clean_installation_progress(clusters):
             logging.info(
                 'clean installation progress for hosts %s in cluster %s',
                 hostids, clusterid)
-            
+
             all_hostids = [host.id for host in cluster.hosts]
             logging.debug('all hosts in cluster %s is: %s',
                           clusterid, all_hostids)
@@ -424,7 +449,7 @@ def _clean_installation_progress(clusters):
                     }, synchronize_session='fetch')
 
 
-@manager.command
+@app_manager.command
 def clean_installation_progress():
     """Clean clusters and hosts installation progress.
 
@@ -438,6 +463,8 @@ def clean_installation_progress():
 
 
 def _reinstall_hosts(clusters):
+    """Helper function to reinstall hosts."""
+    # TODO(xiaodong): Move the code to config_manager.
     logging.info('reinstall cluster hosts: %s', clusters)
     manager = config_manager.ConfigManager()
     with database.session() as session:
@@ -445,7 +472,7 @@ def _reinstall_hosts(clusters):
             cluster = session.query(Cluster).filter_by(id=clusterid).first()
             if not cluster:
                 continue
-           
+
             all_hostids = [host.id for host in cluster.hosts]
             logging.debug('all hosts in cluster %s is: %s',
                           clusterid, all_hostids)
@@ -503,9 +530,9 @@ def _reinstall_hosts(clusters):
                     }, synchronize_session='fetch')
 
     manager.sync()
-  
 
-@manager.command
+
+@app_manager.command
 def reinstall_hosts():
     """Reinstall hosts in clusters.
 
@@ -518,18 +545,8 @@ def reinstall_hosts():
     os.system('service rsyslog restart')
 
 
-@manager.command
-def set_fake_switch_machine():
-    """Set fake switches and machines.
-
-    .. note::
-       --fake_switches_vendor is the vendor name for all fake switches.
-       the default value is 'huawei'
-       --fake_switches_file is the filename which stores all fake switches
-       and fake machines.
-       each line in fake_switches_files presents one machine.
-       the format of each line <switch_ip>,<switch_port>,<vlan>,<mac>.
-    """
+def _get_fake_switch_machines(switch_ips, switch_machines):
+    """Helper function to get fake switch machines."""
     missing_flags = False
     if not flags.OPTIONS.fake_switches_vendor:
         print 'the flag --fake_switches_vendor should be specified'
@@ -546,19 +563,11 @@ def set_fake_switch_machine():
         missing_flags = True
 
     if missing_flags:
-        return
-
-    switch_ips = []
-    switch_machines = {}
-    vendor = flags.OPTIONS.fake_switches_vendor
-    credential = { 
-        'version'    :  'v2c',
-        'community'  :  'public',
-    }
+        return False
 
     try:
-        with open(flags.OPTIONS.fake_switches_file) as f:
-            for line in f:
+        with open(flags.OPTIONS.fake_switches_file) as switch_file:
+            for line in switch_file:
                 line = line.strip()
                 switch_ip, switch_port, vlan, mac = line.split(',', 3)
                 if switch_ip not in switch_ips:
@@ -574,13 +583,39 @@ def set_fake_switch_machine():
         logging.error('failed to parse file %s',
                       flags.OPTIONS.fake_switches_file)
         logging.exception(error)
+        return False
+
+    return True
+
+
+@app_manager.command
+def set_fake_switch_machine():
+    """Set fake switches and machines.
+
+    .. note::
+       --fake_switches_vendor is the vendor name for all fake switches.
+       the default value is 'huawei'
+       --fake_switches_file is the filename which stores all fake switches
+       and fake machines.
+       each line in fake_switches_files presents one machine.
+       the format of each line <switch_ip>,<switch_port>,<vlan>,<mac>.
+    """
+    # TODO(xiaodong): Move the main code to config manager.
+    switch_ips = []
+    switch_machines = {}
+    vendor = flags.OPTIONS.fake_switches_vendor
+    credential = {
+        'version'    :  'v2c',
+        'community'  :  'public',
+    }
+    if not _get_fake_switch_machines(switch_ips, switch_machines):
         return
 
     with database.session() as session:
         session.query(Switch).delete(synchronize_session='fetch')
         session.query(Machine).delete(synchronize_session='fetch')
         for switch_ip in switch_ips:
-            logging.info('add switch %s', switch_ip)     
+            logging.info('add switch %s', switch_ip)
             switch = Switch(ip=switch_ip, vendor_info=vendor,
                             credential=credential,
                             state='under_monitoring')
@@ -597,6 +632,7 @@ def set_fake_switch_machine():
 
 
 def _get_config_properties():
+    """Helper function to get config properties."""
     if not flags.OPTIONS.search_config_properties:
         logging.info('the flag --search_config_properties is not specified.')
         return {}
@@ -620,6 +656,7 @@ def _get_config_properties():
 
 
 def _get_print_properties():
+    """Helper function to get what properties to print."""
     if not flags.OPTIONS.print_config_properties:
         logging.info('the flag --print_config_properties is not specified.')
         return []
@@ -638,6 +675,8 @@ def _get_print_properties():
 
 
 def _match_config_properties(config, config_properties):
+    """Helper function to check if config properties are match."""
+    # TODO(xiaodong): Move the code to config manager.
     ref = config_reference.ConfigReference(config)
     for property_name, property_value in config_properties.items():
         config_value = ref.get(property_name)
@@ -661,6 +700,7 @@ def _match_config_properties(config, config_properties):
 
 
 def _print_config_properties(config, config_properties):
+    """Helper function to print config properties."""
     ref = config_reference.ConfigReference(config)
     print_properties = []
     for property_name in config_properties:
@@ -675,7 +715,7 @@ def _print_config_properties(config, config_properties):
     print ';'.join(print_properties)
 
 
-@manager.command
+@app_manager.command
 def search_hosts():
     """Search hosts by properties.
 
@@ -697,7 +737,7 @@ def search_hosts():
                 _print_config_properties(host.config, print_properties)
 
 
-@manager.command
+@app_manager.command
 def search_clusters():
     """Search clusters by properties.
 
@@ -722,4 +762,4 @@ def search_clusters():
 if __name__ == "__main__":
     flags.init()
     logsetting.init()
-    manager.run()
+    app_manager.run()

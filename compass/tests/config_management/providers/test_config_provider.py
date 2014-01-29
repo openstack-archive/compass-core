@@ -1,6 +1,17 @@
+import os
 import unittest2
 
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
+
 from compass.config_management.providers import config_provider
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 class DummyProvider(config_provider.ConfigProvider):
@@ -41,4 +52,6 @@ class TestProviderRegisterFunctions(unittest2.TestCase):
 
 
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

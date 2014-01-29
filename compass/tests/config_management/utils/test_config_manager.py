@@ -9,12 +9,17 @@ import xmlrpclib
 from mock import Mock
 
 
-os.environ['COMPASS_SETTING'] = '%s/data/setting' % os.path.dirname(os.path.abspath(__file__))
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
 from compass.utils import setting_wrapper as setting
 reload(setting)
 
+
+setting.OS_INSTALLER = 'cobbler'
+setting.COBBLER_INSTALLER_URL = 'http://localhost/cobbler_api'
+setting.PACKAGE_INSTALLER = 'chef'
+setting.CHEF_INSTALLER_URL = 'https://localhost/'
 setting.CONFIG_DIR = '%s/data' % os.path.dirname(os.path.abspath(__file__))
 
 

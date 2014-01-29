@@ -1,9 +1,17 @@
-import simplejson as json
 from copy import deepcopy
 from celery import current_app
-
 from mock import Mock
+import simplejson as json
+import os
 import unittest2
+
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
 
 from compass.api import app
 from compass.db import database
@@ -15,6 +23,8 @@ from compass.db.model import HostState
 from compass.db.model import Adapter
 from compass.db.model import Role
 from compass.db.model import SwitchConfig
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 class ApiTestCase(unittest2.TestCase):
@@ -1120,4 +1130,6 @@ class TestAPIWorkFlow(ApiTestCase):
 
 
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

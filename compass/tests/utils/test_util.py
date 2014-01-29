@@ -1,5 +1,16 @@
+import os
 import unittest2
 
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
+
+from compass.utils import flags
+from compass.utils import logsetting
 from compass.utils import util
 
 
@@ -125,4 +136,6 @@ class TestGetListWithPossibility(unittest2.TestCase):
 
 
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

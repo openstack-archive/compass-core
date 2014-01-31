@@ -260,7 +260,8 @@ class TestSwtichMachineAPI(ApiTestCase):
                     {'url': '/machines?switchId=1', 'expected': 8},
                     # TODO:
                     #{'url': '/machines?switchId=1&port=6', 'expected': 1},
-                    {'url': '/machines?switchId=4', 'expected': 0}]
+                    {'url': '/machines?switchId=4', 'expected': 0},
+                    {'url': "/machines?mac='00:27:88:0c:01'", 'expected': 1}]
 
         for test in testList:
             url = test['url']
@@ -355,21 +356,29 @@ class TestClusterAPI(ApiTestCase):
 
     # Create a cluster
     def test_post_cluster(self):
-        # a. Post a new cluster
+        # a. Post a new cluster but no adapter exists
         cluster_req = {'cluster': {'name': 'cluster_02',
                                    'adapter_id': 1}}
         url = '/clusters'
         rv = self.app.post(url, data=json.dumps(cluster_req))
         data = json.loads(rv.get_data())
 
-        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.status_code, 404)
+
+        #b. Post a cluster sucessfully
+        with database.session() as session:
+            adapter = Adapter(name='Centos_openstack', os='Centos',
+                              target_system='openstack')
+            session.add(adapter)
+        rv = self.app.post(url, data=json.dumps(cluster_req))
+        data = json.loads(rv.get_data())
         self.assertEqual(data['cluster']['id'], 2)
         self.assertEqual(data['cluster']['name'], 'cluster_02')
 
-        #b. Post an existing cluster, return 409
+        #c. Post an existing cluster, return 409
         rv = self.app.post(url, data=json.dumps(cluster_req))
         self.assertEqual(rv.status_code, 409)
-        #c. Post a new cluster without providing a name
+        #d. Post a new cluster without providing a name
         cluster_req['cluster']['name'] = ''
         rv = self.app.post(url, data=json.dumps(cluster_req))
         data = json.loads(rv.get_data())
@@ -969,6 +978,9 @@ class TestAPIWorkFlow(ApiTestCase):
             "interfaces": {
                 "management": {
                     "ip": ""
+                },
+                "tenant": {
+                    "ip": ""
                 }
             }
         },
@@ -997,6 +1009,10 @@ class TestAPIWorkFlow(ApiTestCase):
 
             session.add_all(machines)
 
+            adapter = Adapter(name='Centos_openstack', os='Centos',
+                              target_system='openstack')
+            session.add(adapter)
+
     def tearDown(self):
         super(TestAPIWorkFlow, self).tearDown()
 
@@ -1020,6 +1036,7 @@ class TestAPIWorkFlow(ApiTestCase):
         machines = json.loads(rv.get_data())['machines']
 
         # Create a Cluster and get cluster id from response
+        # In this example, adapter_id will be 1 by default.
         url = '/clusters'
         data = {
             "cluster": {
@@ -1068,9 +1085,12 @@ class TestAPIWorkFlow(ApiTestCase):
         ]
         names = ["host_01", "host_02", "host_03"]
         mgmt_ips = ["10.120.8.100", "10.120.8.101", "10.120.8.102"]
-        for config, name, ip in zip(hosts_configs, names, mgmt_ips):
+        tenant_ips = ["12.120.8.100", "12.120.8.101", "12.120.8.102"]
+        for config, name, mgmt_ip, tenant_ip in zip(hosts_configs, names,
+                                                    mgmt_ips, tenant_ips):
             config["hostname"] = name
-            config["networking"]["interfaces"]["management"]["ip"] = ip
+            config["networking"]["interfaces"]["management"]["ip"] = mgmt_ip
+            config["networking"]["interfaces"]["tenant"]["ip"] = tenant_ip
 
         for config, host_info in zip(hosts_configs, hosts_info):
             host_id = host_info["id"]

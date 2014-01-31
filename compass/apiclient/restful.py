@@ -129,7 +129,7 @@ class Client(object):
         return self._get('/api/switches/%s' % switch_id)
 
     def add_switch(self, switch_ip, version=None, community=None,
-                   username=None, password=None):
+                   username=None, password=None, raw_data=None):
         """Create a switch with specified details.
 
         .. note::
@@ -149,26 +149,30 @@ class Client(object):
         :type password: str.
         """
         data = {}
-        data['switch'] = {}
-        data['switch']['ip'] = switch_ip
-        data['switch']['credential'] = {}
-        if version:
-            data['switch']['credential']['version' ] = version
-
-        if community:
-            data['switch']['credential']['community'] = community
-
-        if username:
-            data['switch']['credential']['username'] = username
-
-        if password:
-            data['switch']['credential']['password'] = password
+        if raw_data:
+            data = raw_data
+        else:    
+            data['switch'] = {}
+            data['switch']['ip'] = switch_ip
+            data['switch']['credential'] = {}
+            if version:
+                data['switch']['credential']['version' ] = version
+            
+            if community:
+                data['switch']['credential']['community'] = community
+            
+            if username:
+                data['switch']['credential']['username'] = username
+            
+            if password:
+                data['switch']['credential']['password'] = password
 
         return self._post('/api/switches', data=data)
 
     def update_switch(self, switch_id, ip_addr=None,
                       version=None, community=None,
-                      username=None, password=None):
+                      username=None, password=None,
+                      raw_data=None):
         """Updates a switch with specified details.
 
         .. note::
@@ -189,22 +193,25 @@ class Client(object):
         :param password: password when using SSH to poll switch.
         """
         data = {}
-        data['switch'] = {}
-        if ip_addr:
-            data['switch']['ip'] = ip_addr
-
-        data['switch']['credential'] = {}
-        if version:
-            data['switch']['credential']['version' ] = version
-
-        if community:
-            data['switch']['credential']['community'] = community
-
-        if username:
-            data['switch']['credential']['username'] = username
-
-        if password:
-            data['switch']['credential']['password'] = password
+        if raw_data:
+            data = raw_data
+        else:    
+            data['switch'] = {}
+            if ip_addr:
+                data['switch']['ip'] = ip_addr
+            
+            data['switch']['credential'] = {}
+            if version:
+                data['switch']['credential']['version' ] = version
+            
+            if community:
+                data['switch']['credential']['community'] = community
+            
+            if username:
+                data['switch']['credential']['username'] = username
+            
+            if password:
+                data['switch']['credential']['password'] = password
 
         return self._put('/api/switches/%s' % switch_id, data=data)
 
@@ -266,7 +273,7 @@ class Client(object):
         """
         return self._get('/api/clusters/%s' % cluster_id)
 
-    def add_cluster(self, cluster_name, adapter_id):
+    def add_cluster(self, cluster_name, adapter_id, raw_data=None):
         """Creates a cluster by specified name and given adapter id.
 
         :param cluster_name: cluster name.
@@ -275,12 +282,15 @@ class Client(object):
         :type adapter_id: int.
         """
         data = {}
-        data['cluster'] = {}
-        data['cluster']['name'] = cluster_name
-        data['cluster']['adapter_id'] = adapter_id
+        if raw_data:
+            data = raw_data
+        else:    
+            data['cluster'] = {}
+            data['cluster']['name'] = cluster_name
+            data['cluster']['adapter_id'] = adapter_id
         return self._post('/api/clusters', data=data)
 
-    def add_hosts(self, cluster_id, machine_ids):
+    def add_hosts(self, cluster_id, machine_ids, raw_data=None):
         """add the specified machine(s) as the host(s) to the cluster.
 
         :param cluster_id: cluster id.
@@ -289,10 +299,13 @@ class Client(object):
         :type machine_ids: list of int, each is the id of one machine.
         """
         data = {}
-        data['addHosts'] = machine_ids
+        if raw_data:
+            data = raw_data
+        else:    
+            data['addHosts'] = machine_ids
         return self._post('/api/clusters/%s/action' % cluster_id, data=data)
 
-    def remove_hosts(self, cluster_id, host_ids):
+    def remove_hosts(self, cluster_id, host_ids, raw_data=None):
         """remove the specified host(s) from the cluster.
 
         :param cluster_id: cluster id.
@@ -301,10 +314,13 @@ class Client(object):
         :type host_ids: list of int, each is the id of one host.
         """
         data = {}
-        data['removeHosts'] = host_ids
+        if raw_data:
+            data = raw_data
+        else:    
+            data['removeHosts'] = host_ids
         return self._post('/api/clusters/%s/action' % cluster_id, data=data)
 
-    def replace_hosts(self, cluster_id, machine_ids):
+    def replace_hosts(self, cluster_id, machine_ids, raw_data=None):
         """replace the cluster hosts with the specified machine(s).
 
         :param cluster_id: int, The unique identifier of the cluster.
@@ -313,17 +329,23 @@ class Client(object):
         :type machine_ids: list of int, each is the id of one machine.
         """
         data = {}
-        data['replaceAllHosts'] = machine_ids
+        if raw_data:
+            data = raw_data
+        else:    
+            data['replaceAllHosts'] = machine_ids
         return self._post('/api/clusters/%s/action' % cluster_id, data=data)
 
-    def deploy_hosts(self, cluster_id):
+    def deploy_hosts(self, cluster_id, raw_data=None):
         """Deploy the cluster.
 
         :param cluster_id: The unique identifier of the cluster
         :type cluster_id: int.
         """
         data = {}
-        data['deploy'] = {}
+        if raw_data:
+            data = raw_data
+        else:    
+            data['deploy'] = []
         return self._post('/api/clusters/%s/action' % cluster_id, data=data)
 
     @classmethod

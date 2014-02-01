@@ -285,6 +285,7 @@ class MachineList(Resource):
     ENDPOINT = "/machines"
 
     SWITCHID = 'switchId'
+    MAC = 'mac'
     VLANID = 'vladId'
     PORT = 'port'
     LIMIT = 'limit'
@@ -296,11 +297,13 @@ class MachineList(Resource):
         be filtered.
 
         :param switchId: the unique identifier of the switch
+        :param mac: the MAC address
         :param vladId: the vlan ID
         :param port: the port number
         :param limit: the number of records expected to return
         """
         switch_id = request.args.get(self.SWITCHID, type=int)
+        mac = request.args.get(self.MAC, None, type=str)
         vlan = request.args.get(self.VLANID, type=int)
         port = request.args.get(self.PORT, None)
         limit = request.args.get(self.LIMIT, 0, type=int)
@@ -310,6 +313,9 @@ class MachineList(Resource):
             filter_clause = []
             if switch_id:
                 filter_clause.append('switch_id=%d' % switch_id)
+
+            if mac:
+                filter_clause.append('mac=%s' % mac)
 
             if vlan:
                 filter_clause.append('vlan=%d' % vlan)
@@ -487,6 +493,12 @@ class Cluster(Resource):
                 error_msg = "Cluster name '%s' already exists!" % cluster.name
                 return errors.handle_duplicate_object(
                     errors.ObjectDuplicateError(error_msg))
+
+            adapter = session.query(Adapter).filter_by(id=adapter_id).first()
+            if not adapter:
+                error_msg = "No adapter id=%s can be found!"
+                return errors.handle_not_exist(
+                    errors.ObjectDoesNotExist(error_msg))
 
             # Create a new cluster in database
             cluster = ModelCluster(name=cluster_name, adapter_id=adapter_id)

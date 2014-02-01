@@ -260,6 +260,7 @@ def valid_host_config(config):
 
     from api import errors
     valid_format = {"/networking/interfaces/management/ip": "is_valid_ip",
+                    "/networking/interfaces/tenant/ip": "is_valid_ip",
                     "/networking/global/gateway": "is_valid_gateway",
                     "/networking/global/nameserver": "",
                     "/networking/global/search_path": "",

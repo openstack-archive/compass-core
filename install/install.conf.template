@@ -1,0 +1,62 @@
+#####################################
+# Config File for Compass Installer #
+#####################################
+# REPO_URL indicates the source where to download compass-web and compass-adapters from
+export REPO_URL=http://git.openstack.org
+
+# OS_INSTALLER indicates the tool for OS provisioning, default is 'cobbler'.
+export OS_INSTALLER=cobbler
+
+# PACKAGE_INSTALLER indicates the tool for Package provisioning, default is 'chef'.
+export PACKAGE_INSTALLER=chef
+
+# service NIC (A bridge "installation" is used for jenkins CI)
+export NIC=installation
+ 
+# DHCP config
+# SUBNET variable specifies the subnet for DHCP server. Example: 192.168.0.0/16 
+export SUBNET=192.168.10.0/24
+# DHCP option router  address(Default is your management interface IP address )"
+export OPTION_ROUTER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+# The IP range for DHCP clients (Default: local subnet start from 100 to 254)
+IP_RANGE="192.168.10.100 192.168.10.254"
+# TFTP server's IP address(Default: Management Interface/eth0 IP)
+export NEXTSERVER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+export ipaddr=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+# the domains covered by nameserver
+export NAMESERVER_DOMAINS=ods.com
+
+# set the default cobbler user "cobbler" password, if not set, the default will be cobbler/cobbler
+CBLR_USER=cobbler
+CBLR_PASSWD=cobbler
+
+# IMAGE_SOURCE is where you host your CentOS image
+#export IMAGE_SOURCE=http://12.234.32.58/software/OS/centos/centos6.4/CentOS-6.4-x86_64-minimal.iso
+export IMAGE_SOURCE=http://mirror.rackspace.com/CentOS/6/isos/x86_64/CentOS-6.5-x86_64-minimal.iso
+IMAGE_NAME=$(echo $IMAGE_SOURCE |rev|cut -d '/' -f1|rev)
+export IMAGE_NAME=${IMAGE_NAME/.iso/''}
+export COBBLER_PASSWORD=cobbler
+
+# Currently the use of Javascript MVC is set to version 3.2.4
+export JS_MVC=javascriptmvc-3.2.4
+
+# set the chef packages download path 
+export CHEF_SRV=http://opscode-omnibus-packages.s3.amazonaws.com/el/6/x86_64/chef-server-11.0.8-1.el6.x86_64.rpm
+
+# Set Chef password for Chef web UI
+export CHEF_PASSWD=root1234
+
+# Set Compass-web and Compass-adpater variables
+WEB_HOME=
+ADAPTER_HOME=
+
+# Set test script variables
+export NAMESERVERS=$ipaddr
+export NTP_SERVER=$ipaddr
+export GATEWAY=$ipaddr
+export PROXY=http://$ipaddr:3128
+
+if [[ -n $source ]] && [ $source = "local" ];then
+  export WEB_SOURCE=${DIR}/../web
+  export ADAPTER_SOURCE=${DIR}/../misc
+fi

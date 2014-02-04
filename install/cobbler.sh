@@ -19,7 +19,10 @@ sudo service ntpd start
 
 # configure xinetd
 sudo cp /etc/xinetd.d/tftp /root/backup/
-sudo sed -i 's/disable\([ \t]\+\)=\([ \t]\+\)yes/disable\1=\2no/g' /etc/xinetd.d/tftp
+sudo sed -i 's/disable\([ \t]\+\)=\([ \t]\+\)yes/disable\1=\2no/g' /etc/cobbler/tftpd.template
+sudo sed -i '/per_source/c\        per_source              = 1000' /etc/cobbler/tftpd.template
+sudo sed -i '/cps/c\        cps                     = 1000 2' /etc/cobbler/tftpd.template
+sudo sed -i '/cps/a\        instances               = 1000' /etc/cobbler/tftpd.template
 sudo service xinetd restart
 
 ##export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')

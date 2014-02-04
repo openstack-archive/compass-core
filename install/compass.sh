@@ -3,34 +3,20 @@ SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 echo "script dir: $SCRIPT_DIR"
 COMPASSDIR=${SCRIPT_DIR}/..
 echo "compass dir is $COMPASSDIR"
+
 copygit2dir()
 {
     destdir=$1
     repo=$2
     if [ -d $destdir ];then
         echo "$destdir exists"
-        cd $destdir
-        git remote set-url origin $repo
-        git remote update
-        git reset --hard
-        git clean -x -f
-        git checkout master
-        git reset --hard remotes/origin/master
-        if [[ -n "$GERRIT_REFSPEC" ]];then
-            git fetch origin $GERRIT_REFSPEC && git checkout FETCH_HEAD
-        fi
-        git clean -x -f
+        sudo rm -rf $destdir/*
     else
         mkdir -p $destdir
-        git clone $repo $destdir
-        if [[ -n "$GERRIT_REFSPEC" ]];then
-            # project=$(echo $repo|rev|cut -d '/' -f 1|rev)
-            cd $destdir
-            git fetch $repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
-        fi
     fi
-    cd $SCRIPT_DIR
+    git clone $repo $destdir
 }
+
 copylocal2dir()
 {
     destdir=$1

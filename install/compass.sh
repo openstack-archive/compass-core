@@ -49,9 +49,9 @@ cd $SCRIPT_DIR
 WEB_HOME=${WEB_HOME:-'/tmp/web/'}
 ADAPTER_HOME=${ADAPTER_HOME:-'/tmp/adapter/'}
 ##WEB_SOURCE=${WEB_SOURCE:-'https://github.com/stackforge/compass-web'}
-WEB_SOURCE=${WEB_SOURCE:-$PROJECT_NAME'/stackforge/compass-web'}
+WEB_SOURCE=${WEB_SOURCE:-$REPO_URL'/stackforge/compass-web'}
 # ADAPTER_SOURCE=${ADAPTER_SOURCE:-'https://github.com/stackforge/compass-adapters'}
-ADAPTER_SOURCE=${ADAPTER_SOURCE:-$PROJECT_NAME'/stackforge/compass-adapters'}
+ADAPTER_SOURCE=${ADAPTER_SOURCE:-$REPO_URL'/stackforge/compass-adapters'}
 if [ "$source" != "local" ]; then
   copygit2dir $WEB_HOME $WEB_SOURCE
   copygit2dir $ADAPTER_HOME $ADAPTER_SOURCE

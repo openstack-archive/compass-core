@@ -29,7 +29,14 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 echo 0 > /selinux/enforce
 
 ### Add epel repo
+sudo rpm -q epel-release-6-8
+if [ "$?" != "0" ]; then
 sudo rpm -Uvh http://download.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm >& /dev/null
+if [ "$?" != "0" ]; then
+    echo "failed to install epel"
+    exit 1
+fi
+fi
 sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
 
 ### Trap any error code with related filename and line.
@@ -39,7 +46,9 @@ errtrap()
     echo "[FILE: "$(basename $FILE)", LINE: $1] Error: Command or function exited with status $2"
 }
 
+if [[ "$-" == *x* ]]; then
 trap 'errtrap $LINENO $?' ERR
+fi
 
 # Install figlet
 sudo yum -y install figlet >& /dev/null
@@ -56,15 +65,13 @@ done
 
 # Load variables
 source $DIR/install.conf
-echo $WEB_SOURCE
-echo $ADAPTER_SOURCE
 loadvars()
 {
     varname=${1,,}
     eval var=\$$(echo $1)
 
     if [[ -z $var ]]; then
-        echo -e "\x1b[32mPlease enter the DHCP $varname (Example: $2):\x1b[37m"
+        echo -e "\x1b[32mPlease enter the $varname (Example: $2):\x1b[37m"
         while read input
         do
             if [ "$input" == "" ]; then
@@ -72,10 +79,7 @@ loadvars()
                 export $(echo $1)="$2"
                 break
             else
-                if [[ ( "$input" != *.* ) && ( "$1" != "NIC" ) ]]; then
-                    echo "I really expect IP addresses"
-                    exit
-                elif [ "$1" == "NIC" ]; then
+                if [ "$1" == "NIC" ]; then
                     sudo ip addr |grep $input >& /dev/null
                     if [ $? -ne 0 ]; then
                         echo "There is not any IP address assigned to the NIC '$input' yet, please assign an IP address first."
@@ -100,9 +104,22 @@ loadvars OPTION_ROUTER $(route -n | grep '^0.0.0.0' | xargs | cut -d ' ' -f 2)
 loadvars IP_RANGE "$range"
 loadvars NEXTSERVER $ipaddr
 loadvars NAMESERVER_DOMAINS "ods.com"
+if [[ -n $source ]] && [ $source = "local" ];then
+loadvars WEB_SOURCE ${DIR}/../web
+loadvars ADAPTER_SOURCE ${DIR}/../misc
+else
+loadvars WEB_SOURCE $REPO_URL'/stackforge/compass-web'
+loadvars ADAPTER_SOURCE $REPO_URL'/stackforge/compass-adapters' 
+fi
 
 echo "Install the Dependencies"
 source $DIR/dependency.sh
+
+echo "Prepare the Installation"
+source $DIR/prepare.sh
+
+echo "script dir: $SCRIPT_DIR"
+echo "compass dir is $COMPASSDIR"
 
 echo "Install the OS Installer Tool"
 source $DIR/$OS_INSTALLER.sh
@@ -113,4 +130,5 @@ source $DIR/$PACKAGE_INSTALLER.sh
 echo "Download and Setup Compass and related services"
 source $DIR/compass.sh
 
+figlet -ctf slant Installation Complete!
 echo -e "It takes\x1b[32m $SECONDS \x1b[0mseconds during the installation."

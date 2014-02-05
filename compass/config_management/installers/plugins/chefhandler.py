@@ -33,8 +33,12 @@ TO_CLUSTER_TRANSLATORS = {
                     '/credential/mysql/image',
                     '/credential/mysql/metering',
                     '/credential/mysql/network',
-                    '/credential/mysql/super',
                     '/credential/mysql/volume',
+                ]
+            )],
+            '/security/service_credentials/password': [KeyTranslator(
+                translated_keys=[
+                    '/credential/mysql/super/password',
                 ]
             )],
             '/networking/interfaces/management/nic': [KeyTranslator(

@@ -1,45 +1,57 @@
 #!/bin/bash
 
-##export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
-echo "$ipaddr    $HOSTNAME" >> /etc/hosts
-sudo rpm -Uvh $CHEF_SRV
+# update /etc/hosts
+sudo rm -f /etc/hosts
+sudo cp -rf $COMPASSDIR/misc/hosts /etc/hosts
+sudo sed -i "s/\$ipaddr \$hostname/$ipaddr $HOSTNAME/g" /etc/hosts
+sudo chmod 644 /etc/hosts
 
-# configure rsyslog
-cp /etc/rsyslog.conf /root/backup/
-# update rsyslog.conf
-sudo sed -i '
-/#### GLOBAL DIRECTIVES ####/ i\
-\$WorkDirectory /var/lib/rsyslog\
-\
-\# Added for chef logfiles\
-\$template Chef_log,"/var/log/cobbler/anamon/%hostname%/chef-client.log"\
-\$template Raw, "%rawmsg%"\
-' /etc/rsyslog.conf
-sudo sed -i '
-/# ### begin forwarding rule ###/ i\
-local3.*        -?Chef_log\
-' /etc/rsyslog.conf
-sudo sed -i 's/^#$ModLoad[ \t]\+imtcp/$ModLoad imtcp/g' /etc/rsyslog.conf
-sudo sed -i '/$InputTCPServerRun/c\$InputTCPServerRun 514' /etc/rsyslog.conf
-sudo service rsyslog restart
+sudo rpm -q chef-server
+if [[ "$?" != "0" ]]; then
+sudo rpm -Uvh $CHEF_SRV
+if [[ "$?" != "0" ]]; then
+    echo "failed to rpm install $CHEF_SRV"
+    exit 1
+fi
+else
+    echo "chef-server has already installed"
+fi
 
 # configure chef-server
-sudo mkdir /root/backup/chef-server
-sudo cp /opt/chef-server/embedded/conf/nginx.conf /root/backup/chef-server/
-sudo sed -i 's/listen\([ \t]\+\)80;/listen\18080;/g' /opt/chef-server/embedded/conf/nginx.conf
+sudo chef-server-ctl cleanse
+mkdir -p /etc/chef-server
+sudo rm -f /etc/chef-server/chef-server.rb
+sudo cp -rf $COMPASSDIR/misc/chef-server/chef-server.rb /etc/chef-server/chef-server.rb
+sudo chmod 644 /etc/chef-server/chef-server.rb
 sudo chef-server-ctl reconfigure
-sudo cp /var/opt/chef-server/nginx/etc/nginx.conf /root/backup/chef-server/etc-nginx.conf
-sudo sed -i 's/listen\([ \t]\+\)80;/listen\18080;/g' /var/opt/chef-server/nginx/etc/nginx.conf
-sudo chef-server-ctl restart
 sudo chef-server-ctl test
+if [[ "$?" != "0" ]]; then
+    echo "chef-server-ctl test failed"
+    exit 1
+fi
 
 # configure chef client and knife
-sudo curl -L http://www.opscode.com/chef/install.sh | sudo bash
+rpm -q chef
+if [[ "$?" != "0" ]]; then
+sudo wget -c --progress=bar:force -O /tmp/chef_install.sh http://www.opscode.com/chef/install.sh
+if [[ "$?" != "0" ]]; then
+    echo "failed to download chef install script"
+    exit 1
+fi
+sudo chmod 755 /tmp/chef_install.sh
+sudo /tmp/chef_install.sh
+if [[ "$?" != "0" ]]; then
+    echo "chef install failed"
+    exit 1
+fi
+else
+echo "chef has already installed"
+fi
 
-sudo mkdir ~/.chef
+sudo mkdir -p ~/.chef
 
 sudo knife configure -y -i --defaults -r ~/chef-repo -s https://localhost:443 -u $USER --admin-client-name admin --admin-client-key /etc/chef-server/admin.pem --validation-client-name chef-validator --validation-key /etc/chef-server/chef-validator.pem <<EOF
-root1234
+$CHEF_PASSWORD
 EOF
 sudo sed -i "/node_name/c\node_name                \'admin\'" /$USER/.chef/knife.rb
 sudo sed -i "/client_key/c\client_key               \'\/etc\/chef-server\/admin.pem\'" /$USER/.chef/knife.rb

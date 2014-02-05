@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 echo "Installing cobbler related packages"
 sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah  python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart -y
 
@@ -17,11 +16,6 @@ sudo service ntpd stop
 sudo ntpdate 0.centos.pool.ntp.org
 sudo service ntpd start
 
-# configure xinetd
-sudo cp /etc/xinetd.d/tftp /root/backup/
-sudo sed -i 's/disable\([ \t]\+\)=\([ \t]\+\)yes/disable\1=\2no/g' /etc/xinetd.d/tftp
-sudo service xinetd restart
-
 ##export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 export cobbler_passwd=$(openssl passwd -1 -salt 'huawei' '123456')
 
@@ -37,6 +31,7 @@ export cobbler_passwd=$(openssl passwd -1 -salt 'huawei' '123456')
 sudo mkdir /root/backup/cobbler
 sudo cp /etc/cobbler/settings /root/backup/cobbler/
 sudo cp /etc/cobbler/dhcp.template /root/backup/cobbler/
+sudo cp /etc/cobbler/tfptd.template /root/backup/cobbler/
 
 # Dumps the variables to dhcp template
 subnet=$(ipcalc $SUBNET -n |cut -f 2 -d '=')
@@ -47,6 +42,11 @@ sudo sed -i "/option domain-name-servers/c\	option domain-name-servers	$ipaddr;"
 sudo sed -i "/range dynamic-bootp/c\     range dynamic-bootp        $IP_RANGE;" /etc/cobbler/dhcp.template
 sudo sed -i 's/^\([ \t]*\).*fixed-address.*$/\1#pass/g' /etc/cobbler/dhcp.template
 sudo sed -i "/allow bootp/a deny unknown-clients;\nlocal-address $ipaddr;" /etc/cobbler/dhcp.template
+
+# update tftpd.template
+sudo rm -f /etc/cobbler/tftpd.template
+sudo cp -rf $ADAPTER_HOME/cobbler/conf/tftpd.template /etc/cobbler/tftpd.template
+sudo chmod 644 /etc/cobbler/tftpd.template
 
 # Set up other setting options in cobbler/settings
 sudo sed -i "/next_server/c\next_server: $NEXTSERVER" /etc/cobbler/settings

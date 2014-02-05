@@ -1,0 +1,9 @@
+/var/log/squid/*log {
+    missingok
+    notifempty
+    sharedscripts
+    delaycompress
+    postrotate
+        /sbin/service squid reload > /dev/null 2>/dev/null || true
+    endscript
+}

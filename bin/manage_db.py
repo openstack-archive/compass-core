@@ -5,6 +5,7 @@ import os
 import os.path
 import re
 import shutil
+import sys
 
 from flask.ext.script import Manager
 
@@ -70,8 +71,20 @@ def list_config():
 
 
 @app_manager.command
+def checkdb():
+    """check if db exists"""
+    if setting.DATABASE_TYPE == 'file':
+        if os.path.exists(setting.DATABASE_FILE):
+            sys.exit(0)
+        else:
+            sys.exit(1)
+
+    sys.exit(0)
+
+
+@app_manager.command
 def createdb():
-    "Creates database from sqlalchemy models"
+    """Creates database from sqlalchemy models"""
     if setting.DATABASE_TYPE == 'file':
         if os.path.exists(setting.DATABASE_FILE):
             os.remove(setting.DATABASE_FILE)
@@ -81,7 +94,7 @@ def createdb():
 
 @app_manager.command
 def dropdb():
-    "Drops database from sqlalchemy models"
+    """Drops database from sqlalchemy models"""
     database.drop_db()
 
 
@@ -115,14 +128,17 @@ def sync_from_installers():
     roles_per_target_system = {}
     for adapter in adapters:
         target_systems.add(adapter['target_system'])
+
     for target_system in target_systems:
         roles_per_target_system[target_system] = manager.get_roles(
             target_system)
+
     with database.session() as session:
         session.query(Adapter).delete()
         session.query(Role).delete()
         for adapter in adapters:
             session.add(Adapter(**adapter))
+
         for target_system, roles in roles_per_target_system.items():
             for role in roles:
                 session.add(Role(**role))

@@ -64,10 +64,7 @@ class DnsCheck(base.BaseCheck):
                 if "listen-on port 53" in line and host_ip in line:
                     VAR_MAP["match_port"] = True
                 if "allow-query" in line:
-                    for subnet in ["127.0.0.0/8",
-                                   "10.0.0.0/8",
-                                   "192.168.0.0/16",
-                                   "172.16.0.0/12"]:
+                    for subnet in ["127.0.0.0/8"]:
                         if not subnet in line:
                             missing_query.append(subnet)
             f.close()

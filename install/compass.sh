@@ -3,6 +3,7 @@ SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 echo "script dir: $SCRIPT_DIR"
 COMPASSDIR=${SCRIPT_DIR}/..
 echo "compass dir is $COMPASSDIR"
+<<<<<<< HEAD
 copygit2dir()
 {
     destdir=$1
@@ -42,10 +43,13 @@ copylocal2dir()
     fi
     sudo \cp -rf $repo/* $destdir
 }
+=======
+>>>>>>> 2439fa2... increase the parallel parameters of tftpd.
 cd $SCRIPT_DIR
 #export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 
 ##SUBNET=${SUBNET:-$(ip address| grep "global $NIC" |cut -f 6 -d ' ')}
+<<<<<<< HEAD
 WEB_HOME=${WEB_HOME:-'/tmp/web/'}
 ADAPTER_HOME=${ADAPTER_HOME:-'/tmp/adapter/'}
 ##WEB_SOURCE=${WEB_SOURCE:-'https://github.com/stackforge/compass-web'}
@@ -59,6 +63,8 @@ else
   copylocal2dir $WEB_HOME $WEB_SOURCE
   copylocal2dir $ADAPTER_HOME $ADAPTER_SOURCE
 fi
+=======
+>>>>>>> 2439fa2... increase the parallel parameters of tftpd.
 
 # download dependences
 wget -N http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip

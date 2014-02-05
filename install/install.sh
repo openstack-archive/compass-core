@@ -104,6 +104,57 @@ loadvars NAMESERVER_DOMAINS "ods.com"
 echo "Install the Dependencies"
 source $DIR/dependency.sh
 
+copygit2dir()
+{
+    destdir=$1
+    repo=$2
+    if [ -d $destdir ];then
+        echo "$destdir exists"
+        git remote set-url origin $repo
+        git remote update
+        git reset --hard
+        git clean -x -f
+        git checkout master
+        git reset --hard remotes/origin/master
+        if [[ -n "$GERRIT_REFSPEC" ]];then
+            git fetch origin $GERRIT_REFSPEC && git checkout FETCH_HEAD
+        fi
+        git clean -x -f
+    else
+        mkdir -p $destdir
+        git clone $repo $destdir
+        if [[ -n "$GERRIT_REFSPEC" ]];then
+            # project=$(echo $repo|rev|cut -d '/' -f 1|rev)
+            cd $destdir
+            git fetch $repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
+        fi
+    fi
+    cd $SCRIPT_DIR
+}
+copylocal2dir()
+{
+    destdir=$1
+    repo=$2
+    if [ -d $destdir ];then
+        echo "$destdir exists"
+    else
+        mkdir -p $destdir
+    fi
+    sudo \cp -rf $repo/* $destdir
+}
+
+WEB_HOME=${WEB_HOME:-'/tmp/web/'}
+ADAPTER_HOME=${ADAPTER_HOME:-'/tmp/adapter/'}
+WEB_SOURCE=${WEB_SOURCE:-$REPO_URL'/stackforge/compass-web'}
+ADAPTER_SOURCE=${ADAPTER_SOURCE:-$REPO_URL'/stackforge/compass-adapters'}
+if [ "$source" != "local" ]; then
+  copygit2dir $WEB_HOME $WEB_SOURCE
+  copygit2dir $ADAPTER_HOME $ADAPTER_SOURCE
+else
+  copylocal2dir $WEB_HOME $WEB_SOURCE
+  copylocal2dir $ADAPTER_HOME $ADAPTER_SOURCE
+fi
+
 echo "Install the OS Installer Tool"
 source $DIR/$OS_INSTALLER.sh
 

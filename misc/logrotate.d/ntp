@@ -1,0 +1,9 @@
+/var/log/ntp.log {
+    missingok
+    notifempty
+    sharedscripts
+    delaycompress
+    postrotate
+        /sbin/service ntpd reload > /dev/null 2>/dev/null || true
+    endscript
+}

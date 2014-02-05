@@ -194,7 +194,7 @@ chef_EXPECTED = {
                     'metering': {'username': 'service', 'password': 'huawei'},
                     'volume': {'username': 'service', 'password': 'huawei'},
                     'dashboard': {'username': 'service', 'password': 'huawei'},
-                    'super': {'username': 'service', 'password': 'huawei'},
+                    'super': {'password': 'huawei'},
                     'identity': {'username': 'service', 'password': 'huawei'}
                 }
             },

@@ -274,9 +274,7 @@ def valid_host_config(config):
         try:
             validator = valid_format[key]
         except:
-            error_msg = ("Cannot find the path '%s'. Please check the keywords"
-                         % key)
-            raise errors.UserInvalidUsage(error_msg)
+            continue
         else:
             value = flat_config[key]
             if validator:
@@ -302,15 +300,19 @@ def flatten_dict(dictionary, output, flat_key=""):
             output[tmp] = dictionary[key]
 
 
-def update_dict_value(searchkey, newvalue, dictionary):
+def update_dict_value(searchkey, dictionary):
     """Update dictionary value"""
 
     keywords = dictionary.keys()
     for key in keywords:
         if key == searchkey:
-            dictionary[key] = newvalue
+            if isinstance(dictionary[key], str):
+                dictionary[key] = ""
+            elif isinstance(dictionary[key], list):
+                dictionary[key] = []
+
         elif isinstance(dictionary[key], dict):
-            update_dict_value(searchkey, newvalue, dictionary[key])
+            update_dict_value(searchkey, dictionary[key])
         else:
             continue
 

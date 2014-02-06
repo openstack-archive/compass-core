@@ -5,27 +5,47 @@ from compass.api import util
 
 class ObjectDoesNotExist(Exception):
     """Define the exception for referring non-existing object"""
-    pass
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
 
 
 class UserInvalidUsage(Exception):
     """Define the exception for fault usage of users"""
-    pass
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
 
 
 class ObjectDuplicateError(Exception):
     """Define the duplicated object exception"""
-    pass
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
 
 
 class InputMissingError(Exception):
     """Define the insufficient input exception"""
-    pass
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
 
 
 class MethodNotAllowed(Exception):
     """Define the exception which invalid method is called"""
-    pass
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
 
 
 @app.errorhandler(ObjectDoesNotExist)

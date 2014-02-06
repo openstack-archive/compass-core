@@ -13,6 +13,7 @@ from compass.db.model import SwitchConfig
 from compass.db.model import Machine as ModelMachine
 from compass.db.model import Cluster as ModelCluster
 from compass.db.model import ClusterHost as ModelClusterHost
+from compass.db.model import ClusterState
 from compass.db.model import Adapter
 from compass.db.model import Role
 
@@ -276,8 +277,9 @@ class Switch(Resource):
 
         :param switch_id: the unique identifier of the switch.
         """
+        err_msg = "The delete API for switch has not been implemented!"
         return errors.handle_not_allowed_method(
-            errors.MethodNotAllowed())
+            errors.MethodNotAllowed(err_msg))
 
 
 class MachineList(Resource):
@@ -496,7 +498,7 @@ class Cluster(Resource):
 
             adapter = session.query(Adapter).filter_by(id=adapter_id).first()
             if not adapter:
-                error_msg = "No adapter id=%s can be found!"
+                error_msg = "No adapter id=%s can be found!" % adapter_id
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg))
 
@@ -574,9 +576,39 @@ class Cluster(Resource):
 def list_clusters():
     """Lists the details of all clusters"""
     endpoint = '/clusters'
+    state = request.args.get('state', None, type=str)
     results = []
     with database.session() as session:
-        clusters = session.query(ModelCluster).all()
+        clusters = []
+        if not state:
+            # Get all clusters
+            clusters = session.query(ModelCluster).all()
+
+        elif state == 'undeployed':
+            clusters_state = session.query(ClusterState.id).all()
+            cluster_ids = [t[0] for t in clusters_state]
+            # The cluster has not been deployed yet
+            clusters = session.query(ModelCluster)\
+                              .filter(~ModelCluster.id.in_(cluster_ids))\
+                              .all()
+        elif state == 'installing':
+            # The deployment of this cluster is in progress.
+            clusters = session.query(ModelCluster)\
+                              .filter(ModelCluster.id == ClusterState.id,
+                                      or_(ClusterState.state == 'INSTALLING',
+                                          ClusterState.state == 'UNINITIALIZED'))\
+                              .all()
+        elif state == 'failed':
+            # The deployment of this cluster is failed.
+            clusters = session.query(ModelCluster)\
+                              .filter(ModelCluster.id == ClusterState.id,
+                                      ClusterState.state == 'ERROR')\
+                              .all()
+        elif state == 'successful':
+            clusters = session.query(ModelCluster)\
+                              .filter(ModelCluster.id == ClusterState.id,
+                                      ClusterState.state == 'READY')\
+                              .all()
 
         if clusters:
             for cluster in clusters:
@@ -934,6 +966,7 @@ class ClusterHost(Resource):
             host_res['hostname'] = host.hostname
             host_res['mutable'] = host.mutable
             host_res['id'] = host.id
+            host_res['switch_ip'] = host.machine.switch.ip
             host_res['link'] = {
                 "href": '/'.join((self.ENDPOINT, str(host.id))),
                 "rel": "self"
@@ -983,6 +1016,7 @@ def list_clusterhosts():
                 host_res['hostname'] = host.hostname
                 host_res['mutable'] = host.mutable
                 host_res['id'] = host.id
+                host_res['switch_ip'] = host.machine.switch.ip
                 host_res['link'] = {
                     "href": '/'.join((endpoint, str(host.id))),
                     "rel": "self"}

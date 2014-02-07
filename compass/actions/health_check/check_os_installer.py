@@ -28,12 +28,13 @@ class OsInstallerCheck(base.BaseCheck):
         except:
             self.code = 0
             self.messages.append(
-                "[OS Installer]Error: Cannot login to Cobbler with "
-                "the tokens provided in the config file")
+                "[%s]Error: Cannot login to Cobbler with "
+                "the tokens provided in the config file"
+                % self.NAME)
             self.messages.append(
-                "[OS Installer]Error: Failed to connect to Cobbler "
+                "[%s]Error: Failed to connect to Cobbler "
                 "API, please check if /etc/cobbler/setting "
-                "is properly configured")
+                "is properly configured" % self.NAME)
             return (self.code, self.messages)
 
         check_result = self.remote.check(self.token)
@@ -44,7 +45,7 @@ class OsInstallerCheck(base.BaseCheck):
         if len(check_result) != 0:
             self.code = 0
             for error_msg in check_result:
-                self.messages.append("[OS Installer]Error: " + error_msg)
+                self.messages.append("[%s]Error: " % self.NAME + error_msg)
 
         if len(self.remote.get_distros()) == 0:
             self._set_status(0,
@@ -111,7 +112,7 @@ class OsInstallerCheck(base.BaseCheck):
 
         if self.code == 1:
             self.messages.append(
-                "[OS Installer]Info: OS Installer health check "
-                "has completed. No problems found, all systems go.")
+                "[%s]Info: OS Installer health check has completed."
+                " No problems found, all systems go." % self.NAME)
 
         return (self.code, self.messages)

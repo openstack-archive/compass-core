@@ -39,7 +39,8 @@ class DhcpCheck(base.BaseCheck):
         cobbler_settings = self.remote.get_settings()
         if cobbler_settings['manage_dhcp'] == 0:
             self.messages.append(
-                "[DHCP]Info: DHCP service is not managed by Compass")
+                "[%s]Info: DHCP service is not managed by Compass"
+                % self.NAME)
             return (self.code, self.messages)
         self.check_cobbler_dhcp_template()
         print "[Done]"

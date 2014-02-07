@@ -162,8 +162,8 @@ class MiscCheck(base.BaseCheck):
             if health_check_utils.check_chkconfig(serv) is True:
                 self._set_status(
                     0,
-                    "[Miscellaenous Check]Error: %s is not disabled"
-                    % serv)
+                    "[%s]Error: %s is not disabled"
+                    % (self.NAME, serv))
                 serv_to_disable.append(serv)
         if len(serv_to_disable) != 0:
             self._set_status(

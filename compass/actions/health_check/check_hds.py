@@ -19,16 +19,18 @@ class HdsCheck(base.BaseCheck):
         try:
             pkg_module = __import__(pkg_type)
         except:
-            self.messages.append("[HDS]Error: No module named %s, "
-                                 "please install it first." % pkg_module)
+            self.messages.append("[%s]Error: No module named %s, "
+                                 "please install it first." 
+                                 % (self.NAME, pkg_module))
         method_name = 'self.check_' + pkg_type + '_snmp(pkg_module)'
         eval(method_name)
         print "[Done]"
         self.check_snmp_mibs()
         print "[Done]"
         if self.code == 1:
-            self.messages.append("[HDS]Info: hds health check has complated. "
-                                 "No problems found, all systems go.")
+            self.messages.append("[%s]Info: hds health check has complated. "
+                                 "No problems found, all systems go."
+                                 % self.NAME)
         return (self.code, self.messages)
 
     def check_yum_snmp(self, pkg_module):
@@ -44,8 +46,8 @@ class HdsCheck(base.BaseCheck):
         uninstalled = []
         for package in ['net-snmp-utils', 'net-snmp', 'net-snmp-python']:
             if not yum_base.rpmdb.searchNevra(name=package):
-                self.messages.append("[HDS]Error: %s package is required "
-                                     "for HDS" % package)
+                self.messages.append("[%s]Error: %s package is required "
+                                     "for HDS" % (self.NAME, package))
                 uninstalled.append(package)
         if len(uninstalled) != 0:
             self._set_status(0, "[%s]Info: Uninstalled packages: %s"

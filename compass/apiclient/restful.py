@@ -632,5 +632,5 @@ class Client(object):
         :type cluster_id: int.
         """
         params = {}
-        params['cluser_id'] = cluster_id
+        params['cluster_id'] = cluster_id
         return self._get('/api/dashboardlinks', params)

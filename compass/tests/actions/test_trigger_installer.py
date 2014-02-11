@@ -239,6 +239,7 @@ class TestEndToEnd(unittest2.TestCase):
                     session.add(host)
 
     def setUp(self):
+        super(TestEndToEnd, self).setUp()
         database.create_db()
         shutil.rmtree = Mock()
         os.system = Mock()
@@ -250,9 +251,17 @@ class TestEndToEnd(unittest2.TestCase):
         self.os_installer_checker_['cobbler'] = self._check_cobbler
         self.package_installer_checker_ = {}
         self.package_installer_checker_['chef'] = self._check_chef
+        self.backup_logfile = flags.OPTIONS.logfile
+        if not flags.OPTIONS.logfile:
+            flags.OPTIONS.logfile = '/tmp/test_trigger_install.log'
+
+        logsetting.init()
 
     def tearDown(self):
+        flags.OPTIONS.logfile = self.backup_logfile
+        logsetting.init()
         database.drop_db()
+        super(TestEndToEnd, self).tearDown()
 
     def test_1(self):
         self._test('test1')

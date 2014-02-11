@@ -49,8 +49,15 @@ class ApiTestCase(unittest2.TestCase):
         # We do not want to send a real task as our test environment
         # does not have a AMQP system set up. TODO(): any better way?
         current_app.send_task = Mock()
+        self.backup_logfile = flags.OPTIONS.logfile
+        if not flags.OPTIONS.logfile:
+            flags.OPTIONS.logfile = '/tmp/test_api.log'
+
+        logsetting.init()
 
     def tearDown(self):
+        flags.OPTIONS.logfile = self.backup_logfile
+        logsetting.init()
         database.drop_db()
         super(ApiTestCase, self).tearDown()
 

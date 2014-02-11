@@ -54,7 +54,10 @@ TO_CLUSTER_TRANSLATORS = {
                 translated_keys=['/networking/public/interface']
             )],
             '/networking/interfaces/tenant/nic': [KeyTranslator(
-                translated_keys=['/networking/tenant/interface']
+                translated_keys=[
+                    '/networking/tenant/interface',
+                    '/networking/plugins/ovs/gre/local_ip_interface'
+                ]
             )],
         }
     ),

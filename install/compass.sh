@@ -43,10 +43,22 @@ fi
 sudo sed -i "/COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/cobbler_api'" /etc/compass/setting
 sudo sed -i "/CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
 
+
 # add cookbooks, databags and roles
-sudo /opt/compass/bin/addcookbooks.py  --cookbooks_dir=$ADAPTER_HOME/chef/cookbooks
-sudo /opt/compass/bin/adddatabags.py   --databags_dir=$ADAPTER_HOME/chef/databags
-sudo /opt/compass/bin/addroles.py      --roles_dir=$ADAPTER_HOME/chef/roles
+sudo mkdir -p /var/chef/cookbooks/		
+sudo mkdir -p /var/chef/databags/		
+sudo mkdir -p /var/chef/roles/		
+sudo cp -r $ADAPTER_HOME/chef/cookbooks/* /var/chef/cookbooks/		
+sudo cp -r $ADAPTER_HOME/chef/databags/* /var/chef/databags/		
+sudo cp -r $ADAPTER_HOME/chef/roles/* /var/chef/roles/
+
+sudo chmod +x /opt/compass/bin/addcookbooks.py		
+sudo chmod +x /opt/compass/bin/adddatabags.py		
+sudo chmod +x /opt/compass/bin/addroles.py
+
+sudo /opt/compass/bin/addcookbooks.py  --cookbooks_dir=/var/chef/cookbooks
+sudo /opt/compass/bin/adddatabags.py   --databags_dir=/var/chef/databags
+sudo /opt/compass/bin/addroles.py      --roles_dir=/var/chef/roles
 
 # copy the chef validatation keys to cobbler snippets
 sudo cp -rf /etc/chef-server/chef-validator.pem /var/lib/cobbler/snippets/chef-validator.pem

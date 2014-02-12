@@ -223,7 +223,7 @@ if [[ "$?" != "0" ]]; then
 else
     echo "$IMAGE_SOURCE is downloaded"
 fi
-
+ls /var/lib/cobbler/iso
 sudo mkdir -p /mnt/${IMAGE_NAME}-${IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${IMAGE_NAME}-${IMAGE_ARCH} ") -eq 0 ]; then
 sudo mount -o loop /var/lib/cobbler/iso/${IMAGE_NAME}-${IMAGE_ARCH}.iso /mnt/${IMAGE_NAME}-${IMAGE_ARCH}

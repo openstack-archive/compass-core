@@ -1,5 +1,6 @@
 """Define all the RestfulAPI entry points"""
 import logging
+import re
 import simplejson as json
 from flask import request
 from flask.ext.restful import Resource
@@ -14,6 +15,7 @@ from compass.db.model import Machine as ModelMachine
 from compass.db.model import Cluster as ModelCluster
 from compass.db.model import ClusterHost as ModelClusterHost
 from compass.db.model import ClusterState
+from compass.db.model import HostState
 from compass.db.model import Adapter
 from compass.db.model import Role
 
@@ -207,7 +209,7 @@ class Switch(Resource):
 
             if not switch:
                 error_msg = "Cannot find the switch with id=%s" % switch_id
-                logging.error("[/switches/{id}]error_msg: %s", error_msg)
+                logging.debug("[/switches/{id}]error_msg: %s", error_msg)
 
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg)
@@ -393,7 +395,7 @@ class Machine(Resource):
 
             if not machine:
                 error_msg = "Cannot find the machine with id=%s" % machine_id
-                logging.error("[/api/machines/{id}]error_msg: %s", error_msg)
+                logging.debug("[/api/machines/{id}]error_msg: %s", error_msg)
 
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg))
@@ -594,10 +596,10 @@ def list_clusters():
         elif state == 'installing':
             # The deployment of this cluster is in progress.
             clusters = session.query(ModelCluster)\
-                              .filter(ModelCluster.id == ClusterState.id,
-                                      or_(ClusterState.state == 'INSTALLING',
-                                          ClusterState.state == 'UNINITIALIZED'))\
-                              .all()
+                .filter(ModelCluster.id == ClusterState.id,
+                        or_(ClusterState.state == 'INSTALLING',
+                            ClusterState.state == 'UNINITIALIZED'))\
+                .all()
         elif state == 'failed':
             # The deployment of this cluster is failed.
             clusters = session.query(ModelCluster)\
@@ -625,7 +627,7 @@ def list_clusters():
               "clusters": results})
 
 
-@app.route("/clusters/<string:cluster_id>/action", methods=['POST'])
+@app.route("/clusters/<int:cluster_id>/action", methods=['POST'])
 def execute_cluster_action(cluster_id):
     """Execute the specified  action to the cluster.
 
@@ -788,6 +790,11 @@ def execute_cluster_action(cluster_id):
             session.query(ModelCluster).filter_by(id=cluster_id)\
                                        .update({'mutable': False})
 
+            # Clean up cluster_state and host_state table
+            session.query(ClusterState).filter_by(id=cluster_id).delete()
+            for host_id in hosts:
+                session.query(HostState).filter_by(id=host_id).delete()
+
         celery.send_task("compass.tasks.trigger_install", (cluster_id, hosts))
         return util.make_json_response(
             202, {"status": "accepted",
@@ -889,10 +896,11 @@ class ClusterHostConfig(Resource):
                 test_host = session.query(ModelClusterHost)\
                                    .filter_by(cluster_id=cluster_id,
                                               hostname=hostname).first()
-                if test_host:
+                if test_host and test_host.id != int(host_id):
                     error_msg = ("Hostname '%s' has been used for other host "
-                                 "in the cluster, cluster ID is %s!"
-                                 % (hostname, cluster_id))
+                                 "in the cluster, cluster ID is %s! %s %s"
+                                 % (hostname, cluster_id,
+                                    test_host.id, host_id))
 
                     return errors.handle_invalid_usage(
                         errors.UserInvalidUsage(error_msg))
@@ -1027,7 +1035,7 @@ def list_clusterhosts():
                   "cluster_hosts": hosts_list})
 
 
-@app.route("/adapters/<string:adapter_id>", methods=['GET'])
+@app.route("/adapters/<int:adapter_id>", methods=['GET'])
 def list_adapter(adapter_id):
     """
     Lists details of the specified adapter.
@@ -1055,7 +1063,7 @@ def list_adapter(adapter_id):
               "adapter": adapter_res})
 
 
-@app.route("/adapters/<string:adapter_id>/roles", methods=['GET'])
+@app.route("/adapters/<int:adapter_id>/roles", methods=['GET'])
 def list_adapter_roles(adapter_id):
     """Lists details of all roles of the specified adapter
 
@@ -1234,22 +1242,106 @@ class DashboardLinks(Resource):
             )
 
 
+@app.route("/export/<string:tname>", methods=['GET'])
+def export_csv(tname):
+    if tname not in TABLES:
+        error_msg = "Table '%s' is not supported to export or wrong table name"
+        return util.handle_invalid_usage(
+            errors.UserInvalidUsage(error_msg)
+            )
+    table = TABLES[tname]['name']
+    colnames = TABLES[tname]['columns']
+    t_headers = []
+    rows = []
+    with database.session() as session:
+        records = session.query(table).all()
+        # Get headers of the table
+        if not records:
+            t_headers = colnames
+        else:
+            first_record = records[0]
+            for col in colnames:
+                value = getattr(first_record, col)
+                if re.match(r'^{(.*:.*[,]*)}', str(value)):
+                    # value is dict
+                    tmp_headers = []
+                    util.get_headers_from_dict(tmp_headers, col,
+                                               json.loads(value))
+                    t_headers.extend(tmp_headers)
+                else:
+                    t_headers.append(col)
+
+        # Get columns values
+        for entry in records:
+            tmp = []
+            for col in colnames:
+                value = None
+                if col == 'state':
+                    value = entry.state.state if entry.state else None
+                    tmp.append(value)
+                    continue
+                else:
+                    value = str(json.loads(json.dumps(getattr(entry, col))))
+
+                if re.match(r'^{(.*:.*[,]*)}', value):
+                    values = []
+                    util.get_col_val_from_dict(values, json.loads(value))
+                    tmp.extend(values)
+                else:
+                    tmp.append(value)
+
+            rows.append(tmp)
+
+    if tname == 'cluster_host':
+        t_headers.append('deploy_action')
+        for row in rows:
+            row.append(0)
+
+    result = ','.join(str(x) for x in t_headers)
+
+    for row in rows:
+        row = ','.join(str(x) for x in row)
+        result = '\n'.join((result, row))
+
+    return util.make_csv_response(200, result, tname)
+
+
+TABLES = {
+    'switch_config': {'name': SwitchConfig,
+                      'columns': ['id', 'ip', 'filter_port']},
+    'switch': {'name': ModelSwitch,
+               'columns': ['id', 'ip', 'credential_data']},
+    'machine': {'name': ModelMachine,
+                'columns': ['id', 'mac', 'port', 'vlan', 'switch_id']},
+    'cluster': {'name': ModelCluster,
+                'columns': ['id', 'name', 'security_config',
+                            'networking_config', 'partition_config',
+                            'adapter_id', 'state']},
+    'cluster_host': {'name': ModelClusterHost,
+                     'columns': ['id', 'cluster_id', 'hostname', 'machine_id',
+                                 'config_data', 'state']},
+    'adapter': {'name': Adapter,
+                'columns': ['id', 'name', 'os', 'target_system']},
+    'role': {'name': Role,
+             'columns': ['id', 'name', 'target_system', 'description']}
+}
+
 util.add_resource(SwitchList, '/switches')
-util.add_resource(Switch, '/switches/<string:switch_id>')
+util.add_resource(Switch, '/switches/<int:switch_id>')
 util.add_resource(MachineList, '/machines')
-util.add_resource(Machine, '/machines/<string:machine_id>')
+util.add_resource(Machine, '/machines/<int:machine_id>')
 util.add_resource(Cluster,
                   '/clusters',
-                  '/clusters/<string:cluster_id>',
-                  '/clusters/<string:cluster_id>/<string:resource>')
+                  '/clusters/<int:cluster_id>',
+                  '/clusters/<int:cluster_id>/<string:resource>')
 util.add_resource(ClusterHostConfig,
-                  '/clusterhosts/<string:host_id>/config',
-                  '/clusterhosts/<string:host_id>/config/<string:subkey>')
-util.add_resource(ClusterHost, '/clusterhosts/<string:host_id>')
+                  '/clusterhosts/<int:host_id>/config',
+                  '/clusterhosts/<int:host_id>/config/<string:subkey>')
+util.add_resource(ClusterHost, '/clusterhosts/<int:host_id>')
 util.add_resource(HostInstallingProgress,
-                  '/clusterhosts/<string:host_id>/progress')
+                  '/clusterhosts/<int:host_id>/progress')
 util.add_resource(ClusterInstallingProgress,
-                  '/clusters/<string:cluster_id>/progress')
+                  '/clusters/<int:cluster_id>/progress')
 util.add_resource(DashboardLinks, '/dashboardlinks')
 
 if __name__ == '__main__':

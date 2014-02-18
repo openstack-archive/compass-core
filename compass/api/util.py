@@ -20,6 +20,15 @@ def make_json_response(status_code, data):
     return resp
 
 
+def make_csv_response(status_code, csv_data, fname):
+    """Wrap CSV format to the reponse object"""
+    fname = '.'.join((fname, 'csv'))
+    resp = make_response(csv_data, status_code)
+    resp.mimetype = 'text/csv'
+    resp.headers['Content-Disposition'] = 'attachment; filename="%s"' % fname
+    return resp
+
+
 def add_resource(*args, **kwargs):
     """Add resource"""
     api.add_resource(*args, **kwargs)
@@ -332,24 +341,46 @@ def is_valid_keys(expected, input_dict, section=""):
     return (True, "")
 
 
-def is_same_dict_keys(expected_dict, config_dict):
+def get_col_val_from_dict(result, data):
+    """
+    Convert a dict's value to a list.
+    :param result: a list of values for each column
+    :param data: input data
 
-    if not expected_dict or not config_dict:
-        return (False, "The Config cannot be None!")
+    for example:
+    data = {"a": {"b": {"c": 1},
+                  "d": 2}}
+    the result will be  [1, 2]
+    """
+    if not isinstance(data, dict):
+        data = str(data) if str(data) else 'None'
+        result.append(data)
+        return
 
-    if expected_dict.viewkeys() == config_dict.viewkeys():
-        for expected_key, config_key in zip(expected_dict, config_dict):
-            if isinstance(expected_dict[expected_key], str):
-                return (True, "")
+    for key in data:
+        get_col_val_from_dict(result, data[key])
 
-            is_same, err = is_same_dict_keys(expected_dict[expected_key],
-                                             config_dict[config_key])
-            if not is_same:
-                return (False, err)
-        return (True, "")
 
-    if len(expected_dict) >= len(config_dict):
-        invalid_list = list(expected_dict.viewkeys() - config_dict.viewkeys())
-    else:
-        invalid_list = list(config_dict.viewkeys() - expected_dict.viewkeys())
-    return (False, "Invalid key(s) %r in the config" % invalid_list)
+def get_headers_from_dict(headers, colname, data):
+    """Convert a column which value is dict to a list of column name and keys.
+       nested keys in dict will be joined by '.' as a column name in CSV.
+       :param headers: the result list to hold dict keys
+       :param colname: the column name
+       :param data: input data
+
+       for example:
+       the column name is 'config_data', and
+       the value is {"a": {"b": {"c": 1},
+                           "d": 2}}
+       then headers will be ['config_data.a.b.c', 'config_data.a.d']
+    """
+    if not colname:
+        raise "colname cannot be None!"
+
+    if not isinstance(data, dict):
+        headers.append(colname)
+        return
+
+    for key in data:
+        tmp_header = '.'.join((colname, key))
+        get_headers_from_dict(headers, tmp_header, data[key])

@@ -3,6 +3,7 @@ from celery import current_app
 from mock import Mock
 import simplejson as json
 import os
+import csv
 import unittest2
 
 
@@ -26,6 +27,7 @@ from compass.db.model import Role
 from compass.db.model import SwitchConfig
 from compass.utils import flags
 from compass.utils import logsetting
+from compass.utils import util
 
 
 class ApiTestCase(unittest2.TestCase):
@@ -41,10 +43,6 @@ class ApiTestCase(unittest2.TestCase):
         database.init(self.DATABASE_URL)
         database.create_db()
         self.app = app.test_client()
-
-        # We do not want to send a real task as our test environment
-        # does not have a AMQP system set up. TODO(): any better way?
-        current_app.send_task = Mock()
 
         # We do not want to send a real task as our test environment
         # does not have a AMQP system set up. TODO(): any better way?
@@ -427,13 +425,13 @@ class TestClusterAPI(ApiTestCase):
         rv = self.app.get(url)
         data = json.loads(rv.get_data())
         self.assertEqual(len(data['clusters']), 8)
-      
+
         # b. get all undeployed clusters
         url = "/clusters?state=undeployed"
         rv = self.app.get(url)
         data = json.loads(rv.get_data())
         self.assertEqual(len(data['clusters']), 2)
-        
+
         # c. get all failed clusters
         url = "/clusters?state=failed"
         rv = self.app.get(url)
@@ -697,6 +695,10 @@ class TestClusterAPI(ApiTestCase):
         deploy_request = json.dumps({"deploy": [host_id]})
         rv = self.app.post(url, data=deploy_request)
         self.assertEqual(202, rv.status_code)
+
+        cluster_state = session.query(ClusterState).filter_by(id=1).first()
+        self.assertIsNone(cluster_state)
+
         expected_deploy_result = {
             "cluster": {
                 "cluster_id": 1,
@@ -739,7 +741,7 @@ class ClusterHostAPITest(ApiTestCase):
                              Machine(mac='00:27:88:0c:03', switch_id=1),
                              Machine(mac='00:27:88:0c:04', switch_id=1)]
             session.add_all(machines_list)
-            
+
             host = ClusterHost(hostname='host_01', cluster_id=1, machine_id=1)
             host.config_data = json.dumps(self.test_config_data)
             session.add(host)
@@ -793,20 +795,22 @@ class ClusterHostAPITest(ApiTestCase):
 
         # 2. Config with incorrect ip format
         url = '/clusterhosts/2/config'
-        incorrect_config = deepcopy(config)
-        incorrect_config['hostname'] = 'host_02_02'
-        incorrect_config['networking']['interfaces']['management']['ip'] = 'xxx'
-        rv = self.app.put(url, data=json.dumps(incorrect_config))
+        incorrect_conf = deepcopy(config)
+        incorrect_conf['hostname'] = 'host_02'
+        incorrect_conf['networking']['interfaces']['management']['ip'] = 'xxx'
+        rv = self.app.put(url, data=json.dumps(incorrect_conf))
         self.assertEqual(400, rv.status_code)
 
         # 3. Config put sucessfully
+        config['hostname'] = 'host_02'
         rv = self.app.put(url, data=json.dumps(config))
         self.assertEqual(200, rv.status_code)
         with database.session() as session:
-            config_db = session.query(ClusterHost.config_data)\
-                               .filter_by(id=2).first()[0]
+            host = session.query(ClusterHost).filter_by(id=2).first()
+            config_db = json.loads(host.config_data)
+            config_db['hostname'] = host.hostname
             self.maxDiff = None
-            self.assertDictEqual(config, json.loads(config_db))
+            self.assertDictEqual(config, config_db)
 
     def test_clusterHost_delete_subkey(self):
         # 1. Try to delete an unqalified subkey of config
@@ -1203,7 +1207,271 @@ class TestAPIWorkFlow(ApiTestCase):
                 self.assertDictEqual(host.config, excepted)
 
 
+class TestExport(ApiTestCase):
+
+    CLUSTER_SECURITY_CONFIG = {
+        "security": {
+            "server_credentials": {
+                "username": "root",
+                "password": "root"},
+            "service_credentials": {
+                "username": "service",
+                "password": "admin"},
+            "console_credentials": {
+                "username": "console",
+                "password": "admin"}
+        }
+    }
+    CLUSTER_NETWORKING_CONFIG = {
+        "networking": {
+            "interfaces": {
+                "management": {
+                    "ip_start": "10.120.8.100",
+                    "ip_end": "10.120.8.200",
+                    "netmask": "255.255.255.0",
+                    "gateway": "",
+                    "nic": "eth0",
+                    "promisc": 1
+                },
+                "tenant": {
+                    "ip_start": "192.168.10.100",
+                    "ip_end": "192.168.10.200",
+                    "netmask": "255.255.255.0",
+                    "gateway": "",
+                    "nic": "eth1",
+                    "promisc": 0
+                },
+                "public": {
+                    "ip_start": "12.145.68.100",
+                    "ip_end": "12.145.68.200",
+                    "netmask": "255.255.255.0",
+                    "gateway": "",
+                    "nic": "eth2",
+                    "promisc": 0
+                },
+                "storage": {
+                    "ip_start": "172.29.8.100",
+                    "ip_end": "172.29.8.200",
+                    "netmask": "255.255.255.0",
+                    "gateway": "",
+                    "nic": "eth3",
+                    "promisc": 0
+                }
+            },
+            "global": {
+                "nameservers": "8.8.8.8",
+                "search_path": "ods.com",
+                "gateway": "192.168.1.1",
+                "proxy": "http://127.0.0.1:3128",
+                "ntp_server": "127.0.0.1"
+            }
+        }
+    }
+    CLUSTER_PARTITION_CONFIG = {
+        "partition": "/home 20%;/tmp 10%;/var 30%;"
+    }
+
+    CLUSTERHOST_CONFIG = {
+        "networking": {
+            "interfaces": {
+                "management": {
+                    "ip": ""
+                },
+                "tenant": {
+                    "ip": ""
+                }
+            }
+        },
+        "roles": ["base"]
+    }
+    CSV_EXCEPTED_OUTPUT_DIR = '/'.join((
+        os.path.dirname(os.path.realpath(__file__)), 'expected_csv'))
+
+    def setUp(self):
+        super(TestExport, self).setUp()
+        #Prepare test data
+        with database.session() as session:
+            # populate switch_config
+            switch_config = [SwitchConfig(ip='192.168.1.10', filter_port='1'),
+                             SwitchConfig(ip='192.168.1.11', filter_port='2')]
+            session.add_all(switch_config)
+
+            # populate role table
+            role = Role(name='compute', target_system='openstack')
+            session.add(role)
+
+            # Populate one adapter to DB
+            adapter = Adapter(name='Centos_openstack', os='Centos',
+                              target_system='openstack')
+            session.add(adapter)
+
+            #Populate switches info to DB
+            switches = [Switch(ip="192.168.2.1",
+                               credential={"version": "2c",
+                                           "community": "public"},
+                               vendor="huawei",
+                               state="under_monitoring"),
+                        Switch(ip="192.168.2.2",
+                               credential={"version": "2c",
+                                           "community": "public"},
+                               vendor="huawei",
+                               state="under_monitoring"),
+                        Switch(ip="192.168.2.3",
+                               credential={"version": "2c",
+                                           "community": "public"},
+                               vendor="huawei",
+                               state="under_monitoring"),
+                        Switch(ip="192.168.2.4",
+                               credential={"version": "2c",
+                                           "community": "public"},
+                               vendor="huawei",
+                               state="under_monitoring")]
+            session.add_all(switches)
+
+            # Populate machines info to DB
+            machines = [
+                Machine(mac='00:0c:27:88:0c:a1', port='1', vlan='1',
+                        switch_id=1),
+                Machine(mac='00:0c:27:88:0c:a2', port='2', vlan='1',
+                        switch_id=1),
+                Machine(mac='00:0c:27:88:0c:a3', port='3', vlan='1',
+                        switch_id=1),
+                Machine(mac='00:0c:27:88:0c:b1', port='1', vlan='1',
+                        switch_id=2),
+                Machine(mac='00:0c:27:88:0c:b2', port='2', vlan='1',
+                        switch_id=2),
+                Machine(mac='00:0c:27:88:0c:b3', port='3', vlan='1',
+                        switch_id=2),
+                Machine(mac='00:0c:27:88:0c:c1', port='1', vlan='1',
+                        switch_id=3),
+                Machine(mac='00:0c:27:88:0c:c2', port='2', vlan='1',
+                        switch_id=3),
+                Machine(mac='00:0c:27:88:0c:c3', port='3', vlan='1',
+                        switch_id=3),
+                Machine(mac='00:0c:27:88:0c:d1', port='1', vlan='1',
+                        switch_id=4),
+                Machine(mac='00:0c:27:88:0c:d2', port='2', vlan='1',
+                        switch_id=4),
+            ]
+
+            session.add_all(machines)
+
+            # Popluate clusters into DB
+            """
+            a. cluster #1: a new machine will be added to it.
+            b. cluster #2: a failed machine needs to be re-deployed.
+            c. cluster #3: a new cluster with 3 hosts will be deployed.
+            """
+            clusters_networking_config = [
+                {"networking":
+                    {"interfaces": {"management": {"ip_start": "10.120.1.100",
+                                                   "ip_end": "10.120.1.200"},
+                                    "tenant": {"ip_start": "192.168.1.100",
+                                               "ip_end": "192.168.1.200"},
+                                    "public": {"ip_start": "12.145.1.100",
+                                               "ip_end": "12.145.1.200"},
+                                    "storage": {"ip_start": "172.29.1.100",
+                                                "ip_end": "172.29.1.200"}}}},
+                {"networking":
+                    {"interfaces": {"management": {"ip_start": "10.120.2.100",
+                                                   "ip_end": "10.120.2.200"},
+                                    "tenant": {"ip_start": "192.168.2.100",
+                                               "ip_end": "192.168.2.200"},
+                                    "public": {"ip_start": "12.145.2.100",
+                                               "ip_end": "12.145.2.200"},
+                                    "storage": {"ip_start": "172.29.2.100",
+                                                "ip_end": "172.29.2.200"}}}}
+            ]
+            cluster_names = ['cluster_01', 'cluster_02']
+            for name, networking_config in zip(cluster_names,
+                                               clusters_networking_config):
+                nconfig = deepcopy(self.CLUSTER_NETWORKING_CONFIG)
+                util.merge_dict(nconfig, networking_config)
+                c = Cluster(name=name, adapter_id=1,
+                            security_config=json.dumps(
+                                self.CLUSTER_SECURITY_CONFIG['security']),
+                            networking_config=json.dumps(
+                                nconfig['networking']),
+                            partition_config=json.dumps(
+                                self.CLUSTER_PARTITION_CONFIG['partition']))
+                session.add(c)
+
+            # Populate hosts to each cluster
+            host_mips = ['10.120.1.100', '10.120.1.101', '10.120.1.102',
+                         '10.120.2.100', '10.120.2.101', '10.120.2.102']
+            host_tips = ['192.168.1.100', '192.168.1.101', '192.168.1.102',
+                         '192.168.2.100', '192.168.2.101', '192.168.2.102']
+            hosts_config = []
+            for mip, tip in zip(host_mips, host_tips):
+                config = deepcopy(self.CLUSTERHOST_CONFIG)
+                config['networking']['interfaces']['management']['ip'] = mip
+                config['networking']['interfaces']['tenant']['ip'] = tip
+                hosts_config.append(json.dumps(config))
+
+            hosts = [
+                ClusterHost(hostname='host_01', machine_id=1, cluster_id=1,
+                            config_data=hosts_config[0]),
+                ClusterHost(hostname='host_02', machine_id=2, cluster_id=1,
+                            config_data=hosts_config[1]),
+                ClusterHost(hostname='host_03', machine_id=3, cluster_id=1,
+                            config_data=hosts_config[2]),
+                ClusterHost(hostname='host_01', machine_id=4, cluster_id=2,
+                            config_data=hosts_config[3]),
+                ClusterHost(hostname='host_02', machine_id=5, cluster_id=2,
+                            config_data=hosts_config[4]),
+                ClusterHost(hostname='host_03', machine_id=6, cluster_id=2,
+                            config_data=hosts_config[5])
+            ]
+            session.add_all(hosts)
+
+            # Populate cluster state and host state
+            cluster_states = [
+                ClusterState(id=1, state="READY", progress=1.0,
+                             message="Successfully!"),
+                ClusterState(id=2, state="ERROR", progress=0.5,
+                             message="Failed!")
+            ]
+            session.add_all(cluster_states)
+
+            host_states = [
+                HostState(id=1, state="READY", progress=1.0,
+                          message="Successfully!"),
+                HostState(id=2, state="READY", progress=1.0,
+                          message="Successfully!"),
+                HostState(id=3, state="READY", progress=1.0,
+                          message="Successfully!"),
+                HostState(id=4, state="ERROR", progress=0.5,
+                          message="Failed!"),
+                HostState(id=5, state="READY", progress=1.0,
+                          message="Successfully!"),
+                HostState(id=6, state="ERROR", progress=1.0,
+                          message="Failed!")
+            ]
+            session.add_all(host_states)
+            session.flush()
+
+    def tearDown(self):
+        super(TestExport, self).tearDown()
+
+    def test_export(self):
+        talbes = ['switch', 'machine', 'cluster', 'cluster_host', 'adapter',
+                  'role', 'switch_config']
+        for tname in talbes:
+            url = '/'.join(('/export', tname))
+            rv = self.app.get(url)
+            resp_data = rv.get_data()
+            resp_data = resp_data.split('\n')
+            resp_data = csv.DictReader(resp_data)
+            expected_file = '/'.join((self.CSV_EXCEPTED_OUTPUT_DIR,
+                                     (tname + '.csv')))
+            expected_data = csv.DictReader(open(expected_file))
+            for export_row, expected_row in zip(resp_data, expected_data):
+                self.assertDictEqual(export_row, expected_row)
+                self.maxDiff = None
+
+
 if __name__ == '__main__':
     flags.init()
+    flags.OPTIONS.logfile = '/var/log/compass/test.log'
     logsetting.init()
     unittest2.main()

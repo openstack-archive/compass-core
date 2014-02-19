@@ -1,19 +1,20 @@
 """Health Check module for Celery"""
 
 import os
-import re
 import commands
 
-import base
-import utils as health_check_utils
 from celery.task.control import inspect
+
+from compass.actions.health_check import base
+from compass.actions.health_check import utils as health_check_utils
 
 
 class CeleryCheck(base.BaseCheck):
-
+    """celery health check class."""
     NAME = "Celery Check"
 
     def run(self):
+        """do health check"""
         self.check_compass_celery_setting()
         print "[Done]"
         self.check_celery_backend()
@@ -28,10 +29,11 @@ class CeleryCheck(base.BaseCheck):
         """Validates Celery settings"""
 
         print "Checking Celery setting......",
-        SETTING_MAP = {'logfile':    'CELERY_LOGFILE',
-                       'configdir':  'CELERYCONFIG_DIR',
-                       'configfile': 'CELERYCONFIG_FILE',
-                       }
+        setting_map = {
+            'logfile': 'CELERY_LOGFILE',
+            'configdir': 'CELERYCONFIG_DIR',
+            'configfile': 'CELERYCONFIG_FILE',
+        }
 
         res = health_check_utils.validate_setting('Celery',
                                                   self.config,
@@ -61,9 +63,10 @@ class CeleryCheck(base.BaseCheck):
             self._set_status(0, res)
 
         unset = []
-        for item in ['logfile', 'configdir', 'configfile']:
-            if eval(item) == "":
-                unset.append(SETTING_MAP[item])
+        for item in [logfile, configdir, configfile]:
+            if item == "":
+                unset.append(setting_map[item])
+
         if len(unset) != 0:
             self._set_status(0,
                              "[%s]Error: Unset celery settings: %s"
@@ -94,13 +97,16 @@ class CeleryCheck(base.BaseCheck):
                     0,
                     "[%s]Error: No running Celery workers were found."
                     % self.NAME)
-        except IOError as e:
+        except IOError as error:
             self._set_status(
                 0,
                 "[%s]Error: Failed to connect to the backend: %s"
-                % (self.NAME, str(e)))
+                % (self.NAME, str(error)))
             from errno import errorcode
-            if len(e.args) > 0 and errorcode.get(e.args[0]) == 'ECONNREFUSED':
+            if (
+                len(error.args) > 0 and
+                errorcode.get(error.args[0]) == 'ECONNREFUSED'
+            ):
                 self.messages.append(
                     "[%s]Error: RabbitMQ server isn't running"
                     % self.NAME)

@@ -61,7 +61,10 @@ def init():
         if not logfile:
             handler = logging.StreamHandler(sys.stderr)
         else:
-            handler = logging.FileHandler(logfile)
+            handler = logging.handlers.TimedRotatingFileHandler(
+                logfile,
+                when=flags.OPTIONS.log_interval_unit,
+                interval=flags.OPTIONS.log_interval)
 
     if loglevel in LOGLEVEL_MAPPING:
         logger.setLevel(LOGLEVEL_MAPPING[loglevel])

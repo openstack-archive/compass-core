@@ -1,22 +1,18 @@
 """Health Check module for Apache service"""
 
-import os
-import re
-import commands
+import socket
 import urllib2
 
-from socket import *
-
-import utils as health_check_utils
-import base
-import logging
+from compass.actions.health_check import base
+from compass.actions.health_check import utils as health_check_utils
 
 
 class ApacheCheck(base.BaseCheck):
-
+    """apache server health check class."""
     NAME = "Apache Check"
 
     def run(self):
+        """do the healthcheck"""
         if self.dist in ("centos", "redhat", "fedora", "scientific linux"):
             apache_service = 'httpd'
         else:
@@ -32,8 +28,7 @@ class ApacheCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_apache_conf(self, apache_service):
-        """
-        Validates if Apache settings.
+        """Validates if Apache settings.
 
         :param apache_service  : service type of apache, os dependent.
                                  e.g. httpd or apache2
@@ -63,7 +58,7 @@ class ApacheCheck(base.BaseCheck):
                                                                 apache_service)
         if not serv_err_msg == "":
             self._set_status(0, serv_err_msg)
-        if 'http' != getservbyport(80):
+        if 'http' != socket.getservbyport(80):
             self._set_status(
                 0,
                 "[%s]Error: Apache is not listening on port 80."

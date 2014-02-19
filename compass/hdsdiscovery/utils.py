@@ -17,25 +17,23 @@ def load_module(mod_name, path, host=None, credential=None):
     :param str host: switch ip address
     :param str credential: credential used to access switch
     """
-    instance = None
     try:
-        file, path, descr = imp.find_module(mod_name, [path])
-        if file:
-            mod = imp.load_module(mod_name, file, path, descr)
+        mod_file, path, descr = imp.find_module(mod_name, [path])
+        if mod_file:
+            mod = imp.load_module(mod_name, mod_file, path, descr)
             if host and credential:
                 instance = getattr(mod, mod.CLASS_NAME)(host, credential)
             else:
                 instance = getattr(mod, mod.CLASS_NAME)()
 
+        return instance
     except ImportError as exc:
         logging.error('No such plugin : %s', mod_name)
         logging.exception(exc)
-
-    finally:
-        return instance
+        return None
 
 
-def ssh_remote_execute(host, username, password, cmd, *args):
+def ssh_remote_execute(host, username, password, cmd):
     """SSH to execute script on remote machine
 
     :param host: ip of the remote machine
@@ -80,7 +78,7 @@ def valid_ip_format(ip_address):
     """Valid the format of an Ip address"""
 
     if not re.match(r'^((([0-2]?\d{0,2}\.){3}([0-2]?\d{0,2}))'
-                    '|(([\da-fA-F]{1,4}:){7}([\da-fA-F]{1,4})))$',
+                    r'|(([\da-fA-F]{1,4}:){7}([\da-fA-F]{1,4})))$',
                     ip_address):
         # check IP's format is match ipv4 or ipv6 by regex
         return False
@@ -190,6 +188,7 @@ SNMP_V2_CREDENTIALS = {"version": "", "community": ""}
 
 
 def is_valid_snmp_v2_credential(credential):
+    """check if credential is valid snmp v2 credential."""
     if credential.keys() != SNMP_V2_CREDENTIALS.keys():
         return False
     if credential['version'] != '2c':
@@ -199,23 +198,25 @@ def is_valid_snmp_v2_credential(credential):
 
 
 def is_valid_ssh_credential(credential):
+    """check if credential is valid ssh credential."""
     if credential.keys() != SSH_CREDENTIALS.keys():
         return False
     return True
 
 
 def snmpget_by_cl(host, credential, oid, timeout=8, retries=3):
+    """snmpget by credential."""
     if not is_valid_snmp_v2_credential(credential):
         logging.error("[utils][snmpget_by_cl] Credential %s cannot be used "
-                      "for SNMP request!" % credential)
+                      "for SNMP request!", credential)
         return None
 
     version = credential['version']
     community = credential['community']
-    cl = ("snmpget -v %s -c %s -Ob -r %s -t %s %s %s"
-          % (version, community, retries, timeout, host, oid))
+    cmd = "snmpget -v %s -c %s -Ob -r %s -t %s %s %s" % (
+        version, community, retries, timeout, host, oid)
     output = None
-    sub_p = subprocess.Popen(cl, shell=True,
+    sub_p = subprocess.Popen(cmd, shell=True,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
     output, err = sub_p.communicate()
@@ -228,17 +229,18 @@ def snmpget_by_cl(host, credential, oid, timeout=8, retries=3):
 
 
 def snmpwalk_by_cl(host, credential, oid, timeout=5, retries=3):
+    """snmpwalk by credential."""
     if not is_valid_snmp_v2_credential(credential):
         logging.error("[utils][snmpwalk_by_cl] Credential %s cannot be used "
-                      "for SNMP request!" % credential)
+                      "for SNMP request!", credential)
         return None
 
     version = credential['version']
     community = credential['community']
-    cl = ("snmpwalk -v %s -c %s -Cc -r %s -t %s -Ob %s %s"
-          % (version, community, retries, timeout, host, oid))
+    cmd = "snmpwalk -v %s -c %s -Cc -r %s -t %s -Ob %s %s" % (
+        version, community, retries, timeout, host, oid)
     output = []
-    sub_p = subprocess.Popen(cl, shell=True, stdout=subprocess.PIPE)
+    sub_p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     output, err = sub_p.communicate()
 
     if err:

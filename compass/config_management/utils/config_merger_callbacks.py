@@ -172,7 +172,7 @@ def _update_exclusive_roles(bundled_exclusives, lower_roles,
 
 
 def _assign_roles_by_mins(role_bundles, lower_roles, unassigned_hosts,
-                         bundled_maxs, bundled_mins):
+                          bundled_maxs, bundled_mins):
     """Assign roles to hosts by min restriction."""
     available_hosts = deepcopy(unassigned_hosts)
     for bundled_role, roles in role_bundles.items():
@@ -204,7 +204,7 @@ def _assign_roles_by_maxs(role_bundles, lower_roles, unassigned_hosts,
     for bundled_role in role_bundles.keys():
         if bundled_maxs[bundled_role] > 0:
             available_lists.append(
-                [bundled_role]*bundled_maxs[bundled_role])
+                [bundled_role] * bundled_maxs[bundled_role])
         else:
             default_roles.append(bundled_role)
 
@@ -367,7 +367,7 @@ def assign_noproxy(_upper_ref, _from_key, lower_refs,
             logging.error('failed to assign %s[%s] = %s %% %s',
                           lower_key, to_key, noproxy_pattern, mapping)
             raise error
- 
+
     no_proxy = ','.join(no_proxy_list)
     host_no_proxy = {}
     for lower_key, _ in lower_refs.items():

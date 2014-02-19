@@ -1,19 +1,19 @@
 """Health Check module for Package Installer"""
 
 import os
-import re
 import requests
 
-import base
-import utils as health_check_utils
-import setting as health_check_setting
+from compass.actions.health_check import base
+from compass.actions.health_check import utils as health_check_utils
+from compass.actions.health_check import setting as health_check_setting
 
 
 class PackageInstallerCheck(base.BaseCheck):
-
+    """package installer health check class."""
     NAME = "Package Installer Check"
 
     def run(self):
+        """do health check"""
         installer = self.config.PACKAGE_INSTALLER
         method_name = "self." + installer + "_check()"
         return eval(method_name)
@@ -21,15 +21,16 @@ class PackageInstallerCheck(base.BaseCheck):
     def chef_check(self):
         """Checks chef setting, cookbooks, databags and roles"""
 
-        CHEFDATA_MAP = {'CookBook':  health_check_setting.COOKBOOKS,
-                        'DataBag':   health_check_setting.DATABAGS,
-                        'Role':       health_check_setting.ROLES,
-                        }
+        chef_data_map = {
+            'CookBook': health_check_setting.COOKBOOKS,
+            'DataBag': health_check_setting.DATABAGS,
+            'Role': health_check_setting.ROLES,
+        }
 
         total_missing = []
-        for data_type in CHEFDATA_MAP.keys():
+        for data_type in chef_data_map.keys():
             total_missing.append(self.check_chef_data(data_type,
-                                 CHEFDATA_MAP[data_type]))
+                                 chef_data_map[data_type]))
             print "[Done]"
 
         missing = False
@@ -46,16 +47,19 @@ class PackageInstallerCheck(base.BaseCheck):
                                    ', '.join(missed for missed in item[1])))
             self._set_status(
                 0,
-                "[%s]Error: Missing modules on chef server: %s. "
-                % (self.NAME, ' ;'.join(message for message in messages)))
+                "[%s]Error: Missing modules on chef server: "
+                "%s." % (
+                    self.NAME,
+                    ' ;'.join(message for message in messages)))
 
         self.check_chef_config_dir()
         print "[Done]"
         if self.code == 1:
             self.messages.append(
                 "[%s]Info: Package installer health check "
-                "has completed. No problems found, all systems go."
-                % self.NAME)
+                "has completed. No problems found, all systems "
+                "go." % self.NAME)
+
         return (self.code, self.messages)
 
     def check_chef_data(self, data_type, github_url):
@@ -79,26 +83,28 @@ class PackageInstallerCheck(base.BaseCheck):
 
             return self.get_status()
 
-        self.api_ = chef.autoconfigure()
+        api = chef.autoconfigure()
 
-        github = set([item['name']
-                     for item in
-                     requests.get(github_url).json()])
+        github = set([
+            item['name']
+            for item in requests.get(github_url).json()
+        ])
         if data_type == 'CookBook':
             local = set(os.listdir('/var/chef/cookbooks'))
         elif data_type == 'Role':
-            local = set([name
-                         for
-                         name, item
-                         in
-                         chef.Role.list(api=self.api_).iteritems()])
-            github = set([item['name'].replace(".rb", "")
-                          for item in
-                          requests.get(github_url).json()])
+            local = set([
+                name for name, item in chef.Role.list(api=api).iteritems()
+            ])
+            github = set([
+                item['name'].replace(".rb", "")
+                for item in requests.get(github_url).json()
+            ])
         else:
-            local = set([item
-                        for item in
-                        eval('chef.' + data_type + '.list(api = self.api_)')])
+            local = set([
+                item for item in eval(
+                    'chef.' + data_type + '.list(api=api)'
+                )
+            ])
         diff = github - local
 
         if len(diff) <= 0:

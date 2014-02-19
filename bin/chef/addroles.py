@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+"""script to import roles to chef server"""
 import logging
 import os
 import os.path
@@ -13,7 +13,8 @@ flags.add('roles_dir',
           default='/var/chef/roles')
 
 
-if __name__ == '__main__':
+def main():
+    """main entry"""
     flags.init()
     logsetting.init()
     rolelist = []
@@ -27,3 +28,7 @@ if __name__ == '__main__':
         logging.info('add role %s', role)
         cmd = "knife role from file %s" % role
         os.system(cmd)
+
+
+if __name__ == '__main__':
+    main()

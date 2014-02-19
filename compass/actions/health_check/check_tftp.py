@@ -1,21 +1,19 @@
 """Health Check module for TFTP service"""
 
 import os
-import re
-import sys
 import xmlrpclib
-import commands
-from socket import *
+import socket
 
-import base
-import utils as health_check_utils
+from compass.actions.health_check import base
+from compass.actions.health_check import utils as health_check_utils
 
 
 class TftpCheck(base.BaseCheck):
-
+    """tftp health check class"""
     NAME = "TFTP Check"
 
     def run(self):
+        """do health check"""
         installer = self.config.OS_INSTALLER
         method_name = "self.check_" + installer + "_tftp()"
         return eval(method_name)
@@ -29,10 +27,10 @@ class TftpCheck(base.BaseCheck):
         """
 
         try:
-            self.remote = xmlrpclib.Server(
+            remote = xmlrpclib.Server(
                 self.config.COBBLER_INSTALLER_URL,
                 allow_none=True)
-            self.token = self.remote.login(
+            remote.login(
                 *self.config.COBBLER_INSTALLER_TOKEN)
         except:
             self._set_status(
@@ -41,7 +39,7 @@ class TftpCheck(base.BaseCheck):
                 " provided in the config file" % self.NAME)
             return (self.code, self.messages)
 
-        cobbler_settings = self.remote.get_settings()
+        cobbler_settings = remote.get_settings()
         if cobbler_settings['manage_tftp'] == 0:
             self.messages.append(
                 '[TFTP]Info: tftp service is not managed by Compass')
@@ -79,7 +77,7 @@ class TftpCheck(base.BaseCheck):
         if not serv_err_msg == "":
             self._set_status(0, serv_err_msg)
 
-        if 'tftp' != getservbyport(69):
+        if 'tftp' != socket.getservbyport(69):
             self._set_status(
                 0,
                 "[%s]Error: tftp doesn't seem to be listening "

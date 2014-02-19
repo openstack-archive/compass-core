@@ -138,3 +138,5 @@ sudo cp -rf $COMPASSDIR/mibs /usr/local/share/snmp/
 sudo rm -f /etc/snmp/snmp.conf
 sudo cp -rf $COMPASSDIR/misc/snmp/snmp.conf /etc/snmp/snmp.conf
 sudo chmod 644 /etc/snmp/snmp.conf
+sudo mkdir -p /var/lib/net-snmp/mib_indexes
+sudo chmod 755 /var/lib/net-snmp/mib_indexes

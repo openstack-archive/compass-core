@@ -198,18 +198,12 @@ ppa_repo_packages="ntp-4.2.6p5-1.el6.${IMAGE_TYPE,,}.$IMAGE_ARCH.rpm
                     ntpdate-4.2.6p5-1.el6.${IMAGE_TYPE,,}.${IMAGE_ARCH}.rpm"
 for f in $ppa_repo_packages
 do
-    if [[ ! -e /tmp/$f ]]; then
-        sudo wget -c --progress=bar:force -O /tmp/$f ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f
-    else
-        echo "$f already exist"
-    fi
+    download ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f
     sudo cp /tmp/$f /var/lib/cobbler/repo_mirror/ppa_repo/
 done
-if [[ ! -e /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm ]]; then
-    sudo wget -c --progress=bar:force -O /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
-else 
-    echo "chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm already exists"
-fi
+
+# download chef client for ppa repo
+download http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
 sudo cp /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm /var/lib/cobbler/repo_mirror/ppa_repo/
 cd ..
 sudo createrepo ppa_repo
@@ -224,17 +218,7 @@ sudo cobbler reposync
 
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
-if [[ ! -e /tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso ]]; then
-    sudo wget -c --progress=bar:force -O /tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso "$IMAGE_SOURCE"
-    if [[ "$?" != "0" ]]; then
-        echo "failed to download images $IMAGE_SOURCE"
-        exit 1
-    else
-        echo "$IMAGE_SOURCE is downloaded"
-    fi
-else 
-    echo "${IMAGE_NAME}-${IMAGE_ARCH}.iso already exists"
-fi
+download "$IMAGE_SOURCE" ${IMAGE_NAME}-${IMAGE_ARCH}.iso
 sudo cp /tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso /var/lib/cobbler/iso/
 sudo mkdir -p /mnt/${IMAGE_NAME}-${IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${IMAGE_NAME}-${IMAGE_ARCH} ") -eq 0 ]; then

@@ -36,23 +36,17 @@ fi
 # configure chef client and knife
 rpm -q chef
 if [[ "$?" != "0" ]]; then
-sudo wget -c --progress=bar:force -O /tmp/chef_install.sh http://www.opscode.com/chef/install.sh
-if [[ "$?" != "0" ]]; then
-    echo "failed to download chef install script"
-    exit 1
+    download http://www.opscode.com/chef/install.sh chef_install.sh
+    sudo chmod 755 /tmp/chef_install.sh
+    sudo /tmp/chef_install.sh
+    if [[ "$?" != "0" ]]; then
+        echo "chef install failed"
+        exit 1
+    else
+        echo "chef is installed"
+    fi
 else
-    echo "chef install script is downloaded"
-fi
-sudo chmod 755 /tmp/chef_install.sh
-sudo /tmp/chef_install.sh
-if [[ "$?" != "0" ]]; then
-    echo "chef install failed"
-    exit 1
-else
-    echo "chef is installed"
-fi
-else
-echo "chef has already installed"
+    echo "chef has already installed"
 fi
 
 sudo mkdir -p ~/.chef

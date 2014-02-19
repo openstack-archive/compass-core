@@ -15,7 +15,7 @@ class OVSwitch(base.BaseVendor):
     def __init__(self):
         self.__name = "Open vSwitch"
 
-    def is_this_vendor(self, host, credential, sys_info):
+    def is_this_vendor(self, host, credential, sys_info, **kwargs):
         """Determine if the hostname is accociated witH this vendor.
 
         :param host: swtich's IP address

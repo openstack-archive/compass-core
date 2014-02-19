@@ -7,12 +7,13 @@ them to provider and installers.
 import functools
 import logging
 
-from compass.config_management.installers import os_installer
-from compass.config_management.installers import package_installer
-from compass.config_management.providers import config_provider
+from compass.config_management import installers
+from compass.config_management import providers
 from compass.config_management.utils import config_merger_callbacks
 from compass.config_management.utils.config_merger import ConfigMapping
 from compass.config_management.utils.config_merger import ConfigMerger
+from compass.config_management.utils.config_reference import ConfigReference
+from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
@@ -94,11 +95,11 @@ class ConfigManager(object):
     """
 
     def __init__(self):
-        self.config_provider_ = config_provider.get_provider()
+        self.config_provider_ = providers.get_provider()
         logging.debug('got config provider: %s', self.config_provider_)
-        self.package_installer_ = package_installer.get_installer()
+        self.package_installer_ = installers.get_package_installer()
         logging.debug('got package installer: %s', self.package_installer_)
-        self.os_installer_ = os_installer.get_installer(
+        self.os_installer_ = installers.get_os_installer(
             package_installer=self.package_installer_)
         logging.debug('got os installer: %s', self.os_installer_)
 
@@ -112,8 +113,11 @@ class ConfigManager(object):
            {'name': '...', 'os': '...', 'target_system': '...'}
         """
         oses = self.os_installer_.get_oses()
+        logging.debug('got oses %s from %s', oses, self.os_installer_)
         target_systems_per_os = self.package_installer_.get_target_systems(
             oses)
+        logging.debug('got target_systems per os from %s: %s',
+                      self.package_installer_, target_systems_per_os)
         adapters = []
         for os_version, target_systems in target_systems_per_os.items():
             for target_system in target_systems:
@@ -138,6 +142,8 @@ class ConfigManager(object):
            {'name': '...', 'description': '...', 'target_system': '...'}
         """
         roles = self.package_installer_.get_roles(target_system)
+        logging.debug('got target system %s roles %s from %s',
+                      target_system, roles, self.package_installer_)
         return [
             {
                 'name': role,
@@ -145,6 +151,57 @@ class ConfigManager(object):
                 'target_system': target_system
             } for role, description in roles.items()
         ]
+
+    def update_adapters_from_installers(self):
+        """update adapters from installers."""
+        adapters = self.get_adapters()
+        target_systems = set()
+        roles_per_target_system = {}
+        for adapter in adapters:
+            target_systems.add(adapter['target_system'])
+
+        for target_system in target_systems:
+            roles_per_target_system[target_system] = self.get_roles(
+                target_system)
+
+        logging.debug('update adapters %s and '
+                      'roles per target system %s to %s',
+                      adapters, roles_per_target_system,
+                      self.config_provider_)
+        self.config_provider_.update_adapters(
+            adapters, roles_per_target_system)
+
+    def update_switch_filters(self):
+        """Update switch filter from setting.SWITCHES"""
+        if not hasattr(setting, 'SWITCHES'):
+            logging.info('no switch configs to set')
+            return
+
+        switch_filters = util.get_switch_filters(setting.SWITCHES)
+        logging.debug('update switch filters %s to %s',
+                      switch_filters, self.config_provider_)
+        self.config_provider_.update_switch_filters(switch_filters)
+
+    def get_switch_and_machines(self):
+        """Get switches and machines"""
+        switches, machines_per_switch = (
+            self.config_provider_.get_switch_and_machines())
+        logging.debug('got switches %s from %s',
+                      switches, self.config_provider_)
+        logging.debug('got machines per switch %s from %s',
+                      machines_per_switch, self.config_provider_)
+        return (switches, machines_per_switch)
+
+    def update_switch_and_machines(
+        self, switches, switch_machines
+    ):
+        """Update switches and machines."""
+        logging.debug('update switches %s to %s',
+                      switches, self.config_provider_)
+        logging.debug('update switch machines %s to %s',
+                      switch_machines, self.config_provider_)
+        self.config_provider_.update_switch_and_machines(
+            switches, switch_machines)
 
     def get_global_config(self, os_version, target_system):
         """Get global config."""
@@ -169,9 +226,15 @@ class ConfigManager(object):
     def update_global_config(self, config, os_version, target_system):
         """update global config."""
         logging.debug('update global config: %s', config)
+        logging.debug('update global config to %s',
+                      self.config_provider_)
         self.config_provider_.update_global_config(config)
+        logging.debug('update global config to %s',
+                      self.os_installer_)
         self.os_installer_.update_global_config(
             config, os_version=os_version, target_system=target_system)
+        logging.debug('update global config to %s',
+                      self.package_installer_)
         self.package_installer_.update_global_config(
             config, os_version=os_version, target_system=target_system)
 
@@ -197,29 +260,20 @@ class ConfigManager(object):
         util.merge_dict(config, package_config)
         return config
 
-    def clean_cluster_config(self, clusterid, os_version, target_system):
-        config = self.config_provider_.get_cluster_config(clusterid)
-        logging.debug('got cluster %s config from %s: %s',
-                      clusterid, self.config_provider_, config)
-        self.os_installer_.clean_cluster_config(
-            clusterid, config, os_version=os_version,
-            target_system=target_system)
-        logging.debug('clean cluster %s config in %s',
-                      clusterid, self.os_installer_)
-        self.package_installer_.clean_cluster_config(
-            clusterid, config, os_version=os_version,
-            target_system=target_system)
-        logging.debug('clean cluster %s config in %s',
-                      clusterid, self.package_installer_)
-
     def update_cluster_config(self, clusterid, config,
                               os_version, target_system):
         """update cluster config."""
         logging.debug('update cluster %s config: %s', clusterid, config)
+        logging.debug('update cluster %s config to %s',
+                      clusterid, self.config_provider_)
         self.config_provider_.update_cluster_config(clusterid, config)
+        logging.debug('update cluster %s config to %s',
+                      clusterid, self.os_installer_)
         self.os_installer_.update_cluster_config(
             clusterid, config, os_version=os_version,
             target_system=target_system)
+        logging.debug('update cluster %s config to %s',
+                      clusterid, self.package_installer_)
         self.package_installer_.update_cluster_config(
             clusterid, config, os_version=os_version,
             target_system=target_system)
@@ -259,16 +313,19 @@ class ConfigManager(object):
         config = self.config_provider_.get_host_config(hostid)
         logging.debug('got host %s config from %s: %s',
                       hostid, self.config_provider_, config)
+        logging.debug('clean host %s config in %s',
+                      hostid, self.config_provider_)
+        self.config_provider_.clean_host_config(hostid)
+        logging.debug('clean host %s config in %s',
+                      hostid, self.os_installer_)
         self.os_installer_.clean_host_config(
             hostid, config, os_version=os_version,
             target_system=target_system)
         logging.debug('clean host %s config in %s',
-                      hostid, self.os_installer_)
+                      hostid, self.package_installer_)
         self.package_installer_.clean_host_config(
             hostid, config, os_version=os_version,
             target_system=target_system)
-        logging.debug('clean host %s config in %s',
-                      hostid, self.package_installer_)
 
     def clean_host_configs(self, hostids, os_version, target_system):
         """clean hosts' configs."""
@@ -280,28 +337,126 @@ class ConfigManager(object):
         config = self.config_provider_.get_host_config(hostid)
         logging.debug('got host %s config from %s: %s',
                       hostid, self.config_provider_, config)
+        logging.debug('reinstall host %s in %s',
+                      hostid, self.config_provider_)
+        self.config_provider_.reinstall_host(hostid)
+        logging.debug('reinstall host %s in %s',
+                      hostid, self.os_installer_)
         self.os_installer_.reinstall_host(
             hostid, config, os_version=os_version,
             target_system=target_system)
         logging.debug('reinstall host %s in %s',
-                      hostid, self.os_installer_)
+                      hostid, self.package_installer_)
         self.package_installer_.reinstall_host(
             hostid, config, os_version=os_version,
             target_system=target_system)
-        logging.debug('clean host %s in %s',
-                      hostid, self.package_installer_)
+
+    def reinstall_cluster(self, clusterid, os_version, target_system):
+        """reinstall cluster."""
+        config = self.config_provider_.get_cluster_config(clusterid)
+        logging.debug('got cluster %s config from %s: %s',
+                      clusterid, self.config_provider_, config)
+        logging.debug('reinstall cluster %s in %s',
+                      clusterid, self.config_provider_)
+        self.config_provider_.reinstall_cluster(clusterid)
+        logging.debug('reinstall cluster %s in %s',
+                      clusterid, self.os_installer_)
+        self.os_installer_.reinstall_cluster(
+            clusterid, config, os_version=os_version,
+            target_system=target_system)
+        logging.debug('reinstall cluster %s in %s',
+                      clusterid, self.package_installer_)
+        self.package_installer_.reinstall_cluster(
+            clusterid, config, os_version=os_version,
+            target_system=target_system)
 
     def reinstall_hosts(self, hostids, os_version, target_system):
+        """reinstall hosts."""
         for hostid in hostids:
             self.reinstall_host(hostid, os_version, target_system)
 
-    def update_host_config(self, hostid, config, os_version, target_system):
+    def clean_host_installing_progress(self, hostid,
+                                       os_version, target_system):
+        """clean host installing progress."""
+        config = self.config_provider_.get_host_config(hostid)
+        logging.debug('got host %s config from %s: %s',
+                      hostid, self.config_provider_, config)
+        logging.debug('clean host %s installing progress in %s',
+                      hostid, self.config_provider_)
+        self.config_provider_.clean_host_installing_progress(hostid)
+        logging.debug('clean host %s installing progress in %s',
+                      hostid, self.os_installer_)
+        self.os_installer_.clean_host_installing_progress(
+            hostid, config, os_version=os_version,
+            target_system=target_system)
+        logging.debug('clean host %s installing progress in %s',
+                      hostid, self.package_installer_)
+        self.package_installer_.clean_host_installing_progress(
+            hostid, config, os_version=os_version,
+            target_system=target_system)
+
+    def clean_hosts_installing_progress(self, hostids,
+                                        os_version, target_system):
+        """clean hosts installing progress."""
+        for hostid in hostids:
+            self.clean_hosts_installing_progress(
+                hostid, os_version, target_system)
+
+    def clean_cluster_installing_progress(self, clusterid,
+                                          os_version, target_system):
+        """clean cluster installing progress."""
+        config = self.config_provider_.get_cluster_config(clusterid)
+        logging.debug('got host %s config from %s: %s',
+                      clusterid, self.config_provider_, config)
+        logging.debug('clean cluster %s installing progress in %s',
+                      clusterid, self.config_provider_)
+        self.config_provider_.clean_cluster_installing_progress(clusterid)
+        logging.debug('clean cluster %s installing progress in %s',
+                      clusterid, self.os_installer_)
+        self.os_installer_.clean_cluster_installing_progress(
+            clusterid, config, os_version=os_version,
+            target_system=target_system)
+        logging.debug('clean cluster %s installing progress in %s',
+                      clusterid, self.package_installer_)
+        self.package_installer_.clean_cluster_installing_progress(
+            clusterid, config, os_version=os_version,
+            target_system=target_system)
+
+    def clean_cluster_config(self, clusterid,
+                             os_version, target_system):
+        """clean cluster config."""
+        config = self.config_provider_.get_cluster_config(clusterid)
+        logging.debug('got cluster %s config from %s: %s',
+                      clusterid, self.config_provider_, config)
+
+        logging.debug('clean cluster %s config in %s',
+                      clusterid, self.config_provider_)
+        self.config_provider_.clean_cluster_config(clusterid)
+        logging.debug('clean cluster %s config in %s',
+                      clusterid, self.os_installer_)
+        self.os_installer_.clean_cluster_config(
+            clusterid, config, os_version=os_version,
+            target_system=target_system)
+        logging.debug('clean cluster %s config in %s',
+                      clusterid, self.package_installer_)
+        self.package_installer_.clean_cluster_config(
+            clusterid, config, os_version=os_version,
+            target_system=target_system)
+
+    def update_host_config(self, hostid, config,
+                           os_version, target_system):
         """update host config."""
         logging.debug('update host %s config: %s', hostid, config)
+        logging.debug('update host %s config to %s',
+                      hostid, self.config_provider_)
         self.config_provider_.update_host_config(hostid, config)
+        logging.debug('update host %s config to %s',
+                      hostid, self.os_installer_)
         self.os_installer_.update_host_config(
             hostid, config, os_version=os_version,
             target_system=target_system)
+        logging.debug('update host %s config to %s',
+                      hostid, self.package_installer_)
         self.package_installer_.update_host_config(
             hostid, config, os_version=os_version,
             target_system=target_system)
@@ -312,40 +467,153 @@ class ConfigManager(object):
             self.update_host_config(
                 hostid, host_config, os_version, target_system)
 
-    def update_cluster_and_host_configs(self,
-                                        clusterid,
-                                        hostids,
-                                        update_hostids,
-                                        os_version,
-                                        target_system):
-        """update cluster/host configs."""
-        logging.debug('update cluster %s with all hosts %s and update: %s',
-                      clusterid, hostids, update_hostids)
+    def get_cluster_hosts(self, clusterid):
+        """get cluster hosts."""
+        hostids = self.config_provider_.get_cluster_hosts(clusterid)
+        logging.debug('got hosts of cluster %s from %s: %s',
+                      clusterid, self.config_provider_, hostids)
+        return hostids
 
-        global_config = self.get_global_config(os_version, target_system)
-        self.update_global_config(global_config, os_version=os_version,
-                                  target_system=target_system)
+    def get_clusters(self):
+        """get clusters"""
+        clusters = self.config_provider_.get_clusters()
+        logging.debug('got clusters from %s: %s',
+                      self.config_provider_, clusters)
+        return clusters
 
-        cluster_config = self.get_cluster_config(
-            clusterid, os_version=os_version, target_system=target_system)
-        util.merge_dict(cluster_config, global_config, False)
-        self.update_cluster_config(
-            clusterid, cluster_config, os_version=os_version,
-            target_system=target_system)
+    def filter_cluster_and_hosts(self, cluster_hosts,
+                                 os_versions, target_systems,
+                                 cluster_properties_match,
+                                 cluster_properties_name,
+                                 host_properties_match,
+                                 host_properties_name):
+        """get filtered cluster and hosts configs."""
+        logging.debug('filter cluster_hosts: %s', cluster_hosts)
+        clusters_properties = []
+        cluster_hosts_properties = {}
+        for clusterid, hostids in cluster_hosts.items():
+            cluster_config = self.get_cluster_config(
+                clusterid, os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            cluster_ref = ConfigReference(cluster_config)
+            if cluster_ref.match(cluster_properties_match):
+                clusters_properties.append(
+                    cluster_ref.filter(cluster_properties_name))
 
-        host_configs = self.get_host_configs(
-            hostids, os_version=os_version,
-            target_system=target_system)
-        CLUSTER_HOST_MERGER.merge(cluster_config, host_configs)
-        update_host_configs = dict(
-            [(hostid, host_config)
-             for hostid, host_config in host_configs.items()
-             if hostid in update_hostids])
-        self.update_host_configs(
-            update_host_configs, os_version=os_version,
-            target_system=target_system)
+            host_configs = self.get_host_configs(
+                hostids, os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            cluster_hosts_properties[clusterid] = []
+            for _, host_config in host_configs.items():
+                host_ref = ConfigReference(host_config)
+                if host_ref.match(host_properties_match):
+                    cluster_hosts_properties[clusterid].append(
+                        host_ref.filter(host_properties_name))
+
+        logging.debug('got clsuter properties: %s',
+                      clusters_properties)
+        logging.debug('got cluster hosts properties: %s',
+                      cluster_hosts_properties)
+        return (clusters_properties, cluster_hosts_properties)
+
+    def reinstall_cluster_and_hosts(self,
+                                    cluster_hosts,
+                                    os_versions,
+                                    target_systems):
+        """reinstall clusters and hosts of each cluster."""
+        logging.debug('reinstall cluster_hosts: %s', cluster_hosts)
+        for clusterid, hostids in cluster_hosts.items():
+            self.reinstall_hosts(
+                hostids,
+                os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            self.reinstall_cluster(clusterid,
+                                   os_version=os_versions[clusterid],
+                                   target_system=target_systems[clusterid])
+
+    def clean_cluster_and_hosts(self, cluster_hosts,
+                                os_versions, target_systems):
+        """clean clusters and hosts of each cluster."""
+        logging.debug('clean cluster_hosts: %s', cluster_hosts)
+        for clusterid, hostids in cluster_hosts.items():
+            self.clean_host_configs(hostids,
+                                    os_version=os_versions[clusterid],
+                                    target_system=target_systems[clusterid])
+            all_hostids = self.get_cluster_hosts(clusterid)
+            if set(all_hostids) == set(hostids):
+                self.clean_cluster_config(
+                    clusterid,
+                    os_version=os_versions[clusterid],
+                    target_system=target_systems[clusterid])
+            else:
+                self.clean_cluster_installing_progress(
+                    clusterid, os_version=os_versions[clusterid],
+                    target_system=target_systems[clusterid])
+
+    def clean_cluster_and_hosts_installing_progress(
+        self, cluster_hosts, os_versions, target_systems
+    ):
+        """Clean clusters and hosts of each cluster intalling progress."""
+        logging.debug('clean cluster_hosts installing progress: %s',
+                      cluster_hosts)
+        for clusterid, hostids in cluster_hosts.items():
+            self.clean_hosts_installing_progress(
+                hostids, os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            self.clean_cluster_installing_progress(
+                clusterid, os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+
+    def install_cluster_and_hosts(self,
+                                  cluster_hosts,
+                                  os_versions,
+                                  target_systems):
+        """update clusters and hosts of each cluster configs."""
+        logging.debug('update cluster_hosts: %s', cluster_hosts)
+
+        for clusterid, hostids in cluster_hosts.items():
+            global_config = self.get_global_config(
+                os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            self.update_global_config(global_config,
+                                      os_version=os_versions[clusterid],
+                                      target_system=target_systems[clusterid])
+            cluster_config = self.get_cluster_config(
+                clusterid, os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            util.merge_dict(cluster_config, global_config, False)
+            self.update_cluster_config(
+                clusterid, cluster_config,
+                os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+
+            all_hostids = self.get_cluster_hosts(clusterid)
+            host_configs = self.get_host_configs(
+                all_hostids, os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            CLUSTER_HOST_MERGER.merge(cluster_config, host_configs)
+            update_host_configs = dict(
+                [(hostid, host_config)
+                 for hostid, host_config in host_configs.items()
+                 if hostid in hostids])
+            self.update_host_configs(
+                update_host_configs,
+                os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            self.reinstall_hosts(
+                update_host_configs.keys(),
+                os_version=os_versions[clusterid],
+                target_system=target_systems[clusterid])
+            self.reinstall_cluster(clusterid,
+                                   os_version=os_versions[clusterid],
+                                   target_system=target_systems[clusterid])
 
     def sync(self):
         """sync os installer and package installer."""
+        logging.info('config manager sync')
+        logging.debug('sync %s', self.config_provider_)
+        self.config_provider_.sync()
+        logging.debug('sync %s', self.os_installer_)
         self.os_installer_.sync()
+        logging.debug('sync %s', self.package_installer_)
         self.package_installer_.sync()

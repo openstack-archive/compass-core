@@ -2,6 +2,8 @@
 import logging
 import re
 
+from abc import ABCMeta
+
 from compass.utils import util
 
 
@@ -29,12 +31,14 @@ class Progress(object):
 
 class ProgressCalculator(object):
     """base class to generate progress."""
-    def __init__(self):
-        raise NotImplementedError(str(self))
+
+    __metaclass__ = ABCMeta
 
     @classmethod
-    def update_progress(cls, progress_data, message,
-                       severity, progress):
+    def update_progress(
+        cls, progress_data, message,
+        severity, progress
+    ):
         """
         Update progress with the given progress_data,
         message and severity.
@@ -48,9 +52,12 @@ class ProgressCalculator(object):
         # the progress is only updated when the new progress
         # is greater than the stored progress or the progress
         # to update is the same but the message is different.
-        if (progress_data > progress.progress or
-               (progress_data == progress.progress and
-                   message != progress.message)):
+        if (
+            progress_data > progress.progress or (
+                progress_data == progress.progress and
+                message != progress.message
+            )
+        ):
             progress.progress = progress_data
             if message:
                 progress.message = message
@@ -80,13 +87,14 @@ class IncrementalProgress(ProgressCalculator):
 
     def __init__(self, min_progress,
                  max_progress, incremental_ratio):
+        super(IncrementalProgress, self).__init__()
         if not 0.0 <= min_progress <= max_progress <= 1.0:
             raise IndexError(
                 '%s restriction is not mat: 0.0 <= min_progress(%s)'
                 ' <= max_progress(%s) <= 1.0' % (
                     self.__class__.__name__, min_progress, max_progress))
 
-        if not 0.0 <= incremental_ratio <=  1.0:
+        if not 0.0 <= incremental_ratio <= 1.0:
             raise IndexError(
                 '%s restriction is not mat: '
                 '0.0 <= incremental_ratio(%s) <=  1.0' % (
@@ -122,6 +130,7 @@ class RelativeProgress(ProgressCalculator):
     """class to update progress to the given relative progress."""
 
     def __init__(self, progress):
+        super(RelativeProgress, self).__init__()
         if not 0.0 <= progress <= 1.0:
             raise IndexError(
                 '%s restriction is not mat: 0.0 <= progress(%s) <= 1.0' % (

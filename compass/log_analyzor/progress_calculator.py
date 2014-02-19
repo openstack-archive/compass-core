@@ -246,8 +246,10 @@ ADAPTER_CONFIGURATIONS = [
 ]
 
 
-def _get_adapter_matcher(os_installer, os_name,
-                        package_installer, target_system):
+def _get_adapter_matcher(
+    os_installer, os_name,
+    package_installer, target_system
+):
     """Get adapter matcher by os name and package installer name."""
     for configuration in ADAPTER_CONFIGURATIONS:
         if configuration.match(os_installer, os_name,
@@ -260,19 +262,20 @@ def _get_adapter_matcher(os_installer, os_name,
     return None
 
 
-def update_progress(os_installer, os_name, package_installer, target_system,
-                    clusterid, hostids):
+def update_progress(os_installer, os_names, package_installer, target_systems,
+                    cluster_hosts):
     """Update adapter installing progress.
 
     :param os_installer: os installer name
-    :param os_name: os name.
     :param package_installer: package installer name.
-    :param clusterid: cluster id.
-    :param hostids: hosts ids.
+    :param cluster_hosts: clusters and hosts in each cluster to update.
+    :param cluster_hosts: dict of int to list of int.
     """
-    adapter = _get_adapter_matcher(os_installer, os_name,
-                                   package_installer, target_system)
-    if not adapter:
-        return
+    for clusterid, hostids in cluster_hosts.items():
+        adapter = _get_adapter_matcher(os_installer, os_names[clusterid],
+                                       package_installer,
+                                       target_systems[clusterid])
+        if not adapter:
+            continue
 
-    adapter.update_progress(clusterid, hostids)
+        adapter.update_progress(clusterid, hostids)

@@ -1,0 +1,9 @@
+Verified+2: Jenkins
+Approved+1: Shuo Yang <shuo.yang@huawei.com>
+Code-Review+2: Shuo Yang <shuo.yang@huawei.com>
+Verified+1: Compass CI <dev-team@syscompass.org>
+Submitted-by: Jenkins
+Submitted-at: Wed, 19 Feb 2014 19:01:54 +0000
+Reviewed-on: https://review.openstack.org/74581
+Project: stackforge/compass-core
+Branch: refs/heads/master

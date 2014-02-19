@@ -1,34 +1,29 @@
 """Miscellaneous Health Check for Compass"""
 
-import os
-import re
-import commands
-import base
-import utils as health_check_utils
+from compass.actions.health_check import base
+from compass.actions.health_check import utils as health_check_utils
 
 
 class MiscCheck(base.BaseCheck):
-
+    """health check for misc"""
     NAME = "Miscellaneous Check"
 
     MISC_MAPPING = {
-        "yum":      "rsyslog ntp iproute openssh-clients python git wget "
-                    "python-setuptools python-netaddr python-flask "
-                    "python-flask-sqlalchemy python-amqplib amqp "
-                    "python-paramiko python-mock mod_wsgi httpd squid "
-                    "dhcp bind rsync yum-utils xinetd tftp-server gcc "
-                    "net-snmp-utils net-snmp python-daemon".split(" "),
-
-        "pip":      "flask-script flask-restful celery six discover "
-                    "unittest2 chef".replace("-", "_").split(" "),
-
-        "disable":  "iptables ip6tables".split(" "),
-
-        "enable":   "httpd squid xinetd dhcpd named sshd rsyslog cobblerd "
-                    "ntpd compassd".split(" "),
+        "yum": "rsyslog ntp iproute openssh-clients python git wget "
+               "python-setuptools python-netaddr python-flask "
+               "python-flask-sqlalchemy python-amqplib amqp "
+               "python-paramiko python-mock mod_wsgi httpd squid "
+               "dhcp bind rsync yum-utils xinetd tftp-server gcc "
+               "net-snmp-utils net-snmp python-daemon".split(" "),
+        "pip": "flask-script flask-restful celery six discover "
+               "unittest2 chef".replace("-", "_").split(" "),
+        "disable": "iptables ip6tables".split(" "),
+        "enable": "httpd squid xinetd dhcpd named sshd rsyslog cobblerd "
+                  "ntpd compassd".split(" "),
     }
 
     def run(self):
+        """do health check"""
         self.check_linux_dependencies()
         print "[Done]"
         self.check_pip_dependencies()
@@ -191,9 +186,9 @@ class MiscCheck(base.BaseCheck):
         """Check if SELinux is disabled"""
 
         print "Checking Selinux......",
-        f = open("/etc/selinux/config")
+        selinux = open("/etc/selinux/config")
         disabled = False
-        for line in f.readlines():
+        for line in selinux.readlines():
             if "SELINUX=disabled" in line:
                 disabled = True
                 break
@@ -203,4 +198,5 @@ class MiscCheck(base.BaseCheck):
                 "[%s]Selinux is not disabled, "
                 "please disable it in /etc/selinux/config." % self.NAME)
 
+        selinux.close()
         return True

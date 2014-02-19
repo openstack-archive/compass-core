@@ -1,5 +1,6 @@
 #!/bin/bash
-#
+# prepare the installation
+
 copygit2dir()
 {
     repo=$1
@@ -41,87 +42,6 @@ copylocal2dir()
     fi
     sudo cp -rf $repo/* $destdir
 }
-
-cd $SCRIPT_DIR
-if [ "$source" != "local" ]; then
-  copygit2dir $WEB_SOURCE $WEB_HOME
-  copygit2dir $ADAPTER_SOURCE $ADAPTER_HOME
-else 
-  copylocal2dir $WEB_SOURCE $WEB_HOME
-  copylocal2dir $ADAPTER_SOURCE $ADAPTER_HOME
-fi
-
-# download chef-server package
-if [[ -f /tmp/chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm ]]; then
-    echo "chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm already exists"
-else
-    wget -c --progress=bar:force -O /tmp/chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm $CHEF_SRV
-    if [[ "$?" != "0" ]]; then
-        echo "failed to download chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm"
-        exit 1
-    else
-        echo "successfully download chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm"
-    fi
-fi
-
-# download centos image
-if [[ -f /tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso ]]; then
-    echo "/tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso already exists"
-else
-    sudo wget -c --progress=bar:force -O /tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso "$IMAGE_SOURCE"
-    if [[ "$?" != "0" ]]; then
-        echo "failed to download ${IMAGE_NAME}-${IMAGE_ARCH}.iso"
-        exit 1
-    else
-        echo "successfully download ${IMAGE_NAME}-${IMAGE_ARCH}.iso"
-    fi
-fi
-
-# download ppa_repo packages
-ppa_repo_packages="ntp-4.2.6p5-1.el6.${IMAGE_TYPE,,}.$IMAGE_ARCH.rpm 
-                   openssh-clients-5.3p1-94.el6.${IMAGE_ARCH}.rpm 
-                   iproute-2.6.32-31.el6.${IMAGE_ARCH}.rpm
-                   wget-1.12-1.8.el6.${IMAGE_ARCH}.rpm
-                   ntpdate-4.2.6p5-1.el6.${IMAGE_TYPE,,}.${IMAGE_ARCH}.rpm"
-for f in $ppa_repo_packages
-do 
-    if [ -f /tmp/$f ]; then
-        echo "$f already exists"
-    else
-        sudo wget -c --progress=bar:force -O /tmp/$f ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f
-        if [[ "$?" != "0" ]]; then
-            echo "fail to download $f"
-        else 
-            echo "successfully download $f"
-        fi
-    fi
-done
-
-if [[ ! -e /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm ]]; then
-    sudo wget -c --progress=bar:force -O /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
-else
-    echo "chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm already exists"
-fi        
-
-# install js mvc package
-if [[ -f /tmp/$JS_MVC.zip ]]; then
-    echo "$JS_MVC.zip already exists"
-else
-    wget -c --progress=bar:force -O /tmp/$JS_MVC.zip http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip
-    if [[ "$?" != "0" ]]; then
-        echo "failed to download $JS_MVC"
-        exit 1
-    else
-        echo "successfully download $JS_MVC"
-    fi
-fi
-
-if [ -d /tmp/$JS_MVC ]; then
-echo "/tmp/$JS_MVC is already unzipped"
-else
-sudo unzip -o /tmp/$JS_MVC.zip -d /tmp/
-fi
-sudo cp -rf /tmp/$JS_MVC/. $WEB_HOME/public/
 
 # Create backup dir
 sudo mkdir -p /root/backup
@@ -187,6 +107,63 @@ else
     echo "squid conf is updated"
 fi
 
+cd $SCRIPT_DIR
+if [ "$source" != "local" ]; then
+  copygit2dir $WEB_SOURCE $WEB_HOME
+  copygit2dir $ADAPTER_SOURCE $ADAPTER_HOME
+else 
+  copylocal2dir $WEB_SOURCE $WEB_HOME
+  copylocal2dir $ADAPTER_SOURCE $ADAPTER_HOME
+fi
+
+download()
+{
+    url=$1
+    package=${2:-$(basename $url)}
+    if [[ -f /tmp/${package} ]]; then
+        echo "$package already exists"
+    else
+        wget -c --progress=bar:force -O /tmp/${package}.tmp $url
+        if [[ "$?" != "0" ]]; then
+            echo "failed to download $package"
+            exit 1
+        else
+            echo "successfully download $package"
+            cp -rf /tmp/${package}.tmp /tmp/${package}
+        fi
+    fi
+}
+
+# download chef-server package
+download $CHEF_SRV
+
+# download centos image
+download $IMAGE_SOURCE ${IMAGE_NAME}-${IMAGE_ARCH}.iso
+
+# download ppa_repo packages
+ppa_repo_packages="ntp-4.2.6p5-1.el6.${IMAGE_TYPE,,}.$IMAGE_ARCH.rpm 
+                   openssh-clients-5.3p1-94.el6.${IMAGE_ARCH}.rpm 
+                   iproute-2.6.32-31.el6.${IMAGE_ARCH}.rpm
+                   wget-1.12-1.8.el6.${IMAGE_ARCH}.rpm
+                   ntpdate-4.2.6p5-1.el6.${IMAGE_TYPE,,}.${IMAGE_ARCH}.rpm"
+for f in $ppa_repo_packages
+do
+    download ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f
+done
+
+# download chef client for ppa repo
+download http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
+
+# download js mvc
+download http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip
+
+if [ -d /tmp/$JS_MVC ]; then
+echo "/tmp/$JS_MVC is already unzipped"
+else
+sudo unzip -o /tmp/$JS_MVC.zip -d /tmp/
+fi
+sudo cp -rf /tmp/$JS_MVC/. $WEB_HOME/public/
+
 # Install net-snmp
 sudo cp -rn /etc/snmp/snmp.conf /root/backup/
 sudo mkdir -p /usr/local/share/snmp/
@@ -194,3 +171,5 @@ sudo cp -rf $COMPASSDIR/mibs /usr/local/share/snmp/
 sudo rm -f /etc/snmp/snmp.conf
 sudo cp -rf $COMPASSDIR/misc/snmp/snmp.conf /etc/snmp/snmp.conf
 sudo chmod 644 /etc/snmp/snmp.conf
+sudo mkdir -p /var/lib/net-snmp/mib_indexes
+sudo chmod 755 /var/lib/net-snmp/mib_indexes

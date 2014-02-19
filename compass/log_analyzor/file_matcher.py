@@ -280,9 +280,12 @@ class FileMatcher(object):
         # total progress should only be updated when the new calculated
         # progress is greater than the recored total progress or the
         # progress to update is the same but the message is different.
-        if (total_progress.progress < total_progress_data or
-               (total_progress.progress == total_progress_data and
-                   total_progress.message != file_progress.message)):
+        if (
+            total_progress.progress < total_progress_data or (
+                total_progress.progress == total_progress_data and
+                total_progress.message != file_progress.message
+            )
+        ):
             total_progress.progress = total_progress_data
             total_progress.message = file_progress.message
             total_progress.severity = file_progress.severity

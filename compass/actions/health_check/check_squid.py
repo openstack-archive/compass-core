@@ -1,21 +1,20 @@
 """Health Check module for Squid service"""
 
 import os
-import re
 import commands
 import pwd
+import socket
 
-from socket import *
-
-import base
-import utils as health_check_utils
+from compass.actions.health_check import base
+from compass.actions.health_check import utils as health_check_utils
 
 
 class SquidCheck(base.BaseCheck):
-
+    """Squid health check class."""
     NAME = "Squid Check"
 
     def run(self):
+        """do health check"""
         self.check_squid_files()
         print "[Done]"
         self.check_squid_service()
@@ -30,10 +29,11 @@ class SquidCheck(base.BaseCheck):
         """Validates squid config, cache directory and ownership"""
 
         print "Checking Squid Files......",
-        VAR_MAP = {'match_squid_conf':      False,
-                   'match_squid_cache':     False,
-                   'match_squid_ownership': False,
-                   }
+        var_map = {
+            'match_squid_conf': False,
+            'match_squid_cache': False,
+            'match_squid_ownership': False,
+        }
 
         conf_err_msg = health_check_utils.check_path(
             self.NAME,
@@ -46,22 +46,25 @@ class SquidCheck(base.BaseCheck):
                 "[%s]Error: squid.conf has incorrect "
                 "file permissions" % self.NAME)
         else:
-            VAR_MAP['match_squid_conf'] = True
+            var_map['match_squid_conf'] = True
 
         squid_path_err_msg = health_check_utils.check_path(
-            self.NAME,
-            '/var/squid/')
+            self.NAME, '/var/squid/')
         if not squid_path_err_msg == "":
-            self.set_stauts(0, squid_path_err_msg)
-        elif health_check_utils.check_path(self.NAME,
-                                           '/var/squid/cache') != "":
+            self._set_status(0, squid_path_err_msg)
+        elif health_check_utils.check_path(
+            self.NAME,
+            '/var/squid/cache'
+        ) != "":
             self._set_status(
                 0,
                 health_check_utils.check_path(
                     self.NAME,
-                    '/var/squid/cache'))
+                    '/var/squid/cache'
+                )
+            )
         else:
-            VAR_MAP['match_squid_cache'] = True
+            var_map['match_squid_cache'] = True
             uid = os.stat('/var/squid/').st_uid
             gid = os.stat('/var/squid/').st_gid
             if uid != gid or pwd.getpwuid(23).pw_name != 'squid':
@@ -70,16 +73,21 @@ class SquidCheck(base.BaseCheck):
                     "[%s]Error: /var/squid directory ownership "
                     "misconfigured" % self.NAME)
             else:
-                VAR_MAP['match_squid_ownership'] = True
+                var_map['match_squid_ownership'] = True
 
-        failed = []
-        for key in VAR_MAP.keys():
-            if VAR_MAP[key] is False:
-                failed.append(key)
-        if len(failed) != 0:
+        fails = []
+        for key in var_map.keys():
+            if var_map[key] is False:
+                fails.append(key)
+
+        if len(fails) != 0:
             self.messages.append(
-                "[%s]Info: Failed components for squid config: %s"
-                % (self.NAME, ', '.join(item for item in failed)))
+                "[%s]Info: Failed components for squid config: "
+                "%s" % (
+                    self.NAME,
+                    ', '.join(item for item in fails)
+                )
+            )
         return True
 
     def check_squid_service(self):
@@ -89,18 +97,20 @@ class SquidCheck(base.BaseCheck):
         if not 'squid' in commands.getoutput('ps -ef'):
             self._set_status(
                 0,
-                "[%s]Error: squid service does not seem running"
-                % self.NAME)
+                "[%s]Error: squid service does not seem "
+                "running" % self.NAME)
 
         try:
-            if 'squid' != getservbyport(3128):
+            if 'squid' != socket.getservbyport(3128):
                 self._set_status(
                     0,
-                    "[%s]Error: squid is not listening on 3128"
-                    % self.NAME)
+                    "[%s]Error: squid is not listening on "
+                    "3128" % self.NAME)
+
         except:
             self._set_status(
                 0,
                 "[%s]Error: No service is listening on 3128, "
                 "squid failed" % self.NAME)
+
         return True

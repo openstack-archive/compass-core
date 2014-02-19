@@ -1,17 +1,14 @@
 """Health Check module for Hardware Discovery"""
-
-import os
-import re
-
-import base
-import utils as health_check_utils
+from compass.actions.health_check import base
+from compass.actions.health_check import utils as health_check_utils
 
 
 class HdsCheck(base.BaseCheck):
-
+    """hds health check class"""
     NAME = "HDS Check"
 
     def run(self):
+        """do health check"""
         if self.dist in ("centos", "redhat", "fedora", "scientific linux"):
             pkg_type = "yum"
         else:
@@ -20,7 +17,7 @@ class HdsCheck(base.BaseCheck):
             pkg_module = __import__(pkg_type)
         except:
             self.messages.append("[%s]Error: No module named %s, "
-                                 "please install it first." 
+                                 "please install it first."
                                  % (self.NAME, pkg_module))
         method_name = 'self.check_' + pkg_type + '_snmp(pkg_module)'
         eval(method_name)
@@ -56,6 +53,7 @@ class HdsCheck(base.BaseCheck):
         return True
 
     def check_apt_snmp(self, pkg_module):
+        """do apt health check"""
         ## TODO: add ubuntu package check here
         return None
 

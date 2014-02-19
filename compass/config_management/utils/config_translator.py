@@ -36,7 +36,7 @@ class KeyTranslator(object):
         self.override_conditions_ = override_conditions
         self._is_valid()
 
-    def  __repr__(self):
+    def __repr__(self):
         return (
             '%s[translated_keys=%s,from_keys=%s,translated_value=%s,'
             'from_values=%s,override=%s,override_conditions=%s]'
@@ -57,8 +57,8 @@ class KeyTranslator(object):
             elif not callable(translated_key):
                 raise TypeError(
                     'translated_keys[%d] type is %s while expected '
-                     'types are str or callable: %s' % (
-                         i, type(translated_key), translated_key))
+                    'types are str or callable: %s' % (
+                        i, type(translated_key), translated_key))
 
     def _is_valid_from_keys(self):
         """Check from keys are valid."""
@@ -142,7 +142,7 @@ class KeyTranslator(object):
         return translated_keys
 
     def _get_translated_value(self, ref_key, sub_ref,
-                              translated_key,  translated_sub_ref):
+                              translated_key, translated_sub_ref):
         """Get translated value."""
         if self.translated_value_ is None:
             return sub_ref.config

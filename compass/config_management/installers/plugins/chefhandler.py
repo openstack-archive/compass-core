@@ -112,6 +112,7 @@ class Installer(package_installer.Installer):
     NAME = 'chef'
 
     def __init__(self, **kwargs):
+        super(Installer, self).__init__(**kwargs)
         import chef
         self.installer_url_ = setting.CHEF_INSTALLER_URL
         self.global_databag_name_ = setting.CHEF_GLOBAL_DATABAG_NAME
@@ -224,7 +225,7 @@ class Installer(package_installer.Installer):
             logging.debug('databag item is removed for cluster %s '
                           'config %s target_system %s',
                           clusterid, config, target_system)
-        except Exception as error:
+        except Exception:
             logging.debug('no databag item to delete for cluster %s '
                           'config %s target_system %s',
                           clusterid, config, target_system)
@@ -261,7 +262,7 @@ class Installer(package_installer.Installer):
             logging.debug('client is removed for host %s '
                           'config %s target_system %s',
                           hostid, config, target_system)
-        except Exception as error:
+        except Exception:
             logging.debug('no client to delete for host %s '
                           'config %s target_system %s',
                           hostid, config, target_system)
@@ -274,12 +275,12 @@ class Installer(package_installer.Installer):
                 self._get_node_name(
                     config['hostname'], config['clusterid'], target_system),
                 api=self.api_
-            ) 
+            )
             node.delete()
             logging.debug('node is removed for host %s '
                           'config %s target_system %s',
                           hostid, config, target_system)
-        except Exception as error:
+        except Exception:
             logging.debug('no node to delete for host %s '
                           'config %s target_system %s',
                           hostid, config, target_system)
@@ -301,7 +302,8 @@ class Installer(package_installer.Installer):
         clusterid = config['clusterid']
         bag = self._get_databag(target_system)
         global_bag_item = dict(self._get_global_databag_item(bag))
-        bag_item = self._get_cluster_databag_item(bag, clusterid, target_system)
+        bag_item = self._get_cluster_databag_item(
+            bag, clusterid, target_system)
         bag_item_dict = dict(bag_item)
         util.merge_dict(bag_item_dict, global_bag_item, False)
         translated_config = TO_HOST_TRANSLATORS[target_system].translate(

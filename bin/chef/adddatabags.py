@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+"""import databags to chef server."""
 import logging
 import os
 import os.path
@@ -13,7 +13,8 @@ flags.add('databags_dir',
           default='/var/chef/databags')
 
 
-if __name__ == '__main__':
+def main():
+    """main entry"""
     flags.init()
     logsetting.init()
     databags = []
@@ -35,3 +36,7 @@ if __name__ == '__main__':
                          databag_item, databag)
             cmd = 'knife data bag from file %s %s' % (databag, databag_item)
             os.system(cmd)
+
+
+if __name__ == '__main__':
+    main()

@@ -55,18 +55,18 @@ VAR_PERCENTAGE = 15
 ROLES_LIST = [['os-dashboard']]
 
 PRESET_VALUES = {
-    'NAMESERVERS':'192.168.10.1',
-    'NTP_SERVER':'192.168.10.1',
-    'GATEWAY':'192.168.10.1',
-    'PROXY':'http://192.168.10.1:3128',
+    'NAMESERVERS': '192.168.10.1',
+    'NTP_SERVER': '192.168.10.1',
+    'GATEWAY': '192.168.10.1',
+    'PROXY': 'http://192.168.10.1:3128',
 }
 print os.environ.get("NAMESERVERS")
 for v in PRESET_VALUES:
     if os.environ.get(v):
-       PRESET_VALUES[v]=os.environ.get(v)
-       print ( v + PRESET_VALUES[v] + " is set by env variables")
+        PRESET_VALUES[v] = os.environ.get(v)
+        print (v + PRESET_VALUES[v] + " is set by env variables")
     else:
-       print (PRESET_VALUES[v])
+        print (PRESET_VALUES[v])
 
 # get apiclient object.
 client = Client(COMPASS_SERVER_URL)
@@ -86,7 +86,7 @@ print 'add a switch status: %s resp: %s' % (status, resp)
 if status < 400:
     switch = resp['switch']
 else:
-    status, resp =  client.get_switches()
+    status, resp = client.get_switches()
     print 'get all switches status: %s resp: %s' % (status, resp)
     switch = None
     for switch in resp['switches']:
@@ -205,7 +205,8 @@ print 'set networking config to cluster %s status: %s, resp: %s' % (
 
 
 # set partiton of each host in cluster
-status, resp = client.set_partition(cluster_id,
+status, resp = client.set_partition(
+    cluster_id,
     home_percentage=HOME_PERCENTAGE,
     tmp_partition_percentage=TMP_PERCENTAGE,
     var_partition_percentage=VAR_PERCENTAGE)
@@ -232,14 +233,17 @@ print 'deploy cluster %s status: %s, resp: %s' % (cluster_id, status, resp)
 
 
 # get intalling progress.
-timeout = time.time() + 60*90
+timeout = time.time() + 60 * 90
 while True:
     status, resp = client.get_cluster_installing_progress(cluster_id)
     print 'get cluster %s installing progress status: %s, resp: %s' % (
         cluster_id, status, resp)
     progress = resp['progress']
-    if (progress['state'] not in ['UNINITIALIZED', 'INSTALLING'] or
-        progress['percentage'] >= 1.0) or time.time() > timeout:
+    if (
+        progress['state'] not in ['UNINITIALIZED', 'INSTALLING'] or
+        progress['percentage'] >= 1.0 or
+        time.time() > timeout
+    ):
         break
 
     for host_id in host_ids:

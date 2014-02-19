@@ -8,10 +8,14 @@ from optparse import OptionParser
 
 
 class Flags(object):
+    """Class to store flags."""
+
     PARSER = OptionParser()
     PARSED_OPTIONS = None
 
-    def parse_args(self):
+    @classmethod
+    def parse_args(cls):
+        """parse args."""
         (options, argv) = Flags.PARSER.parse_args()
         sys.argv = [sys.argv[0]] + argv
         Flags.PARSED_OPTIONS = options
@@ -45,7 +49,6 @@ OPTIONS = Flags()
 def init():
     """Init flag parsing.
     """
-    global OPTIONS
     OPTIONS.parse_args()
 
 

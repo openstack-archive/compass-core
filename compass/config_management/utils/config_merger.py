@@ -221,11 +221,11 @@ class ConfigMapping(object):
 
             util.merge_dict(sub_configs, lower_sub_configs)
 
-            values  = self._get_values(
+            values = self._get_values(
                 ref_key, sub_ref, lower_sub_refs, sub_configs)
 
             logging.debug('%s set values %s to %s',
-                          ref_key,  self.to_key_, values)
+                          ref_key, self.to_key_, values)
             for lower_key, lower_sub_ref in lower_sub_refs.items():
                 if lower_key not in values:
                     logging.error('no key %s in %s', lower_key, values)

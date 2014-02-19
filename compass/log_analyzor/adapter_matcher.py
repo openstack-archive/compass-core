@@ -151,187 +151,178 @@ class AdapterMatcher(object):
         """Get Host Progress from database.
 
         .. notes::
-           The function should be called out of database session.
+           The function should be called in database session.
         """
-        with database.session() as session:
-            host = session.query(
-                ClusterHost).filter_by(
-                id=hostid).first()
-            if not host:
-                logging.error(
-                    'there is no host for %s in ClusterHost', hostid)
-                return None, None, None
+        session = database.current_session()
+        host = session.query(
+            ClusterHost).filter_by(
+            id=hostid).first()
+        if not host:
+            logging.error(
+                'there is no host for %s in ClusterHost', hostid)
+            return None, None, None
 
-            if not host.state:
-                logging.error('there is no related HostState for %s',
-                              hostid)
-                return host.hostname, None, None
+        if not host.state:
+            logging.error('there is no related HostState for %s',
+                          hostid)
+            return host.hostname, None, None
 
-            return (
-                host.hostname,
-                host.state.state,
-                Progress(host.state.progress,
-                         host.state.message,
-                         host.state.severity))
+        return (
+            host.hostname,
+            host.state.state,
+            Progress(host.state.progress,
+                     host.state.message,
+                     host.state.severity))
 
     @classmethod
     def _update_host_progress(cls, hostid, progress):
         """Update host progress to database.
 
         .. note::
-           The function should be called out of the database session.
+           The function should be called in database session.
         """
-        with database.session() as session:
-            host = session.query(
-                ClusterHost).filter_by(id=hostid).first()
-            if not host:
-                logging.error(
-                    'there is no host for %s in ClusterHost', hostid)
-                return
+        session = database.current_session()
+        host = session.query(
+            ClusterHost).filter_by(id=hostid).first()
+        if not host:
+            logging.error(
+                'there is no host for %s in ClusterHost', hostid)
+            return
 
-            if not host.state:
-                logging.error(
-                    'there is no related HostState for %s', hostid)
-                return
+        if not host.state:
+            logging.error(
+                'there is no related HostState for %s', hostid)
+            return
 
-            if host.state.state != 'INSTALLING':
-                logging.error(
-                    'host %s is not in INSTALLING state',
-                    hostid)
-                return
+        if host.state.state != 'INSTALLING':
+            logging.error(
+                'host %s is not in INSTALLING state',
+                hostid)
+            return
 
-            if host.state.progress > progress.progress:
-                logging.error(
-                    'host %s progress is not increased '
-                    'from %s to %s',
-                    hostid, host.state, progress)
-                return
+        if host.state.progress > progress.progress:
+            logging.error(
+                'host %s progress is not increased '
+                'from %s to %s',
+                hostid, host.state, progress)
+            return
 
-            if (host.state.progress == progress.progress and
-                host.state.message == progress.message):
-                logging.info(
-                    'ignore update host %s progress %s to %s',
-                    hostid, progress, host.state)
-                return
+        if (
+            host.state.progress == progress.progress and
+            host.state.message == progress.message
+        ):
+            logging.info(
+                'ignore update host %s progress %s to %s',
+                hostid, progress, host.state)
+            return
 
-            if progress.progress >= 1.0:
-                host.state.state = 'READY'
+        host.state.progress = progress.progress
+        host.state.message = progress.message
+        if progress.severity:
+            host.state.severity = progress.severity
 
-            host.state.progress = progress.progress
-            host.state.message = progress.message
+        if host.state.progress >= 1.0:
+            host.state.state = 'READY'
 
-            if progress.severity:
-                host.state.severity = progress.severity
+        if host.state.severity == 'ERROR':
+            host.state.state = 'ERROR'
 
-            if progress.severity == 'ERROR':
-                host.state.state = 'ERROR'
+        if host.state.state != 'INSTALLING':
+            host.mutable = True
 
-            if host.state.state != 'INSTALLING':
-                host.mutable = True
-            logging.debug(
-                'update host %s state %s',
-                hostid, host.state)
+        logging.debug(
+            'update host %s state %s',
+            hostid, host.state)
 
     @classmethod
-    def _get_cluster_progress(cls, clusterid):
-        """Get cluster progress from database.
-
-        .. notes::
-           The function should be called out of database session.
-        """
-        with database.session() as session:
-            cluster = session.query(Cluster).filter_by(id=clusterid).first()
-            if not cluster:
-                logging.error('there is no Cluster for %s', clusterid)
-                return None, None
-
-            if not cluster.state:
-                logging.error('there is no ClusterState for %s', clusterid)
-                return None, None
-
-            return (
-                cluster.state.state,
-                Progress(cluster.state.progress,
-                         cluster.state.message,
-                         cluster.state.severity))
-
-    @classmethod
-    def _update_cluster_progress(cls, clusterid, progress):
+    def _update_cluster_progress(cls, clusterid):
         """Update cluster installing progress to database.
 
         .. note::
-           The function should be called out of the database session.
+           The function should be called in the database session.
         """
-        with database.session() as session:
-            cluster = session.query(
-                Cluster).filter_by(id=clusterid).first()
-            if not cluster:
-                logging.error(
-                    'there is no cluster for %s in Cluster',
-                    clusterid)
-                return
+        session = database.current_session()
+        cluster = session.query(
+            Cluster).filter_by(id=clusterid).first()
+        if not cluster:
+            logging.error(
+                'there is no cluster for %s in Cluster',
+                clusterid)
+            return
 
-            if not cluster.state:
-                logging.error(
-                    'there is no ClusterState for %s',
-                    clusterid)
+        if not cluster.state:
+            logging.error(
+                'there is no ClusterState for %s',
+                clusterid)
 
-            if cluster.state.state != 'INSTALLING':
-                logging.error('cluster %s is not in INSTALLING state',
-                              clusterid)
-                return
+        if cluster.state.state != 'INSTALLING':
+            logging.error('cluster %s is not in INSTALLING state',
+                          clusterid)
+            return
 
-            if progress.progress >= 1.0:
-                cluster.state.state = 'READY'
+        cluster_progress = 0.0
+        cluster_messages = {}
+        cluster_severities = set([])
+        hostids = []
+        for host in cluster.hosts:
+            if host.state:
+                hostids.append(host.id)
+                cluster_progress += host.state.progress
+                if host.state.message:
+                    cluster_messages[host.hostname] = host.state.message
 
-            cluster.state.progress = progress.progress
-            cluster.state.message = progress.message
+                if host.state.severity:
+                    cluster_severities.add(host.state.severity)
 
-            if progress.severity:
-                cluster.state.severity = progress.severity
+        cluster.state.progress = cluster_progress / len(hostids)
+        cluster.state.message = '\n'.join(
+            [
+                '%s: %s' % (hostname, message)
+                for hostname, message in cluster_messages.items()
+            ]
+        )
+        for severity in ['ERROR', 'WARNING', 'INFO']:
+            if severity in cluster_severities:
+                cluster.state.severity = severity
+                break
 
-            if progress.severity == 'ERROR':
-                cluster.state.state = 'ERROR'
+        if cluster.state.progress >= 1.0:
+            cluster.state.state = 'READY'
 
-            if cluster.state.state != 'INSTALLING':
-                cluster.mutable = True
+        if cluster.state.severity == 'ERROR':
+            cluster.state.state = 'ERROR'
 
-            logging.debug(
-                'update cluster %s state %s',
-                clusterid, cluster.state)
+        if cluster.state.state != 'INSTALLING':
+            cluster.mutable = True
+
+        logging.debug(
+            'update cluster %s state %s',
+            clusterid, cluster.state)
 
     def update_progress(self, clusterid, hostids):
         """Update cluster progress and hosts progresses.
 
-        :param clusterid: the cluster id.
-        :type clusterid: int
-        :param hostids: the host ids.
-        :type hostids: list of int
+        :param clusterid: the id of the cluster to update.
+        :type clusterid: int.
+        :param hostids: the ids of the hosts to update.
+        :type hostids: list of int.
         """
-        cluster_state, cluster_progress = self._get_cluster_progress(
-            clusterid)
-        if not cluster_progress:
-            logging.error(
-                'nothing to update cluster %s => state %s progress %s',
-                clusterid, cluster_state, cluster_progress)
-            return
-
-        logging.debug('got cluster %s state %s progress %s',
-                      clusterid, cluster_state, cluster_progress)
         host_progresses = {}
-        for hostid in hostids:
-            hostname, host_state, host_progress = self._get_host_progress(
-                hostid)
-            if not hostname or not host_progress:
-                logging.error(
-                    'nothing to update host %s => hostname %s '
-                    'state %s progress %s',
-                    hostid, hostname, host_state, host_progress)
-                continue
+        with database.session():
+            for hostid in hostids:
+                hostname, host_state, host_progress = (
+                    self._get_host_progress(hostid))
+                if not hostname or not host_progress:
+                    logging.error(
+                        'nothing to update host %s => hostname %s '
+                        'state %s progress %s',
+                        hostid, hostname, host_state, host_progress)
+                    continue
 
-            logging.debug('got host %s hostname %s state %s progress %s',
-                          hostid, hostname, host_state, host_progress)
-            host_progresses[hostid] = (hostname, host_state, host_progress)
+                logging.debug('got host %s hostname %s state %s progress %s',
+                              hostid, hostname, host_state, host_progress)
+                host_progresses[hostid] = (
+                    hostname, host_state, host_progress)
 
         for hostid, host_value in host_progresses.items():
             hostname, host_state, host_progress = host_value
@@ -340,35 +331,18 @@ class AdapterMatcher(object):
                     hostname, clusterid, host_progress)
                 self.package_matcher_.update_progress(
                     hostname, clusterid, host_progress)
-                self._update_host_progress(hostid, host_progress)
             else:
                 logging.error(
                     'there is no need to update host %s '
                     'progress: hostname %s state %s progress %s',
                     hostid, hostname, host_state, host_progress)
 
-        cluster_progress_data = 0.0
-        for _, _, host_progress in host_progresses.values():
-            cluster_progress_data += host_progress.progress
+        with database.session():
+            for hostid in hostids:
+                if hostid not in host_progresses:
+                    continue
 
-        cluster_progress.progress = cluster_progress_data / len(hostids)
-        messages = []
-        for _, _, host_progress in host_progresses.values():
-            if host_progress.message:
-                messages.append(host_progress.message)
+                _, _, host_progress = host_progresses[hostid]
+                self._update_host_progress(hostid, host_progress)
 
-        if messages:
-            cluster_progress.message = '\n'.join(messages)
-
-        for severity in ['ERROR', 'WARNING', 'INFO']:
-            cluster_severity = None
-            for _, _, host_progress in host_progresses.values():
-                if host_progress.severity == severity:
-                    cluster_severity = severity
-                    break
-
-            if cluster_severity:
-                cluster_progress.severity = cluster_severity
-                break
-
-        self._update_cluster_progress(clusterid, cluster_progress)
+            self._update_cluster_progress(clusterid)

@@ -8,7 +8,8 @@ from compass.utils import util
 
 def get_key_from_pattern(
     _ref, path, from_pattern='.*',
-    to_pattern='', **kwargs):
+    to_pattern='', **kwargs
+):
     """Get translated key from pattern"""
     match = re.match(from_pattern, path)
     if not match:

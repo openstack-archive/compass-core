@@ -1,14 +1,29 @@
+"""test hdsdiscovery module"""
+import os
 import unittest2
 from mock import patch
+
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
 
 from compass.hdsdiscovery.hdmanager import HDManager
 from compass.hdsdiscovery.vendors.huawei.huawei import Huawei
 from compass.hdsdiscovery.vendors.huawei.plugins.mac import Mac
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 class HuaweiTest(unittest2.TestCase):
+    """test huawei switch snmp get"""
 
     def setUp(self):
+        super(HuaweiTest, self).setUp()
+        logsetting.init()
         self.huawei = Huawei()
         self.correct_host = '12.23.1.1'
         self.correct_credentials = {'version': '2c', 'community': 'public'}
@@ -16,8 +31,10 @@ class HuaweiTest(unittest2.TestCase):
 
     def tearDown(self):
         del self.huawei
+        super(HuaweiTest, self).tearDown()
 
     def test_is_this_vendor(self):
+        """test device vendor is haiwei"""
         #Credential's keyword is incorrect
         self.assertFalse(
             self.huawei.is_this_vendor(self.correct_host,
@@ -40,15 +57,21 @@ class HuaweiTest(unittest2.TestCase):
 
 
 class HuaweiMacTest(unittest2.TestCase):
+    """test get mac from huawei device"""
+
     def setUp(self):
+        super(HuaweiMacTest, self).setUp()
+        logsetting.init()
         host = '12.23.1.1'
         credential = {'version': '2c', 'community': 'public'}
         self.mac_plugin = Mac(host, credential)
 
     def tearDown(self):
         del self.mac_plugin
+        super(HuaweiMacTest, self).tearDown()
 
-    def test_ProcessData_Operation(self):
+    def test_process_data(self):
+        """get progress data function"""
         # GET operation haven't been implemeneted.
         self.assertIsNone(self.mac_plugin.process_data('GET'))
 
@@ -57,12 +80,17 @@ from compass.hdsdiscovery.vendors.ovswitch.plugins.mac import Mac as OVSMac
 
 
 class OVSMacTest(unittest2.TestCase):
+    """ovs switch test"""
+
     def setUp(self):
+        super(OVSMacTest, self).setUp()
+        logsetting.init()
         self.host = '10.145.88.160'
         self.credential = {'username': 'root', 'password': 'huawei'}
 
     @patch('compass.hdsdiscovery.utils.ssh_remote_execute')
     def test_scan(self, ovs_mock):
+        """test scan ovs switch"""
         ovs_mock.return_value = []
         mac_instance = OVSMac(self.host, self.credential)
         self.assertIsNone(mac_instance.scan())
@@ -75,17 +103,22 @@ class OVSMacTest(unittest2.TestCase):
 
 
 class HDManagerTest(unittest2.TestCase):
+    """test HDManager"""
 
     def setUp(self):
+        super(HDManagerTest, self).setUp()
+        logsetting.init()
         self.manager = HDManager()
         self.correct_host = '12.23.1.1'
         self.correct_credential = {'version': '2c', 'community': 'public'}
 
     def tearDown(self):
         del self.manager
+        super(HDManagerTest, self).tearDown()
 
     @patch('compass.hdsdiscovery.hdmanager.HDManager.get_sys_info')
     def test_get_vendor(self, sys_info_mock):
+        """test get_vendor"""
         # Incorrect ip
         self.assertIsNone(self.manager.get_vendor('1234.1.1.1',
                                                   self.correct_credential)[0])
@@ -128,7 +161,7 @@ class HDManagerTest(unittest2.TestCase):
 
     @patch('compass.hdsdiscovery.hdmanager.HDManager.get_sys_info')
     def test_is_valid_vendor(self, sys_info_mock):
-
+        """test is_valid_vendor"""
         #non-exsiting vendor
         self.assertFalse(self.manager.is_valid_vendor(self.correct_host,
                                                       self.correct_credential,
@@ -150,7 +183,8 @@ class HDManagerTest(unittest2.TestCase):
                                                      self.correct_credential,
                                                      'pica8'))
 
-    def test_Learn(self):
+    def test_learn(self):
+        """test learn"""
         #non-exsiting plugin
         self.assertIsNone(self.manager.learn(self.correct_host,
                                              self.correct_credential,
@@ -166,9 +200,18 @@ from compass.hdsdiscovery import utils
 
 
 class UtilsTest(unittest2.TestCase):
-    def test_LoadModule(self):
+    """hdsdiscovery util test class"""
+
+    def setUp(self):
+        super(UtilsTest, self).setUp()
+        logsetting.init()
+
+    def test_load_module(self):
+        """test load_module"""
         self.assertIsNone(utils.load_module('xxx', 'fake/path/to/module'))
 
 
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

@@ -14,15 +14,15 @@ class Mac(base.BasePlugin):
         self.host = host
         self.credential = credential
 
-    def process_data(self, oper="SCAN"):
+    def process_data(self, oper="SCAN", **kwargs):
         """Dynamically call the function according 'oper'
 
         :param oper: operation of data processing
         """
         func_name = oper.lower()
-        return getattr(self, func_name)()
+        return getattr(self, func_name)(**kwargs)
 
-    def scan(self):
+    def scan(self, **kwargs):
         """
         Implemnets the scan method in BasePlugin class. In this module,
         mac addesses were retrieved by ssh

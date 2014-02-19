@@ -1,11 +1,24 @@
+"""test config merger callbacks module"""
 import unittest2
 
 from compass.config_management.utils import config_merger_callbacks
 from compass.config_management.utils import config_reference
+from compass.utils import flags
+from comapss.utils import logsetting
 
 
 class TestAssignRoles(unittest2.TestCase):
+    """test assign roles"""
+
+    def setUp(self):
+        super(TestAssignRoles, self).setUp()
+        logsetting.init()
+
+    def tearDown(self):
+        super(TestAssignRoles, self).tearDown()
+
     def test_assign_roles(self):
+        """test assign roles"""
         lower_configs = {
             1: {'roles': ['control']},
             2: {'roles': ['api', 'compute']},
@@ -79,4 +92,6 @@ class TestAssignRoles(unittest2.TestCase):
 
 
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

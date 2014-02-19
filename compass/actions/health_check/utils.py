@@ -27,8 +27,8 @@ def validate_setting(module, setting, param):
 def get_dist():
     """Returns the operating system related information"""
 
-    os, version, release = platform.linux_distribution()
-    return (os.lower().strip(), version, release.lower().strip())
+    os_version, version, release = platform.linux_distribution()
+    return (os_version.lower().strip(), version, release.lower().strip())
 
 
 def check_path(module_name, path):
@@ -43,8 +43,9 @@ def check_path(module_name, path):
     """
     err_msg = ""
     if not os.path.exists(path):
-        err_msg = "[%s]Error: %s does not exsit, "
-        "please check your configurations." % (module_name, path)
+        err_msg = (
+            "[%s]Error: %s does not exsit, "
+            "please check your configurations.") % (module_name, path)
     return err_msg
 
 
@@ -60,8 +61,9 @@ def check_service_running(module_name, service_name):
     """
     err_msg = ""
     if not service_name in commands.getoutput('ps -ef'):
-        err_msg = "[%s]Error: %s is not running." \
-                  % (module_name, service_name)
+        err_msg = "[%s]Error: %s is not running." % (
+            module_name, service_name)
+
     return err_msg
 
 
@@ -73,9 +75,10 @@ def check_chkconfig(service_name):
     :type service_name   : string
 
     """
-    on = False
+    chk_on = False
     for service in os.listdir('/etc/rc3.d/'):
         if service_name in service and 'S' in service:
-            on = True
+            chk_on = True
             break
-    return on
+
+    return chk_on

@@ -8,7 +8,7 @@ import simplejson as json
 
 from compass.api import app
 
-api = Api(app)
+API = Api(app)
 
 
 def make_json_response(status_code, data):
@@ -31,7 +31,7 @@ def make_csv_response(status_code, csv_data, fname):
 
 def add_resource(*args, **kwargs):
     """Add resource"""
-    api.add_resource(*args, **kwargs)
+    API.add_resource(*args, **kwargs)
 
 
 def is_valid_ip(ip_address):
@@ -39,9 +39,9 @@ def is_valid_ip(ip_address):
     if not ip_address:
         return False
 
-    regex = ('^(([0-9]|[1-9][0-9]|1[0-9]{2}|[1-2][0-4][0-9]|25[0-5])\.)'
-             '{3}'
-             '([0-9]|[1-9][0-9]|1[0-9]{2}|[1-2][0-4][0-9]|25[0-5])')
+    regex = (r'^(([0-9]|[1-9][0-9]|1[0-9]{2}|[1-2][0-4][0-9]|25[0-5])\.)'
+             r'{3}'
+             r'([0-9]|[1-9][0-9]|1[0-9]{2}|[1-2][0-4][0-9]|25[0-5])')
 
     if re.match(regex, ip_address):
         return True
@@ -55,10 +55,10 @@ def is_valid_ipnetowrk(ip_network):
     if not ip_network:
         return False
 
-    regex = ('^(([0-9]|[1-9][0-9]|1[0-9]{2}|[1-2][0-4][0-9]|25[0-5])\.)'
-             '{3}'
-             '([0-9]|[1-9][0-9]|1[0-9]{2}|[1-2][0-4][0-9]|25[0-5])'
-             '((\/[0-9]|\/[1-2][0-9]|\/[1-3][0-2]))$')
+    regex = (r'^(([0-9]|[1-9][0-9]|1[0-9]{2}|[1-2][0-4][0-9]|25[0-5])\.)'
+             r'{3}'
+             r'([0-9]|[1-9][0-9]|1[0-9]{2}|[1-2][0-4][0-9]|25[0-5])'
+             r'((\/[0-9]|\/[1-2][0-9]|\/[1-3][0-2]))$')
 
     if re.match(regex, ip_network):
         return True
@@ -93,6 +93,7 @@ def is_valid_gateway(ip_addr):
 
 
 def _is_valid_nameservers(value):
+    """Valid the format of nameservers."""
     if value:
         nameservers = value.strip(",").split(",")
         for elem in nameservers:
@@ -282,7 +283,7 @@ def valid_host_config(config):
         validator = None
         try:
             validator = valid_format[key]
-        except:
+        except Exception:
             continue
         else:
             value = flat_config[key]
@@ -327,6 +328,7 @@ def update_dict_value(searchkey, dictionary):
 
 
 def is_valid_keys(expected, input_dict, section=""):
+    """Valid keys"""
     excepted_keys = set(expected.keys())
     input_keys = set(input_dict.keys())
     if excepted_keys != input_keys:

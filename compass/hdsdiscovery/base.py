@@ -5,14 +5,17 @@ A vendor needs to implement abstract methods of base class.
 import re
 import logging
 
+from abc import ABCMeta
+
 from compass.hdsdiscovery import utils
 from compass.hdsdiscovery.error import TimeoutError
 
 
 class BaseVendor(object):
     """Basic Vendor object"""
+    __metaclass__ = ABCMeta
 
-    def is_this_vendor(self, *args, **kwargs):
+    def is_this_vendor(self, host, credential, sys_info, **kwargs):
         """Determine if the host is associated with this vendor.
            This function must be implemented by vendor itself
         """
@@ -24,10 +27,11 @@ class BaseSnmpVendor(BaseVendor):
        to determine the vendor of the switch. """
 
     def __init__(self, matched_names):
+        super(BaseSnmpVendor, self).__init__()
         self._matched_names = matched_names
 
-    def is_this_vendor(self, host, credential, sys_info):
-
+    def is_this_vendor(self, host, credential, sys_info, **kwargs):
+        """Determine if the host is associated with this vendor."""
         if utils.is_valid_snmp_v2_credential(credential) and sys_info:
             for name in self._matched_names:
                 if re.search(r"\b" + re.escape(name) + r"\b", sys_info,
@@ -40,62 +44,66 @@ class BasePlugin(object):
     """Extended by vendor's plugin, which processes request and
        retrieve info directly from the switch.
     """
+    __metaclass__ = ABCMeta
 
-    def process_data(self, *args, **kwargs):
+    def process_data(self, oper='SCAN', **kwargs):
         """Each vendors will have some plugins to do some operations.
            Plugin will process request data and return expected result.
 
-        :param args: arguments
+        :param oper: operation function name.
         :param kwargs: key-value pairs of arguments
         """
         raise NotImplementedError
 
     # At least one of these three functions below must be implemented.
-    def scan(self, *args, **kwargs):
+    def scan(self, **kwargs):
         """Get multiple records at once"""
         pass
 
-    def set(self, *args, **kwargs):
+    def set(self, **kwargs):
         """Set value to desired variable"""
         pass
 
-    def get(self, *args, **kwargs):
+    def get(self, **kwargs):
         """Get one record from a host"""
         pass
 
 
 class BaseSnmpMacPlugin(BasePlugin):
+    """Base snmp plugin."""
+
     def __init__(self, host, credential, oid='BRIDGE-MIB::dot1dTpFdbPort',
                  vlan_oid='Q-BRIDGE-MIB::dot1qPvid'):
+        super(BaseSnmpMacPlugin, self).__init__()
         self.host = host
         self.credential = credential
         self.oid = oid
         self.port_oid = 'ifName'
         self.vlan_oid = vlan_oid
 
-    def process_data(self, oper='SCAN'):
+    def process_data(self, oper='SCAN', **kwargs):
         func_name = oper.lower()
-        return getattr(self, func_name)()
+        return getattr(self, func_name)(**kwargs)
 
-    def scan(self):
+    def scan(self, **kwargs):
         results = None
         try:
             results = utils.snmpwalk_by_cl(self.host, self.credential,
                                            self.oid)
-        except TimeoutError as e:
+        except TimeoutError as error:
             logging.debug("PluginMac:scan snmpwalk_by_cl failed: %s",
-                          e.message)
+                          error.message)
             return None
 
         mac_list = []
         for entity in results:
-            ifIndex = entity['value']
-            if entity and int(ifIndex):
+            if_index = entity['value']
+            if entity and int(if_index):
                 tmp = {}
                 mac_numbers = entity['iid'].split('.')
                 tmp['mac'] = self.get_mac_address(mac_numbers)
-                tmp['port'] = self.get_port(ifIndex)
-                tmp['vlan'] = self.get_vlan_id(ifIndex)
+                tmp['port'] = self.get_port(if_index)
+                tmp['vlan'] = self.get_vlan_id(if_index)
                 mac_list.append(tmp)
 
         return mac_list
@@ -110,9 +118,9 @@ class BaseSnmpMacPlugin(BasePlugin):
         result = None
         try:
             result = utils.snmpget_by_cl(self.host, self.credential, oid)
-        except TimeoutError as e:
+        except TimeoutError as error:
             logging.debug("[PluginMac:get_vlan_id snmpget_by_cl failed: %s]",
-                          e.message)
+                          error.message)
             return None
 
         vlan_id = result.split()[-1]
@@ -125,9 +133,9 @@ class BaseSnmpMacPlugin(BasePlugin):
         result = None
         try:
             result = utils.snmpget_by_cl(self.host, self.credential, if_name)
-        except TimeoutError as e:
+        except TimeoutError as error:
             logging.debug("[PluginMac:get_port snmpget_by_cl failed: %s]",
-                          e.message)
+                          error.message)
             return None
 
         # A result may be like "Value:  FasterEthernet1/2/34

@@ -4,6 +4,8 @@
 """
 import fnmatch
 import os.path
+import re
+
 from copy import deepcopy
 
 from compass.utils import util
@@ -292,3 +294,37 @@ class ConfigReference(object):
         if ref.config is None:
             ref.__init__(value, ref.parent_, ref.parent_key_)
         return ref
+
+    def match(self, properties_match):
+        """Check if config match the given properties."""
+        for property_name, property_value in properties_match.items():
+            config_value = self.get(property_name)
+            if config_value is None:
+                return False
+
+            if isinstance(config_value, list):
+                found = False
+                for config_value_item in config_value:
+                    if re.match(property_value, str(config_value_item)):
+                        found = True
+
+                if not found:
+                    return False
+
+            else:
+                if not re.match(property_value, str(config_value)):
+                    return False
+
+        return True
+
+    def filter(self, properties_name):
+        """filter config by properties name."""
+        filtered_properties = {}
+        for property_name in properties_name:
+            config_value = self.get(property_name)
+            if config_value is None:
+                continue
+
+            filtered_properties[property_name] = config_value
+
+        return filtered_properties

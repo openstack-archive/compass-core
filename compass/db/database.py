@@ -29,6 +29,14 @@ def init(database_url):
     SCOPED_SESSION = scoped_session(SESSION)
 
 
+def in_session():
+    """check if in database session scope."""
+    if hasattr(SESSION_HOLDER, 'session'):
+        return True
+    else:
+        return False
+
+
 @contextmanager
 def session():
     """
@@ -37,11 +45,12 @@ def session():
     """
     if hasattr(SESSION_HOLDER, 'session'):
         logging.error('we are already in session')
-        new_session = SESSION_HOLDER.session
+        raise Exception('session already exist')
     else:
         new_session = SCOPED_SESSION()
-    try:
         SESSION_HOLDER.session = new_session
+
+    try:
         yield new_session
         new_session.commit()
     except Exception as error:

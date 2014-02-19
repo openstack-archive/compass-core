@@ -1,24 +1,27 @@
 #!/usr/bin/python
 """utility binary to manage database."""
-import logging
 import os
 import os.path
-import re
-import shutil
 import sys
 
 from flask.ext.script import Manager
 
+from compass.actions import clean_deployment
+from compass.actions import reinstall
+from compass.actions import deploy
+from compass.actions import clean_installing_progress
+from compass.actions import search
 from compass.api import app
 from compass.config_management.utils import config_manager
-from compass.config_management.utils import config_reference
 from compass.db import database
 from compass.db.model import Adapter, Role, Switch, SwitchConfig
 from compass.db.model import Machine, HostState, ClusterState
 from compass.db.model import Cluster, ClusterHost, LogProgressingHistory
+from compass.tasks.client import celery
 from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
+from compass.utils import util
 
 
 flags.add('table_name',
@@ -26,23 +29,31 @@ flags.add('table_name',
           default='')
 flags.add('clusters',
           help=(
-              'clusters to clean, the format is as '
+              'clusters and hosts of each cluster, the format is as '
               'clusterid:hostname1,hostname2,...;...'),
           default='')
-flags.add('fake_switches_file',
+flags.add_bool('async',
+               help='ryn in async mode',
+               default=True)
+flags.add('switch_machines_file',
           help=(
               'files for switches and machines '
               'connected to each switch. each line in the file '
-              'is <switch ip>,<switch port>,<vlan>,<mac>'),
+              'is machine,<switch ip>,<switch port>,<vlan>,<mac> '
+              'or switch,<switch_ip>,<switch_vendor>,'
+              '<switch_version>,<switch_community>,<switch_state>'),
           default='')
-flags.add('fake_switches_vendor',
-          help='switch vendor used to set fake switch and machines.',
-          default='huawei')
-flags.add('search_config_properties',
-          help='semicomma separated properties to search in config',
+flags.add('search_cluster_properties',
+          help='comma separated properties to search in cluster config',
           default='')
-flags.add('print_config_properties',
-          help='semicomma separated config properties to print',
+flags.add('print_cluster_properties',
+          help='comma separated cluster config properties to print',
+          default='')
+flags.add('search_host_properties',
+          help='comma separated properties to search in host config',
+          default='')
+flags.add('print_host_properties',
+          help='comma separated host config properties to print',
           default='')
 
 
@@ -92,6 +103,7 @@ def createdb():
     if setting.DATABASE_TYPE == 'file':
         os.chmod(setting.DATABASE_FILE, 0777)
 
+
 @app_manager.command
 def dropdb():
     """Drops database from sqlalchemy models"""
@@ -101,146 +113,39 @@ def dropdb():
 @app_manager.command
 def createtable():
     """Create database table by --table_name"""
+    if not flags.OPTIONS.table_name:
+        print 'flag --table_name is missing'
+        return
+
     table_name = flags.OPTIONS.table_name
-    if table_name and table_name in TABLE_MAPPING:
-        database.create_table(TABLE_MAPPING[table_name])
-    else:
+    if table_name not in TABLE_MAPPING:
         print '--table_name should be in %s' % TABLE_MAPPING.keys()
+        return
+
+    database.create_table(TABLE_MAPPING[table_name])
 
 
 @app_manager.command
 def droptable():
     """Drop database table by --talbe_name"""
+    if not flags.OPTIONS.table_name:
+        print 'flag --table_name is missing'
+        return
+
     table_name = flags.OPTIONS.table_name
-    if table_name and table_name in TABLE_MAPPING:
-        database.drop_table(TABLE_MAPPING[table_name])
-    else:
+    if table_name not in TABLE_MAPPING:
         print '--table_name should be in %s' % TABLE_MAPPING.keys()
+        return
+
+    database.drop_table(TABLE_MAPPING[table_name])
 
 
 @app_manager.command
 def sync_from_installers():
     """set adapters in Adapter table from installers."""
-    # TODO(xiaodong): Move the code to config_manager.
-    manager = config_manager.ConfigManager()
-    adapters = manager.get_adapters()
-    target_systems = set()
-    roles_per_target_system = {}
-    for adapter in adapters:
-        target_systems.add(adapter['target_system'])
-
-    for target_system in target_systems:
-        roles_per_target_system[target_system] = manager.get_roles(
-            target_system)
-
-    with database.session() as session:
-        session.query(Adapter).delete()
-        session.query(Role).delete()
-        for adapter in adapters:
-            session.add(Adapter(**adapter))
-
-        for target_system, roles in roles_per_target_system.items():
-            for role in roles:
-                session.add(Role(**role))
-
-
-def _get_switch_ips(switch):
-    """Helper function to get switch ips."""
-    ips = []
-    blocks = switch['switch_ips'].split('.')
-    ip_blocks_list = []
-    for block in blocks:
-        ip_blocks_list.append([])
-        sub_blocks = block.split(',')
-        for sub_block in sub_blocks:
-            if not sub_block:
-                continue
-
-            if '-' in sub_block:
-                start_block, end_block = sub_block.split('-', 1)
-                start_block = int(start_block)
-                end_block = int(end_block)
-                if start_block > end_block:
-                    continue
-
-                ip_block = start_block
-                while ip_block <= end_block:
-                    ip_blocks_list[-1].append(str(ip_block))
-                    ip_block += 1
-
-            else:
-                ip_blocks_list[-1].append(sub_block)
-
-    ip_prefixes = [[]]
-    for ip_blocks in ip_blocks_list:
-        prefixes = []
-        for ip_block in ip_blocks:
-            for prefix in ip_prefixes:
-                prefixes.append(prefix + [ip_block])
-
-        ip_prefixes = prefixes
-
-    for prefix in ip_prefixes:
-        if not prefix:
-            continue
-
-        ips.append('.'.join(prefix))
-
-    logging.debug('found switch ips: %s', ips)
-    return ips
-
-
-def _get_switch_filter_ports(switch):
-    """Helper function to get switch filter ports."""
-    port_pat = re.compile(r'(\D*)(\d+(?:-\d+)?)')
-    filter_ports = []
-    for port_range in switch['filter_ports'].split(','):
-        if not port_range:
-            continue
-
-        mat = port_pat.match(port_range)
-        if not mat:
-            filter_ports.append(port_range)
-        else:
-            port_prefix = mat.group(1)
-            port_range = mat.group(2)
-            if '-' in port_range:
-                start_port, end_port = port_range.split('-', 1)
-                start_port = int(start_port)
-                end_port = int(end_port)
-                if start_port > end_port:
-                    continue
-
-                port = start_port
-                while port <= end_port:
-                    filter_ports.append('%s%s' % (port_prefix, port))
-                    port += 1
-
-            else:
-                filter_ports.append('%s%s' % (port_prefix, port_range))
-
-    logging.debug('filter ports: %s', filter_ports)
-    return filter_ports
-
-
-def _get_switch_config():
-    """Helper function to get switch config."""
-    switch_configs = []
-    if not hasattr(setting, 'SWITCHES') or not setting.SWITCHES:
-        logging.info('no switch configs to set')
-        return switch_configs
-
-    for switch in setting.SWITCHES:
-        ips = _get_switch_ips(switch)
-        filter_ports = _get_switch_filter_ports(switch)
-
-        for ip_addr in ips:
-            for filter_port in filter_ports:
-                switch_configs.append(
-                    {'ip': ip_addr, 'filter_port': filter_port})
-
-    logging.debug('switch configs: %s', switch_configs)
-    return switch_configs
+    with database.session():
+        manager = config_manager.ConfigManager()
+        manager.update_adapters_from_installers()
 
 
 @app_manager.command
@@ -261,127 +166,9 @@ def sync_switch_configs():
        integer or a rnage of integer like xx-xx.
        The example of filter_ports is like: ae1-5,20-40.
     """
-    switch_configs = _get_switch_config()
-    switch_config_tuples = set([])
-    with database.session() as session:
-        session.query(SwitchConfig).delete(synchronize_session='fetch')
-        for switch_config in switch_configs:
-            switch_config_tuple = tuple(switch_config.values())
-            if switch_config_tuple in switch_config_tuples:
-                logging.debug('ignore adding switch config: %s',
-                              switch_config)
-                continue
-            else:
-                logging.debug('add switch config: %s', switch_config)
-                switch_config_tuples.add(switch_config_tuple)
-
-            session.add(SwitchConfig(**switch_config))
-
-
-def _get_clusters():
-    """Helper function to get clusters from flag --clusters."""
-    clusters = {}
-    logging.debug('get clusters from flag: %s', flags.OPTIONS.clusters)
-    for clusterid_and_hostnames in flags.OPTIONS.clusters.split(';'):
-        if not clusterid_and_hostnames:
-            continue
-
-        if ':' in clusterid_and_hostnames:
-            clusterid_str, hostnames_str = clusterid_and_hostnames.split(
-                ':', 1)
-        else:
-            clusterid_str = clusterid_and_hostnames
-            hostnames_str = ''
-
-        clusterid = int(clusterid_str)
-        hostnames = [
-            hostname for hostname in hostnames_str.split(',')
-            if hostname
-        ]
-        clusters[clusterid] = hostnames
-
-    logging.debug('got clusters from flag: %s', clusters)
-    with database.session() as session:
-        clusterids = clusters.keys()
-        if not clusterids:
-            cluster_list = session.query(Cluster).all()
-            clusterids = [cluster.id for cluster in cluster_list]
-
-        for clusterid in clusterids:
-            hostnames = clusters.get(clusterid, [])
-            if not hostnames:
-                host_list = session.query(ClusterHost).filter_by(
-                    cluster_id=clusterid).all()
-                hostids = [host.id for host in host_list]
-                clusters[clusterid] = hostids
-            else:
-                hostids = []
-                for hostname in hostnames:
-                    host = session.query(ClusterHost).filter_by(
-                        cluster_id=clusterid, hostname=hostname).first()
-                    if host:
-                        hostids.append(host.id)
-                clusters[clusterid] = hostids
-
-    return clusters
-
-
-def _clean_clusters(clusters):
-    """Helper function to clean clusters."""
-    # TODO(xiaodong): Move the code to config manager.
-    manager = config_manager.ConfigManager()
-    logging.info('clean cluster hosts: %s', clusters)
-    with database.session() as session:
-        for clusterid, hostids in clusters.items():
-            cluster = session.query(Cluster).filter_by(id=clusterid).first()
-            if not cluster:
-                continue
-
-            all_hostids = [host.id for host in cluster.hosts]
-            logging.debug('all hosts in cluster %s is: %s',
-                          clusterid, all_hostids)
-
-            logging.info('clean hosts %s in cluster %s',
-                         hostids, clusterid)
-
-            adapter = cluster.adapter
-            for hostid in hostids:
-                host = session.query(ClusterHost).filter_by(id=hostid).first()
-                if not host:
-                    continue
-
-                log_dir = os.path.join(
-                    setting.INSTALLATION_LOGDIR,
-                    '%s.%s' % (host.hostname, clusterid))
-                logging.info('clean log dir %s', log_dir)
-                shutil.rmtree(log_dir, True)
-                session.query(LogProgressingHistory).filter(
-                    LogProgressingHistory.pathname.startswith(
-                        '%s/' % log_dir)).delete(
-                    synchronize_session='fetch')
-
-                logging.info('clean host %s', hostid)
-                manager.clean_host_config(
-                    hostid,
-                    os_version=adapter.os,
-                    target_system=adapter.target_system)
-                session.query(ClusterHost).filter_by(
-                    id=hostid).delete(synchronize_session='fetch')
-                session.query(HostState).filter_by(
-                    id=hostid).delete(synchronize_session='fetch')
-
-            if set(all_hostids) == set(hostids):
-                logging.info('clean cluster %s', clusterid)
-                manager.clean_cluster_config(
-                    clusterid,
-                    os_version=adapter.os,
-                    target_system=adapter.target_system)
-                session.query(Cluster).filter_by(
-                    id=clusterid).delete(synchronize_session='fetch')
-                session.query(ClusterState).filter_by(
-                    id=clusterid).delete(synchronize_session='fetch')
-
-    manager.sync()
+    with database.session():
+        manager = config_manager.ConfigManager()
+        manager.update_switch_filters()
 
 
 @app_manager.command
@@ -392,77 +179,11 @@ def clean_clusters():
        The clusters and hosts are defined in --clusters.
        the clusters flag is as clusterid:hostname1,hostname2,...;...
     """
-    clusters = _get_clusters()
-    _clean_clusters(clusters)
-    os.system('service rsyslog restart')
-
-
-def _clean_installation_progress(clusters):
-    """Helper function to clean installation progress."""
-    # TODO(xiaodong): Move the code to config manager.
-    logging.info('clean installation progress for cluster hosts: %s',
-                 clusters)
-    with database.session() as session:
-        for clusterid, hostids in clusters.items():
-            cluster = session.query(Cluster).filter_by(
-                id=clusterid).first()
-            if not cluster:
-                continue
-
-            logging.info(
-                'clean installation progress for hosts %s in cluster %s',
-                hostids, clusterid)
-
-            all_hostids = [host.id for host in cluster.hosts]
-            logging.debug('all hosts in cluster %s is: %s',
-                          clusterid, all_hostids)
-
-            for hostid in hostids:
-                host = session.query(ClusterHost).filter_by(id=hostid).first()
-                if not host:
-                    continue
-
-                log_dir = os.path.join(
-                    setting.INSTALLATION_LOGDIR,
-                    '%s.%s' % (host.hostname, clusterid))
-
-                logging.info('clean log dir %s', log_dir)
-                shutil.rmtree(log_dir, True)
-
-                session.query(LogProgressingHistory).filter(
-                    LogProgressingHistory.pathname.startswith(
-                        '%s/' % log_dir)).delete(
-                    synchronize_session='fetch')
-
-                logging.info('clean host installation progress for %s',
-                             hostid)
-                if host.state and host.state.state != 'UNINITIALIZED':
-                    session.query(ClusterHost).filter_by(
-                        id=hostid).update({
-                            'mutable': False
-                        }, synchronize_session='fetch')
-                    session.query(HostState).filter_by(id=hostid).update({
-                        'state': 'INSTALLING',
-                        'progress': 0.0,
-                        'message': '',
-                        'severity': 'INFO'
-                    }, synchronize_session='fetch')
-
-            if set(all_hostids) == set(hostids):
-                logging.info('clean cluster installation progress %s',
-                             clusterid)
-                if cluster.state and cluster.state != 'UNINITIALIZED':
-                    session.query(Cluster).filter_by(
-                        id=clusterid).update({
-                        'mutable': False
-                    }, synchronize_session='fetch')
-                    session.query(ClusterState).filter_by(
-                        id=clusterid).update({
-                        'state': 'INSTALLING',
-                        'progress': 0.0,
-                        'message': '',
-                        'severity': 'INFO'
-                    }, synchronize_session='fetch')
+    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
+    if flags.OPTIONS.async:
+        celery.send_task('compass.tasks.clean_deployment', (cluster_hosts,))
+    else:
+        clean_deployment.clean_deployment(cluster_hosts)
 
 
 @app_manager.command
@@ -473,306 +194,106 @@ def clean_installation_progress():
        The cluster and hosts is defined in --clusters.
        The clusters flags is as clusterid:hostname1,hostname2,...;...
     """
-    clusters = _get_clusters()
-    _clean_installation_progress(clusters)
-    os.system('service rsyslog restart')
-
-
-def _reinstall_hosts(clusters):
-    """Helper function to reinstall hosts."""
-    # TODO(xiaodong): Move the code to config_manager.
-    logging.info('reinstall cluster hosts: %s', clusters)
-    manager = config_manager.ConfigManager()
-    with database.session() as session:
-        for clusterid, hostids in clusters.items():
-            cluster = session.query(Cluster).filter_by(id=clusterid).first()
-            if not cluster:
-                continue
-
-            all_hostids = [host.id for host in cluster.hosts]
-            logging.debug('all hosts in cluster %s is: %s',
-                          clusterid, all_hostids)
-
-            logging.info('reinstall hosts %s in cluster %s',
-                         hostids, clusterid)
-            adapter = cluster.adapter
-            for hostid in hostids:
-                host = session.query(ClusterHost).filter_by(id=hostid).first()
-                if not host:
-                    continue
-
-                log_dir = os.path.join(
-                    setting.INSTALLATION_LOGDIR,
-                    '%s.%s' % (host.hostname, clusterid))
-                logging.info('clean log dir %s', log_dir)
-                shutil.rmtree(log_dir, True)
-                session.query(LogProgressingHistory).filter(
-                    LogProgressingHistory.pathname.startswith(
-                        '%s/' % log_dir)).delete(
-                    synchronize_session='fetch')
-
-                logging.info('reinstall host %s', hostid)
-                manager.reinstall_host(
-                    hostid,
-                    os_version=adapter.os,
-                    target_system=adapter.target_system)
-                if host.state and host.state.state != 'UNINITIALIZED':
-                    session.query(ClusterHost).filter_by(
-                        id=hostid).update({
-                            'mutable': False
-                        }, synchronize_session='fetch')
-                    session.query(HostState).filter_by(
-                        id=hostid).update({
-                            'state': 'INSTALLING',
-                            'progress': 0.0,
-                            'message': '',
-                            'severity': 'INFO'
-                        }, synchronize_session='fetch')
-
-            if set(all_hostids) == set(hostids):
-                logging.info('reinstall cluster %s',
-                             clusterid)
-                if cluster.state and cluster.state != 'UNINITIALIZED':
-                    session.query(Cluster).filter_by(
-                        id=clusterid).update({
-                        'mutable': False
-                    }, synchronize_session='fetch')
-                    session.query(ClusterState).filter_by(
-                        id=clusterid).update({
-                        'state': 'INSTALLING',
-                        'progress': 0.0,
-                        'message': '',
-                        'severity': 'INFO'
-                    }, synchronize_session='fetch')
-
-    manager.sync()
+    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
+    if flags.OPTIONS.async:
+        celery.send_task('compass.tasks.clean_installing_progress',
+                         (cluster_hosts,))
+    else:
+        clean_installing_progress.clean_installing_progress(cluster_hosts)
 
 
 @app_manager.command
-def reinstall_hosts():
+def reinstall_clusters():
     """Reinstall hosts in clusters.
 
     .. note::
        The hosts are defined in --clusters.
        The clusters flag is as clusterid:hostname1,hostname2,...;...
     """
-    clusters = _get_clusters()
-    _reinstall_hosts(clusters)
-    os.system('service rsyslog restart')
-
-
-def _get_fake_switch_machines(switch_ips, switch_machines):
-    """Helper function to get fake switch machines."""
-    missing_flags = False
-    if not flags.OPTIONS.fake_switches_vendor:
-        print 'the flag --fake_switches_vendor should be specified'
-        missing_flags = True
-
-    if not flags.OPTIONS.fake_switches_file:
-        print 'the flag --fake_switches_file should be specified.'
-        print 'each line in fake_switches_files presents one machine'
-        print 'the format of each line is <%s>,<%s>,<%s>,<%s>' % (
-            'switch ip as xxx.xxx.xxx.xxx',
-            'switch port as xxx12',
-            'vlan as 1',
-            'mac as xx:xx:xx:xx:xx:xx')
-        missing_flags = True
-
-    if missing_flags:
-        return False
-
-    try:
-        with open(flags.OPTIONS.fake_switches_file) as switch_file:
-            for line in switch_file:
-                line = line.strip()
-                switch_ip, switch_port, vlan, mac = line.split(',', 3)
-                if switch_ip not in switch_ips:
-                    switch_ips.append(switch_ip)
-
-                switch_machines.setdefault(switch_ip, []).append({
-                    'mac': mac,
-                    'port': switch_port,
-                    'vlan': int(vlan)
-                })
-
-    except Exception as error:
-        logging.error('failed to parse file %s',
-                      flags.OPTIONS.fake_switches_file)
-        logging.exception(error)
-        return False
-
-    return True
+    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
+    if flags.OPTIONS.async:
+        celery.send_task('compass.tasks.reinstall', (cluster_hosts,))
+    else:
+        reinstall.reinstall(cluster_hosts)
 
 
 @app_manager.command
-def set_fake_switch_machine():
-    """Set fake switches and machines.
+def deploy_clusters():
+    """Deploy hosts in clusters.
 
     .. note::
-       --fake_switches_vendor is the vendor name for all fake switches.
-       the default value is 'huawei'
-       --fake_switches_file is the filename which stores all fake switches
-       and fake machines.
-       each line in fake_switches_files presents one machine.
-       the format of each line <switch_ip>,<switch_port>,<vlan>,<mac>.
+       The hosts are defined in --clusters.
+       The clusters flag is as clusterid:hostname1,hostname2,...;...
     """
-    # TODO(xiaodong): Move the main code to config manager.
-    switch_ips = []
-    switch_machines = {}
-    vendor = flags.OPTIONS.fake_switches_vendor
-    credential = {
-        'version'    :  'v2c',
-        'community'  :  'public',
-    }
-    if not _get_fake_switch_machines(switch_ips, switch_machines):
+    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
+    if flags.OPTIONS.async:
+        celery.send_task('compass.tasks.deploy', (cluster_hosts,))
+    else:
+        deploy.deploy(cluster_hosts)
+
+
+@app_manager.command
+def set_switch_machines():
+    """Set switches and machines.
+
+    .. note::
+       --switch_machines_file is the filename which stores all switches
+       and machines information.
+       each line in fake_switches_files presents one machine.
+       the format of each line machine,<switch_ip>,<switch_port>,<vlan>,<mac>
+       or switch,<switch_ip>,<switch_vendor>,<switch_version>,
+       <switch_community>,<switch_state>
+    """
+    if not flags.OPTIONS.switch_machines_file:
+        print 'flag --switch_machines_file is missing'
         return
 
-    with database.session() as session:
-        session.query(Switch).delete(synchronize_session='fetch')
-        session.query(Machine).delete(synchronize_session='fetch')
-        for switch_ip in switch_ips:
-            logging.info('add switch %s', switch_ip)
-            switch = Switch(ip=switch_ip, vendor_info=vendor,
-                            credential=credential,
-                            state='under_monitoring')
-            logging.debug('add switch %s', switch_ip)
-            session.add(switch)
-
-            machines = switch_machines[switch_ip]
-            for item in machines:
-                logging.debug('add machine %s', item)
-                machine = Machine(**item)
-                machine.switch = switch
-
-            session.add(machine)
-
-
-def _get_config_properties():
-    """Helper function to get config properties."""
-    if not flags.OPTIONS.search_config_properties:
-        logging.info('the flag --search_config_properties is not specified.')
-        return {}
-
-    search_config_properties = flags.OPTIONS.search_config_properties
-    config_properties = {}
-    for config_property in search_config_properties.split(';'):
-        if not config_property:
-            continue
-
-        if '=' not in config_property:
-            logging.debug('ignore config property %s '
-                          'since there is no = in it.', config_property)
-            continue
-
-        property_name, property_value = config_property.split('=', 1)
-        config_properties[property_name] = property_value
-
-    logging.debug('get search config properties: %s', config_properties)
-    return config_properties
-
-
-def _get_print_properties():
-    """Helper function to get what properties to print."""
-    if not flags.OPTIONS.print_config_properties:
-        logging.info('the flag --print_config_properties is not specified.')
-        return []
-
-    print_config_properties = flags.OPTIONS.print_config_properties
-    config_properties = []
-    for config_property in print_config_properties.split(';'):
-        if not config_property:
-            continue
-
-        config_properties.append(config_property)
-
-    logging.debug('get print config properties: %s', config_properties)
-    return config_properties
-
-
-
-def _match_config_properties(config, config_properties):
-    """Helper function to check if config properties are match."""
-    # TODO(xiaodong): Move the code to config manager.
-    ref = config_reference.ConfigReference(config)
-    for property_name, property_value in config_properties.items():
-        config_value = ref.get(property_name)
-        if config_value is None:
-            return False
-
-        if isinstance(config_value, list):
-            found = False
-            for config_value_item in config_value:
-                if str(config_value_item) == str(property_value):
-                    found = True
-
-            if not found:
-                return False
-
-        else:
-            if not str(config_value) == str(property_value):
-                return False
-
-    return True
-
-
-def _print_config_properties(config, config_properties):
-    """Helper function to print config properties."""
-    ref = config_reference.ConfigReference(config)
-    print_properties = []
-    for property_name in config_properties:
-        config_value = ref.get(property_name)
-        if config_value is None:
-            logging.error('did not found %s in %s',
-                          property_name, config)
-            continue
-
-        print_properties.append('%s=%s' % (property_name, config_value))
-
-    print ';'.join(print_properties)
+    switches, switch_machines = util.get_switch_machines_from_file(
+        flags.OPTIONS.switch_machines_file)
+    with database.session():
+        manager = config_manager.ConfigManager()
+        manager.update_switch_and_machines(switches, switch_machines)
 
 
 @app_manager.command
-def search_hosts():
-    """Search hosts by properties.
+def search_cluster_hosts():
+    """Search cluster hosts by properties.
 
     .. note::
-       --search_config_properties defines what properties are used to search.
-       the format of search_config_properties is as
+       --search_cluster_properties defines what properties are used to search.
+       the format of search_cluster_properties is as
        <property_name>=<property_value>;... If no search properties are set,
        It will returns properties of all hosts.
-       --print_config_properties defines what properties to print.
-       the format of print_config_properties is as
+       --print_cluster_properties defines what properties to print.
+       the format of print_cluster_properties is as
        <property_name>;...
-    """
-    config_properties = _get_config_properties()
-    print_properties = _get_print_properties()
-    with database.session() as session:
-        hosts = session.query(ClusterHost).all()
-        for host in hosts:
-            if _match_config_properties(host.config, config_properties):
-                _print_config_properties(host.config, print_properties)
-
-
-@app_manager.command
-def search_clusters():
-    """Search clusters by properties.
-
-    .. note::
-       --search_config_properties defines what properties are used to search.
-       the format of search_config_properties is as
+       --search_host_properties defines what properties are used to search.
+       the format of search_host_properties is as
        <property_name>=<property_value>;... If no search properties are set,
        It will returns properties of all hosts.
-       --print_config_properties defines what properties to print.
-       the format of print_config_properties is as
+       --print_host_properties defines what properties to print.
+       the format of print_host_properties is as
        <property_name>;...
+
     """
-    config_properties = _get_config_properties()
-    print_properties = _get_print_properties()
-    with database.session() as session:
-        clusters = session.query(Cluster).all()
-        for cluster in clusters:
-            if _match_config_properties(cluster.config, config_properties):
-                _print_config_properties(cluster.config, print_properties)
+    cluster_properties = util.get_properties_from_str(
+        flags.OPTIONS.search_cluster_properties)
+    cluster_properties_name = util.get_properties_name_from_str(
+        flags.OPTIONS.print_cluster_properties)
+    host_properties = util.get_properties_from_str(
+        flags.OPTIONS.search_host_properties)
+    host_properties_name = util.get_properties_name_from_str(
+        flags.OPTIONS.print_host_properties)
+    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
+    cluster_properties, cluster_host_properties = search.search(
+        cluster_hosts, cluster_properties,
+        cluster_properties_name, host_properties,
+        host_properties_name)
+    print 'clusters properties:'
+    util.print_properties(cluster_properties)
+    for clusterid, host_properties in cluster_host_properties.items():
+        print 'hosts properties under cluster %s' % clusterid
+        util.print_properties(host_properties)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ NOTSUPPORTED = 'notsupported'
 ERROR = 'error'
 
 
-class HDManager:
+class HDManager(object):
     """Process a request."""
 
     def __init__(self):
@@ -42,7 +42,7 @@ class HDManager:
             logging.error('no plugin %s to load from %s', req_obj, plugin_dir)
             return None
 
-        return plugin.process_data(oper)
+        return plugin.process_data(oper, **kwargs)
 
     def is_valid_vendor(self, host, credential, vendor):
         """ Check if vendor is associated with this host and credential
@@ -86,7 +86,7 @@ class HDManager:
         # TODO(grace): Why do we need to have valid IP?
         # a hostname should also work.
         if not utils.valid_ip_format(host):
-            logging.error("host '%s' is not valid IP address!" % host)
+            logging.error("host '%s' is not valid IP address!", host)
             return (None, ERROR, "Invalid IP address %s!" % host)
 
         if not utils.is_valid_snmp_v2_credential(credential):
@@ -106,7 +106,7 @@ class HDManager:
                        and re.match(r'^[^\.]', o)]
 
         logging.debug("[get_vendor][available vendors]: %s ", all_vendors)
-        logging.debug("[get_vendor] System Information is [%s]" % sys_info)
+        logging.debug("[get_vendor] System Information is [%s]", sys_info)
 
         # TODO(grace): should not conver to lower. The vendor impl can choose
         # to do case-insensitive match
@@ -120,7 +120,7 @@ class HDManager:
                 continue
 
             if instance.is_this_vendor(host, credential, sys_info):
-                logging.info("[get_vendor]****Found vendor '%s'****" % vname)
+                logging.info("[get_vendor]****Found vendor '%s'****", vname)
                 vendor = vname
                 break
 
@@ -131,12 +131,13 @@ class HDManager:
         return (vendor, "Found", "")
 
     def get_sys_info(self, host, credential):
+        """get sys info"""
         sys_info = None
         try:
             sys_info = utils.snmpget_by_cl(host,
                                            credential,
                                            self.snmp_sysdescr)
-        except TimeoutError as e:
-            return (None, e.message)
+        except TimeoutError as error:
+            return (None, error.message)
 
         return (sys_info, "")

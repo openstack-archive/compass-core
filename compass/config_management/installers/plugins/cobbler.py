@@ -1,6 +1,8 @@
 """os installer cobbler plugin"""
 import functools
 import logging
+import os.path
+import shutil
 import xmlrpclib
 
 from compass.config_management.installers import os_installer
@@ -112,6 +114,7 @@ class Installer(os_installer.Installer):
     NAME = 'cobbler'
 
     def __init__(self, **kwargs):
+        super(Installer, self).__init__()
         # the connection is created when cobbler installer is initialized.
         self.remote_ = xmlrpclib.Server(
             setting.COBBLER_INSTALLER_URL,
@@ -148,6 +151,7 @@ class Installer(os_installer.Installer):
         """Sync cobbler to catch up the latest update config."""
         logging.debug('sync %s', self)
         self.remote_.sync(self.token_)
+        os.system('service rsyslog restart')
 
     def _get_modify_system(self, profile, config, **kwargs):
         """get modified system config."""
@@ -176,7 +180,9 @@ class Installer(os_installer.Installer):
             {'name': os_version})
         return profile_found[0]
 
-    def _get_system_name(self, config):
+    @classmethod
+    def _get_system_name(cls, config):
+        """get system name"""
         return '%s.%s' % (
             config['hostname'], config['clusterid'])
 
@@ -188,7 +194,7 @@ class Installer(os_installer.Installer):
                 sys_name, self.token_)
             logging.debug('using existing system %s for %s',
                           sys_id, sys_name)
-        except Exception as e:
+        except Exception:
             if create_if_not_exists:
                 sys_id = self.remote_.new_system(self.token_)
                 logging.debug('create new system %s for %s',
@@ -204,9 +210,9 @@ class Installer(os_installer.Installer):
         try:
             self.remote_.remove_system(sys_name, self.token_)
             logging.debug('system %s is removed', sys_name)
-        except Exception as error:
+        except Exception:
             logging.debug('no system %s found to remove', sys_name)
-      
+
     def _save_system(self, sys_id):
         """save system config update."""
         self.remote_.save_system(sys_id, self.token_)
@@ -224,12 +230,30 @@ class Installer(os_installer.Installer):
 
     def clean_host_config(self, hostid, config, **kwargs):
         """clean host config."""
+        self.clean_host_installing_progress(
+            hostid, config, **kwargs)
         self._clean_system(config)
+
+    @classmethod
+    def _clean_log(cls, system_name):
+        """clean log"""
+        log_dir = os.path.join(
+            setting.INSTALLATION_LOGDIR,
+            system_name)
+        shutil.rmtree(log_dir, True)
+
+    def clean_host_installing_progress(
+        self, hostid, config, **kwargs
+    ):
+        """clean host installing progress."""
+        self._clean_log(self._get_system_name(config))
 
     def reinstall_host(self, hostid, config, **kwargs):
         """reinstall host."""
         sys_id = self._get_system(config, False)
         if sys_id:
+            self.clean_host_installing_progress(
+                hostid, config, **kwargs)
             self._netboot_enabled(sys_id)
 
     def update_host_config(self, hostid, config, **kwargs):
@@ -244,7 +268,6 @@ class Installer(os_installer.Installer):
 
         self._update_modify_system(sys_id, system_config)
         self._save_system(sys_id)
-
 
 
 os_installer.register(Installer)

@@ -1,13 +1,16 @@
+"""test config merger module"""
 import functools
 import unittest2
 
 from compass.config_management.utils import config_merger
 from compass.config_management.utils import config_merger_callbacks
-from compass.config_management.utils import config_reference
 
 
 class TestConfigMerger(unittest2.TestCase):
+    """test config merger class"""
+
     def test_merge(self):
+        """test merge"""
         upper_config = {
             'networking': {
                 'interfaces': {
@@ -15,13 +18,16 @@ class TestConfigMerger(unittest2.TestCase):
                         'ip_start': '192.168.1.1',
                         'ip_end': '192.168.1.100',
                         'netmask': '255.255.255.0',
-                        'dns_pattern': '%(hostname)s.%(clustername)s.%(search_path)s',
+                        'dns_pattern': (
+                            '%(hostname)s.%(clustername)s.%(search_path)s'),
                     },
                     'floating': {
                         'ip_start': '172.16.0.1',
                         'ip_end': '172.16.0.100',
                         'netmask': '0.0.0.0',
-                        'dns_pattern': 'public-%(hostname)s.%(clustername)s.%(search_path)s', 
+                        'dns_pattern': (
+                            'public-%(hostname)s.%(clustername)s'
+                            '.%(search_path)s'),
                     },
                 },
                 'global': {
@@ -101,7 +107,7 @@ class TestConfigMerger(unittest2.TestCase):
                 'roles': ['os-single-controller', 'os-network']
             }
         }
-        mappings=[
+        mappings = [
             config_merger.ConfigMapping(
                 path_list=['/networking/interfaces/*'],
                 from_upper_keys={'ip_start': 'ip_start', 'ip_end': 'ip_end'},
@@ -136,12 +142,14 @@ class TestConfigMerger(unittest2.TestCase):
                 path_list=['/networking/interfaces/*'],
                 from_upper_keys={'pattern': 'dns_pattern',
                                  'clustername': '/clustername',
-                                 'search_path': '/networking/global/search_path'},
+                                 'search_path': (
+                                     '/networking/global/search_path')},
                 from_lower_keys={'hostname': '/hostname'},
                 to_key='dns_alias',
-                value=functools.partial(config_merger_callbacks.assign_from_pattern,
-                                        upper_keys=['search_path', 'clustername'],
-                                        lower_keys=['hostname'])
+                value=functools.partial(
+                    config_merger_callbacks.assign_from_pattern,
+                    upper_keys=['search_path', 'clustername'],
+                    lower_keys=['hostname'])
             ),
         ]
         merger = config_merger.ConfigMerger(mappings)

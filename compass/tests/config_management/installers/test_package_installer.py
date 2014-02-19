@@ -1,3 +1,4 @@
+"""test package_installer module"""
 import os
 import unittest2
 
@@ -15,6 +16,7 @@ from compass.utils import logsetting
 
 
 class DummyInstaller(package_installer.Installer):
+    """dummy installer"""
     NAME = 'dummy'
 
     def __init__(self):
@@ -22,6 +24,7 @@ class DummyInstaller(package_installer.Installer):
 
 
 class Dummy2Installer(package_installer.Installer):
+    """another dummy installer"""
     NAME = 'dummy'
 
     def __init__(self):
@@ -29,6 +32,8 @@ class Dummy2Installer(package_installer.Installer):
 
 
 class TestInstallerFunctions(unittest2.TestCase):
+    """test installer functions"""
+
     def setUp(self):
         self.installers_backup = package_installer.INSTALLERS
         package_installer.INSTALLERS = {}
@@ -37,16 +42,19 @@ class TestInstallerFunctions(unittest2.TestCase):
         package_installer.INSTALLERS = self.installers_backup
 
     def test_found_installer(self):
+        """test found installer"""
         package_installer.register(DummyInstaller)
         intaller = package_installer.get_installer_by_name(
             DummyInstaller.NAME)
         self.assertIsInstance(intaller, DummyInstaller)
 
     def test_notfound_unregistered_installer(self):
+        """test not found unregistered installer"""
         self.assertRaises(KeyError, package_installer.get_installer_by_name,
                           DummyInstaller.NAME)
 
     def test_multi_registered_installer(self):
+        """test register multi installers with the same name"""
         package_installer.register(DummyInstaller)
         self.assertRaises(KeyError, package_installer.register,
                           Dummy2Installer)

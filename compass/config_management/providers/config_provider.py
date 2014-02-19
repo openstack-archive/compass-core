@@ -4,16 +4,16 @@
 """
 import logging
 
+from abc import ABCMeta
+
 from compass.utils import setting_wrapper as setting
 
 
 class ConfigProvider(object):
     """Interface for config provider"""
+    __metaclass__ = ABCMeta
 
     NAME = 'config_provider'
-
-    def __init__(self):
-        raise NotImplementedError('%s is not implemented' % self)
 
     def __repr__(self):
         return '%s[%s]' % (self.__class__.__name__, self.NAME)
@@ -35,6 +35,24 @@ class ConfigProvider(object):
         """
         return {}
 
+    def update_adapters(self, adapters, roles_per_target_system):
+        """Virtual method to update adapters.
+
+        :param adapters: adapters to update
+        :type adapters: list of dict
+        :param roles_per_target_system: roles per target_system to update
+        :type roles_per_target_system: dict of str to dict.
+        """
+        pass
+
+    def update_switch_filters(self, switch_filters):
+        """Virtual method to update switch filters.
+
+        :param switch_filters: switch filters to update.
+        :type switch_filters: list of dict
+        """
+        pass
+
     def get_host_config(self, hostid):
         """Virtual method to get host config.
 
@@ -44,19 +62,6 @@ class ConfigProvider(object):
         :returns: host configuration as dict.
         """
         return {}
-
-    def get_host_configs(self, hostids):
-        """Wrapper method to get hosts' configs.
-
-        :param hostids: ids of the hosts to get configuration.
-        :type hostids: list of int
-
-        :returns: dict mapping each hostid to host configuration as dict.
-        """
-        configs = {}
-        for hostid in hostids:
-            configs[hostid] = self.get_host_config(hostid)
-        return configs
 
     def update_global_config(self, config):
         """Virtual method to update global config.
@@ -86,14 +91,88 @@ class ConfigProvider(object):
         """
         pass
 
-    def update_host_configs(self, configs):
-        """Wrapper method to update host configs.
+    def clean_host_config(self, hostid):
+        """Virtual method to clean host config.
 
-        :param configs: dict mapping host id to host configuration as dict.
-        :type configs: dict of (int, dict)
+        :param hostid; the id of the host to clean.
+        :type hostid: int
         """
-        for hostname, config in configs.items():
-            self.update_host_config(hostname, config)
+        pass
+
+    def reinstall_host(self, hostid):
+        """Virtual method to reintall host.
+
+        :param hostid: the id of the host to reinstall.
+        :type hostid: int.
+        """
+        pass
+
+    def reinstall_cluster(self, clusterid):
+        """Virtual method to reinstall cluster.
+
+        :param clusterid: the id of the cluster to reinstall.
+        :type clusterid: int
+        """
+        pass
+
+    def clean_host_installing_progress(self, hostid):
+        """Virtual method to clean host installing progress.
+
+        :param hostid: the id of the host to clean the installing progress
+        :type hostid: int
+        """
+        pass
+
+    def clean_cluster_installing_progress(self, clusterid):
+        """Virtual method to clean cluster installing progress.
+
+        :param clusterid: the id of the cluster to clean installing progress
+        :type clusterid: int
+        """
+        pass
+
+    def clean_cluster_config(self, clusterid):
+        """Virtual method to clean cluster config
+
+        :param clsuterid: the id of the cluster to clean
+        :type clusterid: int
+        """
+        pass
+
+    def get_cluster_hosts(self, clusterid):
+        """Virtual method to get hosts of given cluster.
+
+        :param clusterid: the id of the clsuter
+        :type clsuterid: int
+        """
+        return []
+
+    def get_clusters(self):
+        """Virtual method to get cluster list."""
+        return []
+
+    def get_switch_and_machines(self):
+        """Virtual method to get switches and machines.
+
+        :returns: switches as list, machines per switch as dict of str to list
+        """
+        return ([], {})
+
+    def update_switch_and_machines(
+        self, switches, switch_machines
+    ):
+        """Virtual method to update switches and machines.
+
+        :param switches: switches to update
+        :type switches: list of dict.
+        :param switch_machines: machines of each switch to update
+        :type switch_machines: dict of str to list of dict.
+        """
+        pass
+
+    def sync(self):
+        """Virtual method to sync data in provider."""
+        pass
 
 
 PROVIDERS = {}

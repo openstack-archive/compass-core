@@ -1,11 +1,16 @@
+"""test config translator module"""
 import functools
 import unittest2
 
 from compass.config_management.utils import config_translator
 from compass.config_management.utils import config_translator_callbacks
 
+
 class TestConfigTranslatorFunctions(unittest2.TestCase):
+    """test config translator class"""
+
     def test_translate_1(self):
+        """config translate test"""
         config = {
             'networking': {
                 'interfaces': {
@@ -37,7 +42,7 @@ class TestConfigTranslatorFunctions(unittest2.TestCase):
                     'search_path': 'ods.com',
                     'gateway': '10.0.0.1',
                     'proxy': 'http://1.2.3.4:3128',
-                    'ntp_server': '1.2.3.4', 
+                    'ntp_server': '1.2.3.4',
                     'ignore_proxy': '127.0.0.1',
                 },
             },
@@ -118,7 +123,8 @@ class TestConfigTranslatorFunctions(unittest2.TestCase):
                     config_translator.KeyTranslator(
                         translated_keys=[functools.partial(
                             config_translator_callbacks.get_key_from_pattern,
-                            to_pattern='/modify_interface/macaddress-%(nic)s')],
+                            to_pattern='/modify_interface/macaddress-%(nic)s'
+                        )],
                         from_keys={'nic': '../nic'},
                         override=functools.partial(
                             config_translator_callbacks.override_path_has,
@@ -171,7 +177,8 @@ class TestConfigTranslatorFunctions(unittest2.TestCase):
                     ), config_translator.KeyTranslator(
                         translated_keys=[functools.partial(
                             config_translator_callbacks.get_key_from_pattern,
-                            to_pattern='/modify_interface/management-%(nic)s')],
+                            to_pattern='/modify_interface/management-%(nic)s'
+                        )],
                         from_keys={'nic': '../nic'},
                         translated_value=functools.partial(
                             config_translator_callbacks.override_path_has,
@@ -193,6 +200,7 @@ class TestConfigTranslatorFunctions(unittest2.TestCase):
         self.assertEqual(translated_config, expected_config)
 
     def test_translate_2(self):
+        """config translate test"""
         translator = config_translator.ConfigTranslator(
             mapping={
                 '/networking/interfaces/management/ip': [
@@ -215,7 +223,8 @@ class TestConfigTranslatorFunctions(unittest2.TestCase):
                             '/endpoints/network/service/host',
                             '/endpoints/volume/service/host',
                         ],
-                        translated_value=config_translator_callbacks.get_value_if,
+                        translated_value=(
+                            config_translator_callbacks.get_value_if),
                         from_values={'condition': '/has_dashboard_roles'},
                         override=config_translator_callbacks.override_if_any,
                         override_conditions={
@@ -322,7 +331,6 @@ class TestConfigTranslatorFunctions(unittest2.TestCase):
         translated_config2 = translator.translate(config2)
         print translated_config2
         self.assertEqual(translated_config2, expected_config2)
-
 
 
 if __name__ == '__main__':

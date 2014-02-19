@@ -1,3 +1,4 @@
+"""test config merger callbacks module"""
 import unittest2
 
 from compass.config_management.utils import config_merger_callbacks
@@ -5,7 +6,10 @@ from compass.config_management.utils import config_reference
 
 
 class TestAssignRoles(unittest2.TestCase):
+    """test assign roles"""
+
     def test_assign_roles(self):
+        """test assign roles"""
         lower_configs = {
             1: {'roles': ['control']},
             2: {'roles': ['api', 'compute']},

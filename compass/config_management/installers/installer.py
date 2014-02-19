@@ -8,10 +8,6 @@ class Installer(object):
     """Interface for installer."""
     NAME = 'installer'
 
-    def __init__(self):
-        raise NotImplementedError(
-            '%s is not implemented' % self.__class__.__name__)
-
     def __repr__(self):
         return '%s[%s]' % (self.__class__.__name__, self.NAME)
 
@@ -19,23 +15,9 @@ class Installer(object):
         """virtual method to sync installer."""
         pass
 
-    def reinstall_host(self, hostid, config, **kwargs):
-        """virtual method to reinstall specific host."""
-        pass
-
     def get_global_config(self, **kwargs):
         """virtual method to get global config."""
         return {}
-
-    def clean_cluster_config(self, clusterid, config, **kwargs):
-        """virtual method to clean cluster config.
-
-        :param clusterid: the id of the cluster to cleanup.
-        :type clusterid: int
-        :param config: cluster configuration to cleanup.
-        :type config: dict
-        """
-        pass
 
     def get_cluster_config(self, clusterid, **kwargs):
         """virtual method to get cluster config.
@@ -47,16 +29,6 @@ class Installer(object):
         """
         return {}
 
-    def clean_host_config(self, hostid, config, **kwargs):
-        """virtual method to clean host config.
-
-        :param hostid: the id of the host to cleanup.
-        :type hostid: int
-        :param config: host configuration to cleanup.
-        :type config: dict
-        """
-        pass
-
     def get_host_config(self, hostid, **kwargs):
         """virtual method to get host config.
 
@@ -66,27 +38,6 @@ class Installer(object):
         :returns: host configuration as dict.
         """
         return {}
-
-    def clean_host_configs(self, host_configs, **kwargs):
-        """Wrapper method to clean hosts' configs.
-
-        :param host_configs: dict of host id to host configuration as dict
-        """
-        for hostid, host_config in host_configs.items():
-            self.clean_host_config(hostid, host_config, **kwargs)
-
-    def get_host_configs(self, hostids, **kwargs):
-        """Wrapper method get hosts' configs.
-
-        :param hostids: ids of the hosts' configuration.
-        :type hostids: list of int
-
-        :returns: dict of host id to host configuration as dict.
-        """
-        host_configs = {}
-        for hostid in hostids:
-            host_configs[hostid] = self.get_host_config(hostid, **kwargs)
-        return host_configs
 
     def update_global_config(self, config, **kwargs):
         """virtual method to update global config.
@@ -116,10 +67,66 @@ class Installer(object):
         """
         pass
 
-    def update_host_configs(self, host_configs, **kwargs):
-        """Wrapper method to updaet hosts' configs.
+    def clean_host_installing_progress(
+        self, hostid, config, **kwargs
+    ):
+        """virtual method to clean host installing progress.
 
-        :param host_configs: dict of host id to host configuration as dict
+        :param hostid: the id of host to clean the log.
+        :type hostid: int
+        :param config: host configuration.
+        :type config: dict
         """
-        for hostid, config in host_configs.items():
-            self.update_host_config(hostid, config, **kwargs)
+        pass
+
+    def clean_cluster_installing_progress(
+        self, clusterid, config, **kwargs
+    ):
+        """virtual method to clean host installing progress.
+
+        :param clusterid: the id of cluster to clean the log.
+        :type clusterid: int
+        :param config: cluster configuration.
+        :type config: dict
+        """
+        pass
+
+    def reinstall_host(self, hostid, config, **kwargs):
+        """virtual method to reinstall specific host.
+
+        :param hostid: the id of the host to reinstall.
+        :type hostid: int
+        :param config: host configuration to reinstall
+        :type config: dict
+        """
+        pass
+
+    def reinstall_cluster(self, clusterid, config, **kwargs):
+        """virtual method to reinstall specific cluster.
+
+        :param clusterid: the id of the cluster to reinstall.
+        :type clusterid: int
+        :param config: cluster configuration to reinstall
+        :type config: dict
+        """
+        pass
+
+    def clean_host_config(self, hostid, config, **kwargs):
+        """virtual method to clean host config.
+
+        :param hostid: the id of the host to cleanup.
+        :type hostid: int
+        :param config: host configuration to cleanup.
+        :type config: dict
+        """
+        pass
+
+    def clean_cluster_config(self, clusterid, config, **kwargs):
+        """virtual method to clean cluster config.
+
+        :param clusterid: the id of the cluster to cleanup.
+        :type clusterid: int
+        :param config: cluster configuration to cleanup.
+        :type config: dict
+        """
+        pass

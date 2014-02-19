@@ -1,19 +1,20 @@
 """Compass Command Line Interface"""
 
 import sys
-import os
 from subprocess import Popen
 
 from compass.actions.health_check import check
 from compass.utils.util import pretty_print
 
-ACTION_MAP = {"check":   "apache celery dhcp dns hds misc os_installer "
-                         "package_installer squid tftp".split(" "),
-              "refresh": "db sync".split(" "),
-              }
+ACTION_MAP = {
+    "check": "apache celery dhcp dns hds misc os_installer "
+             "package_installer squid tftp".split(" "),
+    "refresh": "db sync".split(" "),
+}
 
 
-class BootCLI:
+class BootCLI(object):
+    """CLI to do compass check."""
 
     def __init__(self):
         return
@@ -33,7 +34,8 @@ class BootCLI:
                 method = "self.run_" + action + "(module)"
                 eval(method)
 
-    def get_action(self, args):
+    @classmethod
+    def get_action(cls, args):
         """
         This method returns an action type.
         For 'compass check dhcp' command, it will return 'check'.
@@ -44,7 +46,8 @@ class BootCLI:
             return args[1]
         return None
 
-    def get_module(self, action, args):
+    @classmethod
+    def get_module(cls, action, args):
         """
         This method returns a module.
         For 'compass check dhcp' command, it will return 'dhcp'.
@@ -66,19 +69,21 @@ class BootCLI:
         if module is None:
             pretty_print("Starting: Compass Health Check",
                          "==============================")
-            c = check.BootCheck()
-            res = c.run()
+            chk = check.BootCheck()
+            res = chk.run()
             self.output_check_result(res)
 
         else:
             pretty_print("Checking Module: %s" % module,
                          "============================")
-            c = check.BootCheck()
-            method = "c.check_" + module + "()"
+            chk = check.BootCheck()
+            method = "chk.check_" + module + "()"
             res = eval(method)
             print "\n".join(msg for msg in res[1])
 
-    def output_check_result(self, result):
+    @classmethod
+    def output_check_result(cls, result):
+        """output check result."""
         if result == {}:
             return
         pretty_print("\n",
@@ -86,7 +91,6 @@ class BootCLI:
                      "* Compass Health Check Report *",
                      "===============================")
         successful = True
-        num = 1
         for key in result.keys():
             if result[key][0] == 0:
                 successful = False
@@ -101,7 +105,9 @@ class BootCLI:
                   "deploying!"
             sys.exit(1)
 
-    def run_refresh(self, action=None):
+    @classmethod
+    def run_refresh(cls, action=None):
+        """Run refresh."""
         ## TODO: replace refresh.sh with refresh.py
         if action is None:
             pretty_print("Refreshing Compass...",
@@ -117,7 +123,9 @@ class BootCLI:
             Popen(['/opt/compass/bin/manage_db.py sync_from_installers'],
                   shell=True)
 
-    def print_help(self, module_help=""):
+    @classmethod
+    def print_help(cls, module_help=""):
+        """print help."""
         if module_help == "":
             pretty_print("usage\n=====",
                          "compass <refresh|check>",

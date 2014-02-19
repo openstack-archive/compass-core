@@ -43,5 +43,55 @@ class MixProvider(config_provider.ConfigProvider):
         """update host config."""
         self.host_provider_.update_host_config(hostid, config)
 
+    def update_adapters(self, adapters, roles_per_target_system):
+        """update adapters."""
+        self.host_provider_.update_adapters(
+            adapters, roles_per_target_system)
+
+    def update_switch_filters(self, switch_filters):
+        """update switch filters"""
+        self.host_provider_.update_switch_filters(switch_filters)
+
+    def clean_host_config(self, hostid):
+        """clean host config."""
+        self.host_provider_.clean_host_config(hostid)
+
+    def reinstall_host(self, hostid):
+        """reinstall host config"""
+        self.host_provider_.reinstall_host(hostid)
+
+    def reinstall_cluster(self, clusterid):
+        """reinstall cluster"""
+        self.host_provider_.reinstall_cluster(clusterid)
+
+    def clean_host_installing_progress(self, hostid):
+        """clean host installing progress"""
+        self.host_provider_.clean_host_installing_progress(hostid)
+
+    def clean_cluster_installing_progress(self, clusterid):
+        """clean cluster installing progress"""
+        self.host_provider_.clean_cluster_installing_progress(clusterid)
+
+    def clean_cluster_config(self, clusterid):
+        """clean cluster config"""
+        self.host_provider_.clean_cluster_config(clusterid)
+
+    def get_cluster_hosts(self, clusterid):
+        """get cluster hosts."""
+        return self.host_provider_.get_cluster_hosts(clusterid)
+
+    def get_clusters(self):
+        """get clusters"""
+        return self.host_provider_.get_clusters()
+
+    def get_switch_and_machines(self):
+        """get switch and machines."""
+        return self.host_provider_.get_switch_and_machines()
+
+    def update_switch_and_machines(self, switches, switch_machines):
+        """update siwtch and machines."""
+        self.host_provider_.update_switch_and_machines(
+            switches, switch_machines)
+
 
 config_provider.register_provider(MixProvider)

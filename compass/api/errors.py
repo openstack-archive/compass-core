@@ -6,6 +6,7 @@ from compass.api import util
 class ObjectDoesNotExist(Exception):
     """Define the exception for referring non-existing object"""
     def __init__(self, message):
+        super(ObjectDoesNotExist, self).__init__(message)
         self.message = message
 
     def __str__(self):
@@ -15,6 +16,7 @@ class ObjectDoesNotExist(Exception):
 class UserInvalidUsage(Exception):
     """Define the exception for fault usage of users"""
     def __init__(self, message):
+        super(UserInvalidUsage, self).__init__(message)
         self.message = message
 
     def __str__(self):
@@ -24,6 +26,7 @@ class UserInvalidUsage(Exception):
 class ObjectDuplicateError(Exception):
     """Define the duplicated object exception"""
     def __init__(self, message):
+        super(ObjectDuplicateError, self).__init__(message)
         self.message = message
 
     def __str__(self):
@@ -33,6 +36,7 @@ class ObjectDuplicateError(Exception):
 class InputMissingError(Exception):
     """Define the insufficient input exception"""
     def __init__(self, message):
+        super(InputMissingError, self).__init__(message)
         self.message = message
 
     def __str__(self):
@@ -42,6 +46,7 @@ class InputMissingError(Exception):
 class MethodNotAllowed(Exception):
     """Define the exception which invalid method is called"""
     def __init__(self, message):
+        super(MethodNotAllowed, self).__init__(message)
         self.message = message
 
     def __str__(self):

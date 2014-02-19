@@ -72,7 +72,7 @@ print 'add a switch status: %s resp: %s' % (status, resp)
 if status < 400:
     switch = resp['switch']
 else:
-    status, resp =  client.get_switches()
+    status, resp = client.get_switches()
     print 'get all switches status: %s resp: %s' % (status, resp)
     switch = None
     for switch in resp['switches']:
@@ -191,7 +191,8 @@ print 'set networking config to cluster %s status: %s, resp: %s' % (
 
 
 # set partiton of each host in cluster
-status, resp = client.set_partition(cluster_id,
+status, resp = client.set_partition(
+    cluster_id,
     home_percentage=HOME_PERCENTAGE,
     tmp_partition_percentage=TMP_PERCENTAGE,
     var_partition_percentage=VAR_PERCENTAGE)
@@ -223,8 +224,10 @@ while True:
     print 'get cluster %s installing progress status: %s, resp: %s' % (
         cluster_id, status, resp)
     progress = resp['progress']
-    if (progress['state'] not in ['UNINITIALIZED', 'INSTALLING'] or
-        progress['percentage'] >= 1.0):
+    if (
+        progress['state'] not in ['UNINITIALIZED', 'INSTALLING'] or
+        progress['percentage'] >= 1.0
+    ):
         break
 
     for host_id in host_ids:

@@ -1,20 +1,19 @@
 """Health Check module for DNS service"""
 
-import os
-import re
-import xmlrpclib
 import commands
+import os
+import socket
+import xmlrpclib
 
-from socket import *
-
-import base
+from compass.actions.health_check import base
 
 
 class DnsCheck(base.BaseCheck):
-
+    """dns health check class."""
     NAME = "DNS Check"
 
     def run(self):
+        """do health check"""
         installer = self.config.OS_INSTALLER
         method_name = "self.check_" + installer + "_dns()"
         return eval(method_name)
@@ -23,10 +22,10 @@ class DnsCheck(base.BaseCheck):
         """Checks if Cobbler has taken over DNS service"""
 
         try:
-            self.remote = xmlrpclib.Server(
+            remote = xmlrpclib.Server(
                 self.config.COBBLER_INSTALLER_URL,
                 allow_none=True)
-            self.token = self.remote.login(
+            remote.login(
                 *self.config.COBBLER_INSTALLER_TOKEN)
         except:
             self._set_status(0,
@@ -35,7 +34,7 @@ class DnsCheck(base.BaseCheck):
                              % self.NAME)
             return (self.code, self.messages)
 
-        cobbler_settings = self.remote.get_settings()
+        cobbler_settings = remote.get_settings()
         if cobbler_settings['manage_dns'] == 0:
             self.messages.append('[DNS]Info: DNS is not managed by Compass')
             return (self.code, self.messages)
@@ -54,49 +53,58 @@ class DnsCheck(base.BaseCheck):
 
         print "Checking DNS template......",
         if os.path.exists("/etc/cobbler/named.template"):
-            VAR_MAP = {"match_port":        False,
-                       "match_allow_query": False,
-                       }
-            f = open("/etc/cobbler/named.template")
-            host_ip = gethostbyname(gethostname())
+            var_map = {
+                "match_port": False,
+                "match_allow_query": False,
+            }
+            named_template = open("/etc/cobbler/named.template")
+            host_ip = socket.gethostbyname(socket.gethostname())
             missing_query = []
-            for line in f.readlines():
+            for line in named_template.readlines():
                 if "listen-on port 53" in line and host_ip in line:
-                    VAR_MAP["match_port"] = True
+                    var_map["match_port"] = True
+
                 if "allow-query" in line:
                     for subnet in ["127.0.0.0/8"]:
                         if not subnet in line:
                             missing_query.append(subnet)
-            f.close()
 
-            if VAR_MAP["match_port"] is False:
+            named_template.close()
+
+            if var_map["match_port"] is False:
                 self.messages.append(
-                    "[%s]Error: named service port and/or IP is "
-                    "misconfigured in /etc/cobbler/named.template"
-                    % self.NAME)
+                    "[%s]Error: named service port "
+                    "and/or IP is misconfigured in "
+                    "/etc/cobbler/named.template" % self.NAME)
+
             if len(missing_query) != 0:
                 self.messages.append(
                     "[%s]Error: Missing allow_query values in "
-                    "/etc/cobbler/named.template:%s"
-                    % (self.Name,
-                       ', '.join(subnet for subnet in missing_query)))
+                    "/etc/cobbler/named.template:%s" % (
+                        self.NAME,
+                        ', '.join(subnet for subnet in missing_query)))
             else:
-                VAR_MAP["match_allow_query"] = True
+                var_map["match_allow_query"] = True
 
-            failed = []
-            for var in VAR_MAP.keys():
-                if VAR_MAP[var] is False:
-                    failed.append(var)
-            if len(failed) != 0:
+            fails = []
+            for var in var_map.keys():
+                if var_map[var] is False:
+                    fails.append(var)
+
+            if len(fails) != 0:
                 self._set_status(
                     0,
-                    "[%s]Info: DNS template failed components: %s"
-                    % (self.NAME, ' '.join(f for f in failed)))
+                    "[%s]Info: DNS template failed components: "
+                    "%s" % (
+                        self.NAME,
+                        ' '.join(failed for failed in fails)))
+
         else:
             self._set_status(
                 0,
                 "[%s]Error: named template file doesn't exist, "
                 "health check failed." % self.NAME)
+
         return True
 
     def check_dns_service(self):
@@ -106,12 +114,13 @@ class DnsCheck(base.BaseCheck):
         if not 'named' in commands.getoutput('ps -ef'):
             self._set_status(
                 0,
-                "[%s]Error: named service does not seem to be running"
-                % self.NAME)
+                "[%s]Error: named service does not seem to be "
+                "running" % self.NAME)
 
-        if getservbyport(53) != 'domain':
+        if socket.getservbyport(53) != 'domain':
             self._set_status(
                 0,
-                "[%s]Error: domain service is not listening on port 53"
-                % self.NAME)
+                "[%s]Error: domain service is not listening on port "
+                "53" % self.NAME)
+
         return None

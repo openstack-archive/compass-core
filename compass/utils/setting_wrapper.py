@@ -22,7 +22,7 @@ CHEF_INSTALLER_URL = ''
 CHEF_GLOBAL_DATABAG_NAME = 'env_default'
 INSTALLATION_LOGDIR = ''
 DEFAULT_LOGLEVEL = 'info'
-DEFAULT_LOGDIR = ''
+DEFAULT_LOGDIR = '/tmp'
 DEFAULT_LOGINTERVAL = 1
 DEFAULT_LOGINTERVAL_UNIT = 'h'
 DEFAULT_LOGFORMAT = (
@@ -37,8 +37,10 @@ SWITCHES = [
 ]
 
 
-if ('COMPASS_IGNORE_SETTING' in os.environ and
-    os.environ['COMPASS_IGNORE_SETTING']):
+if (
+    'COMPASS_IGNORE_SETTING' in os.environ and
+    os.environ['COMPASS_IGNORE_SETTING']
+):
     pass
 else:
     if 'COMPASS_SETTING' in os.environ:

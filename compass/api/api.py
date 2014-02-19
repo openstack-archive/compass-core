@@ -86,10 +86,10 @@ class SwitchList(Resource):
                     """ Get Ip prefex as pattern used to query switches.
                         Switches' Ip addresses need to match this pattern.
                     """
-                    count = int(prefix/8)
+                    count = int(prefix / 8)
                     if count == 0:
                         count = 1
-                    return network.rsplit('.', count)[0]+'.'
+                    return network.rsplit('.', count)[0] + '.'
 
                 from netaddr import IPNetwork, IPAddress
 
@@ -101,8 +101,8 @@ class SwitchList(Resource):
                 result_set = []
                 if limit:
                     result_set = session.query(ModelSwitch).filter(
-                        ModelSwitch.ip.startswith(ip_filter)).limit(limit)\
-                                                             .all()
+                        ModelSwitch.ip.startswith(ip_filter)).limit(
+                        limit).all()
                 else:
                     result_set = session.query(ModelSwitch).filter(
                         ModelSwitch.ip.startswith(ip_filter)).all()
@@ -158,7 +158,7 @@ class SwitchList(Resource):
             error_msg = "Invalid IP address format!"
             return errors.handle_invalid_usage(
                 errors.UserInvalidUsage(error_msg)
-                )
+            )
 
         new_switch = {}
         with database.session() as session:
@@ -186,9 +186,12 @@ class SwitchList(Resource):
         celery.send_task("compass.tasks.pollswitch", (ip_addr,))
         logging.info('new switch added: %s', new_switch)
         return util.make_json_response(
-            202, {"status": "accepted",
-                  "switch":  new_switch}
-            )
+            202,
+            {
+                "status": "accepted",
+                "switch": new_switch
+            }
+        )
 
 
 class Switch(Resource):
@@ -211,7 +214,7 @@ class Switch(Resource):
 
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg)
-                    )
+                )
 
             switch_res['id'] = switch.id
             switch_res['ip'] = switch.ip
@@ -330,7 +333,7 @@ class MachineList(Resource):
                 return errors.UserInvalidUsage(
                     errors.UserInvalidUsage(error_msg)
                 )
-            #TODO: supporte query filtered port
+            #TODO: support query filtered port
             if filter_clause:
                 machines = session.query(ModelMachine)\
                                   .filter(and_(*filter_clause)).all()
@@ -444,7 +447,7 @@ class Cluster(Resource):
                 error_msg = 'Cannot found the cluster with id=%s' % cluster_id
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg)
-                    )
+                )
 
             if resource:
                 # List resource details
@@ -515,9 +518,12 @@ class Cluster(Resource):
             }
 
         return util.make_json_response(
-            200, {"status": "OK",
-                  "cluster": cluster_resp}
-            )
+            200,
+            {
+                "status": "OK",
+                "cluster": cluster_resp
+            }
+        )
 
     def put(self, cluster_id, resource):
         """
@@ -536,25 +542,28 @@ class Cluster(Resource):
         }
         request_data = json.loads(request.data)
         with database.session() as session:
-            cluster = session.query(ModelCluster).filter_by(id=cluster_id)\
-                                                 .first()
+            cluster = session.query(
+                ModelCluster).filter_by(id=cluster_id).first()
 
             if not cluster:
                 error_msg = 'You are trying to update a non-existing cluster!'
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg)
-                    )
+                )
+
             if resource not in request_data:
                 error_msg = "Invalid resource name '%s'" % resource
                 return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg))
+                    errors.UserInvalidUsage(error_msg)
+                )
 
             value = request_data[resource]
 
             if resource not in resources.keys():
                 error_msg = "Invalid resource name '%s'" % resource
                 return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg))
+                    errors.UserInvalidUsage(error_msg)
+                )
 
             validate_func = resources[resource]['validator']
             module = globals()['util']
@@ -562,14 +571,18 @@ class Cluster(Resource):
 
             if is_valid:
                 column = resources[resource]['column']
-                session.query(ModelCluster).filter_by(id=cluster_id)\
-                       .update({column: json.dumps(value)})
+                session.query(
+                    ModelCluster).filter_by(id=cluster_id).update(
+                        {column: json.dumps(value)}
+                )
             else:
                 return errors.handle_mssing_input(
-                    errors.InputMissingError(msg))
+                    errors.InputMissingError(msg)
+                )
 
         return util.make_json_response(
-            200, {"status": "OK"})
+            200, {"status": "OK"}
+        )
 
 
 @app.route("/clusters", methods=['GET'])
@@ -593,11 +606,13 @@ def list_clusters():
                               .all()
         elif state == 'installing':
             # The deployment of this cluster is in progress.
-            clusters = session.query(ModelCluster)\
-                              .filter(ModelCluster.id == ClusterState.id,
-                                      or_(ClusterState.state == 'INSTALLING',
-                                          ClusterState.state == 'UNINITIALIZED'))\
-                              .all()
+            clusters = session.query(
+                ModelCluster).filter(
+                ModelCluster.id == ClusterState.id,
+                or_(
+                    ClusterState.state == 'INSTALLING',
+                    ClusterState.state == 'UNINITIALIZED'
+                )).all()
         elif state == 'failed':
             # The deployment of this cluster is failed.
             clusters = session.query(ModelCluster)\
@@ -625,7 +640,7 @@ def list_clusters():
               "clusters": results})
 
 
-@app.route("/clusters/<string:cluster_id>/action", methods=['POST'])
+@app.route("/clusters/<int:cluster_id>/action", methods=['POST'])
 def execute_cluster_action(cluster_id):
     """Execute the specified  action to the cluster.
 
@@ -646,20 +661,21 @@ def execute_cluster_action(cluster_id):
             failed_machines = []
             for host in hosts:
                 # Check if machine exists
-                machine = session.query(ModelMachine).filter_by(id=host)\
-                                                     .first()
+                machine = session.query(
+                    ModelMachine).filter_by(id=host).first()
                 if not machine:
                     error_msg = "Machine id=%s does not exist!" % host
                     return errors.handle_not_exist(
                         errors.ObjectDoesNotExist(error_msg)
-                        )
-                clusterhost = session.query(ModelClusterHost)\
-                                     .filter_by(machine_id=host)\
-                                     .first()
+                    )
+
+                clusterhost = session.query(
+                    ModelClusterHost).filter_by(machine_id=host).first()
                 if clusterhost:
                     # Machine is already used
                     failed_machines.append(clusterhost.machine_id)
                     continue
+
                 # Add the available machine to available_machines list
                 available_machines.append(machine)
 
@@ -670,7 +686,8 @@ def execute_cluster_action(cluster_id):
                 error_msg = "Conflict!"
                 return errors.handle_duplicate_object(
                     errors.ObjectDuplicateError(error_msg), value
-                    )
+                )
+
             for machine, host in zip(available_machines, hosts):
                 host = ModelClusterHost(cluster_id=cluster_id,
                                         machine_id=machine.id)
@@ -686,8 +703,8 @@ def execute_cluster_action(cluster_id):
             200, {
                 "status": "OK",
                 "cluster_hosts": cluseter_hosts
-                }
-            )
+            }
+        )
 
     def _remove_hosts(cluster_id, hosts):
         """Remove existing cluster host from the cluster"""
@@ -696,9 +713,9 @@ def execute_cluster_action(cluster_id):
         with database.session() as session:
             failed_hosts = []
             for host_id in hosts:
-                host = session.query(ModelClusterHost)\
-                              .filter_by(id=host_id, cluster_id=cluster_id)\
-                              .first()
+                host = session.query(
+                    ModelClusterHost).filter_by(
+                    id=host_id, cluster_id=cluster_id).first()
 
                 if not host:
                     failed_hosts.append(host_id)
@@ -717,7 +734,7 @@ def execute_cluster_action(cluster_id):
                 }
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg), value
-                    )
+                )
 
             filter_clause = []
             for host_id in hosts:
@@ -731,17 +748,17 @@ def execute_cluster_action(cluster_id):
             200, {
                 "status": "OK",
                 "cluster_hosts": removed_hosts
-                }
-            )
+            }
+        )
 
     def _replace_all_hosts(cluster_id, hosts):
         """Remove all existing hosts from the cluster and add new ones"""
 
         with database.session() as session:
             # Delete all existing hosts of the cluster
-            session.query(ModelClusterHost)\
-                   .filter_by(cluster_id=cluster_id).delete()
-            session.flush()
+            session.query(ModelClusterHost).filter_by(
+                cluster_id=cluster_id).delete()
+
         return _add_hosts(cluster_id, hosts)
 
     def _deploy(cluster_id, hosts):
@@ -752,21 +769,23 @@ def execute_cluster_action(cluster_id):
         with database.session() as session:
             if not hosts:
                 # Deploy all hosts in the cluster
-                cluster_hosts = session.query(ModelClusterHost)\
-                                       .filter_by(cluster_id=cluster_id).all()
+                cluster_hosts = session.query(
+                    ModelClusterHost).filter_by(cluster_id=cluster_id).all()
 
                 if not cluster_hosts:
                     # No host belongs to this cluster
-                    error_msg = ('Cannot find any host in cluster id=%s' %
-                                 cluster_id)
+                    error_msg = (
+                        'Cannot find any host in cluster id=%s' % cluster_id)
                     return errors.handle_not_exist(
                         errors.ObjectDoesNotExist(error_msg))
 
                 for host in cluster_hosts:
                     if not host.mutable:
                         # The host is not allowed to modified
-                        error_msg = ("The host id=%s is not allowed to be "
-                                     "modified now!") % host.id
+                        error_msg = (
+                            'The host id=%s is not allowed to be '
+                            'modified now!'
+                        ) % host.id
                         return errors.UserInvalidUsage(
                             errors.UserInvalidUsage(error_msg))
 
@@ -783,18 +802,21 @@ def execute_cluster_action(cluster_id):
                 deploy_hosts_info.append(host_info)
 
             # Lock cluster hosts and its cluster
-            session.query(ModelClusterHost).filter_by(cluster_id=cluster_id)\
-                                           .update({'mutable': False})
-            session.query(ModelCluster).filter_by(id=cluster_id)\
-                                       .update({'mutable': False})
+            session.query(ModelClusterHost).filter_by(
+                cluster_id=cluster_id).update({'mutable': False})
+            session.query(ModelCluster).filter_by(
+                id=cluster_id).update({'mutable': False})
 
-        celery.send_task("compass.tasks.trigger_install", (cluster_id, hosts))
+        celery.send_task("compass.tasks.deploy", ({cluster_id: hosts},))
         return util.make_json_response(
-            202, {"status": "accepted",
-                  "deployment": {
-                      "cluster": deploy_cluster_info,
-                      "hosts": deploy_hosts_info
-                      }})
+            202, {
+                "status": "accepted",
+                "deployment": {
+                    "cluster": deploy_cluster_info,
+                    "hosts": deploy_hosts_info
+                }
+            }
+        )
 
     request_data = None
     with database.session() as session:
@@ -803,7 +825,8 @@ def execute_cluster_action(cluster_id):
             error_msg = 'Cluster id=%s does not exist!'
             return errors.handle_not_exist(
                 errors.ObjectDoesNotExist(error_msg)
-                )
+            )
+
         if not cluster.mutable:
             # The cluster cannot be deploy again
             error_msg = ("The cluster id=%s is not allowed to "
@@ -829,7 +852,7 @@ def execute_cluster_action(cluster_id):
     else:
         return errors.handle_invalid_usage(
             errors.UserInvalidUsage('%s action is not support!' % action)
-            )
+        )
 
 
 class ClusterHostConfig(Resource):
@@ -842,8 +865,8 @@ class ClusterHostConfig(Resource):
         """
         config_res = {}
         with database.session() as session:
-            host = session.query(ModelClusterHost).filter_by(id=host_id)\
-                                                  .first()
+            host = session.query(
+                ModelClusterHost).filter_by(id=host_id).first()
             if not host:
                 # The host does not exist.
                 error_msg = "The host id=%s does not exist!" % host_id
@@ -864,12 +887,13 @@ class ClusterHostConfig(Resource):
         :param host_id: the unique identifier of the host
         """
         with database.session() as session:
-            host = session.query(ModelClusterHost).filter_by(id=host_id)\
-                                                  .first()
+            host = session.query(
+                ModelClusterHost).filter_by(id=host_id).first()
             if not host:
                 error_msg = "The host id=%s does not exist!" % host_id
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg))
+
             logging.debug("cluster config put request.data %s", request.data)
             request_data = json.loads(request.data)
             if not request_data:
@@ -920,8 +944,8 @@ class ClusterHostConfig(Resource):
         """
         available_delete_keys = ['roles']
         with database.session() as session:
-            host = session.query(ModelClusterHost).filter_by(id=host_id)\
-                                                  .first()
+            host = session.query(
+                ModelClusterHost).filter_by(id=host_id).first()
             if not host:
                 error_msg = "The host id=%s does not exist!" % host_id
                 return errors.handle_not_exist(
@@ -957,12 +981,13 @@ class ClusterHost(Resource):
         """
         host_res = {}
         with database.session() as session:
-            host = session.query(ModelClusterHost).filter_by(id=host_id)\
-                                                  .first()
+            host = session.query(
+                ModelClusterHost).filter_by(id=host_id).first()
             if not host:
                 error_msg = "The host id=%s does not exist!" % host_id
                 return errors.handle_not_exist(
                     errors.ObjectDoesNotExist(error_msg))
+
             host_res['hostname'] = host.hostname
             host_res['mutable'] = host.mutable
             host_res['id'] = host.id
@@ -994,19 +1019,20 @@ def list_clusterhosts():
     with database.session() as session:
         hosts = None
         if hostname and clustername:
-            hosts = session.query(ModelClusterHost).join(ModelCluster)\
-                           .filter(ModelClusterHost.hostname == hostname,
-                                   ModelCluster.name == clustername)\
-                           .all()
+            hosts = session.query(
+                ModelClusterHost).join(ModelCluster).filter(
+                ModelClusterHost.hostname == hostname,
+                ModelCluster.name == clustername).all()
 
         elif hostname:
-            hosts = session.query(ModelClusterHost)\
-                           .filter_by(hostname=hostname).all()
+            hosts = session.query(
+                ModelClusterHost).filter_by(hostname=hostname).all()
         elif clustername:
-            cluster = session.query(ModelCluster)\
-                             .filter_by(name=clustername).first()
+            cluster = session.query(
+                ModelCluster).filter_by(name=clustername).first()
             if cluster:
                 hosts = cluster.hosts
+
         else:
             hosts = session.query(ModelClusterHost).all()
 
@@ -1027,7 +1053,7 @@ def list_clusterhosts():
                   "cluster_hosts": hosts_list})
 
 
-@app.route("/adapters/<string:adapter_id>", methods=['GET'])
+@app.route("/adapters/<int:adapter_id>", methods=['GET'])
 def list_adapter(adapter_id):
     """
     Lists details of the specified adapter.
@@ -1043,6 +1069,7 @@ def list_adapter(adapter_id):
             error_msg = "Adapter id=%s does not exist!" % adapter_id
             return errors.handle_not_exist(
                 errors.ObjectDoesNotExist(error_msg))
+
         adapter_res['name'] = adapter.name
         adapter_res['os'] = adapter.os
         adapter_res['id'] = adapter.id
@@ -1050,12 +1077,13 @@ def list_adapter(adapter_id):
         adapter_res['link'] = {
             "href": "/".join((endpoint, str(adapter.id))),
             "rel": "self"}
+
     return util.make_json_response(
         200, {"status": "OK",
               "adapter": adapter_res})
 
 
-@app.route("/adapters/<string:adapter_id>/roles", methods=['GET'])
+@app.route("/adapters/<int:adapter_id>/roles", methods=['GET'])
 def list_adapter_roles(adapter_id):
     """Lists details of all roles of the specified adapter
 
@@ -1063,19 +1091,19 @@ def list_adapter_roles(adapter_id):
     """
     roles_list = []
     with database.session() as session:
-        adapter_q = session.query(Adapter)\
-                           .filter_by(id=adapter_id).first()
+        adapter_q = session.query(
+            Adapter).filter_by(id=adapter_id).first()
         if not adapter_q:
             error_msg = "Adapter id=%s does not exist!" % adapter_id
             return errors.handle_not_exist(
                 errors.ObjectDoesNotExist(error_msg))
 
-        roles = session.query(Role, Adapter)\
-                       .filter(Adapter.id == adapter_id,
-                               Adapter.target_system == Role.target_system)\
-                       .all()
+        roles = session.query(
+            Role, Adapter).filter(
+            Adapter.id == adapter_id,
+            Adapter.target_system == Role.target_system).all()
 
-        for role, adapter in roles:
+        for role, _ in roles:
             role_res = {}
             role_res['name'] = role.name
             role_res['description'] = role.description
@@ -1219,37 +1247,37 @@ class DashboardLinks(Resource):
                 config = host.config
                 if ('has_dashboard_roles' in config and
                         config['has_dashboard_roles']):
-                    ip = config.get(
+                    ip_addr = config.get(
                         'networking', {}).get(
                         'interfaces', {}).get(
                         'management', {}).get(
                         'ip', '')
                     roles = config.get('roles', [])
                     for role in roles:
-                        links[role] = 'http://%s' % ip
+                        links[role] = 'http://%s' % ip_addr
 
         return util.make_json_response(
             200, {"status": "OK",
                   "dashboardlinks": links}
-            )
+        )
 
 
 util.add_resource(SwitchList, '/switches')
-util.add_resource(Switch, '/switches/<string:switch_id>')
+util.add_resource(Switch, '/switches/<int:switch_id>')
 util.add_resource(MachineList, '/machines')
-util.add_resource(Machine, '/machines/<string:machine_id>')
+util.add_resource(Machine, '/machines/<int:machine_id>')
 util.add_resource(Cluster,
                   '/clusters',
-                  '/clusters/<string:cluster_id>',
-                  '/clusters/<string:cluster_id>/<string:resource>')
+                  '/clusters/<int:cluster_id>',
+                  '/clusters/<int:cluster_id>/<string:resource>')
 util.add_resource(ClusterHostConfig,
-                  '/clusterhosts/<string:host_id>/config',
-                  '/clusterhosts/<string:host_id>/config/<string:subkey>')
-util.add_resource(ClusterHost, '/clusterhosts/<string:host_id>')
+                  '/clusterhosts/<int:host_id>/config',
+                  '/clusterhosts/<int:host_id>/config/<string:subkey>')
+util.add_resource(ClusterHost, '/clusterhosts/<int:host_id>')
 util.add_resource(HostInstallingProgress,
-                  '/clusterhosts/<string:host_id>/progress')
+                  '/clusterhosts/<int:host_id>/progress')
 util.add_resource(ClusterInstallingProgress,
-                  '/clusters/<string:cluster_id>/progress')
+                  '/clusters/<int:cluster_id>/progress')
 util.add_resource(DashboardLinks, '/dashboardlinks')
 
 if __name__ == '__main__':

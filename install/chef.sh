@@ -6,7 +6,11 @@ sudo mkdir -p /root/backup/chef
 
 sudo rpm -q chef-server
 if [[ "$?" != "0" ]]; then
-sudo rpm -Uvh $CHEF_SRV
+    if [[ ! -e /tmp/chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm ]]; then
+        sudo rpm -Uvh $CHEF_SRV
+    else
+        sudo rpm -Uvh /tmp/chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm
+    fi
 if [[ "$?" != "0" ]]; then
     echo "failed to rpm install $CHEF_SRV"
     exit 1

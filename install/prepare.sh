@@ -51,13 +51,69 @@ else
   copylocal2dir $ADAPTER_SOURCE $ADAPTER_HOME
 fi
 
-# install js mvc package
-wget -c --progress=bar:force -O /tmp/$JS_MVC.zip http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip
-if [[ "$?" != "0" ]]; then
-echo "failed to download $JS_MVC"
-exit 1
+# download chef-server package
+if [[ -f /tmp/chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm ]]; then
+    echo "chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm already exists"
 else
-echo "successfully download $JS_MVC"
+    wget -c --progress=bar:force -O /tmp/chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm $CHEF_SRV
+    if [[ "$?" != "0" ]]; then
+        echo "failed to download chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm"
+        exit 1
+    else
+        echo "successfully download chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm"
+    fi
+fi
+
+# download centos image
+if [[ -f /tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso ]]; then
+    echo "/tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso already exists"
+else
+    sudo wget -c --progress=bar:force -O /tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso "$IMAGE_SOURCE"
+    if [[ "$?" != "0" ]]; then
+        echo "failed to download ${IMAGE_NAME}-${IMAGE_ARCH}.iso"
+        exit 1
+    else
+        echo "successfully download ${IMAGE_NAME}-${IMAGE_ARCH}.iso"
+    fi
+fi
+
+# download ppa_repo packages
+ppa_repo_packages="ntp-4.2.6p5-1.el6.${IMAGE_TYPE,,}.$IMAGE_ARCH.rpm 
+                   openssh-clients-5.3p1-94.el6.${IMAGE_ARCH}.rpm 
+                   iproute-2.6.32-31.el6.${IMAGE_ARCH}.rpm
+                   wget-1.12-1.8.el6.${IMAGE_ARCH}.rpm
+                   ntpdate-4.2.6p5-1.el6.${IMAGE_TYPE,,}.${IMAGE_ARCH}.rpm"
+for f in $ppa_repo_packages
+do 
+    if [ -f /tmp/$f ]; then
+        echo "$f already exists"
+    else
+        sudo wget -c --progress=bar:force -O /tmp/$f ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f
+        if [[ "$?" != "0" ]]; then
+            echo "fail to download $f"
+        else 
+            echo "successfully download $f"
+        fi
+    fi
+done
+
+if [[ ! -e /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm ]]; then
+    sudo wget -c --progress=bar:force -O /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
+else
+    echo "chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm already exists"
+fi        
+
+# install js mvc package
+if [[ -f /tmp/$JS_MVC.zip ]]; then
+    echo "$JS_MVC.zip already exists"
+else
+    wget -c --progress=bar:force -O /tmp/$JS_MVC.zip http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip
+    if [[ "$?" != "0" ]]; then
+        echo "failed to download $JS_MVC"
+        exit 1
+    else
+        echo "successfully download $JS_MVC"
+    fi
 fi
 
 if [ -d /tmp/$JS_MVC ]; then

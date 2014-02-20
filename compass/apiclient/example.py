@@ -232,7 +232,7 @@ print 'deploy cluster %s status: %s, resp: %s' % (cluster_id, status, resp)
 
 
 # get intalling progress.
-timeout = time.time() + 60*90
+timeout = time.time() + 60*35
 while True:
     status, resp = client.get_cluster_installing_progress(cluster_id)
     print 'get cluster %s installing progress status: %s, resp: %s' % (

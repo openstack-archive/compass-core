@@ -7,7 +7,7 @@ import os
 from compass.apiclient.restful import Client
 
 
-COMPASS_SERVER_URL = 'http://127.0.0.1'
+COMPASS_SERVER_URL = 'http://127.0.0.1/api'
 SWITCH_IP = '10.145.81.220'
 SWITCH_SNMP_VERSION = 'v2c'
 SWITCH_SNMP_COMMUNITY = 'public'

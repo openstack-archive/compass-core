@@ -1,0 +1,16 @@
+cluster_id,progress_url
+1,/clusters/1/progress
+host_id,progress_url
+11,/cluster_hosts/11/progress
+cluster_id,progress_url
+3,/clusters/3/progress
+host_id,progress_url
+7,/cluster_hosts/7/progress
+8,/cluster_hosts/8/progress
+9,/cluster_hosts/9/progress
+cluster_id,progress_url
+2,/clusters/2/progress
+host_id,progress_url
+4,/cluster_hosts/4/progress
+6,/cluster_hosts/6/progress
+10,/cluster_hosts/10/progress

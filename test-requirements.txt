@@ -2,3 +2,4 @@ discover
 mock
 unittest2
 testrepository>=0.0.17
+mimeparse

@@ -118,7 +118,7 @@ class Client(object):
 
         if limit:
             params['limit'] = limit
-        return self._get('/api/switches', params=params)
+        return self._get('/switches', params=params)
 
     def get_switch(self, switch_id):
         """Lists details for a specified switch.
@@ -126,7 +126,7 @@ class Client(object):
         :param switch_id: switch id.
         :type switch_id: int.
         """
-        return self._get('/api/switches/%s' % switch_id)
+        return self._get('/switches/%s' % switch_id)
 
     def add_switch(self, switch_ip, version=None, community=None,
                    username=None, password=None, raw_data=None):
@@ -167,7 +167,7 @@ class Client(object):
             if password:
                 data['switch']['credential']['password'] = password
 
-        return self._post('/api/switches', data=data)
+        return self._post('/switches', data=data)
 
     def update_switch(self, switch_id, ip_addr=None,
                       version=None, community=None,
@@ -213,11 +213,11 @@ class Client(object):
             if password:
                 data['switch']['credential']['password'] = password
 
-        return self._put('/api/switches/%s' % switch_id, data=data)
+        return self._put('/switches/%s' % switch_id, data=data)
 
     def delete_switch(self, switch_id):
         """Not implemented in api."""
-        return self._delete('api/switches/%s' % switch_id)
+        return self._delete('/switches/%s' % switch_id)
 
     def get_machines(self, switch_id=None, vlan_id=None,
                      port=None, limit=None):
@@ -250,7 +250,7 @@ class Client(object):
         if limit:
             params['limit'] = limit
 
-        return self._get('/api/machines', params=params)
+        return self._get('/machines', params=params)
 
     def get_machine(self, machine_id):
         """Lists the details for a specified machine.
@@ -258,12 +258,12 @@ class Client(object):
         :param machine_id: Return machine with the id.
         :type machine_id: int.
         """
-        return self._get('/api/machines/%s' % machine_id)
+        return self._get('/machines/%s' % machine_id)
 
     def get_clusters(self):
         """Lists the details for all clusters.
         """
-        return self._get('/api/clusters')
+        return self._get('/clusters')
 
     def get_cluster(self, cluster_id):
         """Lists the details of the specified cluster.
@@ -271,7 +271,7 @@ class Client(object):
         :param cluster_id: cluster id.
         :type cluster_id: int.
         """
-        return self._get('/api/clusters/%s' % cluster_id)
+        return self._get('/clusters/%d' % cluster_id)
 
     def add_cluster(self, cluster_name, adapter_id, raw_data=None):
         """Creates a cluster by specified name and given adapter id.
@@ -288,7 +288,7 @@ class Client(object):
             data['cluster'] = {}
             data['cluster']['name'] = cluster_name
             data['cluster']['adapter_id'] = adapter_id
-        return self._post('/api/clusters', data=data)
+        return self._post('/clusters', data=data)
 
     def add_hosts(self, cluster_id, machine_ids, raw_data=None):
         """add the specified machine(s) as the host(s) to the cluster.
@@ -303,7 +303,7 @@ class Client(object):
             data = raw_data
         else:
             data['addHosts'] = machine_ids
-        return self._post('/api/clusters/%s/action' % cluster_id, data=data)
+        return self._post('/clusters/%d/action' % cluster_id, data=data)
 
     def remove_hosts(self, cluster_id, host_ids, raw_data=None):
         """remove the specified host(s) from the cluster.
@@ -318,7 +318,7 @@ class Client(object):
             data = raw_data
         else:
             data['removeHosts'] = host_ids
-        return self._post('/api/clusters/%s/action' % cluster_id, data=data)
+        return self._post('/clusters/%s/action' % cluster_id, data=data)
 
     def replace_hosts(self, cluster_id, machine_ids, raw_data=None):
         """replace the cluster hosts with the specified machine(s).
@@ -333,7 +333,7 @@ class Client(object):
             data = raw_data
         else:
             data['replaceAllHosts'] = machine_ids
-        return self._post('/api/clusters/%s/action' % cluster_id, data=data)
+        return self._post('/clusters/%s/action' % cluster_id, data=data)
 
     def deploy_hosts(self, cluster_id, raw_data=None):
         """Deploy the cluster.
@@ -346,7 +346,7 @@ class Client(object):
             data = raw_data
         else:
             data['deploy'] = []
-        return self._post('/api/clusters/%s/action' % cluster_id, data=data)
+        return self._post('/clusters/%d/action' % cluster_id, data=data)
 
     @classmethod
     def parse_security(cls, kwargs):
@@ -376,7 +376,7 @@ class Client(object):
         """
         data = {}
         data['security'] = self.parse_security(kwargs)
-        return self._put('/api/clusters/%s/security' % cluster_id, data=data)
+        return self._put('/clusters/%d/security' % cluster_id, data=data)
 
     @classmethod
     def parse_networking(cls, kwargs):
@@ -429,7 +429,7 @@ class Client(object):
         """
         data = {}
         data['networking'] = self.parse_networking(kwargs)
-        return self._put('/api/clusters/%s/networking' % cluster_id, data=data)
+        return self._put('/clusters/%d/networking' % cluster_id, data=data)
 
     @classmethod
     def parse_partition(cls, kwargs):
@@ -462,7 +462,7 @@ class Client(object):
         """
         data = {}
         data['partition'] = self.parse_partition(kwargs)
-        return self._put('/api/clusters/%s/partition' % cluster_id, data=data)
+        return self._put('/clusters/%s/partition' % cluster_id, data=data)
 
     def get_hosts(self, hostname=None, clustername=None):
         """Lists the details of hosts.
@@ -484,7 +484,7 @@ class Client(object):
         if clustername:
             params['clustername'] = clustername
 
-        return self._get('/api/clusterhosts', params=params)
+        return self._get('/clusterhosts', params=params)
 
     def get_host(self, host_id):
         """Lists the details for the specified host.
@@ -492,7 +492,7 @@ class Client(object):
         :param host_id: host id.
         :type host_id: int.
         """
-        return self._get('/api/clusterhosts/%s' % host_id)
+        return self._get('/clusterhosts/%s' % host_id)
 
     def get_host_config(self, host_id):
         """Lists the details of the config for the specified host.
@@ -500,7 +500,7 @@ class Client(object):
         :param host_id: host id.
         :type host_id: int.
         """
-        return self._get('/api/clusterhosts/%s/config' % host_id)
+        return self._get('/clusterhosts/%s/config' % host_id)
 
     def update_host_config(self, host_id, hostname=None,
                            roles=None, raw_data=None, **kwargs):
@@ -564,7 +564,7 @@ class Client(object):
             if roles:
                 data['roles'] = roles
 
-        return self._put('/api/clusterhosts/%s/config' % host_id, data)
+        return self._put('/clusterhosts/%s/config' % host_id, data)
 
     def delete_from_host_config(self, host_id, delete_key):
         """Deletes one key in config for the host.
@@ -574,7 +574,7 @@ class Client(object):
         :param delete_key: the key in host config to be deleted.
         :type delete_key: str.
         """
-        return self._delete('/api/clusterhosts/%s/config/%s' % (
+        return self._delete('/clusterhosts/%s/config/%s' % (
             host_id, delete_key))
 
     def get_adapters(self, name=None):
@@ -590,7 +590,7 @@ class Client(object):
         if name:
             params['name'] = name
 
-        return self._get('/api/adapters', params=params)
+        return self._get('/adapters', params=params)
 
     def get_adapter(self, adapter_id):
         """Lists details for the specified adapter.
@@ -598,7 +598,7 @@ class Client(object):
         :param adapter_id: adapter id.
         :type adapter_id: int.
         """
-        return self._get('/api/adapters/%s' % adapter_id)
+        return self._get('/adapters/%s' % adapter_id)
 
     def get_adapter_roles(self, adapter_id):
         """Lists roles to assign to hosts for the specified adapter.
@@ -606,7 +606,7 @@ class Client(object):
         :param adapter_id: adapter id.
         :type adapter_id: int.
         """
-        return self._get('/api/adapters/%s/roles' % adapter_id)
+        return self._get('/adapters/%s/roles' % adapter_id)
 
     def get_host_installing_progress(self, host_id):
         """Lists progress details for the specified host.
@@ -614,7 +614,7 @@ class Client(object):
         :param host_id: host id.
         :type host_id: int.
         """
-        return self._get('/api/clusterhosts/%s/progress' % host_id)
+        return self._get('/clusterhosts/%s/progress' % host_id)
 
     def get_cluster_installing_progress(self, cluster_id):
         """Lists progress details for the specified cluster.
@@ -623,7 +623,7 @@ class Client(object):
         :param cluster_id: int.
         """
 
-        return self._get('/api/clusters/%s/progress' % cluster_id)
+        return self._get('/clusters/%s/progress' % cluster_id)
 
     def get_dashboard_links(self, cluster_id):
         """Lists links for dashboards of deployed cluster.
@@ -633,4 +633,4 @@ class Client(object):
         """
         params = {}
         params['cluster_id'] = cluster_id
-        return self._get('/api/dashboardlinks', params)
+        return self._get('/dashboardlinks', params)

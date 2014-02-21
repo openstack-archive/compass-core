@@ -722,7 +722,7 @@ class TestClusterAPI(ApiTestCase):
         host_id = json.loads(return_value.get_data())["cluster_hosts"][0]["id"]
 
         deploy_request = json.dumps({"deploy": [host_id]})
-        return_value = self.app.post(url, data=deploy_request)
+        return_value = self.test_client.post(url, data=deploy_request)
         self.assertEqual(202, return_value.status_code)
 
         cluster_state = session.query(ClusterState).filter_by(id=1).first()
@@ -836,13 +836,13 @@ class ClusterHostAPITest(ApiTestCase):
         incorrect_conf['hostname'] = 'host_02'
         incorrect_conf[
             'networking']['interfaces']['management']['ip'] = 'xxx'
-        return_vlaue = self.app.put(
+        return_vlaue = self.test_client.put(
             url, data=json.dumps(incorrect_conf))
         self.assertEqual(400, return_vlaue.status_code)
 
         # 3. Config put sucessfully
         config['hostname'] = 'host_02'
-        return_value = self.app.put(url, data=json.dumps(config))
+        return_value = self.test_client.put(url, data=json.dumps(config))
         self.assertEqual(200, return_value.status_code)
         with database.session() as session:
             host = session.query(ClusterHost).filter_by(id=2).first()
@@ -1516,8 +1516,8 @@ class TestExport(ApiTestCase):
                   'role', 'switch_config']
         for tname in talbes:
             url = '/'.join(('/export', tname))
-            rv = self.app.get(url)
-            resp_data = rv.get_data()
+            return_value = self.test_client.get(url)
+            resp_data = return_value.get_data()
             resp_data = resp_data.split('\n')
             resp_data = csv.DictReader(resp_data)
             expected_file = '/'.join((self.CSV_EXCEPTED_OUTPUT_DIR,

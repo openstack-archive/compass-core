@@ -6,5 +6,4 @@ celery
 netaddr
 paramiko
 simplejson
-
-
+requests

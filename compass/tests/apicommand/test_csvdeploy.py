@@ -94,6 +94,11 @@ class TestAPICommand(ApiTestCase):
                                       'url': '/cluster_hosts/1/progress'}]}}
 
     def tearDown(self):
+        # Remove the resulting output file from the test case.
+        try:
+            os.remove(os.path.join(self.CSV_IMPORT_DIR, 'progress.csv'))
+        except OSError:
+            pass
         super(TestAPICommand, self).tearDown()
 
     def test_start(self):

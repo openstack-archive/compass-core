@@ -3,7 +3,7 @@
 import sys
 import time
 import os
-
+import requests
 from compass.apiclient.restful import Client
 
 
@@ -233,7 +233,7 @@ print 'deploy cluster %s status: %s, resp: %s' % (cluster_id, status, resp)
 
 
 # get intalling progress.
-timeout = time.time() + 60 * 90
+timeout = time.time() + 60 * 30
 while True:
     status, resp = client.get_cluster_installing_progress(cluster_id)
     print 'get cluster %s installing progress status: %s, resp: %s' % (
@@ -257,3 +257,11 @@ while True:
 status, resp = client.get_dashboard_links(cluster_id)
 print 'get cluster %s dashboardlinks status: %s, resp: %s' % (
     cluster_id, status, resp)
+dashboardlinks = resp['dashboardlinks']
+r = requests.get(dashboardlinks['os-dashboard'], verify=False)
+r.raise_for_status()
+if r.text.find('username') == 1054:
+    print 'dashboard login page can be downloaded with keyword username'
+else:
+    print 'dashboard login page failed to be downloaded'
+    raise Exception("os-dashboard is not properly installed!")

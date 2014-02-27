@@ -16,6 +16,8 @@ SESSION.configure(bind=ENGINE)
 SCOPED_SESSION = scoped_session(SESSION)
 SESSION_HOLDER = local()
 
+model.BASE.query = SCOPED_SESSION.query_property()
+
 
 def init(database_url):
     """Initialize database.

@@ -1,4 +1,5 @@
 #!/bin/bash -xe
+ln -s /var/log/cobbler/anamon logs
 cp compass-core/compass/apiclient/example.py /tmp/test.py
 chmod +x /tmp/test.py
 virsh destroy pxe01

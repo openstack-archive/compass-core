@@ -1,10 +1,25 @@
-"""Manage hdsdiscovery functionalities"""
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Manage hdsdiscovery functionalities."""
+import logging
 import os
 import re
-import logging
 
-from compass.hdsdiscovery import utils
 from compass.hdsdiscovery.error import TimeoutError
+from compass.hdsdiscovery import utils
+
 
 UNREACHABLE = 'unreachable'
 NOTSUPPORTED = 'notsupported'
@@ -38,14 +53,14 @@ class HDManager(object):
         plugin = utils.load_module(req_obj, plugin_dir, host, credential)
         if not plugin:
             # No plugin found!
-            #TODO add more code to catch excpetion or unexpected state
+            # TODO(Grace): add more code to catch excpetion or unexpected state
             logging.error('no plugin %s to load from %s', req_obj, plugin_dir)
             return None
 
         return plugin.process_data(oper, **kwargs)
 
     def is_valid_vendor(self, host, credential, vendor):
-        """ Check if vendor is associated with this host and credential
+        """Check if vendor is associated with this host and credential
 
         :param host: switch ip
         :param credential: credential to access switch
@@ -76,7 +91,7 @@ class HDManager(object):
         return False
 
     def get_vendor(self, host, credential):
-        """ Check and get vendor of the switch.
+        """Check and get vendor of the switch.
 
         :param host: switch ip:
         :param credential: credential to access switch
@@ -131,7 +146,7 @@ class HDManager(object):
         return (vendor, "Found", "")
 
     def get_sys_info(self, host, credential):
-        """get sys info"""
+        """get sys info."""
         sys_info = None
         try:
             sys_info = utils.snmpget_by_cl(host,

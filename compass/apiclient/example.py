@@ -52,7 +52,7 @@ STORAGE_PROMISC = 0
 HOME_PERCENTAGE = 40
 TMP_PERCENTAGE = 10
 VAR_PERCENTAGE = 15
-ROLES_LIST = [['os-dashboard']]
+ROLES_LIST = [['os-single-controller']]
 
 PRESET_VALUES = {
     'NAMESERVERS': '192.168.10.1',
@@ -233,7 +233,7 @@ print 'deploy cluster %s status: %s, resp: %s' % (cluster_id, status, resp)
 
 
 # get intalling progress.
-timeout = time.time() + 60 * 30
+timeout = time.time() + 60 * 60
 while True:
     status, resp = client.get_cluster_installing_progress(cluster_id)
     print 'get cluster %s installing progress status: %s, resp: %s' % (

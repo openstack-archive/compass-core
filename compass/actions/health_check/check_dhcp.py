@@ -1,10 +1,23 @@
-"""Health Check module for DHCP service"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+"""Health Check module for DHCP service."""
+import commands
 import os
 import re
-import commands
-import xmlrpclib
 import socket
+import xmlrpclib
 
 from compass.actions.health_check import base
 
@@ -15,13 +28,13 @@ class DhcpCheck(base.BaseCheck):
     NAME = "DHCP Check"
 
     def run(self):
-        """do health check"""
+        """do health check."""
         installer = self.config.OS_INSTALLER
         method_name = "self.check_" + installer + "_dhcp()"
         return eval(method_name)
 
     def check_cobbler_dhcp(self):
-        """Checks if Cobbler has taken over DHCP service"""
+        """Checks if Cobbler has taken over DHCP service."""
 
         try:
             remote = xmlrpclib.Server(
@@ -29,7 +42,7 @@ class DhcpCheck(base.BaseCheck):
                 allow_none=True)
             remote.login(
                 *self.config.COBBLER_INSTALLER_TOKEN)
-        except:
+        except Exception:
             self._set_status(
                 0,
                 "[%s]Error: Cannot login to Cobbler with "
@@ -42,6 +55,7 @@ class DhcpCheck(base.BaseCheck):
                 "[%s]Info: DHCP service is "
                 "not managed by Compass" % self.NAME)
             return (self.code, self.messages)
+
         self.check_cobbler_dhcp_template()
         print "[Done]"
         self.check_dhcp_service()
@@ -50,11 +64,11 @@ class DhcpCheck(base.BaseCheck):
             self.messages.append(
                 "[%s]Info: DHCP health check has completed. "
                 "No problems found, all systems go." % self.NAME)
+
         return (self.code, self.messages)
 
     def check_cobbler_dhcp_template(self):
-        """Validates Cobbler's DHCP template file"""
-
+        """Validates Cobbler's DHCP template file."""
         print "Checking DHCP template......",
         if os.path.exists("/etc/cobbler/dhcp.template"):
             var_map = {
@@ -127,13 +141,13 @@ class DhcpCheck(base.BaseCheck):
                 0,
                 "[%s]Error: DHCP template file doesn't exist, "
                 "health check failed." % self.NAME)
+
         return True
 
     def check_dhcp_service(self):
-        """Checks if DHCP is running on port 67"""
-
+        """Checks if DHCP is running on port 67."""
         print "Checking DHCP service......",
-        if not 'dhcp' in commands.getoutput('ps -ef'):
+        if 'dhcp' not in commands.getoutput('ps -ef'):
             self._set_status(
                 0,
                 "[%s]Error: dhcp service does not "
@@ -144,4 +158,5 @@ class DhcpCheck(base.BaseCheck):
                 0,
                 "[%s]Error: bootps is not listening "
                 "on port 67" % self.NAME)
+
         return True

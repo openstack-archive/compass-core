@@ -1,13 +1,25 @@
-"""Compass Health Check heavy-lifting utilities"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+"""Compass Health Check heavy-lifting utilities"""
+import commands
 import os
 import platform
-import commands
 
 
 def validate_setting(module, setting, param):
-    """
-    Checks if a Compass setting exists in the config file.
+    """Checks if a Compass setting exists in the config file.
 
     :param module   : module name to be checked
     :type module    : string
@@ -25,15 +37,14 @@ def validate_setting(module, setting, param):
 
 
 def get_dist():
-    """Returns the operating system related information"""
+    """Returns the operating system related information."""
 
     os_version, version, release = platform.linux_distribution()
     return (os_version.lower().strip(), version, release.lower().strip())
 
 
 def check_path(module_name, path):
-    """
-    Checks if a directory or file exisits.
+    """Checks if a directory or file exisits.
 
     :param module_name   : module name to be checked
     :type module_name    : string
@@ -50,8 +61,7 @@ def check_path(module_name, path):
 
 
 def check_service_running(module_name, service_name):
-    """
-    Checks if a certain service is running.
+    """Checks if a certain service is running.
 
     :param module_name  : module name to be checked
     :type module_name   : string
@@ -60,7 +70,7 @@ def check_service_running(module_name, service_name):
 
     """
     err_msg = ""
-    if not service_name in commands.getoutput('ps -ef'):
+    if service_name not in commands.getoutput('ps -ef'):
         err_msg = "[%s]Error: %s is not running." % (
             module_name, service_name)
 
@@ -68,8 +78,7 @@ def check_service_running(module_name, service_name):
 
 
 def check_chkconfig(service_name):
-    """
-    Checks if a service is enabled at the start up.
+    """Checks if a service is enabled at the start up.
 
     :param service_name  : service name to be checked
     :type service_name   : string

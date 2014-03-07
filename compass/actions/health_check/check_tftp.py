@@ -1,26 +1,38 @@
-"""Health Check module for TFTP service"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+"""Health Check module for TFTP service."""
 import os
-import xmlrpclib
 import socket
+import xmlrpclib
 
 from compass.actions.health_check import base
 from compass.actions.health_check import utils as health_check_utils
 
 
 class TftpCheck(base.BaseCheck):
-    """tftp health check class"""
+    """tftp health check class."""
     NAME = "TFTP Check"
 
     def run(self):
-        """do health check"""
+        """do health check."""
         installer = self.config.OS_INSTALLER
         method_name = "self.check_" + installer + "_tftp()"
         return eval(method_name)
 
     def check_cobbler_tftp(self):
-        """
-        Checks if Cobbler manages TFTP service
+        """Checks if Cobbler manages TFTP service.
 
         :note: we assume TFTP service is running at the
         same machine where this health check runs at
@@ -32,7 +44,7 @@ class TftpCheck(base.BaseCheck):
                 allow_none=True)
             remote.login(
                 *self.config.COBBLER_INSTALLER_TOKEN)
-        except:
+        except Exception:
             self._set_status(
                 0,
                 "[%s]Error: Cannot login to Cobbler with the tokens "
@@ -56,8 +68,7 @@ class TftpCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_tftp_dir(self):
-        """Validates TFTP directories and configurations"""
-
+        """Validates TFTP directories and configurations."""
         print "Checking TFTP directories......",
         if not os.path.exists('/var/lib/tftpboot/'):
             self._set_status(
@@ -69,8 +80,7 @@ class TftpCheck(base.BaseCheck):
         return True
 
     def check_tftp_service(self):
-        """Checks if TFTP is running on port 69"""
-
+        """Checks if TFTP is running on port 69."""
         print "Checking TFTP services......",
         serv_err_msg = health_check_utils.check_service_running(self.NAME,
                                                                 'xinetd')

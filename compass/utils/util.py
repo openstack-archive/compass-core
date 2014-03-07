@@ -1,10 +1,23 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to provider util functions in all compass code
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
+import copy
 import re
-
-from copy import deepcopy
 
 
 def merge_dict(lhs, rhs, override=True):
@@ -38,7 +51,7 @@ def merge_dict(lhs, rhs, override=True):
             merge_dict(lhs[key], value, override)
         else:
             if override or key not in lhs:
-                lhs[key] = deepcopy(value)
+                lhs[key] = copy.deepcopy(value)
 
 
 def order_keys(keys, orders):
@@ -106,7 +119,7 @@ def flat_lists_with_possibility(lists):
        ['a', 'a', 'a', 'a'], ['b', 'b'], ['c'],
        the expected output is ['a', 'b', 'c', 'a', 'a', 'b', 'a'].
     """
-    lists = deepcopy(lists)
+    lists = copy.deepcopy(lists)
     lists = sorted(lists, key=len, reverse=True)
     list_possibility = []
     max_index = 0
@@ -146,23 +159,22 @@ def pretty_print(*contents):
 def get_clusters_from_str(clusters_str):
     """get clusters from string."""
     clusters = {}
-    for clusterid_and_hostnames in clusters_str.split(';'):
-        if not clusterid_and_hostnames:
+    for cluster_and_hosts in clusters_str.split(';'):
+        if not cluster_and_hosts:
             continue
 
-        if ':' in clusterid_and_hostnames:
-            clusterid_str, hostnames_str = clusterid_and_hostnames.split(
+        if ':' in cluster_and_hosts:
+            cluster_str, hosts_str = cluster_and_hosts.split(
                 ':', 1)
         else:
-            clusterid_str = clusterid_and_hostnames
-            hostnames_str = ''
+            cluster_str = cluster_and_hosts
+            hosts_str = ''
 
-        clusterid = int(clusterid_str)
-        hostnames = [
-            hostname for hostname in hostnames_str.split(',')
-            if hostname
+        hosts = [
+            host for host in hosts_str.split(',')
+            if host
         ]
-        clusters[clusterid] = hostnames
+        clusters[cluster_str] = hosts
 
     return clusters
 
@@ -335,7 +347,11 @@ def get_properties_name_from_str(properties_name_str):
 def print_properties(properties):
     """print properties."""
     print '-----------------------------------------------'
-    for property_name, property_value in properties.items():
-        print '%s=%s' % (property_name, property_value)
+    for property_item in properties:
+        property_pairs = []
+        for property_name, property_value in property_item.items():
+            property_pairs.append('%s=%s' % (property_name, property_value))
+
+        print ','.join(property_pairs)
 
     print '-----------------------------------------------'

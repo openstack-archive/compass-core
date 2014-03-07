@@ -1,3 +1,5 @@
+import simplejson as json
+
 ADAPTERS = [
     {'name': 'CentOS_openstack', 'os': 'CentOS', 'target_system': 'openstack'},
 ]
@@ -7,7 +9,7 @@ ROLES = [
     {'name': 'os-compute', 'target_system': 'openstack'},
 ]
 SWITCHES = [
-    {'ip': '1.2.3.4', 'vendor': 'huawei', 'credential': {'version': 'v2c', 'community': 'public'}},
+    {'ip': '1.2.3.4', 'vendor_info': 'huawei', 'credential_data': json.dumps({'version': 'v2c', 'community': 'public'})},
 ]
 MACHINES_BY_SWITCH = {
     '1.2.3.4': [
@@ -20,7 +22,7 @@ CLUSTERS = [
         'name': 'cluster1',
         'adapter': 'CentOS_openstack',
         'mutable': False,
-        'security': {
+        'security_config': json.dumps({
             'server_credentials': {
                 'username': 'root', 'password': 'huawei'
             },
@@ -30,8 +32,8 @@ CLUSTERS = [
             'console_credentials': {
                 'username': 'admin', 'password': 'huawei'
             }
-        },
-        'networking': {
+        }),
+        'networking_config': json.dumps({
             'interfaces': {
                 'management': {
                     'nic': 'eth0',
@@ -73,8 +75,8 @@ CLUSTERS = [
                 'search_path': 'ods.com',
                 'gateway': '10.145.88.1'
             },
-        },
-        'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
+        }),
+        'partition_config': json.dumps('/home 20%%;/tmp 10%%;/var 30%%;'),
     },
 ]
 HOSTS_BY_CLUSTER = {
@@ -83,7 +85,7 @@ HOSTS_BY_CLUSTER = {
             'hostname': 'host1',
             'mac': '00:00:01:02:03:04',
             'mutable': False,
-            'config': {
+            'config_data': json.dumps({
                 'networking': {
                     'interfaces': {
                         'management': {
@@ -92,12 +94,12 @@ HOSTS_BY_CLUSTER = {
                     },
                 },
                 'roles': ["os-single-controller", "os-network"],
-            },
+            }),
         },{
             'hostname': 'host2',
             'mac': '00:00:01:02:03:05',
             'mutable': False,
-            'config': {
+            'config_data': json.dumps({
                 'networking': {
                     'interfaces': {
                         'management': {
@@ -106,7 +108,7 @@ HOSTS_BY_CLUSTER = {
                     },
                 },
                 'roles': ["os-compute"],
-            },
+            }),
         },
 
     ],
@@ -126,6 +128,29 @@ chef_MOCK = {
                'os-compute-worker': 'openstack nova node'
            },
            'dashboard_roles': ['os-single-controller'],
+           'role_mapping': {
+               'os-single-controller': {
+                   '/db/mysql/bind_address': '/networking/interfaces/management/ip',
+                   '/mq/rabbitmq/bind_address': '/networking/interfaces/management/ip',
+                   '/endpoints/compute/metadata/host': '/networking/interfaces/management/ip',
+                   '/endpoints/compute/novnc/host': '/networking/interfaces/management/ip',
+                   '/endpoints/compute/service/host': '/networking/interfaces/management/ip',
+                   '/endpoints/compute/xvpvnc/host': '/networking/interfaces/management/ip',
+                   '/endpoints/ec2/admin/host': '/networking/interfaces/management/ip',
+                   '/endpoints/ec2/service/host': '/networking/interfaces/management/ip',
+                   '/endpoints/identity/admin/host': '/networking/interfaces/management/ip',
+                   '/endpoints/identity/service/host': '/networking/interfaces/management/ip',
+                   '/endpoints/image/registry/host': '/networking/interfaces/management/ip',
+                   '/endpoints/image/service/host': '/networking/interfaces/management/ip',
+                   '/endpoints/metering/service/host': '/networking/interfaces/management/ip',
+                   '/endpoints/network/service/host': '/networking/interfaces/management/ip',
+                   '/endpoints/volume/service/host': '/networking/interfaces/management/ip'
+               },
+               'os-network': {
+               },
+               'os-compute-worker': {
+               }
+           },
            'role_assign_policy': {
                'default':{
                    'bundles': [],
@@ -181,9 +206,9 @@ cobbler_EXPECTED = {
             'run_list': '"role[os-single-controller]","role[os-network]"',
             'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100,host2.1,192.168.20.101',
             'ntp_server': '192.168.20.254',
-            'chef_client_name': 'host1_openstack_1',
+            'chef_client_name': 'openstack.host1.1',
             'cluster_databag': 'openstack_1',
-            'chef_node_name': 'host1_openstack_1'
+            'chef_node_name': 'openstack.host1.1'
         },
     },{
         'profile': 'CentOS',
@@ -215,9 +240,9 @@ cobbler_EXPECTED = {
             'run_list': '"role[os-compute]"',
             'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100,host2.1,192.168.20.101',
             'ntp_server': '192.168.20.254',
-            'chef_client_name': 'host2_openstack_1',
+            'chef_client_name': 'openstack.host2.1',
             'cluster_databag': 'openstack_1',
-            'chef_node_name': 'host2_openstack_1'
+            'chef_node_name': 'openstack.host2.1'
         },
     }],
 }

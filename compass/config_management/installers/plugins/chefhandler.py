@@ -1,3 +1,17 @@
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """package instaler chef plugin.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@gmail.com>
@@ -5,12 +19,12 @@
 import fnmatch
 import logging
 
-from compass.utils import util
 from compass.config_management.installers import package_installer
 from compass.config_management.utils.config_translator import ConfigTranslator
 from compass.config_management.utils.config_translator import KeyTranslator
 from compass.config_management.utils import config_translator_callbacks
 from compass.utils import setting_wrapper as setting
+from compass.utils import util
 
 
 TO_CLUSTER_TRANSLATORS = {
@@ -73,6 +87,9 @@ FROM_CLUSTER_TRANSLATORS = {
             '/dashboard_roles': [KeyTranslator(
                 translated_keys=['/dashboard_roles']
             )],
+            '/role_mapping': [KeyTranslator(
+                translated_keys=['/role_mapping']
+            )],
         }
     ),
 }
@@ -81,26 +98,13 @@ FROM_CLUSTER_TRANSLATORS = {
 TO_HOST_TRANSLATORS = {
     'openstack': ConfigTranslator(
         mapping={
-            '/networking/interfaces/management/ip': [KeyTranslator(
-                translated_keys=[
-                    '/db/mysql/bind_address',
-                    '/mq/rabbitmq/bind_address',
-                    '/endpoints/compute/metadata/host',
-                    '/endpoints/compute/novnc/host',
-                    '/endpoints/compute/service/host',
-                    '/endpoints/compute/xvpvnc/host',
-                    '/endpoints/ec2/admin/host',
-                    '/endpoints/ec2/service/host',
-                    '/endpoints/identity/admin/host',
-                    '/endpoints/identity/service/host',
-                    '/endpoints/image/registry/host',
-                    '/endpoints/image/service/host',
-                    '/endpoints/metering/service/host',
-                    '/endpoints/network/service/host',
-                    '/endpoints/volume/service/host',
-                ],
-                translated_value=config_translator_callbacks.get_value_if,
-                from_values={'condition': '/has_dashboard_roles'}
+            '/roles': [KeyTranslator(
+                translated_keys=(
+                    config_translator_callbacks.get_keys_from_role_mapping),
+                from_keys={'mapping': '/role_mapping'},
+                translated_value=(
+                    config_translator_callbacks.get_value_from_role_mapping),
+                from_values={'mapping': '/role_mapping'}
             )],
         }
     ),
@@ -121,40 +125,36 @@ class Installer(package_installer.Installer):
 
     def __repr__(self):
         return '%s[name=%s,installer_url=%s,global_databag_name=%s]' % (
-            self.__class__.__name__, self.installer_url_,
-            self.NAME, self.global_databag_name_)
+            self.__class__.__name__, self.NAME, self.installer_url_,
+            self.global_databag_name_)
 
     @classmethod
     def _cluster_databag_name(cls, clusterid, target_system):
-        """get cluster databag name"""
-        return '%s_%s' % (target_system, str(clusterid))
+        """get cluster databag name."""
+        return '%s_%s' % (target_system, clusterid)
 
     @classmethod
-    def _get_client_name(cls, hostname, clusterid, target_system):
-        """get client name"""
-        return cls._get_node_name(hostname, clusterid, target_system)
+    def _get_client_name(cls, fullname, target_system):
+        """get client name."""
+        return cls._get_node_name(fullname, target_system)
 
     @classmethod
-    def _get_node_name(cls, hostname, clusterid, target_system):
-        """get node name"""
-        return '%s_%s_%s' % (hostname, target_system, clusterid)
+    def _get_node_name(cls, fullname, target_system):
+        """get node name."""
+        return '%s.%s' % (target_system, fullname)
 
     def os_installer_config(self, config, target_system, **kwargs):
         """get os installer config."""
-        clusterid = config['clusterid']
-        roles = config['roles']
         return {
             '%s_url' % self.NAME: self.installer_url_,
             'run_list': ','.join(
-                ['"role[%s]"' % role for role in roles if role]),
+                ['"role[%s]"' % role for role in config['roles'] if role]),
             'cluster_databag': self._cluster_databag_name(
-                clusterid, target_system),
+                config['clusterid'], target_system),
             'chef_client_name': self._get_client_name(
-                config['hostname'], config['clusterid'],
-                target_system),
+                config['fullname'], target_system),
             'chef_node_name': self._get_node_name(
-                config['hostname'], config['clusterid'],
-                target_system)
+                config['fullname'], target_system)
         }
 
     def get_target_systems(self, oses):
@@ -251,12 +251,12 @@ class Installer(package_installer.Installer):
         bag_item.save()
 
     def _clean_client(self, hostid, config, target_system, **kwargs):
-        """clean client"""
+        """clean client."""
         from chef import Client
         try:
             client = Client(
                 self._get_client_name(
-                    config['hostname'], config['clusterid'], target_system),
+                    config['fullname'], target_system),
                 api=self.api_)
             client.delete()
             logging.debug('client is removed for host %s '
@@ -268,12 +268,12 @@ class Installer(package_installer.Installer):
                           hostid, config, target_system)
 
     def _clean_node(self, hostid, config, target_system, **kwargs):
-        """clean node"""
+        """clean node."""
         from chef import Node
         try:
             node = Node(
                 self._get_node_name(
-                    config['hostname'], config['clusterid'], target_system),
+                    config['fullname'], target_system),
                 api=self.api_
             )
             node.delete()

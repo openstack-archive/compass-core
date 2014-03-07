@@ -1,3 +1,17 @@
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Config Translator module to translate orign config to dest config.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
@@ -16,7 +30,7 @@ class KeyTranslator(object):
         """Constructor
 
         :param translated_keys: keys in dest ref to be translated to.
-        :type translated_keys: list of str
+        :type translated_keys: callable or list of (str or callable)
         :param from_keys: extra kwargs parsed to translated key callback.
         :type: from_keys: dict mapping name of kwargs to path in origin ref
         :param translated_value: value or callback to get translated value.
@@ -48,6 +62,9 @@ class KeyTranslator(object):
 
     def _is_valid_translated_keys(self):
         """Check translated keys are valid."""
+        if callable(self.translated_keys_):
+            return
+
         for i, translated_key in enumerate(self.translated_keys_):
             if util.is_instance(translated_key, [str, unicode]):
                 if '*' in translated_key:
@@ -120,6 +137,11 @@ class KeyTranslator(object):
             else:
                 logging.error('%s from_key %s missing in %s',
                               self, from_key, sub_ref)
+
+        if callable(self.translated_keys_):
+            translated_keys = self.translated_keys_(
+                sub_ref, ref_key, **key_configs)
+            return translated_keys
 
         translated_keys = []
         for translated_key in self.translated_keys_:

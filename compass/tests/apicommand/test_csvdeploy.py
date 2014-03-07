@@ -1,19 +1,39 @@
-import simplejson as json
+#!/usr/bin/env python
+#
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""test deploy from csv file."""
+import mock
 import os
-import sys
-import unittest2
-import tempfile
-import subprocess
 import shutil
 import signal
+import simplejson as json
 import socket
+import subprocess
+import sys
+import tempfile
 import time
-from mock import Mock
+import unittest2
+
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
 api_cmd_path = '/'.join((
     os.path.dirname(os.path.dirname(os.path.dirname(curr_dir))), 'bin'))
 sys.path.append(api_cmd_path)
+
+
 import csvdeploy
 
 
@@ -51,12 +71,12 @@ class ApiTestCase(unittest2.TestCase):
             tmp_socket.bind(('', 0))
             self.port = tmp_socket.getsockname()[-1]
             tmp_socket.close()
-            time.sleep(5)
+            time.sleep(10)
         except socket.error:
             sys.exit(1)
 
-        cmd = '%s run_server.py %s %d' % (sys.executable, database_url,
-                                          self.port)
+        cmd = '%s run_server.py %s %d' % (
+            sys.executable, database_url, self.port)
         self.proc = subprocess.Popen(cmd, shell=True,
                                      stderr=subprocess.PIPE,
                                      preexec_fn=os.setsid,
@@ -73,6 +93,7 @@ class ApiTestCase(unittest2.TestCase):
         super(ApiTestCase, self).tearDown()
 
         database.ENGINE.dispose()
+        database.init('sqlite://')
         os.killpg(self.proc.pid, signal.SIGTERM)
         try:
             if os.path.exists(self.db_dir):
@@ -102,7 +123,9 @@ class TestAPICommand(ApiTestCase):
         super(TestAPICommand, self).tearDown()
 
     def test_start(self):
-        Client.deploy_hosts = Mock(return_value=(202, self.deploy_return_val))
+        """test start deploy from csv."""
+        Client.deploy_hosts = mock.Mock(
+            return_value=(202, self.deploy_return_val))
         url = "http://127.0.0.1:%d" % self.port
         csvdeploy.start(self.CSV_IMPORT_DIR, url)
         clusters = csvdeploy.get_csv('cluster.csv',
@@ -110,8 +133,9 @@ class TestAPICommand(ApiTestCase):
         with database.session() as session:
             for csv_cluster in clusters:
                 cluster_id = csv_cluster['id']
-                cluster = session.query(Cluster)\
-                                 .filter_by(id=cluster_id).first()
+                cluster = session.query(
+                    Cluster
+                ).filter_by(id=cluster_id).first()
                 self.assertIsNotNone(cluster)
                 self.assertEqual(csv_cluster['name'], cluster.name)
                 self.assertDictEqual(csv_cluster['security_config'],

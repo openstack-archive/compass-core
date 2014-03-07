@@ -1,14 +1,42 @@
-"""test config merger callbacks module"""
+#!/usr/bin/python
+#
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""test config merger callbacks module.
+
+   .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
+"""
+import os
 import unittest2
+
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
 
 from compass.config_management.utils import config_merger_callbacks
 from compass.config_management.utils import config_reference
 from compass.utils import flags
-from comapss.utils import logsetting
+from compass.utils import logsetting
 
 
 class TestAssignRoles(unittest2.TestCase):
-    """test assign roles"""
+    """test assign roles."""
 
     def setUp(self):
         super(TestAssignRoles, self).setUp()
@@ -18,7 +46,7 @@ class TestAssignRoles(unittest2.TestCase):
         super(TestAssignRoles, self).tearDown()
 
     def test_assign_roles(self):
-        """test assign roles"""
+        """test assign roles."""
         lower_configs = {
             1: {'roles': ['control']},
             2: {'roles': ['api', 'compute']},

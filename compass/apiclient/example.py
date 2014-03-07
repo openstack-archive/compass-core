@@ -69,7 +69,7 @@ STORAGE_PROMISC = 0
 HOME_PERCENTAGE = 40
 TMP_PERCENTAGE = 10
 VAR_PERCENTAGE = 15
-ROLES_LIST = [['os-dashboard']]
+ROLES_LIST = [['os-single-controller', 'os-network', 'os-compute-worker']]
 
 PRESET_VALUES = {
     'NAMESERVERS': '192.168.10.1',
@@ -250,7 +250,7 @@ print 'deploy cluster %s status: %s, resp: %s' % (cluster_id, status, resp)
 
 
 # get intalling progress.
-timeout = time.time() + 60 * 60
+timeout = time.time() + 75 * 60
 while True:
     status, resp = client.get_cluster_installing_progress(cluster_id)
     print 'get cluster %s installing progress status: %s, resp: %s' % (
@@ -275,7 +275,7 @@ status, resp = client.get_dashboard_links(cluster_id)
 print 'get cluster %s dashboardlinks status: %s, resp: %s' % (
     cluster_id, status, resp)
 dashboardlinks = resp['dashboardlinks']
-r = requests.get(dashboardlinks['os-dashboard'], verify=False)
+r = requests.get(dashboardlinks['os-single-controller'], verify=False)
 r.raise_for_status()
 match = re.search(r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)', r.text)
 if match:

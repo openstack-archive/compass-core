@@ -1,13 +1,30 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """database model."""
-from datetime import datetime
-import simplejson as json
 import logging
+import simplejson as json
 import uuid
+
+from datetime import datetime
 from sqlalchemy import Column, ColumnDefault, Integer, String
 from sqlalchemy import Float, Enum, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
+
 from compass.utils import util
 
 
@@ -73,7 +90,7 @@ class Switch(BASE):
         return '<Switch ip: %r, credential: %r, vendor: %r, state: %s>'\
             % (self.ip, self.credential, self.vendor, self.state)
 
-    @property
+    @hybrid_property
     def vendor(self):
         """vendor property getter"""
         return self.vendor_info
@@ -129,9 +146,11 @@ class Switch(BASE):
 
 
 class Machine(BASE):
-    """
-    Machine table.Note: currently, we are taking care of management plane.
-    Therefore, we assume one machine is connected to one switch.
+    """Machine table.
+
+       .. note::
+          currently, we are taking care of management plane.
+          Therefore, we assume one machine is connected to one switch.
 
     :param id: int, identity as primary key
     :param mac: string, the MAC address of the machine.
@@ -199,16 +218,24 @@ class HostState(BASE):
     def __init__(self, **kwargs):
         super(HostState, self).__init__(**kwargs)
 
-    @property
+    @hybrid_property
     def hostname(self):
         """hostname getter"""
         return self.host.hostname
 
+    @hybrid_property
+    def fullname(self):
+        """fullname getter"""
+        return self.host.fullname
+
     def __repr__(self):
-        return ('<HostState %r: state=%r, progress=%s, '
-                'message=%s, severity=%s>') % (
+        return (
+            '<HostState %r: state=%r, progress=%s, '
+            'message=%s, severity=%s>'
+        ) % (
             self.hostname, self.state, self.progress,
-            self.message, self.severity)
+            self.message, self.severity
+        )
 
 
 class ClusterState(BASE):
@@ -244,16 +271,19 @@ class ClusterState(BASE):
     def __init__(self, **kwargs):
         super(ClusterState, self).__init__(**kwargs)
 
-    @property
+    @hybrid_property
     def clustername(self):
         """clustername getter"""
         return self.cluster.name
 
     def __repr__(self):
-        return ('<ClusterState %r: state=%r, progress=%s, '
-                'message=%s, severity=%s>') % (
+        return (
+            '<ClusterState %r: state=%r, progress=%s, '
+            'message=%s, severity=%s>'
+        ) % (
             self.clustername, self.state, self.progress,
-            self.message, self.severity)
+            self.message, self.severity
+        )
 
 
 class Cluster(BASE):
@@ -285,9 +315,8 @@ class Cluster(BASE):
 
     def __init__(self, **kwargs):
         if 'name' not in kwargs or not kwargs['name']:
-            self.name = str(uuid.uuid4())
-            if 'name' in kwargs:
-                del kwargs['name']
+            kwargs['name'] = str(uuid.uuid4())
+
         super(Cluster, self).__init__(**kwargs)
 
     def __repr__(self):
@@ -367,7 +396,7 @@ class Cluster(BASE):
 
     @networking.setter
     def networking(self, value):
-        """networking setter"""
+        """networking setter."""
         logging.debug('cluster %s set networking %s', self.id, value)
         if value:
             try:
@@ -380,9 +409,9 @@ class Cluster(BASE):
         else:
             self.networking_config = None
 
-    @property
+    @hybrid_property
     def config(self):
-        """get config from security, networking, partition"""
+        """get config from security, networking, partition."""
         config = {}
         if self.raw_config:
             try:
@@ -462,14 +491,17 @@ class ClusterHost(BASE):
 
     def __init__(self, **kwargs):
         if 'hostname' not in kwargs or not kwargs['hostname']:
-            self.hostname = str(uuid.uuid4())
-            if 'hostname' in kwargs:
-                del kwargs['hostname']
+            kwargs['hostname'] = str(uuid.uuid4())
+
         super(ClusterHost, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<ClusterHost %r: cluster=%r machine=%r>'\
-            % (self.hostname, self.cluster, self.machine)
+        return '<ClusterHost %r: cluster=%r machine=%r>' % (
+            self.hostname, self.cluster, self.machine)
+
+    @hybrid_property
+    def fullname(self):
+        return '%s.%s' % (self.hostname, self.cluster.id)
 
     @property
     def config(self):
@@ -479,10 +511,16 @@ class ClusterHost(BASE):
             if self.config_data:
                 config.update(json.loads(self.config_data))
 
-            config.update({'hostid': self.id, 'hostname': self.hostname})
+            config.update({
+                'hostid': self.id,
+                'hostname': self.hostname,
+            })
             if self.cluster:
-                config.update({'clusterid': self.cluster.id,
-                               'clustername': self.cluster.name})
+                config.update({
+                    'clusterid': self.cluster.id,
+                    'clustername': self.cluster.name,
+                    'fullname': self.fullname,
+                })
 
             if self.machine:
                 util.merge_dict(
@@ -560,14 +598,17 @@ class LogProgressingHistory(BASE):
         super(LogProgressingHistory, self).__init__(**kwargs)
 
     def __repr__(self):
-        return ('LogProgressingHistory[%r: position %r,'
-                'partial_line %r,progress %r,message %r,'
-                'severity %r]') % (
+        return (
+            'LogProgressingHistory[%r: position %r,'
+            'partial_line %r,progress %r,message %r,'
+            'severity %r]'
+        ) % (
             self.pathname, self.position,
             self.partial_line,
             self.progress,
             self.message,
-            self.severity)
+            self.severity
+        )
 
 
 class Adapter(BASE):
@@ -592,13 +633,15 @@ class Adapter(BASE):
 
     def __repr__(self):
         return '<Adapter %r: os %r, target_system %r>' % (
-            self.name, self.os, self.target_system)
+            self.name, self.os, self.target_system
+        )
 
 
 class Role(BASE):
-    """
-    The Role table stores avaiable roles of one target system
-    where the host can be deployed to one or several roles in the cluster.
+    """The Role table stores avaiable roles of one target system.
+
+       .. note::
+          the host can be deployed to one or several roles in the cluster.
 
     :param id: int, identity as primary key.
     :param name: role name.

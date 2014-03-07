@@ -1,3 +1,17 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Mix provider which read config from different other providers.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
@@ -49,7 +63,7 @@ class MixProvider(config_provider.ConfigProvider):
             adapters, roles_per_target_system)
 
     def update_switch_filters(self, switch_filters):
-        """update switch filters"""
+        """update switch filters."""
         self.host_provider_.update_switch_filters(switch_filters)
 
     def clean_host_config(self, hostid):
@@ -57,23 +71,23 @@ class MixProvider(config_provider.ConfigProvider):
         self.host_provider_.clean_host_config(hostid)
 
     def reinstall_host(self, hostid):
-        """reinstall host config"""
+        """reinstall host config."""
         self.host_provider_.reinstall_host(hostid)
 
     def reinstall_cluster(self, clusterid):
-        """reinstall cluster"""
+        """reinstall cluster."""
         self.host_provider_.reinstall_cluster(clusterid)
 
     def clean_host_installing_progress(self, hostid):
-        """clean host installing progress"""
+        """clean host installing progress."""
         self.host_provider_.clean_host_installing_progress(hostid)
 
     def clean_cluster_installing_progress(self, clusterid):
-        """clean cluster installing progress"""
+        """clean cluster installing progress."""
         self.host_provider_.clean_cluster_installing_progress(clusterid)
 
     def clean_cluster_config(self, clusterid):
-        """clean cluster config"""
+        """clean cluster config."""
         self.host_provider_.clean_cluster_config(clusterid)
 
     def get_cluster_hosts(self, clusterid):
@@ -81,7 +95,7 @@ class MixProvider(config_provider.ConfigProvider):
         return self.host_provider_.get_cluster_hosts(clusterid)
 
     def get_clusters(self):
-        """get clusters"""
+        """get clusters."""
         return self.host_provider_.get_clusters()
 
     def get_switch_and_machines(self):

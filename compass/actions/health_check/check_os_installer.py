@@ -1,4 +1,18 @@
-"""Compass Health Check module for OS Installer"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Compass Health Check module for OS Installer."""
 
 import os
 import xmlrpclib
@@ -7,25 +21,24 @@ from compass.actions.health_check import base
 
 
 class OsInstallerCheck(base.BaseCheck):
-    """os installer health check"""
+    """os installer health check."""
     NAME = "OS Installer Check"
 
     def run(self):
-        """do health check"""
+        """do health check."""
         installer = self.config.OS_INSTALLER
         method_name = 'self.' + installer + '_check()'
         return eval(method_name)
 
     def cobbler_check(self):
-        """Runs cobbler check from xmlrpc client"""
-
+        """Runs cobbler check from xmlrpc client."""
         try:
             remote = xmlrpclib.Server(
                 self.config.COBBLER_INSTALLER_URL,
                 allow_none=True)
             token = remote.login(
                 *self.config.COBBLER_INSTALLER_TOKEN)
-        except:
+        except Exception:
             self.code = 0
             self.messages.append(
                 "[%s]Error: Cannot login to Cobbler with "
@@ -42,6 +55,7 @@ class OsInstallerCheck(base.BaseCheck):
         for index, message in enumerate(check_result):
             if "SELinux" in message:
                 check_result.pop(index)
+
         if len(check_result) != 0:
             self.code = 0
             for error_msg in check_result:
@@ -62,6 +76,7 @@ class OsInstallerCheck(base.BaseCheck):
                 if 'ppa_repo' in repo['mirror']:
                     found_ppa = True
                     break
+
         if found_ppa is False:
             self._set_status(0,
                              "[%s]Error: No repository ppa_repo found"

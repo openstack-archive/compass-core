@@ -1,11 +1,24 @@
-"""Miscellaneous Health Check for Compass"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+"""Miscellaneous Health Check for Compass."""
 from compass.actions.health_check import base
 from compass.actions.health_check import utils as health_check_utils
 
 
 class MiscCheck(base.BaseCheck):
-    """health check for misc"""
+    """health check for misc."""
     NAME = "Miscellaneous Check"
 
     MISC_MAPPING = {
@@ -23,7 +36,7 @@ class MiscCheck(base.BaseCheck):
     }
 
     def run(self):
-        """do health check"""
+        """do health check."""
         self.check_linux_dependencies()
         print "[Done]"
         self.check_pip_dependencies()
@@ -44,26 +57,26 @@ class MiscCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_linux_dependencies(self):
-        """Checks if dependencies are installed"""
-
+        """Checks if dependencies are installed."""
         print "Checking Linux dependencies....",
         if self.dist in ("centos", "redhat", "fedora", "scientific linux"):
             pkg_type = "yum"
         else:
             pkg_type = "apt"
+
         try:
             pkg_module = __import__(pkg_type)
-        except:
+        except Exception:
             self._set_status(
                 0,
                 "[%s]Error: No module named %s, "
                 "please install it first." % (self.NAME, pkg_module))
+
         method_name = 'self.check_' + pkg_type + '_dependencies(pkg_module)'
         eval(method_name)
 
     def check_yum_dependencies(self, pkg_module):
-        """
-        Checks if yum dependencies are installed.
+        """Checks if yum dependencies are installed.
 
         :param pkg_module  : python yum library
         :type pkg_module   : python module
@@ -89,14 +102,13 @@ class MiscCheck(base.BaseCheck):
         return True
 
     def check_pip_dependencies(self):
-        """Checks if required pip packages are installed"""
-
+        """Checks if required pip packages are installed."""
         print "Checking pip dependencies......",
         uninstalled = []
         for module in self.MISC_MAPPING['pip']:
             try:
                 __import__(module)
-            except:
+            except Exception:
                 self._set_status(
                     0,
                     "[%s]Error: pip package %s is requred"
@@ -112,7 +124,7 @@ class MiscCheck(base.BaseCheck):
         return True
 
     def check_ntp(self):
-        """Validates ntp configuration and service"""
+        """Validates ntp configuration and service."""
 
         print "Checking NTP......",
         conf_err_msg = health_check_utils.check_path(self.NAME,
@@ -128,7 +140,7 @@ class MiscCheck(base.BaseCheck):
         return True
 
     def check_rsyslogd(self):
-        """Validates rsyslogd configuration and service"""
+        """Validates rsyslogd configuration and service."""
 
         print "Checking rsyslog......",
         conf_err_msg = health_check_utils.check_path(self.NAME,
@@ -149,7 +161,7 @@ class MiscCheck(base.BaseCheck):
         return True
 
     def check_chkconfig(self):
-        """Check if required services are enabled on the start up"""
+        """Check if required services are enabled on the start up."""
 
         print "Checking chkconfig......",
         serv_to_disable = []
@@ -160,6 +172,7 @@ class MiscCheck(base.BaseCheck):
                     "[%s]Error: %s is not disabled"
                     % (self.NAME, serv))
                 serv_to_disable.append(serv)
+
         if len(serv_to_disable) != 0:
             self._set_status(
                 0,
@@ -174,6 +187,7 @@ class MiscCheck(base.BaseCheck):
                 self._set_status(
                     0, "[%s]Error: %s is disabled" % (self.NAME, serv))
                 serv_to_enable.append(serv)
+
         if len(serv_to_enable) != 0:
             self._set_status(0, "[%s]Info: You need to enable these "
                                 "services on system start-up: %s"
@@ -183,20 +197,19 @@ class MiscCheck(base.BaseCheck):
         return True
 
     def check_selinux(self):
-        """Check if SELinux is disabled"""
-
+        """Check if SELinux is disabled."""
         print "Checking Selinux......",
-        selinux = open("/etc/selinux/config")
         disabled = False
-        for line in selinux.readlines():
-            if "SELINUX=disabled" in line:
-                disabled = True
-                break
+        with open("/etc/selinux/config") as selinux:
+            for line in selinux:
+                if "SELINUX=disabled" in line:
+                    disabled = True
+                    break
+
         if disabled is False:
             self._set_status(
                 0,
                 "[%s]Selinux is not disabled, "
                 "please disable it in /etc/selinux/config." % self.NAME)
 
-        selinux.close()
         return True

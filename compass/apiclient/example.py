@@ -1,9 +1,26 @@
 #!/usr/bin/python
+#
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Example code to deploy a cluster by compass client api."""
+import os
+import re
+import requests
 import sys
 import time
-import os
-import requests
+
 from compass.apiclient.restful import Client
 
 
@@ -260,8 +277,11 @@ print 'get cluster %s dashboardlinks status: %s, resp: %s' % (
 dashboardlinks = resp['dashboardlinks']
 r = requests.get(dashboardlinks['os-dashboard'], verify=False)
 r.raise_for_status()
-if r.text.find('username') == 1054:
-    print 'dashboard login page can be downloaded with keyword username'
+match = re.search(r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)', r.text)
+if match:
+    print 'dashboard login page can be downloaded'
 else:
-    print 'dashboard login page failed to be downloaded'
+    print (
+        'dashboard login page failed to be downloaded\n'
+        'the context is:\n%s\n') % r.text
     raise Exception("os-dashboard is not properly installed!")

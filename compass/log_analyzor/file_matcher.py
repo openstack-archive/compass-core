@@ -1,3 +1,17 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to update intalling progress by processing log file.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
@@ -25,7 +39,7 @@ class FileFilter(object):
 
 
 class CompositeFileFilter(FileFilter):
-    """filter log file based on the list of filters"""
+    """filter log file based on the list of filters."""
     def __init__(self, filters):
         self.filters_ = filters
 
@@ -97,8 +111,10 @@ class FileReader(object):
         """
         with database.session() as session:
             history = session.query(
-                LogProgressingHistory).filter_by(
-                pathname=self.pathname_).first()
+                LogProgressingHistory
+            ).filter_by(
+                pathname=self.pathname_
+            ).first()
             if history:
                 self.position_ = history.position
                 self.partial_line_ = history.partial_line
@@ -198,18 +214,15 @@ class FileReaderFactory(object):
         return '%s[logdir: %s filefilter: %s]' % (
             self.__class__.__name__, self.logdir_, self.filefilter_)
 
-    def get_file_reader(self, hostname, clusterid, filename):
+    def get_file_reader(self, fullname, filename):
         """Get FileReader instance.
 
-        :param hostname: hostname of installing host.
-        :param clusterid: cluster id of the installing host.
+        :param fullname: fullname of installing host.
         :param filename: the filename of the log file.
 
         :returns: :class:`FileReader` instance if it is not filtered.
         """
-        pathname = os.path.join(
-            self.logdir_, '%s.%s' % (hostname, clusterid),
-            filename)
+        pathname = os.path.join(self.logdir_, fullname, filename)
         logging.debug('get FileReader from %s', pathname)
         if not self.filefilter_.filter(pathname):
             logging.error('%s is filtered', pathname)
@@ -223,10 +236,7 @@ FILE_READER_FACTORY = FileReaderFactory(
 
 
 class FileMatcher(object):
-    """
-       File matcher the get the lastest installing progress
-       from the log file.
-    """
+    """File matcher to get the installing progress from the log file."""
     def __init__(self, line_matchers, min_progress, max_progress, filename):
         if not 0.0 <= min_progress <= max_progress <= 1.0:
             raise IndexError(
@@ -272,10 +282,13 @@ class FileMatcher(object):
             return
 
         total_progress_data = min(
-            self.absolute_min_progress_
-                +
-            file_progress.progress * self.absolute_progress_diff_,
-            self.absolute_max_progress_)
+            (
+                self.absolute_min_progress_ + (
+                    file_progress.progress * self.absolute_progress_diff_
+                )
+            ),
+            self.absolute_max_progress_
+        )
 
         # total progress should only be updated when the new calculated
         # progress is greater than the recored total progress or the
@@ -296,13 +309,11 @@ class FileMatcher(object):
                 'ignore update file %s progress %s to total progress %s',
                 self.filename_, file_progress, total_progress)
 
-    def update_progress(self, hostname, clusterid, total_progress):
+    def update_progress(self, fullname, total_progress):
         """update progress from file.
 
-        :param hostname: the hostname of the installing host.
-        :type hostname: str
-        :param clusterid: the cluster id of the installing host.
-        :type clusterid: int
+        :param fullname: the fullname of the installing host.
+        :type fullname: str
         :param total_progress: Progress instance to update.
 
         the function update installing progress by reading the log file.
@@ -315,7 +326,7 @@ class FileMatcher(object):
         no line end indicator for the last line of the file.
         """
         file_reader = FILE_READER_FACTORY.get_file_reader(
-            hostname, clusterid, self.filename_)
+            fullname, self.filename_)
         if not file_reader:
             return
 

@@ -1,8 +1,8 @@
 networking = {
     'global': {
-        'default_no_proxy': ['127.0.0.1', 'localhost'],
+        'default_no_proxy': ['127.0.0.1', 'localhost', '$compass_ip', '$compass_hostname'],
         'search_path_pattern': '%(clusterid)s.%(search_path)s %(search_path)s',
-        'noproxy_pattern': '%(hostname)s.%(clusterid)s,%(ip)s'
+        'noproxy_pattern': '%(hostname)s,%(ip)s'
     },
     'interfaces': {
         'management': {

@@ -1,4 +1,19 @@
 #!/usr/bin/python
+#
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """utility binary to manage database."""
 import os
 import os.path
@@ -7,16 +22,23 @@ import sys
 from flask.ext.script import Manager
 
 from compass.actions import clean_deployment
-from compass.actions import reinstall
-from compass.actions import deploy
 from compass.actions import clean_installing_progress
+from compass.actions import deploy
+from compass.actions import reinstall
 from compass.actions import search
 from compass.api import app
 from compass.config_management.utils import config_manager
 from compass.db import database
-from compass.db.model import Adapter, Role, Switch, SwitchConfig
-from compass.db.model import Machine, HostState, ClusterState
-from compass.db.model import Cluster, ClusterHost, LogProgressingHistory
+from compass.db.model import Adapter
+from compass.db.model import Cluster
+from compass.db.model import ClusterHost
+from compass.db.model import ClusterState
+from compass.db.model import HostState
+from compass.db.model import LogProgressingHistory
+from compass.db.model import Machine
+from compass.db.model import Role
+from compass.db.model import Switch
+from compass.db.model import SwitchConfig
 from compass.tasks.client import celery
 from compass.utils import flags
 from compass.utils import logsetting
@@ -76,14 +98,14 @@ TABLE_MAPPING = {
 
 @app_manager.command
 def list_config():
-    "List the configuration"
+    "List the commands."
     for key, value in app.config.items():
         print key, value
 
 
 @app_manager.command
 def checkdb():
-    """check if db exists"""
+    """check if db exists."""
     if setting.DATABASE_TYPE == 'file':
         if os.path.exists(setting.DATABASE_FILE):
             sys.exit(0)
@@ -95,24 +117,24 @@ def checkdb():
 
 @app_manager.command
 def createdb():
-    """Creates database from sqlalchemy models"""
+    """Creates database from sqlalchemy models."""
     if setting.DATABASE_TYPE == 'file':
         if os.path.exists(setting.DATABASE_FILE):
             os.remove(setting.DATABASE_FILE)
     database.create_db()
     if setting.DATABASE_TYPE == 'file':
-        os.chmod(setting.DATABASE_FILE, 0777)
+        os.chmod(setting.DATABASE_FILE, 0o777)
 
 
 @app_manager.command
 def dropdb():
-    """Drops database from sqlalchemy models"""
+    """Drops database from sqlalchemy models."""
     database.drop_db()
 
 
 @app_manager.command
 def createtable():
-    """Create database table by --table_name"""
+    """Create database table."""
     if not flags.OPTIONS.table_name:
         print 'flag --table_name is missing'
         return
@@ -127,7 +149,7 @@ def createtable():
 
 @app_manager.command
 def droptable():
-    """Drop database table by --talbe_name"""
+    """Drop database table."""
     if not flags.OPTIONS.table_name:
         print 'flag --table_name is missing'
         return

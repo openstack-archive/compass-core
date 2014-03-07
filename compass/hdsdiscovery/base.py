@@ -1,18 +1,32 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Base class extended by specific vendor in vendors directory.
 A vendor needs to implement abstract methods of base class.
 """
-import re
 import logging
+import re
 
 from abc import ABCMeta
 
-from compass.hdsdiscovery import utils
 from compass.hdsdiscovery.error import TimeoutError
+from compass.hdsdiscovery import utils
 
 
 class BaseVendor(object):
-    """Basic Vendor object"""
+    """Basic Vendor object."""
     __metaclass__ = ABCMeta
 
     def is_this_vendor(self, host, credential, sys_info, **kwargs):
@@ -23,8 +37,11 @@ class BaseVendor(object):
 
 
 class BaseSnmpVendor(BaseVendor):
-    """Base SNMP-based vendor plugin. It uses MIB-II sysDescr value
-       to determine the vendor of the switch. """
+    """Base SNMP-based vendor plugin.
+
+       .. note::
+          It uses MIB-II sysDescr value to determine the vendor of the switch.
+    """
 
     def __init__(self, matched_names):
         super(BaseSnmpVendor, self).__init__()
@@ -57,15 +74,15 @@ class BasePlugin(object):
 
     # At least one of these three functions below must be implemented.
     def scan(self, **kwargs):
-        """Get multiple records at once"""
+        """Get multiple records at once."""
         pass
 
     def set(self, **kwargs):
-        """Set value to desired variable"""
+        """Set value to desired variable."""
         pass
 
     def get(self, **kwargs):
-        """Get one record from a host"""
+        """Get one record from a host."""
         pass
 
 
@@ -82,10 +99,12 @@ class BaseSnmpMacPlugin(BasePlugin):
         self.vlan_oid = vlan_oid
 
     def process_data(self, oper='SCAN', **kwargs):
+        """progress data."""
         func_name = oper.lower()
         return getattr(self, func_name)(**kwargs)
 
     def scan(self, **kwargs):
+        """scan."""
         results = None
         try:
             results = utils.snmpwalk_by_cl(self.host, self.credential,
@@ -109,7 +128,7 @@ class BaseSnmpMacPlugin(BasePlugin):
         return mac_list
 
     def get_vlan_id(self, port):
-        """Get vlan Id"""
+        """Get vlan Id."""
         if not port:
             return None
 
@@ -127,7 +146,7 @@ class BaseSnmpMacPlugin(BasePlugin):
         return vlan_id
 
     def get_port(self, if_index):
-        """Get port number"""
+        """Get port number."""
 
         if_name = '.'.join((self.port_oid, if_index))
         result = None
@@ -143,12 +162,12 @@ class BaseSnmpMacPlugin(BasePlugin):
         return port
 
     def convert_to_hex(self, value):
-        """Convert the integer from decimal to hex"""
+        """Convert the integer from decimal to hex."""
 
         return "%0.2x" % int(value)
 
     def get_mac_address(self, mac_numbers):
-        """Assemble mac address from the list"""
+        """Assemble mac address from the list."""
         if len(mac_numbers) != 6:
             logging.error("[PluginMac:get_mac_address] MAC address must be "
                           "6 digitals")

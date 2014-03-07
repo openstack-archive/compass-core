@@ -1,4 +1,21 @@
-"""os installer cobbler plugin"""
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""os installer cobbler plugin.
+
+   .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
+"""
 import functools
 import logging
 import os.path
@@ -156,7 +173,7 @@ class Installer(os_installer.Installer):
     def _get_modify_system(self, profile, config, **kwargs):
         """get modified system config."""
         system_config = {
-            'name': self._get_system_name(config),
+            'name': config['fullname'],
             'hostname': config['hostname'],
             'profile': profile,
         }
@@ -180,15 +197,9 @@ class Installer(os_installer.Installer):
             {'name': os_version})
         return profile_found[0]
 
-    @classmethod
-    def _get_system_name(cls, config):
-        """get system name"""
-        return '%s.%s' % (
-            config['hostname'], config['clusterid'])
-
     def _get_system(self, config, create_if_not_exists=True):
         """get system reference id."""
-        sys_name = self._get_system_name(config)
+        sys_name = config['fullname']
         try:
             sys_id = self.remote_.get_system_handle(
                 sys_name, self.token_)
@@ -206,7 +217,7 @@ class Installer(os_installer.Installer):
 
     def _clean_system(self, config):
         """clean system."""
-        sys_name = self._get_system_name(config)
+        sys_name = config['fullname']
         try:
             self.remote_.remove_system(sys_name, self.token_)
             logging.debug('system %s is removed', sys_name)
@@ -218,13 +229,13 @@ class Installer(os_installer.Installer):
         self.remote_.save_system(sys_id, self.token_)
 
     def _update_modify_system(self, sys_id, system_config):
-        """update modify system"""
+        """update modify system."""
         for key, value in system_config.items():
             self.remote_.modify_system(
                 sys_id, key, value, self.token_)
 
     def _netboot_enabled(self, sys_id):
-        """enable netboot"""
+        """enable netboot."""
         self.remote_.modify_system(
             sys_id, 'netboot_enabled', True, self.token_)
 
@@ -236,7 +247,7 @@ class Installer(os_installer.Installer):
 
     @classmethod
     def _clean_log(cls, system_name):
-        """clean log"""
+        """clean log."""
         log_dir = os.path.join(
             setting.INSTALLATION_LOGDIR,
             system_name)
@@ -246,7 +257,7 @@ class Installer(os_installer.Installer):
         self, hostid, config, **kwargs
     ):
         """clean host installing progress."""
-        self._clean_log(self._get_system_name(config))
+        self._clean_log(config['fullname'])
 
     def reinstall_host(self, hostid, config, **kwargs):
         """reinstall host."""
@@ -255,6 +266,7 @@ class Installer(os_installer.Installer):
             self.clean_host_installing_progress(
                 hostid, config, **kwargs)
             self._netboot_enabled(sys_id)
+            self._save_system(sys_id)
 
     def update_host_config(self, hostid, config, **kwargs):
         """update host config."""

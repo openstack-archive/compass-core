@@ -1,3 +1,17 @@
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to define celery tasks.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
@@ -8,8 +22,8 @@ from compass.actions import clean_deployment
 from compass.actions import clean_installing_progress
 from compass.actions import deploy
 from compass.actions import poll_switch
-from compass.actions import update_progress
 from compass.actions import reinstall
+from compass.actions import update_progress
 from compass.tasks.client import celery
 from compass.utils import flags
 from compass.utils import logsetting

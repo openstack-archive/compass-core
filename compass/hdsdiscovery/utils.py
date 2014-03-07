@@ -1,16 +1,30 @@
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Utility functions
    Including functions of get/getbulk/walk/set of snmp for three versions
 """
 import imp
-import re
 import logging
+import re
 import subprocess
 
 from compass.hdsdiscovery.error import TimeoutError
 
 
 def load_module(mod_name, path, host=None, credential=None):
-    """ Load a module instance.
+    """Load a module instance.
 
     :param str mod_name: module name
     :param str path: directory of the module
@@ -75,7 +89,7 @@ def ssh_remote_execute(host, username, password, cmd):
 
 
 def valid_ip_format(ip_address):
-    """Valid the format of an Ip address"""
+    """Valid the format of an Ip address."""
 
     if not re.match(r'^((([0-2]?\d{0,2}\.){3}([0-2]?\d{0,2}))'
                     r'|(([\da-fA-F]{1,4}:){7}([\da-fA-F]{1,4})))$',
@@ -89,9 +103,11 @@ def valid_ip_format(ip_address):
 # Implement snmpwalk and snmpget funtionality
 # The structure of returned dictionary will by tag/iid/value/type
 #################################################################
-AUTH_VERSIONS = {'1': 1,
-                 '2c': 2,
-                 '3': 3}
+AUTH_VERSIONS = {
+    '1': 1,
+    '2c': 2,
+    '3': 3
+}
 
 
 def snmp_walk(host, credential, *args, **kwargs):

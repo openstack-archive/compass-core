@@ -1,13 +1,33 @@
-"""integration test for action deploy"""
+#!/usr/bin/python
+#
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""integration test for action deploy.
+
+   .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
+"""
 import chef
 import logging
+import mock
 import os
 import os.path
 import shutil
 import unittest2
 import xmlrpclib
 
-from mock import Mock
+from contextlib import contextmanager
 
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
@@ -21,13 +41,18 @@ setting.OS_INSTALLER = 'cobbler'
 setting.COBBLER_INSTALLER_URL = 'http://localhost/cobbler_api'
 setting.PACKAGE_INSTALLER = 'chef'
 setting.CHEF_INSTALLER_URL = 'https://localhost/'
-setting.CONFIG_DIR = '%s/data' % os.path.dirname(os.path.abspath(__file__))
+setting.CONFIG_DIR = '%s/data' % os.path.dirname(os.path.realpath(__file__))
 
 
 from compass.actions import deploy
+from compass.actions import util
 from compass.db import database
-from compass.db.model import Switch, Machine
-from compass.db.model import Cluster, ClusterHost, Adapter, Role
+from compass.db.model import Adapter
+from compass.db.model import Cluster
+from compass.db.model import ClusterHost
+from compass.db.model import Machine
+from compass.db.model import Role
+from compass.db.model import Switch
 from compass.utils import flags
 from compass.utils import logsetting
 
@@ -60,36 +85,55 @@ class TestEndToEnd(unittest2.TestCase):
         else:
             return expected_config == origin_config
 
+    def _mock_lock(self):
+        @contextmanager
+        def _lock(lock_name, blocking=True, timeout=10):
+            """mock lock."""
+            try:
+                yield lock_name
+            finally:
+                pass
+
+        self.lock_backup_ = util.lock
+        util.lock = mock.Mock(side_effect=_lock)
+
+    def _unmock_lock(self):
+        util.lock = self.lock_backup_
+
+    def _unmock_cobbler(self):
+        xmlrpclib.Server = self.cobbler_server_backup_
+
     def _mock_cobbler(self, host_configs):
-        """mock cobbler"""
-        mock_server = Mock()
+        """mock cobbler."""
+        self.cobbler_server_backup_ = xmlrpclib.Server
+        mock_server = mock.Mock()
         xmlrpclib.Server = mock_server
         mock_server.return_value.login.return_value = ''
-        mock_server.return_value.sync = Mock()
-        mock_server.return_value.find_profile = Mock(
+        mock_server.return_value.sync = mock.Mock()
+        mock_server.return_value.find_profile = mock.Mock(
             side_effect=lambda x: [x['name']])
 
         def _get_system_handle(sys_name, token):
-            """mock get_system_handle"""
+            """mock get_system_handle."""
             for i, config in enumerate(host_configs):
                 if config['name'] == sys_name:
                     return i
 
             raise Exception('Not Found %s' % sys_name)
 
-        mock_server.return_value.get_system_handle = Mock(
+        mock_server.return_value.get_system_handle = mock.Mock(
             side_effect=_get_system_handle)
 
         def _new_system(token):
-            """mock new_system"""
+            """mock new_system."""
             host_configs.append({'name': ''})
             return len(host_configs) - 1
 
-        mock_server.return_value.new_system = Mock(
+        mock_server.return_value.new_system = mock.Mock(
             side_effect=_new_system)
 
         def _remove_system(sys_name, token):
-            """mock remove system"""
+            """mock remove system."""
             for i, config in host_configs:
                 if config['name'] == sys_name:
                     del host_configs[i]
@@ -97,29 +141,42 @@ class TestEndToEnd(unittest2.TestCase):
 
             raise Exception('Not Found %s' % sys_name)
 
-        mock_server.return_value.remove_system = Mock(
+        mock_server.return_value.remove_system = mock.Mock(
             side_effect=_remove_system)
 
-        mock_server.return_value.save_system = Mock()
+        mock_server.return_value.save_system = mock.Mock()
 
         def _modify_system(sys_id, key, value, token):
-            """mock modify_system"""
+            """mock modify_system."""
             host_configs[sys_id][key] = value
 
-        mock_server.return_value.modify_system = Mock(
+        mock_server.return_value.modify_system = mock.Mock(
             side_effect=_modify_system)
 
     def _check_cobbler(self, host_configs, expected_host_configs):
-        """check cobbler config generated correctly"""
+        """check cobbler config generated correctly."""
         self.assertEqual(len(host_configs), len(expected_host_configs))
         for i in range(len(host_configs)):
             self.assertTrue(
-                self._contains(host_configs[i], expected_host_configs[i]))
+                self._contains(host_configs[i], expected_host_configs[i]),
+                'host %s config is\n%s\nwhile expected config is\n%s' % (
+                    i, host_configs[i], expected_host_configs[i]
+                )
+            )
+
+    def _unmock_chef(self):
+        chef.autoconfigure = self.chef_autoconfigure_backup_
+        chef.DataBag = chef.chef_databag_backup_
+        chef.DataBagItem = self.chef_databagitem_backup_
+        chef.Client = self.chef_client_backup_
+        chef.Node = self.chef_node_backup_
 
     def _mock_chef(self, configs):
-        """mock chef"""
-        chef.autoconfigure = Mock()
-        chef.DataBag = Mock()
+        """mock chef."""
+        self.chef_autoconfigure_backup_ = chef.autoconfigure
+        chef.chef_databag_backup_ = chef.DataBag
+        chef.autoconfigure = mock.Mock()
+        chef.DataBag = mock.Mock()
 
         import collections
 
@@ -146,35 +203,49 @@ class TestEndToEnd(unittest2.TestCase):
                 del in_self.config_[name]
 
             def delete(in_self):
-                """mock delete"""
+                """mock delete."""
                 del configs[in_self.bag_item_name_]
 
             def save(in_self):
-                """mock save"""
+                """mock save."""
                 configs[in_self.bag_item_name_] = in_self.config_
 
-        chef.DataBagItem = Mock(side_effect=_mockDict)
-        chef.Client = Mock()
-        chef.Client.return_value.delete = Mock()
-        chef.Node = Mock()
-        chef.Node.return_value.delete = Mock()
+        self.chef_databagitem_backup_ = chef.DataBagItem
+        chef.DataBagItem = mock.Mock(side_effect=_mockDict)
+        self.chef_client_backup_ = chef.Client
+        chef.Client = mock.Mock()
+        chef.Client.return_value.delete = mock.Mock()
+        self.chef_node_backup_ = chef.Node
+        chef.Node = mock.Mock()
+        chef.Node.return_value.delete = mock.Mock()
 
     def _check_chef(self, configs, expected_configs):
         """check chef config is generated correctly."""
-        self.assertTrue(self._contains(configs, expected_configs))
+        self.assertTrue(
+            self._contains(configs, expected_configs),
+            'configs\n%s\nwhile expected configs\n%s' % (
+                configs, expected_configs
+            )
+        )
 
     def _mock_os_installer(self, config_locals):
-        """mock os installer"""
+        """mock os installer."""
         self.os_installer_mock_[setting.OS_INSTALLER](
             **config_locals['%s_MOCK' % setting.OS_INSTALLER])
 
+    def _unmock_os_installer(self):
+        self.os_installer_unmock_[setting.OS_INSTALLER]()
+
     def _mock_package_installer(self, config_locals):
-        """mock package installer"""
+        """mock package installer."""
         self.package_installer_mock_[setting.PACKAGE_INSTALLER](
             **config_locals['%s_MOCK' % setting.PACKAGE_INSTALLER])
 
+    def _unmock_package_installer(self):
+        self.package_installer_unmock_[setting.PACKAGE_INSTALLER]()
+
     def _check_os_installer(self, config_locals):
-        """check os installer generate correct configs"""
+        """check os installer generate correct configs."""
         mock_kwargs = config_locals['%s_MOCK' % setting.OS_INSTALLER]
         expected_kwargs = config_locals['%s_EXPECTED' % setting.OS_INSTALLER]
         kwargs = {}
@@ -183,7 +254,7 @@ class TestEndToEnd(unittest2.TestCase):
         self.os_installer_checker_[setting.OS_INSTALLER](**kwargs)
 
     def _check_package_installer(self, config_locals):
-        """check package installer generate correct configs"""
+        """check package installer generate correct configs."""
         mock_kwargs = config_locals['%s_MOCK' % setting.PACKAGE_INSTALLER]
         expected_kwargs = config_locals[
             '%s_EXPECTED' % setting.PACKAGE_INSTALLER]
@@ -193,7 +264,7 @@ class TestEndToEnd(unittest2.TestCase):
         self.package_installer_checker_[setting.PACKAGE_INSTALLER](**kwargs)
 
     def _test(self, config_filename):
-        """run the test"""
+        """run the test."""
         full_path = '%s/data/%s' % (
             os.path.dirname(os.path.abspath(__file__)),
             config_filename)
@@ -214,9 +285,11 @@ class TestEndToEnd(unittest2.TestCase):
 
         self._check_os_installer(config_locals)
         self._check_package_installer(config_locals)
+        self._unmock_os_installer()
+        self._unmock_package_installer()
 
     def _prepare_database(self, config_locals):
-        """prepare database"""
+        """prepare database."""
         with database.session() as session:
             adapters = {}
             for adapter_config in config_locals['ADAPTERS']:
@@ -270,24 +343,34 @@ class TestEndToEnd(unittest2.TestCase):
                     session.add(host)
 
     def setUp(self):
-        """test setup"""
+        """test setup."""
         super(TestEndToEnd, self).setUp()
         logsetting.init()
         database.create_db()
-        shutil.rmtree = Mock()
-        os.system = Mock()
+        self._mock_lock()
+        self.rmtree_backup_ = shutil.rmtree
+        shutil.rmtree = mock.Mock()
+        self.system_backup_ = os.system
+        os.system = mock.Mock()
         self.os_installer_mock_ = {}
         self.os_installer_mock_['cobbler'] = self._mock_cobbler
+        self.os_installer_unmock_ = {}
+        self.os_installer_unmock_['cobbler'] = self._unmock_cobbler
         self.package_installer_mock_ = {}
         self.package_installer_mock_['chef'] = self._mock_chef
+        self.package_installer_unmock_ = {}
+        self.package_installer_unmock_['chef'] = self._unmock_chef
         self.os_installer_checker_ = {}
         self.os_installer_checker_['cobbler'] = self._check_cobbler
         self.package_installer_checker_ = {}
         self.package_installer_checker_['chef'] = self._check_chef
 
     def tearDown(self):
-        """test teardown"""
+        """test teardown."""
         database.drop_db()
+        self._unmock_lock()
+        shutil.rmtree = self.rmtree_backup_
+        os.system = self.system_backup_
         super(TestEndToEnd, self).tearDown()
 
     def test_1(self):
@@ -299,7 +382,7 @@ class TestEndToEnd(unittest2.TestCase):
         self._test('test2')
 
     def test_3(self):
-        """test multi clusters multi hosts"""
+        """test multi clusters multi hosts."""
         self._test('test3')
 
 

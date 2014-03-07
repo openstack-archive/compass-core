@@ -1,15 +1,30 @@
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """module to provide updating installing process function.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
 import logging
 
-from compass.log_analyzor.line_matcher import LineMatcher, IncrementalProgress
-from compass.log_analyzor.file_matcher import FileMatcher
-from compass.log_analyzor.adapter_matcher import AdapterMatcher
 from compass.log_analyzor.adapter_matcher import AdapterItemMatcher
+from compass.log_analyzor.adapter_matcher import AdapterMatcher
 from compass.log_analyzor.adapter_matcher import OSMatcher
 from compass.log_analyzor.adapter_matcher import PackageMatcher
+from compass.log_analyzor.file_matcher import FileMatcher
+from compass.log_analyzor.line_matcher import IncrementalProgress
+from compass.log_analyzor.line_matcher import LineMatcher
 
 
 # TODO(weidong): reconsider intialization method for the following.

@@ -1,7 +1,20 @@
-"""Health Check module for Squid service"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import os
+"""Health Check module for Squid service."""
 import commands
+import os
 import pwd
 import socket
 
@@ -14,7 +27,7 @@ class SquidCheck(base.BaseCheck):
     NAME = "Squid Check"
 
     def run(self):
-        """do health check"""
+        """do health check."""
         self.check_squid_files()
         print "[Done]"
         self.check_squid_service()
@@ -26,8 +39,7 @@ class SquidCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_squid_files(self):
-        """Validates squid config, cache directory and ownership"""
-
+        """Validates squid config, cache directory and ownership."""
         print "Checking Squid Files......",
         var_map = {
             'match_squid_conf': False,
@@ -91,10 +103,10 @@ class SquidCheck(base.BaseCheck):
         return True
 
     def check_squid_service(self):
-        """Checks if squid is running on port 3128"""
+        """Checks if squid is running on port 3128."""
 
         print "Checking Squid service......",
-        if not 'squid' in commands.getoutput('ps -ef'):
+        if 'squid' not in commands.getoutput('ps -ef'):
             self._set_status(
                 0,
                 "[%s]Error: squid service does not seem "
@@ -107,7 +119,7 @@ class SquidCheck(base.BaseCheck):
                     "[%s]Error: squid is not listening on "
                     "3128" % self.NAME)
 
-        except:
+        except Exception:
             self._set_status(
                 0,
                 "[%s]Error: No service is listening on 3128, "

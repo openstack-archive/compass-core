@@ -1,11 +1,29 @@
 #!/usr/bin/python
+#
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""deploy cluster from csv file."""
+import ast
+import copy
+import csv
 import os
 import re
-import csv
-import ast
 import sys
-from copy import deepcopy
-from multiprocessing import Process, Queue
+
+from multiprocessing import Process
+from multiprocessing import Queue
 from optparse import OptionParser
 
 try:
@@ -35,8 +53,7 @@ TABLES = {
 
 
 def start(csv_dir, compass_url):
-    """ Start deploy both failed clusters and new clusters.
-    """
+    """Start deploy both failed clusters and new clusters."""
     # Get clusters and hosts data from CSV
     clusters_data = get_csv('cluster.csv', csv_dir)
     hosts_data = get_csv('cluster_host.csv', csv_dir)
@@ -95,11 +112,15 @@ def start(csv_dir, compass_url):
 
 
 def get_csv(fname, csv_dir):
-    """ Parse csv files into python variables. all nested fields in db will be
-        assembled.
+    """Parse csv files into python variables.
+
+       .. note::
+          all nested fields in db will be assembled.
+
         :param fname: CSV file name
         :param csv_dir: CSV files directory
-        Return a list of dict which key is column name and value is its data.
+
+        :returns: list of dict which key is column name and value is its data.
     """
     headers = []
     rows = []
@@ -168,7 +189,7 @@ def merge_dict(lhs, rhs, override=True):
             merge_dict(lhs[key], value, override)
         else:
             if override or key not in lhs:
-                lhs[key] = deepcopy(value)
+                lhs[key] = copy.deepcopy(value)
 
 
 class _APIClient(Client):
@@ -180,10 +201,11 @@ class _APIClient(Client):
         return self._put(url, data=data)
 
     def execute(self, cluster_data, hosts_data, resp_results):
-        """ The process including create or update a cluster and the cluster
-            configuration, add or update a host in the cluster, and deploy
-            the updated hosts.
-            :param cluster_data: the dictionary of cluster data
+        """The process including create or update a cluster and the cluster
+           configuration, add or update a host in the cluster, and deploy
+           the updated hosts.
+
+        :param cluster_data: the dictionary of cluster data
         """
         cluster_id = cluster_data['id']
         code, resp = self.get_cluster(cluster_id)

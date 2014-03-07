@@ -1,8 +1,24 @@
 #!/usr/bin/env python
-from copy import deepcopy
+#
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""run fake flask server for test."""
+import copy
+import os
 import simplejson as json
 import sys
-import os
+
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
 compass_dir = os.path.dirname(os.path.dirname(os.path.dirname(curr_dir)))
@@ -11,20 +27,20 @@ sys.path.append(compass_dir)
 
 from compass.api import app
 from compass.db import database
-from compass.db.model import Switch
-from compass.db.model import Machine
-from compass.db.model import Cluster
-from compass.db.model import ClusterState
-from compass.db.model import ClusterHost
-from compass.db.model import HostState
 from compass.db.model import Adapter
+from compass.db.model import Cluster
+from compass.db.model import ClusterHost
+from compass.db.model import ClusterState
+from compass.db.model import HostState
+from compass.db.model import Machine
 from compass.db.model import Role
+from compass.db.model import Switch
 from compass.db.model import SwitchConfig
 from compass.utils import util
 
 
 def setupDb():
-
+    """setup database."""
     SECURITY_CONFIG = {
         "security": {
             "server_credentials": {
@@ -197,7 +213,7 @@ def setupDb():
             cluster_names = ['cluster_01', 'cluster_02']
             for name, networking_config in zip(cluster_names,
                                                clusters_networking_config):
-                nconfig = deepcopy(NET_CONFIG)
+                nconfig = copy.deepcopy(NET_CONFIG)
                 util.merge_dict(nconfig, networking_config)
                 c = Cluster(
                     name=name, adapter_id=1,
@@ -213,7 +229,7 @@ def setupDb():
 
             hosts_config = []
             for mip, tip in zip(host_mips, host_tips):
-                config = deepcopy(HOST_CONFIG)
+                config = copy.deepcopy(HOST_CONFIG)
                 config['networking']['interfaces']['management']['ip'] = mip
                 config['networking']['interfaces']['tenant']['ip'] = tip
                 hosts_config.append(json.dumps(config))
@@ -259,20 +275,23 @@ def setupDb():
             ]
             session.add_all(host_states)
 
+
 if __name__ == '__main__':
     db_url, port = sys.argv[1:]
     print db_url
     try:
         database.init(db_url)
         database.create_db()
-    except Exception as e:
+    except Exception as error:
         print "=====> Failed to create database"
-        print e
+        print error
 
     try:
         setupDb()
-    except:
-        pass
+    except Exception as error:
+        print "setupDb=====>Failed to setup database"
+        print error
+
     print "Starting server ....."
     print "port is ", port
     app.run(use_reloader=False, host="0.0.0.0", port=port)

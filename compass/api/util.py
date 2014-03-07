@@ -1,18 +1,33 @@
-"""Utils for API usage"""
-from flask import make_response
-from flask.ext.restful import Api
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+"""Utils for API usage."""
+import netaddr
 import re
-from netaddr import IPAddress
+
+from flask.ext.restful import Api
+from flask import make_response
 import simplejson as json
 
 from compass.api import app
+
 
 API = Api(app)
 
 
 def make_json_response(status_code, data):
-    """Wrap json format to the reponse object"""
+    """Wrap json format to the reponse object."""
 
     result = json.dumps(data, indent=4)
     resp = make_response(result, status_code)
@@ -21,7 +36,7 @@ def make_json_response(status_code, data):
 
 
 def make_csv_response(status_code, csv_data, fname):
-    """Wrap CSV format to the reponse object"""
+    """Wrap CSV format to the reponse object."""
     fname = '.'.join((fname, 'csv'))
     resp = make_response(csv_data, status_code)
     resp.mimetype = 'text/csv'
@@ -30,12 +45,12 @@ def make_csv_response(status_code, csv_data, fname):
 
 
 def add_resource(*args, **kwargs):
-    """Add resource"""
+    """Add resource."""
     API.add_resource(*args, **kwargs)
 
 
 def is_valid_ip(ip_address):
-    """Valid the format of an Ip address"""
+    """Valid the format of an Ip address."""
     if not ip_address:
         return False
 
@@ -50,7 +65,7 @@ def is_valid_ip(ip_address):
 
 
 def is_valid_ipnetowrk(ip_network):
-    """Valid the format of an Ip network"""
+    """Valid the format of an Ip network."""
 
     if not ip_network:
         return False
@@ -66,9 +81,9 @@ def is_valid_ipnetowrk(ip_network):
 
 
 def is_valid_netmask(ip_addr):
-    """Valid the format of a netmask"""
+    """Valid the format of a netmask."""
     try:
-        ip_address = IPAddress(ip_addr)
+        ip_address = netaddr.IPAddress(ip_addr)
         return ip_address.is_netmask()
 
     except Exception:
@@ -76,14 +91,14 @@ def is_valid_netmask(ip_addr):
 
 
 def is_valid_gateway(ip_addr):
-    """Valid the format of gateway"""
+    """Valid the format of gateway."""
 
     invalid_ip_prefix = ['0', '224', '169', '127']
     try:
         # Check if ip_addr is an IP address and not start with 0
         ip_addr_prefix = ip_addr.split('.')[0]
         if is_valid_ip(ip_addr) and ip_addr_prefix not in invalid_ip_prefix:
-            ip_address = IPAddress(ip_addr)
+            ip_address = netaddr.IPAddress(ip_addr)
             if not ip_address.is_multicast():
                 # Check if ip_addr is not multicast and reserved IP
                 return True
@@ -106,7 +121,7 @@ def _is_valid_nameservers(value):
 
 
 def is_valid_security_config(config):
-    """Valid the format of security section in config"""
+    """Valid the format of security section in config."""
     outer_format = {
         "server_credentials": {}, "service_credentials": {},
         "console_credentials": {}
@@ -132,10 +147,10 @@ def is_valid_security_config(config):
 
 
 def is_valid_networking_config(config):
-    """Valid the format of networking config"""
+    """Valid the format of networking config."""
 
     def _is_valid_interfaces_config(interfaces_config):
-        """Valid the format of interfaces section in config"""
+        """Valid the format of interfaces section in config."""
         interfaces_section = {
             "management": {}, "tenant": {}, "public": {}, "storage": {}
         }
@@ -206,7 +221,7 @@ def is_valid_networking_config(config):
         return (True, '')
 
     def _is_valid_global_config(global_config):
-        """Valid the format of 'global' section in config"""
+        """Valid the format of 'global' section in config."""
         global_section = {
             "nameservers": {"req": 1, "validator": _is_valid_nameservers},
             "search_path": {"req": 1, "validator": ""},
@@ -253,7 +268,7 @@ def is_valid_networking_config(config):
 
 
 def is_valid_partition_config(config):
-    """Valid the configuration format"""
+    """Valid the configuration format."""
 
     if not config:
         return (False, '%s in partition cannot be null!' % config)
@@ -262,10 +277,13 @@ def is_valid_partition_config(config):
 
 
 def valid_host_config(config):
-    """ valid_format is used to check if the input config is qualified
-        the required fields and format.
-        The key is the required field and format of the input config
-        The value is the validator function name of the config value
+    """Valid the host configuration format.
+
+       .. note::
+          Valid_format is used to check if the input config is qualified
+          the required fields and format.
+          The key is the required field and format of the input config
+          The value is the validator function name of the config value
     """
 
     from api import errors
@@ -295,10 +313,12 @@ def valid_host_config(config):
 
 
 def flatten_dict(dictionary, output, flat_key=""):
-    """This function will convert the dictionary into a list
-       For example:
-       dict = {'a':{'b': 'c'}, 'd': 'e'}  ==>
-       list = ['a/b/c', 'd/e']
+    """This function will convert the dictionary into a flatten dict.
+
+       .. note::
+          For example:
+          dict = {'a':{'b': 'c'}, 'd': 'e'}  ==>
+          flatten dict = {'a/b': 'c', 'd': 'e'}
     """
 
     keywords = dictionary.keys()
@@ -311,13 +331,13 @@ def flatten_dict(dictionary, output, flat_key=""):
 
 
 def update_dict_value(searchkey, dictionary):
-    """Update dictionary value"""
+    """Update dictionary value."""
 
     keywords = dictionary.keys()
     for key in keywords:
         if key == searchkey:
             if isinstance(dictionary[key], str):
-                dictionary[key] = ""
+                dictionary[key] = ''
             elif isinstance(dictionary[key], list):
                 dictionary[key] = []
 
@@ -328,7 +348,7 @@ def update_dict_value(searchkey, dictionary):
 
 
 def is_valid_keys(expected, input_dict, section=""):
-    """Valid keys"""
+    """Validate keys."""
     excepted_keys = set(expected.keys())
     input_keys = set(input_dict.keys())
     if excepted_keys != input_keys:
@@ -344,15 +364,15 @@ def is_valid_keys(expected, input_dict, section=""):
 
 
 def get_col_val_from_dict(result, data):
-    """
-    Convert a dict's values to a list.
+    """Convert a dict's values to a list.
+
     :param result: a list of values for each column
     :param data: input data
 
-    for example:
-    data = {"a": {"b": {"c": 1},
-                  "d": 2}}
-    the result will be  [1, 2]
+       .. note::
+          for example:
+          data = {"a": {"b": {"c": 1}, "d": 2}}
+          the result will be  [1, 2]
     """
     if not isinstance(data, dict):
         data = str(data) if str(data) else 'None'
@@ -365,16 +385,18 @@ def get_col_val_from_dict(result, data):
 
 def get_headers_from_dict(headers, colname, data):
     """Convert a column which value is dict to a list of column name and keys.
-       nested keys in dict will be joined by '.' as a column name in CSV.
-       :param headers: the result list to hold dict keys
-       :param colname: the column name
-       :param data: input data
 
-       for example:
-       the column name is 'config_data', and
-       the value is {"a": {"b": {"c": 1},
-                           "d": 2}}
-       then headers will be ['config_data.a.b.c', 'config_data.a.d']
+       .. note::
+          nested keys in dict will be joined by '.' as a column name in CSV.
+          for example:
+          the column name is 'config_data', and
+          the value is {"a": {"b": {"c": 1}, "d": 2}}
+          then headers will be ['config_data.a.b.c', 'config_data.a.d']
+
+    :param headers: the result list to hold dict keys
+    :param colname: the column name
+    :param data: input data
+
     """
     if not colname:
         raise "colname cannot be None!"

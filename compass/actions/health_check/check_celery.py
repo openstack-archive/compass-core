@@ -1,7 +1,20 @@
-"""Health Check module for Celery"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import os
+"""Health Check module for Celery."""
 import commands
+import os
 
 from celery.task.control import inspect
 
@@ -11,10 +24,10 @@ from compass.actions.health_check import utils as health_check_utils
 
 class CeleryCheck(base.BaseCheck):
     """celery health check class."""
-    NAME = "Celery Check"
+    NAME = "Celery Check."
 
     def run(self):
-        """do health check"""
+        """do health check."""
         self.check_compass_celery_setting()
         print "[Done]"
         self.check_celery_backend()
@@ -26,7 +39,7 @@ class CeleryCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_compass_celery_setting(self):
-        """Validates Celery settings"""
+        """Validates Celery settings."""
 
         print "Checking Celery setting......",
         setting_map = {
@@ -75,10 +88,10 @@ class CeleryCheck(base.BaseCheck):
         return True
 
     def check_celery_backend(self):
-        """Checks if Celery backend is running and configured properly"""
+        """Checks if Celery backend is running and configured properly."""
 
         print "Checking Celery Backend......",
-        if not 'celeryd' in commands.getoutput('ps -ef'):
+        if 'celeryd' not in commands.getoutput('ps -ef'):
             self._set_status(0, "[%s]Error: celery is not running" % self.NAME)
             return True
 

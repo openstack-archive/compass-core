@@ -1,6 +1,18 @@
-"""
-Module to get configs from provider and isntallers and update
-them to provider and installers.
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Module to get configs from provider and isntallers and update
+   them to provider and installers.
 
    .. moduleauthor:: Xiaodong wang ,xiaodongwang@huawei.com>
 """
@@ -9,9 +21,9 @@ import logging
 
 from compass.config_management import installers
 from compass.config_management import providers
-from compass.config_management.utils import config_merger_callbacks
 from compass.config_management.utils.config_merger import ConfigMapping
 from compass.config_management.utils.config_merger import ConfigMerger
+from compass.config_management.utils import config_merger_callbacks
 from compass.config_management.utils.config_reference import ConfigReference
 from compass.utils import setting_wrapper as setting
 from compass.utils import util
@@ -39,6 +51,9 @@ CLUSTER_HOST_MERGER = ConfigMerger(
             from_lower_keys={'lower_values': '/roles'},
             to_key='/has_dashboard_roles',
             value=config_merger_callbacks.has_intersection
+        ),
+        ConfigMapping(
+            path_list=['/role_mapping'],
         ),
         ConfigMapping(
             path_list=[
@@ -88,10 +103,12 @@ CLUSTER_HOST_MERGER = ConfigMerger(
 
 
 class ConfigManager(object):
-    """
-    Class is to get global/clsuter/host configs from provider,
-    os installer, package installer, process them, and
-    update them to provider, os installer, package installer.
+    """Class to get global/clsuter/host configs.
+
+       .. note::
+          The class is used to get global/clsuter/host configs
+          from provider, os installer, package installer, process them,
+          and update them to provider, os installer, package installer.
     """
 
     def __init__(self):
@@ -172,7 +189,7 @@ class ConfigManager(object):
             adapters, roles_per_target_system)
 
     def update_switch_filters(self):
-        """Update switch filter from setting.SWITCHES"""
+        """Update switch filter from setting.SWITCHES."""
         if not hasattr(setting, 'SWITCHES'):
             logging.info('no switch configs to set')
             return
@@ -183,7 +200,7 @@ class ConfigManager(object):
         self.config_provider_.update_switch_filters(switch_filters)
 
     def get_switch_and_machines(self):
-        """Get switches and machines"""
+        """Get switches and machines."""
         switches, machines_per_switch = (
             self.config_provider_.get_switch_and_machines())
         logging.debug('got switches %s from %s',
@@ -475,7 +492,7 @@ class ConfigManager(object):
         return hostids
 
     def get_clusters(self):
-        """get clusters"""
+        """get clusters."""
         clusters = self.config_provider_.get_clusters()
         logging.debug('got clusters from %s: %s',
                       self.config_provider_, clusters)

@@ -1,4 +1,19 @@
 #!/usr/bin/python
+#
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Bootstrap setuptools installation
 
 If you want to use setuptools in your package's setup.py, just include this
@@ -13,13 +28,13 @@ the appropriate options to ``use_setuptools()``.
 
 This file can also be run as a script to install or upgrade setuptools.
 """
+import optparse
 import os
 import shutil
-import sys
-import tempfile
-import tarfile
-import optparse
 import subprocess
+import sys
+import tarfile
+import tempfile
 
 from distutils import log
 
@@ -35,13 +50,13 @@ DEFAULT_URL = "https://pypi.python.org/packages/source/s/setuptools/"
 
 
 def _python_cmd(*args):
-    """run cmd in python"""
+    """run cmd in python."""
     args = (sys.executable,) + args
     return subprocess.call(args) == 0
 
 
 def _install(tarball, install_args=()):
-    """install tarball"""
+    """install tarball."""
     # extracting the tarball
     tmpdir = tempfile.mkdtemp()
     log.warn('Extracting in %s', tmpdir)
@@ -71,7 +86,7 @@ def _install(tarball, install_args=()):
 
 
 def _build_egg(egg, tarball, to_dir):
-    """build egg"""
+    """build egg."""
     # extracting the tarball
     tmpdir = tempfile.mkdtemp()
     log.warn('Extracting in %s', tmpdir)
@@ -102,7 +117,7 @@ def _build_egg(egg, tarball, to_dir):
 
 
 def _do_download(version, download_base, to_dir, download_delay):
-    """download package"""
+    """download package."""
     egg = os.path.join(to_dir, 'setuptools-%s-py%d.%d.egg'
                        % (version, sys.version_info[0], sys.version_info[1]))
     if not os.path.exists(egg):
@@ -117,7 +132,7 @@ def _do_download(version, download_base, to_dir, download_delay):
 
 def use_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
                    to_dir=os.curdir, download_delay=15):
-    """use setuptools to do the setup"""
+    """use setuptools to do the setup."""
     # making sure we use the absolute path
     to_dir = os.path.abspath(to_dir)
     was_imported = 'pkg_resources' in sys.modules or \
@@ -243,7 +258,8 @@ def _extractall(self, path=".", members=None):
 
 
 def _build_install_args(options):
-    """
+    """Build install args
+
     Build the arguments to 'python setup.py install' on the setuptools package
     """
     install_args = []
@@ -258,7 +274,7 @@ def _build_install_args(options):
 
 
 def _parse_args():
-    """Parse the command line for options"""
+    """Parse the command line for options."""
     parser = optparse.OptionParser()
     parser.add_option(
         '--user', dest='user_install', action='store_true', default=False,
@@ -273,7 +289,7 @@ def _parse_args():
 
 
 def main(version=DEFAULT_VERSION):
-    """Install or upgrade setuptools and EasyInstall"""
+    """Install or upgrade setuptools and EasyInstall."""
     options = _parse_args()
     tarball = download_setuptools(download_base=options.download_base)
     return _install(tarball, _build_install_args(options))

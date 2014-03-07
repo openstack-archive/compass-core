@@ -1,3 +1,17 @@
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to filter configuration when upddating.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
@@ -8,7 +22,7 @@ from compass.config_management.utils import config_reference
 
 
 class ConfigFilter(object):
-    """config filter based on allows and denies rules"""
+    """config filter based on allows and denies rules."""
 
     def __init__(self, allows=['*'], denies=[]):
         """Constructor
@@ -27,7 +41,7 @@ class ConfigFilter(object):
             self.__class__.__name__, self.allows_, self.denies_)
 
     def _is_allows_valid(self):
-        """Check if allows are valid"""
+        """Check if allows are valid."""
         if not isinstance(self.allows_, list):
             raise TypeError(
                 'allows type is %s but expected type is list: %s' % (
@@ -80,7 +94,9 @@ class ConfigFilter(object):
             if not allow:
                 continue
 
+            logging.debug('filter by allow rule %s', allow)
             for sub_key, sub_ref in ref.ref_items(allow):
+                logging.debug('%s is added to filtered config', sub_key)
                 filtered_ref.setdefault(sub_key).update(sub_ref.config)
 
     def _filter_denies(self, filtered_ref):
@@ -89,5 +105,7 @@ class ConfigFilter(object):
             if not deny:
                 continue
 
+            logging.debug('filter by deny rule %s', deny)
             for ref_key in filtered_ref.ref_keys(deny):
+                logging.debug('%s is removed from filtered config', ref_key)
                 del filtered_ref[ref_key]

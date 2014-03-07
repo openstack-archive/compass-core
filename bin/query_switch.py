@@ -1,24 +1,40 @@
 #!/usr/bin/python
+#
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""query switch."""
+import optparse
+import Queue
 import threading
 import time
-
-from Queue import Queue, Empty
-from optparse import OptionParser
 
 from compass.apiclient.restful import Client
 
 
 class AddSwitch(object):
-    """ A utility class that handles adding a switch and retrieving
-        corresponding machines associated with the switch. """
+    """A utility class that handles adding a switch and retrieving
+       corresponding machines associated with the switch.
+    """
 
     def __init__(self, server_url):
         print server_url, " ...."
         self._client = Client(server_url)
 
     def add_switch(self, queue, ip, snmp_community):
-        """ Add a switch with SNMP credentials and retrieve attached
-            server machines.
+        """Add a switch with SNMP credentials and retrieve attached
+           server machines.
 
         :param queue: The result holder for the machine details.
         :type queue: A Queue object(thread-safe).
@@ -88,10 +104,10 @@ class AddSwitch(object):
 
 if __name__ == "__main__":
     usage = "usage: %prog [options] switch_ips"
-    parser = OptionParser(usage)
+    parser = optparse.OptionParser(usage)
 
     parser.add_option("-u", "--server-url", dest="server_url",
-                      default="http://localhost/",
+                      default="http://localhost/api",
                       help="The Compass Server URL")
 
     parser.add_option("-c", "--community", dest="community",
@@ -104,7 +120,7 @@ if __name__ == "__main__":
         parser.error("Wrong number of arguments")
 
     threads = []
-    queue = Queue()
+    queue = Queue.Queue()
     add_switch = AddSwitch(options.server_url)
 
     print "Add switch to the server. This may take a while ..."
@@ -122,5 +138,5 @@ if __name__ == "__main__":
         try:
             ip, result = queue.get(block=False)
             print ip, " : ", result
-        except Empty:
+        except Queue.Empty:
             break

@@ -1,9 +1,23 @@
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to set the hosts configs from cluster config.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
+import copy
 import logging
-from copy import deepcopy
 
 from compass.config_management.utils import config_reference
 from compass.utils import util
@@ -173,14 +187,14 @@ class ConfigMapping(object):
         if self.value_ is None:
             lower_values = {}
             for lower_key in lower_sub_refs.keys():
-                lower_values[lower_key] = deepcopy(sub_ref.config)
+                lower_values[lower_key] = copy.deepcopy(sub_ref.config)
 
             return lower_values
 
         if not callable(self.value_):
             lower_values = {}
             for lower_key in lower_sub_refs.keys():
-                lower_values[lower_key] = deepcopy(self.value_)
+                lower_values[lower_key] = copy.deepcopy(self.value_)
 
             return lower_values
 

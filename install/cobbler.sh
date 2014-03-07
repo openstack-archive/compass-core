@@ -92,14 +92,21 @@ CBLR_PASSWD=${CBLR_PASSWD:-"cobbler"}
 # update cobbler config
 sudo cp -rn /var/lib/cobbler/snippets /root/backup/cobbler/
 sudo cp -rn /var/lib/cobbler/kickstarts/ /root/backup/cobbler/
+sudo cp -rn /var/lib/cobbler/triggers /root/backup/cobbler/
 sudo rm -rf /var/lib/cobbler/snippets/*
 sudo cp -rf $ADAPTER_HOME/cobbler/snippets/* /var/lib/cobbler/snippets/
+sudo cp -rf $ADAPTER_HOME/cobbler/triggers/* /var/lib/cobbler/triggers/
 sudo chmod 777 /var/lib/cobbler/snippets
-sudo chmod 666 /var/lib/cobbler/snippets/*
+sudo chmod -R 666 /var/lib/cobbler/snippets/*
+sudo chmod -R 755 /var/lib/cobbler/triggers
 sudo sed -i "s/# \$compass_ip \$compass_hostname/$ipaddr $HOSTNAME/g" /var/lib/cobbler/snippets/hosts
 sudo rm -f /var/lib/cobbler/kickstarts/default.ks
 sudo cp -rf $ADAPTER_HOME/cobbler/kickstarts/default.ks /var/lib/cobbler/kickstarts/
 sudo chmod 666 /var/lib/cobbler/kickstarts/default.ks
+sudo mkdir /var/www/cblr_ks
+sudo chmod 755 /var/www/cblr_ks
+sudo cp -rf $ADAPTER_HOME/cobbler/conf/cobbler.conf /etc/httpd/conf.d/
+chmod 644 /etc/httpd/conf.d/cobbler.conf
 
 sudo cp -rn /etc/xinetd.d /root/backup/
 sudo sed -i 's/disable\([ \t]\+\)=\([ \t]\+\)yes/disable\1=\2no/g' /etc/xinetd.d/rsync

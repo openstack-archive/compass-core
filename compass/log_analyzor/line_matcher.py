@@ -1,3 +1,17 @@
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to get the progress when found match with a line of the log."""
 import logging
 import re
@@ -39,9 +53,7 @@ class ProgressCalculator(object):
         cls, progress_data, message,
         severity, progress
     ):
-        """
-        Update progress with the given progress_data,
-        message and severity.
+        """Update progress with the given progress_data, message and severity.
 
         :param progress_data: installing progress.
         :type progress_data: float between 0 to 1.

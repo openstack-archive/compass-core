@@ -7,3 +7,5 @@ netaddr
 paramiko
 simplejson
 requests
+PyChef
+redis

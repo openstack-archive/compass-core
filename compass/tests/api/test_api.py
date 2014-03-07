@@ -1,10 +1,26 @@
-"""test api module"""
-from copy import deepcopy
-from celery import current_app
-from mock import Mock
-import simplejson as json
-import os
+#!/usr/bin/python
+#
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""test api module."""
+import celery
+import copy
 import csv
+import mock
+import os
+import simplejson as json
 import unittest2
 
 
@@ -17,14 +33,14 @@ reload(setting)
 
 from compass.api import app
 from compass.db import database
-from compass.db.model import Switch
-from compass.db.model import Machine
-from compass.db.model import Cluster
-from compass.db.model import ClusterState
-from compass.db.model import ClusterHost
-from compass.db.model import HostState
 from compass.db.model import Adapter
+from compass.db.model import Cluster
+from compass.db.model import ClusterHost
+from compass.db.model import ClusterState
+from compass.db.model import HostState
+from compass.db.model import Machine
 from compass.db.model import Role
+from compass.db.model import Switch
 from compass.db.model import SwitchConfig
 from compass.utils import flags
 from compass.utils import logsetting
@@ -49,7 +65,7 @@ class ApiTestCase(unittest2.TestCase):
 
         # We do not want to send a real task as our test environment
         # does not have a AMQP system set up. TODO(): any better way?
-        current_app.send_task = Mock()
+        celery.current_app.send_task = mock.Mock()
 
     def tearDown(self):
         database.drop_db()
@@ -57,7 +73,7 @@ class ApiTestCase(unittest2.TestCase):
 
 
 class TestSwtichMachineAPI(ApiTestCase):
-    """test switch machine api"""
+    """test switch machine api."""
 
     SWITCH_RESP_TPL = {"state": "under_monitoring",
                        "ip": "",
@@ -79,21 +95,29 @@ class TestSwtichMachineAPI(ApiTestCase):
         super(TestSwtichMachineAPI, self).tearDown()
 
     def test_get_switch_list(self):
-        """tst get switch list api"""
+        """tst get switch list api."""
         # Prepare testing data
         with database.session() as session:
-            switches = [Switch(ip='192.168.1.1',
-                               credential=self.SWITCH_CREDENTIAL),
-                        Switch(ip='192.168.1.2',
-                               credential=self.SWITCH_CREDENTIAL),
-                        Switch(ip='192.1.192.1',
-                               credential=self.SWITCH_CREDENTIAL),
-                        Switch(ip='192.1.192.2',
-                               credential=self.SWITCH_CREDENTIAL),
-                        Switch(ip='192.1.195.3',
-                               credential=self.SWITCH_CREDENTIAL),
-                        Switch(ip='192.2.192.4',
-                               credential=self.SWITCH_CREDENTIAL)]
+            switches = [
+                Switch(
+                    ip='192.168.1.1',
+                    credential_data=json.dumps(self.SWITCH_CREDENTIAL)),
+                Switch(
+                    ip='192.168.1.2',
+                    credential_data=json.dumps(self.SWITCH_CREDENTIAL)),
+                Switch(
+                    ip='192.1.192.1',
+                    credential_data=json.dumps(self.SWITCH_CREDENTIAL)),
+                Switch(
+                    ip='192.1.192.2',
+                    credential_data=json.dumps(self.SWITCH_CREDENTIAL)),
+                Switch(
+                    ip='192.1.195.3',
+                    credential_data=json.dumps(self.SWITCH_CREDENTIAL)),
+                Switch(
+                    ip='192.2.192.4',
+                    credential_data=json.dumps(self.SWITCH_CREDENTIAL))
+            ]
             session.add_all(switches)
 
         # Start to query switches
@@ -137,7 +161,7 @@ class TestSwtichMachineAPI(ApiTestCase):
                 self.assertEqual(switch_count, expected_count)
 
     def test_post_switch_list(self):
-        """test post switch list"""
+        """test post switch list."""
         # Test SwitchList POST method
         url = '/switches'
 
@@ -169,7 +193,7 @@ class TestSwtichMachineAPI(ApiTestCase):
         self.assertEqual(return_value.status_code, 400)
 
     def test_get_switch_by_id(self):
-        """test get switch y id"""
+        """test get switch by id."""
         # Test Get /switches/{id}
         # Non-exist switch id
         url = '/switches/1000'
@@ -190,7 +214,7 @@ class TestSwtichMachineAPI(ApiTestCase):
         self.assertDictEqual(data["switch"], expected_switch_resp)
 
     def test_put_switch_by_id(self):
-        """test put switch by id"""
+        """test put switch by id."""
         # Test put a switch by id
         url = '/switches/1000'
         # Put a non-existing switch
@@ -200,7 +224,7 @@ class TestSwtichMachineAPI(ApiTestCase):
 
         # Put sucessfully
         url = '/switches/1'
-        credential = deepcopy(self.SWITCH_CREDENTIAL)
+        credential = copy.deepcopy(self.SWITCH_CREDENTIAL)
         credential['version'] = '1v'
         data = {'switch': {'credential': credential}}
         return_value = self.test_client.put(url, data=json.dumps(data))
@@ -210,13 +234,13 @@ class TestSwtichMachineAPI(ApiTestCase):
             'repolling')
 
     def test_delete_switch(self):
-        """test delete switch"""
+        """test delete switch."""
         url = '/switches/1'
         return_value = self.test_client.delete(url)
         self.assertEqual(return_value.status_code, 405)
 
     def test_get_machine_by_id(self):
-        """test get machine by id"""
+        """test get machine by id."""
         # Prepare testing data
         with database.session() as session:
             machine = Machine(mac='00:27:88:0c:a6', port='1', vlan='1',
@@ -234,7 +258,7 @@ class TestSwtichMachineAPI(ApiTestCase):
         self.assertEqual(return_value.status_code, 404)
 
     def test_get_machine_list(self):
-        """test get machine list"""
+        """test get machine list."""
         #Prepare testing data
         with database.session() as session:
             switch_config = [
@@ -295,7 +319,7 @@ class TestSwtichMachineAPI(ApiTestCase):
 
 
 class TestClusterAPI(ApiTestCase):
-    """test cluster api"""
+    """test cluster api."""
 
     SECURITY_CONFIG = {
         'server_credentials': {
@@ -377,7 +401,7 @@ class TestClusterAPI(ApiTestCase):
         super(TestClusterAPI, self).tearDown()
 
     def test_get_cluster_by_id(self):
-        """test get cluster by id"""
+        """test get cluster by id."""
         # a. Get an existing cluster
         # b. Get a non-existing cluster, return 404
         test_list = [{'url': '/clusters/1', 'expected_code': 200,
@@ -399,7 +423,7 @@ class TestClusterAPI(ApiTestCase):
 
     # Create a cluster
     def test_post_cluster(self):
-        """test post cluster"""
+        """test post cluster."""
         # a. Post a new cluster but no adapter exists
         cluster_req = {'cluster': {'name': 'cluster_09',
                                    'adapter_id': 1}}
@@ -430,7 +454,7 @@ class TestClusterAPI(ApiTestCase):
         self.assertEqual(data['cluster']['id'], 10)
 
     def test_get_clusters(self):
-        """test get clusters"""
+        """test get clusters."""
         # a. get all clusters
         url = "/clusters"
         return_value = self.test_client.get(url)
@@ -462,7 +486,7 @@ class TestClusterAPI(ApiTestCase):
         self.assertEqual(len(data['clusters']), 2)
 
     def test_put_cluster_security_resource(self):
-        """test put cluster security resource"""
+        """test put cluster security resource."""
         # Prepare testing data
         security = {'security': self.SECURITY_CONFIG}
 
@@ -488,82 +512,82 @@ class TestClusterAPI(ApiTestCase):
 
         # d. Security config is invalid -- some required field is null
         url = "/clusters/1/security"
-        invalid_security = deepcopy(security)
+        invalid_security = copy.deepcopy(security)
         invalid_security['security']['server_credentials']['username'] = None
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_security))
         self.assertEqual(return_value.status_code, 400)
 
         # e. Security config is invalid -- keyword is incorrect
-        invalid_security = deepcopy(security)
+        invalid_security = copy.deepcopy(security)
         invalid_security['security']['xxxx'] = {'xxx': 'xxx'}
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_security))
         self.assertEqual(return_value.status_code, 400)
 
         # f. Security config is invalid -- missing keyword
-        invalid_security = deepcopy(security)
+        invalid_security = copy.deepcopy(security)
         del invalid_security["security"]["server_credentials"]
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_security))
         self.assertEqual(return_value.status_code, 400)
 
         # g. Security config is invalid -- missing subkey keyword
-        invalid_security = deepcopy(security)
+        invalid_security = copy.deepcopy(security)
         del invalid_security["security"]["server_credentials"]["username"]
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_security))
         self.assertEqual(return_value.status_code, 400)
 
     def test_put_cluster_networking_resource(self):
-        """test put cluster networking resource"""
+        """test put cluster networking resource."""
         networking = {"networking": self.NETWORKING_CONFIG}
         url = "/clusters/1/networking"
         return_value = self.test_client.put(url, data=json.dumps(networking))
         self.assertEqual(return_value.status_code, 200)
 
         # Missing some required keyword in interfaces section
-        invalid_config = deepcopy(networking)
+        invalid_config = copy.deepcopy(networking)
         del invalid_config["networking"]["interfaces"]["management"]["nic"]
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_config))
         self.assertEqual(return_value.status_code, 400)
 
-        invalid_config = deepcopy(networking)
+        invalid_config = copy.deepcopy(networking)
         del invalid_config["networking"]["interfaces"]["management"]
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_config))
         self.assertEqual(return_value.status_code, 400)
 
-        invalid_config = deepcopy(networking)
+        invalid_config = copy.deepcopy(networking)
         invalid_config["networking"]["interfaces"]["xxx"] = {}
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_config))
         self.assertEqual(return_value.status_code, 400)
 
         # Missing some required keyword in global section
-        invalid_config = deepcopy(networking)
+        invalid_config = copy.deepcopy(networking)
         del invalid_config["networking"]["global"]["gateway"]
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_config))
         self.assertEqual(return_value.status_code, 400)
 
         # Invalid value in interfaces section
-        invalid_config = deepcopy(networking)
+        invalid_config = copy.deepcopy(networking)
         invalid_config["networking"]["interfaces"]["tenant"]["nic"] = "eth0"
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_config))
         self.assertEqual(return_value.status_code, 400)
 
         # Invalid value in global section
-        invalid_config = deepcopy(networking)
+        invalid_config = copy.deepcopy(networking)
         invalid_config["networking"]["global"]["nameservers"] = "*.*.*.*,"
         return_value = self.test_client.put(
             url, data=json.dumps(invalid_config))
         self.assertEqual(return_value.status_code, 400)
 
     def test_get_cluster_resource(self):
-        """test get cluster resource"""
+        """test get cluster resource."""
         # Test  resource
         with database.session() as session:
             cluster = session.query(Cluster).filter_by(id=1).first()
@@ -592,7 +616,7 @@ class TestClusterAPI(ApiTestCase):
         self.assertEqual(data['message'], excepted_err_msg)
 
     def test_cluster_action(self):
-        """test cluster action"""
+        """test cluster action."""
         from sqlalchemy import func
         #Prepare testing data: create machines, clusters in database
         #The first three machines will belong to cluster_01, the last one
@@ -629,8 +653,8 @@ class TestClusterAPI(ApiTestCase):
         # ClusterHost table should not have any records.
         with database.session() as session:
             hosts_num = session.query(
-                func.count(ClusterHost.id)).filter_by(
-                cluster_id=1).scalar()
+                func.count(ClusterHost.id)
+            ).filter_by(cluster_id=1).scalar()
             self.assertEqual(hosts_num, 0)
 
         # 2. add a host with a installed machine
@@ -647,8 +671,8 @@ class TestClusterAPI(ApiTestCase):
         total_hosts = 0
         with database.session() as session:
             total_hosts = session.query(
-                func.count(ClusterHost.id)).filter_by(
-                cluster_id=1).scalar()
+                func.count(ClusterHost.id)
+            ).filter_by(cluster_id=1).scalar()
             data = json.loads(return_value.get_data())
             self.assertEqual(len(data['cluster_hosts']), total_hosts)
             self.assertEqual(total_hosts, 3)
@@ -661,7 +685,8 @@ class TestClusterAPI(ApiTestCase):
         self.assertEqual(len(data['failedHosts']), 3)
         with database.session() as session:
             count = session.query(
-                func.count(ClusterHost.id)).filter_by(cluster_id=1).scalar()
+                func.count(ClusterHost.id)
+            ).filter_by(cluster_id=1).scalar()
             self.assertEqual(count, 3)
 
         # 5. sucessfully remove requested hosts
@@ -672,7 +697,8 @@ class TestClusterAPI(ApiTestCase):
         self.assertEqual(len(data['cluster_hosts']), 2)
         with database.session() as session:
             count = session.query(
-                func.count(ClusterHost.id)).filter_by(cluster_id=1).scalar()
+                func.count(ClusterHost.id)
+            ).filter_by(cluster_id=1).scalar()
             self.assertEqual(count, 1)
 
         # 6. Test 'replaceAllHosts' action on cluster_01
@@ -683,7 +709,8 @@ class TestClusterAPI(ApiTestCase):
         self.assertEqual(len(data['cluster_hosts']), 3)
         with database.session() as session:
             count = session.query(
-                func.count(ClusterHost.id)).filter_by(cluster_id=1).scalar()
+                func.count(ClusterHost.id)
+            ).filter_by(cluster_id=1).scalar()
             self.assertEqual(count, 3)
 
         # 7. Test 'deploy' action on cluster_01
@@ -699,10 +726,13 @@ class TestClusterAPI(ApiTestCase):
         url = '/clusters/2/action'
         with database.session() as session:
             session.query(
-                ClusterHost).filter_by(cluster_id=2).delete(
-                synchronize_session=False)
+                ClusterHost
+            ).filter_by(cluster_id=2).delete(
+                synchronize_session=False
+            )
             host = session.query(
-                ClusterHost).filter_by(cluster_id=2).first()
+                ClusterHost
+            ).filter_by(cluster_id=2).first()
 
         return_value = self.test_client.post(url, data=json.dumps(request))
         self.assertEqual(return_value.status_code, 404)
@@ -743,7 +773,7 @@ class TestClusterAPI(ApiTestCase):
 
 
 class ClusterHostAPITest(ApiTestCase):
-    """test cluster host api"""
+    """test cluster host api."""
 
     def setUp(self):
         super(ClusterHostAPITest, self).setUp()
@@ -787,43 +817,62 @@ class ClusterHostAPITest(ApiTestCase):
         super(ClusterHostAPITest, self).tearDown()
 
     def test_clusterhost_get_config(self):
-        """test get cluster host config"""
+        """test get cluster host config."""
         # 1. Try to get a config of the cluster host which does not exist
         url = '/clusterhosts/1000/config'
         return_value = self.test_client.get(url)
         self.assertEqual(404, return_value.status_code)
 
         # 2. Get a config of a cluster host sucessfully
-        test_config_data = deepcopy(self.test_config_data)
+        test_config_data = copy.deepcopy(self.test_config_data)
         test_config_data['hostname'] = 'host_01'
 
         url = '/clusterhosts/1/config'
         return_value = self.test_client.get(url)
         self.assertEqual(200, return_value.status_code)
         config = json.loads(return_value.get_data())['config']
-        expected_config = deepcopy(test_config_data)
+        expected_config = copy.deepcopy(test_config_data)
         expected_config['hostid'] = 1
         expected_config['hostname'] = 'host_01'
         expected_config['clusterid'] = 1
         expected_config['clustername'] = 'cluster_01'
+        expected_config['fullname'] = 'host_01.1'
         expected_config[
-            'networking']['interfaces'][
-            'management']['mac'] = "00:27:88:0c:01"
+            'networking'
+        ][
+            'interfaces'
+        ][
+            'management'
+        ][
+            'mac'
+        ] = "00:27:88:0c:01"
         expected_config['switch_port'] = ''
         expected_config['switch_ip'] = '192.168.1.1'
         expected_config['vlan'] = 0
         self.assertDictEqual(config, expected_config)
 
     def test_clusterhost_put_config(self):
-        """test put clusterhost config"""
-        config = deepcopy(self.test_config_data)
+        """test put clusterhost config."""
+        config = copy.deepcopy(self.test_config_data)
         config['roles'] = ['base']
         config[
-            'networking']['interfaces'][
-            'management']['ip'] = '192.168.1.2'
+            'networking'
+        ][
+            'interfaces'
+        ][
+            'management'
+        ][
+            'ip'
+        ] = '192.168.1.2'
         config[
-            'networking']['interfaces'][
-            'tenant']['ip'] = '10.12.1.2'
+            'networking'
+        ][
+            'interfaces'
+        ][
+            'tenant'
+        ][
+            'ip'
+        ] = '10.12.1.2'
 
         # 1. Try to put a config of the cluster host which does not exist
         url = '/clusterhosts/1000/config'
@@ -832,7 +881,7 @@ class ClusterHostAPITest(ApiTestCase):
 
         # 2. Config with incorrect ip format
         url = '/clusterhosts/2/config'
-        incorrect_conf = deepcopy(config)
+        incorrect_conf = copy.deepcopy(config)
         incorrect_conf['hostname'] = 'host_02'
         incorrect_conf[
             'networking']['interfaces']['management']['ip'] = 'xxx'
@@ -852,7 +901,7 @@ class ClusterHostAPITest(ApiTestCase):
             self.assertDictEqual(config, config_db)
 
     def test_clusterhost_delete_subkey(self):
-        """test delete cluster host subkey"""
+        """test delete cluster host subkey."""
         # 1. Try to delete an unqalified subkey of config
         url = '/clusterhosts/1/config/gateway'
         return_value = self.test_client.delete(url)
@@ -862,7 +911,7 @@ class ClusterHostAPITest(ApiTestCase):
         url = 'clusterhosts/1/config/roles'
         return_value = self.test_client.delete(url)
         self.assertEqual(200, return_value.status_code)
-        expected_config = deepcopy(self.test_config_data)
+        expected_config = copy.deepcopy(self.test_config_data)
         with database.session() as session:
             config_db = session.query(
                 ClusterHost.config_data).filter_by(id=1).first()[0]
@@ -878,7 +927,7 @@ class ClusterHostAPITest(ApiTestCase):
         self.assertEqual(400, return_value.status_code)
 
     def test_clusterhost_get_by_id(self):
-        """test get cluster host by id"""
+        """test get cluster host by id."""
         # 1. Get host sucessfully
         url = '/clusterhosts/1'
         return_value = self.test_client.get(url)
@@ -893,7 +942,7 @@ class ClusterHostAPITest(ApiTestCase):
         self.assertEqual(404, return_value.status_code)
 
     def test_list_clusterhosts(self):
-        """test list cluster hosts"""
+        """test list cluster hosts."""
         # 1. list the cluster host whose hostname is host_01
         url = '/clusterhosts?hostname=host_02'
         return_value = self.test_client.get(url)
@@ -932,7 +981,7 @@ class ClusterHostAPITest(ApiTestCase):
         self.assertListEqual([], hosts_result)
 
     def test_host_installing_progress(self):
-        """test get host installing progress"""
+        """test get host installing progress."""
         # 1. Get progress of a non-existing host
         url = '/clusterhosts/1000/progress'
         return_value = self.test_client.get(url)
@@ -959,10 +1008,14 @@ class ClusterHostAPITest(ApiTestCase):
             host = session.query(ClusterHost).filter_by(id=1).first()
             host.state.state = 'INSTALLING'
             session.query(
-                HostState).filter_by(id=1).update(
-                {'progress': 0.3,
-                 'message': 'Configuring...',
-                 'severity': 'INFO'})
+                HostState
+            ).filter_by(
+                id=1
+            ).update({
+                'progress': 0.3,
+                'message': 'Configuring...',
+                'severity': 'INFO'
+            })
 
         return_value = self.test_client.get(url)
         self.assertEqual(200, return_value.status_code)
@@ -972,7 +1025,7 @@ class ClusterHostAPITest(ApiTestCase):
 
 
 class TestAdapterAPI(ApiTestCase):
-    """test adapter api"""
+    """test adapter api."""
 
     def setUp(self):
         super(TestAdapterAPI, self).setUp()
@@ -992,7 +1045,7 @@ class TestAdapterAPI(ApiTestCase):
         super(TestAdapterAPI, self).tearDown()
 
     def test_list_adapter_by_id(self):
-        """test list adapter by id"""
+        """test list adapter by id."""
         url = '/adapters/1'
         return_value = self.test_client.get(url)
         self.assertEqual(200, return_value.status_code)
@@ -1000,7 +1053,7 @@ class TestAdapterAPI(ApiTestCase):
         self.assertEqual('Centos_openstack', data['adapter']['name'])
 
     def test_list_adapter_roles(self):
-        """test list adapter roles"""
+        """test list adapter roles."""
         url = '/adapters/1/roles'
         return_value = self.test_client.get(url)
         self.assertEqual(200, return_value.status_code)
@@ -1008,7 +1061,7 @@ class TestAdapterAPI(ApiTestCase):
         self.assertEqual(2, len(data['roles']))
 
     def test_list_adapters(self):
-        """test list adapters"""
+        """test list adapters."""
         url = '/adapters?name=Centos_openstack'
         return_value = self.test_client.get(url)
         data = json.loads(return_value.get_data())
@@ -1031,7 +1084,7 @@ class TestAdapterAPI(ApiTestCase):
 
 
 class TestAPIWorkFlow(ApiTestCase):
-    """test api workflow"""
+    """test api workflow."""
 
     CLUSTER_SECURITY_CONFIG = {
         "security": {
@@ -1118,11 +1171,12 @@ class TestAPIWorkFlow(ApiTestCase):
         #Prepare test data
         with database.session() as session:
             # Populate switch info to DB
-            switch = Switch(ip="192.168.2.1",
-                            credential={"version": "2c",
-                                        "community": "public"},
-                            vendor="huawei",
-                            state="under_monitoring")
+            switch = Switch(
+                ip="192.168.2.1",
+                credential_data=json.dumps(
+                    {"version": "2c", "community": "public"}),
+                vendor_info="huawei",
+                state="under_monitoring")
             session.add(switch)
 
             # Populate machines info to DB
@@ -1142,7 +1196,7 @@ class TestAPIWorkFlow(ApiTestCase):
         super(TestAPIWorkFlow, self).tearDown()
 
     def test_work_flow(self):
-        """test api workflow"""
+        """test api workflow."""
         # Polling switch: mock post switch
         # url = '/switches'
         # data = {"ip": "192.168.2.1",
@@ -1207,9 +1261,9 @@ class TestAPIWorkFlow(ApiTestCase):
 
         # Put cluster host config individually
         hosts_configs = [
-            deepcopy(self.CLUSTERHOST_CONFIG),
-            deepcopy(self.CLUSTERHOST_CONFIG),
-            deepcopy(self.CLUSTERHOST_CONFIG)
+            copy.deepcopy(self.CLUSTERHOST_CONFIG),
+            copy.deepcopy(self.CLUSTERHOST_CONFIG),
+            copy.deepcopy(self.CLUSTERHOST_CONFIG)
         ]
         names = ["host_01", "host_02", "host_03"]
         mgmt_ips = ["10.120.8.100", "10.120.8.101", "10.120.8.102"]
@@ -1254,6 +1308,8 @@ class TestAPIWorkFlow(ApiTestCase):
                 excepted["clusterid"] = cluster_id
                 excepted["clustername"] = "cluster_01"
                 excepted["hostid"] = host_info["id"]
+                excepted["fullname"] = "%s.%s" % (
+                    excepted["hostname"], excepted["clusterid"])
                 excepted["networking"]["interfaces"]["management"]["mac"] = mac
                 excepted['switch_port'] = machine.port
                 excepted['vlan'] = machine.vlan
@@ -1266,6 +1322,7 @@ class TestAPIWorkFlow(ApiTestCase):
 
 
 class TestExport(ApiTestCase):
+    """test export functions."""
 
     CLUSTER_SECURITY_CONFIG = {
         "security": {
@@ -1364,26 +1421,32 @@ class TestExport(ApiTestCase):
             session.add(adapter)
 
             #Populate switches info to DB
-            switches = [Switch(ip="192.168.2.1",
-                               credential={"version": "2c",
-                                           "community": "public"},
-                               vendor="huawei",
-                               state="under_monitoring"),
-                        Switch(ip="192.168.2.2",
-                               credential={"version": "2c",
-                                           "community": "public"},
-                               vendor="huawei",
-                               state="under_monitoring"),
-                        Switch(ip="192.168.2.3",
-                               credential={"version": "2c",
-                                           "community": "public"},
-                               vendor="huawei",
-                               state="under_monitoring"),
-                        Switch(ip="192.168.2.4",
-                               credential={"version": "2c",
-                                           "community": "public"},
-                               vendor="huawei",
-                               state="under_monitoring")]
+            switches = [
+                Switch(
+                    ip="192.168.2.1",
+                    credential_data=json.dumps(
+                        {"version": "2c", "community": "public"}),
+                    vendor_info="huawei",
+                    state="under_monitoring"),
+                Switch(
+                    ip="192.168.2.2",
+                    credential_data=json.dumps(
+                        {"version": "2c", "community": "public"}),
+                    vendor_info="huawei",
+                    state="under_monitoring"),
+                Switch(
+                    ip="192.168.2.3",
+                    credential_data=json.dumps(
+                        {"version": "2c", "community": "public"}),
+                    vendor_info="huawei",
+                    state="under_monitoring"),
+                Switch(
+                    ip="192.168.2.4",
+                    credential_data=json.dumps(
+                        {"version": "2c", "community": "public"}),
+                    vendor_info="huawei",
+                    state="under_monitoring")
+            ]
             session.add_all(switches)
 
             # Populate machines info to DB
@@ -1443,7 +1506,7 @@ class TestExport(ApiTestCase):
             cluster_names = ['cluster_01', 'cluster_02']
             for name, networking_config in zip(cluster_names,
                                                clusters_networking_config):
-                nconfig = deepcopy(self.CLUSTER_NETWORKING_CONFIG)
+                nconfig = copy.deepcopy(self.CLUSTER_NETWORKING_CONFIG)
                 util.merge_dict(nconfig, networking_config)
                 c = Cluster(name=name, adapter_id=1,
                             security_config=json.dumps(
@@ -1461,7 +1524,7 @@ class TestExport(ApiTestCase):
                          '192.168.2.100', '192.168.2.101', '192.168.2.102']
             hosts_config = []
             for mip, tip in zip(host_mips, host_tips):
-                config = deepcopy(self.CLUSTERHOST_CONFIG)
+                config = copy.deepcopy(self.CLUSTERHOST_CONFIG)
                 config['networking']['interfaces']['management']['ip'] = mip
                 config['networking']['interfaces']['tenant']['ip'] = tip
                 hosts_config.append(json.dumps(config))
@@ -1512,6 +1575,7 @@ class TestExport(ApiTestCase):
         super(TestExport, self).tearDown()
 
     def test_export(self):
+        """test export."""
         talbes = ['switch', 'machine', 'cluster', 'cluster_host', 'adapter',
                   'role', 'switch_config']
         for tname in talbes:
@@ -1530,6 +1594,5 @@ class TestExport(ApiTestCase):
 
 if __name__ == '__main__':
     flags.init()
-    flags.OPTIONS.logfile = '/var/log/compass/test.log'
     logsetting.init()
     unittest2.main()

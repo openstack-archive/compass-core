@@ -1,3 +1,17 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to update status and installing progress of the given cluster.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
@@ -5,8 +19,8 @@
 import logging
 
 from compass.actions import util
-from compass.log_analyzor import progress_calculator
 from compass.db import database
+from compass.log_analyzor import progress_calculator
 from compass.utils import setting_wrapper as setting
 
 
@@ -44,7 +58,7 @@ def update_progress(cluster_hosts):
     """Update status and installing progress of the given cluster.
 
     :param cluster_hosts: clusters and hosts in each cluster to update.
-    :type cluster_hosts: dict of int to list of int
+    :type cluster_hosts: dict of int or str to list of int or str
 
     .. note::
        The function should be called out of the database session scope.
@@ -58,17 +72,19 @@ def update_progress(cluster_hosts):
        After the progress got updated, these information will be stored back
        to the log_progressing_history for next time run.
     """
-    logging.debug('update installing progress of cluster_hosts: %s',
-                  cluster_hosts)
-    os_versions = {}
-    target_systems = {}
-    with database.session():
-        cluster_hosts, os_versions, target_systems = (
-            util.update_cluster_hosts(
-                cluster_hosts, _cluster_filter, _host_filter))
+    with util.lock('log_progressing', blocking=False):
+        logging.debug('update installing progress of cluster_hosts: %s',
+                      cluster_hosts)
+        os_versions = {}
+        target_systems = {}
+        with database.session():
+            cluster_hosts, os_versions, target_systems = (
+                util.update_cluster_hosts(
+                    cluster_hosts, _cluster_filter, _host_filter))
 
-    progress_calculator.update_progress(setting.OS_INSTALLER,
-                                        os_versions,
-                                        setting.PACKAGE_INSTALLER,
-                                        target_systems,
-                                        cluster_hosts)
+        progress_calculator.update_progress(
+            setting.OS_INSTALLER,
+            os_versions,
+            setting.PACKAGE_INSTALLER,
+            target_systems,
+            cluster_hosts)

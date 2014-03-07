@@ -1,10 +1,24 @@
-"""Compass Command Line Interface"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+"""Compass Command Line Interface"""
+import subprocess
 import sys
-from subprocess import Popen
 
 from compass.actions.health_check import check
 from compass.utils.util import pretty_print
+
 
 ACTION_MAP = {
     "check": "apache celery dhcp dns hds misc os_installer "
@@ -20,9 +34,7 @@ class BootCLI(object):
         return
 
     def run(self, args):
-        """
-        cli takes the commands and calls respective modules
-        """
+        """cli takes the commands and calls respective modules."""
         action = self.get_action(args)
         if action is None:
             self.print_help()
@@ -36,9 +48,10 @@ class BootCLI(object):
 
     @classmethod
     def get_action(cls, args):
-        """
-        This method returns an action type.
-        For 'compass check dhcp' command, it will return 'check'.
+        """This method returns an action type.
+
+           .. note::
+              For 'compass check dhcp' command, it will return 'check'.
         """
         if len(args) == 1:
             return None
@@ -48,9 +61,10 @@ class BootCLI(object):
 
     @classmethod
     def get_module(cls, action, args):
-        """
-        This method returns a module.
-        For 'compass check dhcp' command, it will return 'dhcp'.
+        """This method returns a module.
+
+           .. note::
+              For 'compass check dhcp' command, it will return 'dhcp'.
         """
         if len(args) <= 2:
             return None
@@ -59,12 +73,12 @@ class BootCLI(object):
         return "invalid"
 
     def run_check(self, module=None):
-        """
-        param module default set to None.
-        This provides a flexible sanity check,
-        if parameter module is none. Compass checks all modules.
-        If module specified, Compass will only check such module.
+        """This provides a flexible sanity check.
 
+           .. note::
+              param module default set to None.
+              if parameter module is none. Compass checks all modules.
+              If module specified, Compass will only check such module.
         """
         if module is None:
             pretty_print("Starting: Compass Health Check",
@@ -101,27 +115,32 @@ class BootCLI(object):
             print "Compass Check completes. No problems found, all systems go"
             sys.exit(0)
         else:
-            print "Compass has ERRORS shown above. Please fix them before " \
-                  "deploying!"
+            print (
+                "Compass has ERRORS shown above. Please fix them before "
+                "deploying!")
             sys.exit(1)
 
     @classmethod
     def run_refresh(cls, action=None):
         """Run refresh."""
-        ## TODO: replace refresh.sh with refresh.py
+        # TODO(xicheng): replace refresh.sh with refresh.py
         if action is None:
             pretty_print("Refreshing Compass...",
                          "=================")
-            Popen(['/opt/compass/bin/refresh.sh'], shell=True)
+            subprocess.Popen(
+                ['/opt/compass/bin/refresh.sh'], shell=True)
         elif action == "db":
             pretty_print("Refreshing Compass Database...",
                          "===================")
-            Popen(['/opt/compass/bin/manage_db.py createdb'], shell=True)
+            subprocess.Popen(
+                ['/opt/compass/bin/manage_db.py createdb'], shell=True)
         else:
             pretty_print("Syncing with Installers...",
                          "================")
-            Popen(['/opt/compass/bin/manage_db.py sync_from_installers'],
-                  shell=True)
+            subprocess.Popen(
+                ['/opt/compass/bin/manage_db.py sync_from_installers'],
+                shell=True
+            )
 
     @classmethod
     def print_help(cls, module_help=""):
@@ -145,12 +164,11 @@ class BootCLI(object):
 
 
 def main():
-    """
-    Compass cli entry point
-    """
+    """Compass cli entry point."""
     cli = BootCLI()
     output = cli.run(sys.argv)
     return sys.exit(output)
+
 
 if __name__ == "__main__":
     main()

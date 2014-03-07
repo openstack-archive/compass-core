@@ -42,7 +42,8 @@ fi
 
 sudo sed -i "/COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/cobbler_api'" /etc/compass/setting
 sudo sed -i "/CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
-
+sudo sed -i "s/\$compass_ip/$ipaddr/g" /etc/compass/global_config
+sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
 
 # add cookbooks, databags and roles
 sudo mkdir -p /var/chef/cookbooks/		
@@ -52,13 +53,25 @@ sudo cp -r $ADAPTER_HOME/chef/cookbooks/* /var/chef/cookbooks/
 sudo cp -r $ADAPTER_HOME/chef/databags/* /var/chef/databags/		
 sudo cp -r $ADAPTER_HOME/chef/roles/* /var/chef/roles/
 
-sudo chmod +x /opt/compass/bin/addcookbooks.py		
-sudo chmod +x /opt/compass/bin/adddatabags.py		
+sudo chmod +x /opt/compass/bin/addcookbooks.py	
+sudo chmod +x /opt/compass/bin/adddatabags.py
 sudo chmod +x /opt/compass/bin/addroles.py
 
 sudo /opt/compass/bin/addcookbooks.py  --cookbooks_dir=/var/chef/cookbooks
+if [[ "$?" != "0" ]]; then
+    echo "failed to add cookbooks"
+    exit 1
+fi
 sudo /opt/compass/bin/adddatabags.py   --databags_dir=/var/chef/databags
+if [[ "$?" != "0" ]]; then
+    echo "failed to add databags"
+    exit 1
+fi
 sudo /opt/compass/bin/addroles.py      --roles_dir=/var/chef/roles
+if [[ "$?" != "0" ]]; then
+    echo "failed to add roles"
+    exit 1
+fi
 
 # copy the chef validatation keys to cobbler snippets
 sudo cp -rf /etc/chef-server/chef-validator.pem /var/lib/cobbler/snippets/chef-validator.pem
@@ -71,6 +84,14 @@ if [[ "$?" != "0" ]]; then
     exit 1
 else
     echo "httpd has already started"
+fi
+
+sudo service redis status
+if [[ "$?" != "0" ]]; then
+    echo "redis is not started"
+    exit 1
+else
+    echo "redis has already started"
 fi
 
 sudo service compassd status

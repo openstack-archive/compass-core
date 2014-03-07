@@ -1,4 +1,18 @@
-"""Health Check module for DNS service"""
+# Copyright 2014 Openstack Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Health Check module for DNS service."""
 
 import commands
 import os
@@ -13,21 +27,20 @@ class DnsCheck(base.BaseCheck):
     NAME = "DNS Check"
 
     def run(self):
-        """do health check"""
+        """do health check."""
         installer = self.config.OS_INSTALLER
         method_name = "self.check_" + installer + "_dns()"
         return eval(method_name)
 
     def check_cobbler_dns(self):
-        """Checks if Cobbler has taken over DNS service"""
-
+        """Checks if Cobbler has taken over DNS service."""
         try:
             remote = xmlrpclib.Server(
                 self.config.COBBLER_INSTALLER_URL,
                 allow_none=True)
             remote.login(
                 *self.config.COBBLER_INSTALLER_TOKEN)
-        except:
+        except Exception:
             self._set_status(0,
                              "[%s]Error: Cannot login to Cobbler "
                              "with the tokens provided in the config file"
@@ -49,7 +62,7 @@ class DnsCheck(base.BaseCheck):
         return (self.code, self.messages)
 
     def check_cobbler_dns_template(self):
-        """Validates Cobbler's DNS template file"""
+        """Validates Cobbler's DNS template file."""
 
         print "Checking DNS template......",
         if os.path.exists("/etc/cobbler/named.template"):
@@ -66,7 +79,7 @@ class DnsCheck(base.BaseCheck):
 
                 if "allow-query" in line:
                     for subnet in ["127.0.0.0/8"]:
-                        if not subnet in line:
+                        if subnet not in line:
                             missing_query.append(subnet)
 
             named_template.close()
@@ -108,10 +121,10 @@ class DnsCheck(base.BaseCheck):
         return True
 
     def check_dns_service(self):
-        """Checks if DNS is running on port 53"""
+        """Checks if DNS is running on port 53."""
 
         print "Checking DNS service......",
-        if not 'named' in commands.getoutput('ps -ef'):
+        if 'named' not in commands.getoutput('ps -ef'):
             self._set_status(
                 0,
                 "[%s]Error: named service does not seem to be "

@@ -1,3 +1,17 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to provide ConfigProvider that reads config from db.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
@@ -8,15 +22,22 @@ import os.path
 from compass.config_management.providers import config_provider
 from compass.config_management.utils import config_filter
 from compass.db import database
-from compass.db.model import Adapter, Role, SwitchConfig, Switch, Machine
-from compass.db.model import Cluster, ClusterHost
-from compass.db.model import ClusterState, HostState, LogProgressingHistory
+from compass.db.model import Adapter
+from compass.db.model import Cluster
+from compass.db.model import ClusterHost
+from compass.db.model import ClusterState
+from compass.db.model import HostState
+from compass.db.model import LogProgressingHistory
+from compass.db.model import Machine
+from compass.db.model import Role
+from compass.db.model import Switch
+from compass.db.model import SwitchConfig
 from compass.utils import setting_wrapper as setting
 
 
-CLUSTER_ALLOWS = ['*']
+CLUSTER_ALLOWS = ['/security', '/networking', '/partition']
 CLUSTER_DENIES = []
-HOST_ALLOWS = ['*']
+HOST_ALLOWS = ['/roles', '/networking/interfaces/*/ip']
 HOST_DENIES = []
 
 
@@ -86,7 +107,6 @@ class DBProvider(config_provider.ConfigProvider):
             if switch_filter_tuple in switch_filter_tuples:
                 logging.debug('ignore adding switch filter: %s',
                               switch_filter)
-
                 continue
             else:
                 logging.debug('add switch filter: %s', switch_filter)
@@ -112,7 +132,7 @@ class DBProvider(config_provider.ConfigProvider):
 
         log_dir = os.path.join(
             setting.INSTALLATION_LOGDIR,
-            '%s.%s' % (host.hostname, host.cluster_id),
+            host.fullname,
             '')
         session.query(LogProgressingHistory).filter(
             LogProgressingHistory.pathname.startswith(
@@ -165,7 +185,7 @@ class DBProvider(config_provider.ConfigProvider):
 
         log_dir = os.path.join(
             setting.INSTALLATION_LOGDIR,
-            '%s.%s' % (host.hostname, host.cluster_id),
+            host.fullname,
             '')
         session.query(LogProgressingHistory).filter(
             LogProgressingHistory.pathname.startswith(
@@ -186,20 +206,20 @@ class DBProvider(config_provider.ConfigProvider):
             id=clusterid).delete(synchronize_session='fetch')
 
     def get_cluster_hosts(self, clusterid):
-        """get cluster hosts"""
+        """get cluster hosts."""
         session = database.current_session()
         hosts = session.query(ClusterHost).filter_by(
             cluster_id=clusterid).all()
         return [host.id for host in hosts]
 
     def get_clusters(self):
-        """get clusters"""
+        """get clusters."""
         session = database.current_session()
         clusters = session.query(Cluster).all()
         return [cluster.id for cluster in clusters]
 
     def get_switch_and_machines(self):
-        """get switches and machines"""
+        """get switches and machines."""
         session = database.current_session()
         switches = session.query(Switch).all()
         switches_data = []
@@ -224,7 +244,7 @@ class DBProvider(config_provider.ConfigProvider):
     def update_switch_and_machines(
         self, switches, switch_machines
     ):
-        """update switches and machines"""
+        """update switches and machines."""
         session = database.current_session()
         session.query(Switch).delete(synchronize_session='fetch')
         session.query(Machine).delete(synchronize_session='fetch')

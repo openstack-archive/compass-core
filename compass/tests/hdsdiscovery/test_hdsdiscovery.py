@@ -1,6 +1,23 @@
-"""test hdsdiscovery module"""
+#!/usr/bin/python
+#
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""test hdsdiscovery module."""
 import os
 import unittest2
+
 from mock import patch
 
 
@@ -19,7 +36,7 @@ from compass.utils import logsetting
 
 
 class HuaweiTest(unittest2.TestCase):
-    """test huawei switch snmp get"""
+    """test huawei switch snmp get."""
 
     def setUp(self):
         super(HuaweiTest, self).setUp()
@@ -34,7 +51,7 @@ class HuaweiTest(unittest2.TestCase):
         super(HuaweiTest, self).tearDown()
 
     def test_is_this_vendor(self):
-        """test device vendor is haiwei"""
+        """test device vendor is haiwei."""
         #Credential's keyword is incorrect
         self.assertFalse(
             self.huawei.is_this_vendor(self.correct_host,
@@ -57,7 +74,7 @@ class HuaweiTest(unittest2.TestCase):
 
 
 class HuaweiMacTest(unittest2.TestCase):
-    """test get mac from huawei device"""
+    """test get mac from huawei device."""
 
     def setUp(self):
         super(HuaweiMacTest, self).setUp()
@@ -71,7 +88,7 @@ class HuaweiMacTest(unittest2.TestCase):
         super(HuaweiMacTest, self).tearDown()
 
     def test_process_data(self):
-        """get progress data function"""
+        """get progress data function."""
         # GET operation haven't been implemeneted.
         self.assertIsNone(self.mac_plugin.process_data('GET'))
 
@@ -80,7 +97,7 @@ from compass.hdsdiscovery.vendors.ovswitch.plugins.mac import Mac as OVSMac
 
 
 class OVSMacTest(unittest2.TestCase):
-    """ovs switch test"""
+    """ovs switch test."""
 
     def setUp(self):
         super(OVSMacTest, self).setUp()
@@ -90,7 +107,7 @@ class OVSMacTest(unittest2.TestCase):
 
     @patch('compass.hdsdiscovery.utils.ssh_remote_execute')
     def test_scan(self, ovs_mock):
-        """test scan ovs switch"""
+        """test scan ovs switch."""
         ovs_mock.return_value = []
         mac_instance = OVSMac(self.host, self.credential)
         self.assertIsNone(mac_instance.scan())
@@ -103,7 +120,7 @@ class OVSMacTest(unittest2.TestCase):
 
 
 class HDManagerTest(unittest2.TestCase):
-    """test HDManager"""
+    """test HDManager."""
 
     def setUp(self):
         super(HDManagerTest, self).setUp()
@@ -118,7 +135,7 @@ class HDManagerTest(unittest2.TestCase):
 
     @patch('compass.hdsdiscovery.hdmanager.HDManager.get_sys_info')
     def test_get_vendor(self, sys_info_mock):
-        """test get_vendor"""
+        """test get_vendor."""
         # Incorrect ip
         self.assertIsNone(self.manager.get_vendor('1234.1.1.1',
                                                   self.correct_credential)[0])
@@ -161,7 +178,7 @@ class HDManagerTest(unittest2.TestCase):
 
     @patch('compass.hdsdiscovery.hdmanager.HDManager.get_sys_info')
     def test_is_valid_vendor(self, sys_info_mock):
-        """test is_valid_vendor"""
+        """test is_valid_vendor."""
         #non-exsiting vendor
         self.assertFalse(self.manager.is_valid_vendor(self.correct_host,
                                                       self.correct_credential,
@@ -184,7 +201,7 @@ class HDManagerTest(unittest2.TestCase):
                                                      'pica8'))
 
     def test_learn(self):
-        """test learn"""
+        """test learn."""
         #non-exsiting plugin
         self.assertIsNone(self.manager.learn(self.correct_host,
                                              self.correct_credential,
@@ -200,14 +217,14 @@ from compass.hdsdiscovery import utils
 
 
 class UtilsTest(unittest2.TestCase):
-    """hdsdiscovery util test class"""
+    """hdsdiscovery util test class."""
 
     def setUp(self):
         super(UtilsTest, self).setUp()
         logsetting.init()
 
     def test_load_module(self):
-        """test load_module"""
+        """test load_module."""
         self.assertIsNone(utils.load_module('xxx', 'fake/path/to/module'))
 
 

@@ -1,27 +1,46 @@
-"""Define all the RestfulAPI entry points"""
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Define all the RestfulAPI entry points."""
 import logging
+import netaddr
 import re
 import simplejson as json
-from flask import request
-from flask.ext.restful import Resource
-from sqlalchemy.sql import and_, or_
 
-from compass.api import app, util, errors
-from compass.tasks.client import celery
+from flask.ext.restful import Resource
+from flask import request
+from sqlalchemy.sql import and_
+from sqlalchemy.sql import or_
+
+from compass.api import app
+from compass.api import errors
+from compass.api import util
 from compass.db import database
-from compass.db.model import Switch as ModelSwitch
-from compass.db.model import SwitchConfig
-from compass.db.model import Machine as ModelMachine
+from compass.db.model import Adapter
 from compass.db.model import Cluster as ModelCluster
 from compass.db.model import ClusterHost as ModelClusterHost
 from compass.db.model import ClusterState
 from compass.db.model import HostState
-from compass.db.model import Adapter
+from compass.db.model import Machine as ModelMachine
 from compass.db.model import Role
+from compass.db.model import Switch as ModelSwitch
+from compass.db.model import SwitchConfig
+from compass.tasks.client import celery
 
 
 class SwitchList(Resource):
-    """Query detals of switches and poll swithes"""
+    """Query details of switches and poll swithes."""
 
     ENDPOINT = "/switches"
 
@@ -30,9 +49,10 @@ class SwitchList(Resource):
     LIMIT = 'limit'
 
     def get(self):
-        """
-        List details of all switches, optionally filtered by some conditions.
-        Note: switchIp and swtichIpNetwork cannot be combined to use.
+        """List details of all switches filtered by some conditions.
+
+           .. note::
+              switchIp and swtichIpNetwork cannot be combined to use.
 
         :param switchIp: switch IP address
         :param switchIpNetwork: switch IP network
@@ -85,17 +105,17 @@ class SwitchList(Resource):
                         errors.UserInvalidUsage(error_msg))
 
                 def get_queried_ip_prefix(network, prefix):
-                    """ Get Ip prefex as pattern used to query switches.
-                        Switches' Ip addresses need to match this pattern.
+                    """Get Ip prefex as pattern used to query switches.
+
+                       .. note::
+                          Switches' Ip addresses need to match this pattern.
                     """
                     count = int(prefix / 8)
                     if count == 0:
                         count = 1
                     return network.rsplit('.', count)[0] + '.'
 
-                from netaddr import IPNetwork, IPAddress
-
-                ip_network = IPNetwork(switch_ip_network)
+                ip_network = netaddr.IPNetwork(switch_ip_network)
                 ip_filter = get_queried_ip_prefix(str(ip_network.network),
                                                   ip_network.prefixlen)
 
@@ -103,15 +123,16 @@ class SwitchList(Resource):
                 result_set = []
                 if limit:
                     result_set = session.query(ModelSwitch).filter(
-                        ModelSwitch.ip.startswith(ip_filter)).limit(
-                        limit).all()
+                        ModelSwitch.ip.startswith(ip_filter)
+                    ).limit(limit).all()
                 else:
                     result_set = session.query(ModelSwitch).filter(
-                        ModelSwitch.ip.startswith(ip_filter)).all()
+                        ModelSwitch.ip.startswith(ip_filter)
+                    ).all()
 
                 for switch in result_set:
                     ip_addr = str(switch.ip)
-                    if IPAddress(ip_addr) in ip_network:
+                    if netaddr.IPAddress(ip_addr) in ip_network:
                         switches.append(switch)
                         logging.info('[SwitchList][get] ip %s', ip_addr)
 
@@ -139,9 +160,10 @@ class SwitchList(Resource):
                   "switches": switch_list})
 
     def post(self):
-        """
-        Insert switch IP and the credential to db. Invoke a task to poll
-        switch at the same time.
+        """Insert switch IP and the credential to db.
+
+           .. note::
+              Invoke a task to poll switch at the same time.
 
         :param ip: switch IP address
         :param credential: a dict for accessing the switch
@@ -197,7 +219,7 @@ class SwitchList(Resource):
 
 
 class Switch(Resource):
-    """Get and update a single switch information"""
+    """Get and update a single switch information."""
     ENDPOINT = "/switches"
 
     def get(self, switch_id):
@@ -288,7 +310,7 @@ class Switch(Resource):
 
 
 class MachineList(Resource):
-    """Query machines by filters"""
+    """Query machines by filters."""
     ENDPOINT = "/machines"
 
     SWITCHID = 'switchId'
@@ -298,10 +320,12 @@ class MachineList(Resource):
     LIMIT = 'limit'
 
     def get(self):
-        """
-        Lists details of machines, optionally filtered by some conditions as
-        the following. According to SwitchConfig, machines with some ports will
-        be filtered.
+        """Lists details of machines.
+
+           .. note::
+              The machines are filtered by some conditions as
+              the following. According to SwitchConfig, machines
+              with some ports will be filtered.
 
         :param switchId: the unique identifier of the switch
         :param mac: the MAC address
@@ -335,7 +359,7 @@ class MachineList(Resource):
                 return errors.UserInvalidUsage(
                     errors.UserInvalidUsage(error_msg)
                 )
-            #TODO: support query filtered port
+            # TODO(grace): support query filtered port
             if filter_clause:
                 machines = session.query(ModelMachine)\
                                   .filter(and_(*filter_clause)).all()
@@ -362,8 +386,8 @@ class MachineList(Resource):
                         continue
 
                 machine_res = {}
-                machine_res['switch_ip'] = None if not machine.switch else \
-                    machine.switch.ip
+                machine_res['switch_ip'] = (
+                    None if not machine.switch else machine.switch.ip)
                 machine_res['id'] = machine.id
                 machine_res['mac'] = machine.mac
                 machine_res['port'] = machine.port
@@ -380,12 +404,11 @@ class MachineList(Resource):
 
 
 class Machine(Resource):
-    """List details of the machine with specific machine id"""
+    """List details of the machine with specific machine id."""
     ENDPOINT = '/machines'
 
     def get(self, machine_id):
-        """
-        Lists details of the specified machine.
+        """Lists details of the specified machine.
 
         :param machine_id: the unique identifier of the machine
         """
@@ -422,8 +445,10 @@ class Machine(Resource):
 
 
 class Cluster(Resource):
-    """Creates cluster and lists cluster details; Update and list the cluster's
-       configuration information.
+    """Creates cluster and lists cluster details.
+
+       .. note::
+          Update and list the cluster's configuration information.
     """
     ENDPOINT = '/clusters'
     SECURITY = 'security'
@@ -431,9 +456,7 @@ class Cluster(Resource):
     PARTITION = 'partition'
 
     def get(self, cluster_id, resource=None):
-        """
-        Lists details of the specified cluster if resource is not specified.
-        Otherwise, lists details of the resource of this cluster
+        """Lists details of the resource specified cluster.
 
         :param cluster_id: the unique identifier of the cluster
         :param resource: the resource name(security, networking, partition)
@@ -527,8 +550,7 @@ class Cluster(Resource):
         )
 
     def put(self, cluster_id, resource):
-        """
-        Update the resource information of the specified cluster in database
+        """Update the resource information of the specified cluster.
 
         :param cluster_id: the unique identifier of the cluster
         :param resource: resource name(security, networking, partition)
@@ -573,8 +595,9 @@ class Cluster(Resource):
             if is_valid:
                 column = resources[resource]['column']
                 session.query(
-                    ModelCluster).filter_by(id=cluster_id).update(
-                        {column: json.dumps(value)}
+                    ModelCluster
+                ).filter_by(id=cluster_id).update(
+                    {column: json.dumps(value)}
                 )
             else:
                 return errors.handle_mssing_input(
@@ -588,7 +611,7 @@ class Cluster(Resource):
 
 @app.route("/clusters", methods=['GET'])
 def list_clusters():
-    """Lists the details of all clusters"""
+    """Lists the details of all clusters."""
     endpoint = '/clusters'
     state = request.args.get('state', None, type=str)
     results = []
@@ -608,23 +631,29 @@ def list_clusters():
         elif state == 'installing':
             # The deployment of this cluster is in progress.
             clusters = session.query(
-                ModelCluster).filter(
+                ModelCluster
+            ).filter(
                 ModelCluster.id == ClusterState.id,
                 or_(
                     ClusterState.state == 'INSTALLING',
                     ClusterState.state == 'UNINITIALIZED'
-                )).all()
+                )
+            ).all()
         elif state == 'failed':
             # The deployment of this cluster is failed.
-            clusters = session.query(ModelCluster)\
-                              .filter(ModelCluster.id == ClusterState.id,
-                                      ClusterState.state == 'ERROR')\
-                              .all()
+            clusters = session.query(
+                ModelCluster
+            ).filter(
+                ModelCluster.id == ClusterState.id,
+                ClusterState.state == 'ERROR'
+            ).all()
         elif state == 'successful':
-            clusters = session.query(ModelCluster)\
-                              .filter(ModelCluster.id == ClusterState.id,
-                                      ClusterState.state == 'READY')\
-                              .all()
+            clusters = session.query(
+                ModelCluster
+            ).filter(
+                ModelCluster.id == ClusterState.id,
+                ClusterState.state == 'READY'
+            ).all()
 
         if clusters:
             for cluster in clusters:
@@ -637,8 +666,11 @@ def list_clusters():
                 results.append(cluster_res)
 
     return util.make_json_response(
-        200, {"status": "OK",
-              "clusters": results})
+        200, {
+            "status": "OK",
+            "clusters": results
+        }
+    )
 
 
 @app.route("/clusters/<int:cluster_id>/action", methods=['POST'])
@@ -653,7 +685,7 @@ def execute_cluster_action(cluster_id):
     :param deploy: the action of starting to deploy
     """
     def _add_hosts(cluster_id, hosts):
-        """Add cluster host(s) to the cluster by cluster_id"""
+        """Add cluster host(s) to the cluster by cluster_id."""
 
         cluseter_hosts = []
         available_machines = []
@@ -708,15 +740,17 @@ def execute_cluster_action(cluster_id):
         )
 
     def _remove_hosts(cluster_id, hosts):
-        """Remove existing cluster host from the cluster"""
+        """Remove existing cluster host from the cluster."""
 
         removed_hosts = []
         with database.session() as session:
             failed_hosts = []
             for host_id in hosts:
                 host = session.query(
-                    ModelClusterHost).filter_by(
-                    id=host_id, cluster_id=cluster_id).first()
+                    ModelClusterHost
+                ).filter_by(
+                    id=host_id, cluster_id=cluster_id
+                ).first()
 
                 if not host:
                     failed_hosts.append(host_id)
@@ -742,8 +776,9 @@ def execute_cluster_action(cluster_id):
                 filter_clause.append('id=%s' % host_id)
 
             # Delete the requested hosts from database
-            session.query(ModelClusterHost).filter(or_(*filter_clause))\
-                   .delete(synchronize_session='fetch')
+            session.query(ModelClusterHost).filter(
+                or_(*filter_clause)
+            ).delete(synchronize_session='fetch')
 
         return util.make_json_response(
             200, {
@@ -753,7 +788,7 @@ def execute_cluster_action(cluster_id):
         )
 
     def _replace_all_hosts(cluster_id, hosts):
-        """Remove all existing hosts from the cluster and add new ones"""
+        """Remove all existing hosts from the cluster and add new ones."""
 
         with database.session() as session:
             # Delete all existing hosts of the cluster
@@ -763,7 +798,7 @@ def execute_cluster_action(cluster_id):
         return _add_hosts(cluster_id, hosts)
 
     def _deploy(cluster_id, hosts):
-        """Deploy the cluster"""
+        """Deploy the cluster."""
 
         deploy_hosts_info = []
         deploy_cluster_info = {}
@@ -862,10 +897,10 @@ def execute_cluster_action(cluster_id):
 
 
 class ClusterHostConfig(Resource):
-    """Lists and update/delete cluster host configurations"""
+    """Lists and update/delete cluster host configurations."""
 
     def get(self, host_id):
-        """Lists configuration details of the specified cluster host
+        """Lists configuration details of the specified cluster host.
 
         :param host_id: the unique identifier of the host
         """
@@ -887,8 +922,7 @@ class ClusterHostConfig(Resource):
                   "config": config_res})
 
     def put(self, host_id):
-        """
-        Update configuration of the specified cluster host
+        """Update configuration of the specified cluster host.
 
         :param host_id: the unique identifier of the host
         """
@@ -943,8 +977,7 @@ class ClusterHostConfig(Resource):
                 200, {"status": "OK"})
 
     def delete(self, host_id, subkey):
-        """
-        Delete one attribute in configuration of the specified cluster host
+        """Delete one attribute of the specified cluster host.
 
         :param host_id: the unique identifier of the host
         :param subkey: the attribute name in configuration
@@ -978,11 +1011,11 @@ class ClusterHostConfig(Resource):
 
 
 class ClusterHost(Resource):
-    """List details of the cluster host by host id"""
+    """List details of the cluster host by host id."""
     ENDPOINT = '/clusterhosts'
 
     def get(self, host_id):
-        """Lists details of the specified cluster host
+        """Lists details of the specified cluster host.
 
         :param host_id: the unique identifier of the host
         """
@@ -1010,8 +1043,10 @@ class ClusterHost(Resource):
 
 @app.route("/clusterhosts", methods=['GET'])
 def list_clusterhosts():
-    """
-    Lists details of all cluster hosts, optionally filtered by some conditions.
+    """Lists details of all cluster hosts.
+
+       .. note::
+          the cluster hosts are optionally filtered by some conditions.
 
     :param hostname: the name of the host
     :param clstername: the name of the cluster
@@ -1027,9 +1062,11 @@ def list_clusterhosts():
         hosts = None
         if hostname and clustername:
             hosts = session.query(
-                ModelClusterHost).join(ModelCluster).filter(
+                ModelClusterHost
+            ).join(ModelCluster).filter(
                 ModelClusterHost.hostname == hostname,
-                ModelCluster.name == clustername).all()
+                ModelCluster.name == clustername
+            ).all()
 
         elif hostname:
             hosts = session.query(
@@ -1062,8 +1099,7 @@ def list_clusterhosts():
 
 @app.route("/adapters/<int:adapter_id>", methods=['GET'])
 def list_adapter(adapter_id):
-    """
-    Lists details of the specified adapter.
+    """Lists details of the specified adapter.
 
     :param adapter_id: the unique identifier of the adapter
     """
@@ -1103,12 +1139,15 @@ def list_adapter_roles(adapter_id):
         if not adapter_q:
             error_msg = "Adapter id=%s does not exist!" % adapter_id
             return errors.handle_not_exist(
-                errors.ObjectDoesNotExist(error_msg))
+                errors.ObjectDoesNotExist(error_msg)
+            )
 
         roles = session.query(
-            Role, Adapter).filter(
+            Role, Adapter
+        ).filter(
             Adapter.id == adapter_id,
-            Adapter.target_system == Role.target_system).all()
+            Adapter.target_system == Role.target_system
+        ).all()
 
         for role, _ in roles:
             role_res = {}
@@ -1117,8 +1156,11 @@ def list_adapter_roles(adapter_id):
             roles_list.append(role_res)
 
     return util.make_json_response(
-        200, {"status": "OK",
-              "roles": roles_list})
+        200, {
+            "status": "OK",
+            "roles": roles_list
+        }
+    )
 
 
 @app.route("/adapters", methods=['GET'])
@@ -1155,10 +1197,10 @@ def list_adapters():
 
 
 class HostInstallingProgress(Resource):
-    """Get host installing progress information"""
+    """Get host installing progress information."""
 
     def get(self, host_id):
-        """Lists progress details of a specific cluster host
+        """Lists progress details of a specific cluster host.
 
         :param host_id: the unique identifier of the host
         """
@@ -1193,10 +1235,10 @@ class HostInstallingProgress(Resource):
 
 
 class ClusterInstallingProgress(Resource):
-    """Get cluster installing progress information"""
+    """Get cluster installing progress information."""
 
     def get(self, cluster_id):
-        """Lists progress details of a specific cluster
+        """Lists progress details of a specific cluster.
 
         :param cluster_id: the unique identifier of the cluster
         """
@@ -1232,66 +1274,94 @@ class ClusterInstallingProgress(Resource):
 
 
 class DashboardLinks(Resource):
-    """Lists dashboard links"""
+    """Lists dashboard links."""
     ENDPOINT = "/dashboardlinks/"
 
     def get(self):
-        """
-        Return a list of dashboard links
+        """Return a list of dashboard links.
         """
         cluster_id = request.args.get('cluster_id', None)
         logging.info('get cluster links with cluster_id=%s', cluster_id)
         links = {}
         with database.session() as session:
-            hosts = session.query(ModelClusterHost)\
-                           .filter_by(cluster_id=cluster_id).all()
+            hosts = session.query(
+                ModelClusterHost
+            ).filter_by(cluster_id=cluster_id).all()
             if not hosts:
                 error_msg = "Cannot find hosts in cluster id=%s" % cluster_id
                 return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
+                    errors.ObjectDoesNotExist(error_msg)
+                )
 
             for host in hosts:
                 config = host.config
-                if ('has_dashboard_roles' in config and
-                        config['has_dashboard_roles']):
+                if (
+                    'has_dashboard_roles' in config and
+                    config['has_dashboard_roles']
+                ):
                     ip_addr = config.get(
-                        'networking', {}).get(
-                        'interfaces', {}).get(
-                        'management', {}).get(
-                        'ip', '')
+                        'networking', {}
+                    ).get(
+                        'interfaces', {}
+                    ).get(
+                        'management', {}
+                    ).get(
+                        'ip', ''
+                    )
                     roles = config.get('roles', [])
                     for role in roles:
                         links[role] = 'http://%s' % ip_addr
 
         return util.make_json_response(
-            200, {"status": "OK",
-                  "dashboardlinks": links}
+            200, {
+                "status": "OK",
+                "dashboardlinks": links
+            }
         )
 
 
 TABLES = {
-    'switch_config': {'name': SwitchConfig,
-                      'columns': ['id', 'ip', 'filter_port']},
-    'switch': {'name': ModelSwitch,
-               'columns': ['id', 'ip', 'credential_data']},
-    'machine': {'name': ModelMachine,
-                'columns': ['id', 'mac', 'port', 'vlan', 'switch_id']},
-    'cluster': {'name': ModelCluster,
-                'columns': ['id', 'name', 'security_config',
-                            'networking_config', 'partition_config',
-                            'adapter_id', 'state']},
-    'cluster_host': {'name': ModelClusterHost,
-                     'columns': ['id', 'cluster_id', 'hostname', 'machine_id',
-                                 'config_data', 'state']},
-    'adapter': {'name': Adapter,
-                'columns': ['id', 'name', 'os', 'target_system']},
-    'role': {'name': Role,
-             'columns': ['id', 'name', 'target_system', 'description']}
+    'switch_config': {
+        'name': SwitchConfig,
+        'columns': ['id', 'ip', 'filter_port']
+    },
+    'switch': {
+        'name': ModelSwitch,
+        'columns': ['id', 'ip', 'credential_data']
+    },
+    'machine': {
+        'name': ModelMachine,
+        'columns': ['id', 'mac', 'port', 'vlan', 'switch_id']
+    },
+    'cluster': {
+        'name': ModelCluster,
+        'columns': [
+            'id', 'name', 'security_config',
+            'networking_config', 'partition_config',
+            'adapter_id', 'state'
+        ]
+    },
+    'cluster_host': {
+        'name': ModelClusterHost,
+        'columns': [
+            'id', 'cluster_id', 'hostname', 'machine_id',
+            'config_data', 'state'
+        ]
+    },
+    'adapter': {
+        'name': Adapter,
+        'columns': ['id', 'name', 'os', 'target_system']
+    },
+    'role': {
+        'name': Role,
+        'columns': ['id', 'name', 'target_system', 'description']
+    }
 }
 
 
 @app.route("/export/<string:tname>", methods=['GET'])
 def export_csv(tname):
+    """export to csv file."""
     if tname not in TABLES:
         error_msg = "Table '%s' is not supported to export or wrong table name"
         return util.handle_invalid_usage(
@@ -1368,6 +1438,7 @@ util.add_resource(HostInstallingProgress,
 util.add_resource(ClusterInstallingProgress,
                   '/clusters/<int:cluster_id>/progress')
 util.add_resource(DashboardLinks, '/dashboardlinks')
+
 
 if __name__ == '__main__':
     app.run(debug=True)

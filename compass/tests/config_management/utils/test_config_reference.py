@@ -1,21 +1,40 @@
-"""test config reference module"""
-import unittest2
-from copy import deepcopy
+#!/usr/bin/python
+#
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from compass.utils import util
+"""test config reference module.
+
+   .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
+"""
+import copy
+import unittest2
+
 from compass.config_management.utils import config_reference
+from compass.utils import util
 
 
 class TestConfigReference(unittest2.TestCase):
-    """test config reference class"""
+    """test config reference class."""
 
     def test_init(self):
-        """test init function"""
+        """test init function."""
         config = {'1': {'2': 3, '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
         config2 = {'5': {'6': 6}}
         ref2 = config_reference.ConfigReference(config2['5'], ref, '5')
-        expected_config = deepcopy(config)
+        expected_config = copy.deepcopy(config)
         util.merge_dict(expected_config, config2)
         self.assertEqual(ref.config, expected_config)
         self.assertEqual(id(ref.config['5']), id(ref2.config))
@@ -24,7 +43,7 @@ class TestConfigReference(unittest2.TestCase):
         self.assertEqual(id(ref.config['5']), id(ref3.config))
 
     def test_ref(self):
-        """test ref function"""
+        """test ref function."""
         config = {'1': {'2': 3, '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
         self.assertRaises(KeyError, ref.ref, '')
@@ -52,7 +71,7 @@ class TestConfigReference(unittest2.TestCase):
         self.assertEqual(ref.ref('9'), subref2)
 
     def test_refs(self):
-        """test refs function"""
+        """test refs function."""
         config = {'1': {'2': 3, '10': {}}, '4': [5, 6, 7], '8': 8, '88': 88}
         ref = config_reference.ConfigReference(config)
         refkeys = ref.ref_keys('1')
@@ -66,7 +85,7 @@ class TestConfigReference(unittest2.TestCase):
         self.assertRaises(KeyError, ref.ref_keys, '')
 
     def test_contains(self):
-        """test contains function"""
+        """test contains function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
         self.assertIn('/1/2', ref)
@@ -77,7 +96,7 @@ class TestConfigReference(unittest2.TestCase):
         self.assertNotIn('/1/2/3/..', ref)
 
     def test_setitem(self):
-        """test setitem function"""
+        """test setitem function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
         ref['/1/2'] = '6'
@@ -91,7 +110,7 @@ class TestConfigReference(unittest2.TestCase):
         self.assertEqual(ref['3/6/8'], [1, 3, 5])
 
     def test_del(self):
-        """test del function"""
+        """test del function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
         del ref['/8']
@@ -103,7 +122,7 @@ class TestConfigReference(unittest2.TestCase):
         self.assertRaises(KeyError, ref.__delitem__, '9')
 
     def test_get(self):
-        """test get function"""
+        """test get function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
         self.assertEqual(ref.get('1/2'), config['1']['2'])
@@ -112,7 +131,7 @@ class TestConfigReference(unittest2.TestCase):
         self.assertNotIn('3', config['1'])
 
     def test_setdefault(self):
-        """test setdefault function"""
+        """test setdefault function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
         self.assertEqual(ref.setdefault('1/2').config, config['1']['2'])
@@ -121,9 +140,9 @@ class TestConfigReference(unittest2.TestCase):
         self.assertEqual(4, config['1']['4'])
 
     def test_update(self):
-        """test update function"""
+        """test update function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
-        expected_config = deepcopy(config)
+        expected_config = copy.deepcopy(config)
 
         ref = config_reference.ConfigReference(config)
         config2 = {'9': 9, '10': {'10': 10}}
@@ -136,7 +155,7 @@ class TestConfigReference(unittest2.TestCase):
         self.assertEqual(ref.config, 10)
 
     def test_iter(self):
-        """test iter function"""
+        """test iter function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
         keys = ref.keys()

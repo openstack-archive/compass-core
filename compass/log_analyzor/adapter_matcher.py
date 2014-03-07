@@ -1,3 +1,17 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Module to provider installing progress calculation for the adapter.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
@@ -6,7 +20,8 @@ import logging
 import re
 
 from compass.db import database
-from compass.db.model import Cluster, ClusterHost
+from compass.db.model import Cluster
+from compass.db.model import ClusterHost
 from compass.log_analyzor.line_matcher import Progress
 
 
@@ -31,17 +46,15 @@ class AdapterItemMatcher(object):
             self.__class__.__name__, self.file_matchers_,
             self.min_progress_, self.max_progress_)
 
-    def update_progress(self, hostname, clusterid, progress):
+    def update_progress(self, fullname, progress):
         """Update progress.
 
-        :param hostname: the hostname of the installing host.
-        :type hostname: str
-        :param clusterid: the cluster id of the installing host.
-        :type clusterid: int
+        :param fullname: the fullname of the installing host.
+        :type fullname: str
         :param progress: Progress instance to update.
         """
         for file_matcher in self.file_matchers_:
-            file_matcher.update_progress(hostname, clusterid, progress)
+            file_matcher.update_progress(fullname, progress)
 
 
 class OSMatcher(object):
@@ -72,9 +85,9 @@ class OSMatcher(object):
             self.name_ == os_installer_name,
             self.os_regex_.match(os_name)])
 
-    def update_progress(self, hostname, clusterid, progress):
+    def update_progress(self, fullname, progress):
         """Update progress."""
-        self.matcher_.update_progress(hostname, clusterid, progress)
+        self.matcher_.update_progress(fullname, progress)
 
 
 class PackageMatcher(object):
@@ -105,9 +118,9 @@ class PackageMatcher(object):
             self.name_ == package_installer_name,
             self.target_system_ == target_system])
 
-    def update_progress(self, hostname, clusterid, progress):
+    def update_progress(self, fullname, progress):
         """Update progress."""
-        self.matcher_.update_progress(hostname, clusterid, progress)
+        self.matcher_.update_progress(fullname, progress)
 
 
 class AdapterMatcher(object):
@@ -155,8 +168,8 @@ class AdapterMatcher(object):
         """
         session = database.current_session()
         host = session.query(
-            ClusterHost).filter_by(
-            id=hostid).first()
+            ClusterHost
+        ).filter_by(id=hostid).first()
         if not host:
             logging.error(
                 'there is no host for %s in ClusterHost', hostid)
@@ -165,10 +178,10 @@ class AdapterMatcher(object):
         if not host.state:
             logging.error('there is no related HostState for %s',
                           hostid)
-            return host.hostname, None, None
+            return host.fullname, None, None
 
         return (
-            host.hostname,
+            host.fullname,
             host.state.state,
             Progress(host.state.progress,
                      host.state.message,
@@ -310,32 +323,32 @@ class AdapterMatcher(object):
         host_progresses = {}
         with database.session():
             for hostid in hostids:
-                hostname, host_state, host_progress = (
+                fullname, host_state, host_progress = (
                     self._get_host_progress(hostid))
-                if not hostname or not host_progress:
+                if not fullname or not host_progress:
                     logging.error(
-                        'nothing to update host %s => hostname %s '
+                        'nothing to update host %s => '
                         'state %s progress %s',
-                        hostid, hostname, host_state, host_progress)
+                        fullname, host_state, host_progress)
                     continue
 
-                logging.debug('got host %s hostname %s state %s progress %s',
-                              hostid, hostname, host_state, host_progress)
+                logging.debug('got host %s state %s progress %s',
+                              fullname, host_state, host_progress)
                 host_progresses[hostid] = (
-                    hostname, host_state, host_progress)
+                    fullname, host_state, host_progress)
 
         for hostid, host_value in host_progresses.items():
-            hostname, host_state, host_progress = host_value
+            fullname, host_state, host_progress = host_value
             if host_state == 'INSTALLING' and host_progress.progress < 1.0:
                 self.os_matcher_.update_progress(
-                    hostname, clusterid, host_progress)
+                    fullname, host_progress)
                 self.package_matcher_.update_progress(
-                    hostname, clusterid, host_progress)
+                    fullname, host_progress)
             else:
                 logging.error(
                     'there is no need to update host %s '
-                    'progress: hostname %s state %s progress %s',
-                    hostid, hostname, host_state, host_progress)
+                    'progress: state %s progress %s',
+                    fullname, host_state, host_progress)
 
         with database.session():
             for hostid in hostids:

@@ -6,6 +6,9 @@ fi
 /opt/compass/bin/manage_db.py createdb
 /opt/compass/bin/manage_db.py sync_switch_configs 
 /opt/compass/bin/manage_db.py sync_from_installers
-service compassd restart
 service httpd restart
 service rsyslog restart
+service redis restart
+redis-cli flushall
+service compassd restart
+

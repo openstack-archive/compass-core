@@ -1,11 +1,25 @@
+# Copyright 2014 Huawei Technologies Co. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """ConfigMerger Callbacks module.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
+import copy
 import itertools
 import logging
-from copy import deepcopy
-from netaddr import IPSet, IPRange
+import netaddr
 
 from compass.utils import util
 
@@ -58,7 +72,7 @@ def _get_bundled_exclusives(exclusives, bundle_mapping):
 
 
 def _get_max(lhs, rhs):
-    """Get max value"""
+    """Get max value."""
     if lhs < 0:
         return lhs
 
@@ -69,7 +83,7 @@ def _get_max(lhs, rhs):
 
 
 def _get_min(lhs, rhs):
-    """Get min value"""
+    """Get min value."""
     if lhs < 0:
         return rhs
 
@@ -77,6 +91,14 @@ def _get_min(lhs, rhs):
         return lhs
 
     return min(lhs, rhs)
+
+
+def _dec_max_min(value):
+    """dec max and min value."""
+    if value > 0:
+        return value - 1
+    else:
+        return value
 
 
 def _get_bundled_max_mins(maxs, mins, default_max, default_min, role_bundles):
@@ -119,10 +141,7 @@ def _get_bundled_max_mins(maxs, mins, default_max, default_min, role_bundles):
 
 def _update_assigned_roles(lower_refs, to_key, bundle_mapping,
                            role_bundles, bundled_maxs, bundled_mins):
-    """
-    Update bundled maxs/mins and get assign roles to each host,
-    unassigned host.
-    """
+    """Update bundled maxs/mins and assign roles to each unassigned host."""
     lower_roles = {}
     unassigned_hosts = []
     for lower_key, lower_ref in lower_refs.items():
@@ -135,8 +154,11 @@ def _update_assigned_roles(lower_refs, to_key, bundle_mapping,
                 bundled_roles.add(bundled_role)
                 roles |= set(role_bundles[bundled_role])
         for bundled_role in bundled_roles:
-            bundled_maxs[bundled_role] -= 1
-            bundled_mins[bundled_role] -= 1
+            bundled_maxs[bundled_role] = _dec_max_min(
+                bundled_maxs[bundled_role])
+            bundled_mins[bundled_role] = _dec_max_min(
+                bundled_mins[bundled_role])
+
         lower_roles[lower_key] = list(roles)
         if not roles:
             unassigned_hosts.append(lower_key)
@@ -158,8 +180,10 @@ def _update_exclusive_roles(bundled_exclusives, lower_roles,
                 raise ValueError('no enough unassigned hosts for exlusive %s',
                                  bundled_exclusive)
             host = unassigned_hosts.pop(0)
-            bundled_mins[bundled_exclusive] -= 1
-            bundled_maxs[bundled_exclusive] -= 1
+            bundled_mins[bundled_exclusive] = _dec_max_min(
+                bundled_mins[bundled_exclusive])
+            bundled_maxs[bundled_exclusive] = _dec_max_min(
+                bundled_maxs[bundled_exclusive])
             lower_roles[host] = list(role_bundles[bundled_exclusive])
 
         del role_bundles[bundled_exclusive]
@@ -174,7 +198,7 @@ def _update_exclusive_roles(bundled_exclusives, lower_roles,
 def _assign_roles_by_mins(role_bundles, lower_roles, unassigned_hosts,
                           bundled_maxs, bundled_mins):
     """Assign roles to hosts by min restriction."""
-    available_hosts = deepcopy(unassigned_hosts)
+    available_hosts = copy.deepcopy(unassigned_hosts)
     for bundled_role, roles in role_bundles.items():
         while bundled_mins[bundled_role] > 0:
             if not available_hosts:
@@ -186,8 +210,10 @@ def _assign_roles_by_mins(role_bundles, lower_roles, unassigned_hosts,
             if host in unassigned_hosts:
                 unassigned_hosts.remove(host)
 
-            bundled_mins[bundled_role] -= 1
-            bundled_maxs[bundled_role] -= 1
+            bundled_mins[bundled_role] = _dec_max_min(
+                bundled_mins[bundled_role])
+            bundled_maxs[bundled_role] = _dec_max_min(
+                bundled_maxs[bundled_role])
             lower_roles[host] = list(roles)
 
     logging.debug('assigned roles after assigning mins: %s', lower_roles)
@@ -200,13 +226,14 @@ def _assign_roles_by_maxs(role_bundles, lower_roles, unassigned_hosts,
                           bundled_maxs):
     """Assign roles to host by max restriction."""
     available_lists = []
-    default_roles = []
+    default_roles_lists = []
     for bundled_role in role_bundles.keys():
         if bundled_maxs[bundled_role] > 0:
             available_lists.append(
                 [bundled_role] * bundled_maxs[bundled_role])
-        else:
-            default_roles.append(bundled_role)
+        elif bundled_maxs[bundled_role] < 0:
+            default_roles_lists.append(
+                [bundled_role] * (-bundled_maxs[bundled_role]))
 
     available_list = util.flat_lists_with_possibility(available_lists)
 
@@ -221,6 +248,9 @@ def _assign_roles_by_maxs(role_bundles, lower_roles, unassigned_hosts,
     logging.debug('unassigned_hosts after assigning maxs: %s',
                   unassigned_hosts)
 
+    default_roles = util.flat_lists_with_possibility(
+        default_roles_lists)
+
     if default_roles:
         default_iter = itertools.cycle(default_roles)
         while unassigned_hosts:
@@ -230,6 +260,22 @@ def _assign_roles_by_maxs(role_bundles, lower_roles, unassigned_hosts,
 
     logging.debug('assigned roles are %s', lower_roles)
     logging.debug('unassigned hosts: %s', unassigned_hosts)
+
+
+def _sort_roles(lower_roles, roles):
+    """Sort roles with the same order as in all roles."""
+    for lower_key, lower_value in lower_roles.items():
+        updated_roles = []
+        for role in roles:
+            if role in lower_value:
+                updated_roles.append(role)
+
+        for role in lower_value:
+            if role not in updated_roles:
+                logging.debug('found role %s not in roles %s', role, roles)
+                updated_roles.append(role)
+
+        lower_roles[lower_key] = updated_roles
 
 
 def assign_roles(_upper_ref, _from_key, lower_refs, to_key,
@@ -258,6 +304,7 @@ def assign_roles(_upper_ref, _from_key, lower_refs, to_key,
     _assign_roles_by_maxs(
         role_bundles, lower_roles, unassigned_hosts,
         bundled_maxs)
+    _sort_roles(lower_roles, roles)
 
     return lower_roles
 
@@ -267,7 +314,7 @@ def assign_roles_by_host_numbers(upper_ref, from_key, lower_refs, to_key,
                                  **_kwargs):
     """Assign roles by role assign policy."""
     host_numbers = str(len(lower_refs))
-    policy_kwargs = deepcopy(default)
+    policy_kwargs = copy.deepcopy(default)
     if host_numbers in policy_by_host_numbers:
         util.merge_dict(policy_kwargs, policy_by_host_numbers[host_numbers])
     else:
@@ -305,7 +352,7 @@ def assign_ips(_upper_ref, _from_key, lower_refs, to_key,
         return {}
     host_ips = {}
     unassigned_hosts = []
-    ips = IPSet(IPRange(ip_start, ip_end))
+    ips = netaddr.IPSet(netaddr.IPRange(ip_start, ip_end))
     for lower_key, lower_ref in lower_refs.items():
         ip_addr = lower_ref.get(to_key, '')
         if ip_addr:
@@ -334,7 +381,7 @@ def assign_from_pattern(_upper_ref, _from_key, lower_refs, to_key,
         upper_configs[key] = kwargs[key]
 
     for lower_key, _ in lower_refs.items():
-        group = deepcopy(upper_configs)
+        group = copy.deepcopy(upper_configs)
         for key in lower_keys:
             group[key] = kwargs[key][lower_key]
 
@@ -353,7 +400,7 @@ def assign_noproxy(_upper_ref, _from_key, lower_refs,
                    noproxy_pattern='',
                    hostnames={}, ips={}, **_kwargs):
     """Assign no proxy to hosts."""
-    no_proxy_list = deepcopy(default)
+    no_proxy_list = copy.deepcopy(default)
 
     for lower_key, _ in lower_refs.items():
         mapping = {
@@ -368,7 +415,7 @@ def assign_noproxy(_upper_ref, _from_key, lower_refs,
                           lower_key, to_key, noproxy_pattern, mapping)
             raise error
 
-    no_proxy = ','.join(no_proxy_list)
+    no_proxy = ','.join([no_proxy for no_proxy in no_proxy_list if no_proxy])
     host_no_proxy = {}
     for lower_key, _ in lower_refs.items():
         host_no_proxy[lower_key] = no_proxy

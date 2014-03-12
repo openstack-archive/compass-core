@@ -67,6 +67,13 @@ class MethodNotAllowed(Exception):
         return repr(self.message)
 
 
+class InvalidUserInfo(Exception):
+    """Define the Exception for incorrect user information."""
+    def __init__(self, message):
+        super(InvalidUserInfo, self).__init__(message)
+        self.message = message
+
+
 @app.errorhandler(ObjectDoesNotExist)
 def handle_not_exist(error, failed_objs=None):
     """Handler of ObjectDoesNotExist Exception."""
@@ -128,3 +135,11 @@ def handle_not_allowed_method(error):
         "message": "The method is not allowed to use"
     }
     return util.make_json_response(405, message)
+
+
+@app.errorhandler(InvalidUserInfo)
+def handle_invalid_user_info(error):
+    """Handler of InvalidUserInfo Exception."""
+    message = {"status": "Incorrect User Info",
+               "message": error.message}
+    return util.make_json_response(401, message)

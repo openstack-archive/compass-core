@@ -76,12 +76,16 @@ setup(
     long_description='Open Deployment System for zero touch installation',
     author='Compass Dev Group, Huawei Cloud',
     author_email='shuo.yang@huawei.com',
-    url='https://github.com/huawei-cloud/compass',
+    url='https://github.com/stackforge/compass-core',
     download_url='',
 
     # dependency
     install_requires=REQUIREMENTS,
     packages=find_packages(exclude=['compass.tests']),
+    include_package_data=True,
+    #TODO login UI will be replaced by compass's own templates later
+    package_data={'compass': ['templates/*.jinja', 'static/js/*.js',
+                              'static/css/*.css', 'static/img/*.png']},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',

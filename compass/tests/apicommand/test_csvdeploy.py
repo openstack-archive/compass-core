@@ -86,8 +86,8 @@ class ApiTestCase(unittest2.TestCase):
         # Initial database
         try:
             database.init(database_url)
-        except Exception as e:
-            print "======>", e
+        except Exception as error:
+            print "Exception when initializing database: %s" % error
 
     def tearDown(self):
         super(ApiTestCase, self).tearDown()
@@ -126,6 +126,7 @@ class TestAPICommand(ApiTestCase):
         """test start deploy from csv."""
         Client.deploy_hosts = mock.Mock(
             return_value=(202, self.deploy_return_val))
+        csvdeploy.write_progress_to_file = mock.Mock()
         url = "http://127.0.0.1:%d" % self.port
         csvdeploy.start(self.CSV_IMPORT_DIR, url)
         clusters = csvdeploy.get_csv('cluster.csv',

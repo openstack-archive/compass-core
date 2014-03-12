@@ -1,0 +1,12 @@
+{% extends 'layout.jinja' %}
+
+{% block title %}Main Page{% endblock %}
+{% block content %}
+<p>
+{% if current_user.is_anonymous() %}
+You are not logged in.
+{% else %}
+Hi, <strong>{{ current_user.email }}</strong>!
+{% endif %}
+</p>
+{% endblock %}

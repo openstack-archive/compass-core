@@ -29,6 +29,9 @@ ENGINE = create_engine(setting.SQLALCHEMY_DATABASE_URI, convert_unicode=True)
 SESSION = sessionmaker(autocommit=False, autoflush=False)
 SESSION.configure(bind=ENGINE)
 SCOPED_SESSION = scoped_session(SESSION)
+
+model.BASE.query = SCOPED_SESSION.query_property()
+
 SESSION_HOLDER = local()
 
 model.BASE.query = SCOPED_SESSION.query_property()
@@ -99,6 +102,11 @@ def current_session():
 def create_db():
     """Create database."""
     model.BASE.metadata.create_all(bind=ENGINE)
+    with session() as _s:
+        # Initialize default user
+        user = model.User(email='admin@abc.com', password='admin')
+        logging.info('Init user: %s, %s' % (user.email, user.get_password()))
+        _s.add(user)
 
 
 def drop_db():

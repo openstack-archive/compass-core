@@ -29,7 +29,7 @@ API = Api(app)
 def make_json_response(status_code, data):
     """Wrap json format to the reponse object."""
 
-    result = json.dumps(data, indent=4)
+    result = json.dumps(data, indent=4) + '\r\n'
     resp = make_response(result, status_code)
     resp.headers['Content-type'] = 'application/json'
     return resp

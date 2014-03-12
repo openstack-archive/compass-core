@@ -88,6 +88,10 @@ def start(csv_dir, compass_url):
         p.join()
 
     progress_file = '/'.join((csv_dir, 'progress.csv'))
+    write_progress_to_file(results_q, progress_file)
+
+
+def write_progress_to_file(results_q, progress_file):
     cluster_headers = ['cluster_id', 'progress_url']
     host_headers = ['host_id', 'progress_url']
 

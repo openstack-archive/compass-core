@@ -2,6 +2,7 @@ flask
 flask-script
 flask-restful
 flask-sqlalchemy
+flask-login
 celery
 netaddr
 paramiko==1.7.5

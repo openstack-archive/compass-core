@@ -3,29 +3,36 @@
 
 copygit2dir()
 {
-    repo=$1
+    project=$1
     destdir=$2
+    if [ -z "$REPO_URL" ];then
+        git_repo=http://git.openstack.org/stackforge/$project
+        gerrit_repo=https://review.openstack.org/stackforge/$project
+    else
+        git_repo=$REPO_URL/stackforge/$project
+        gerrit_repo=$REPO_URL/stackforge/$project
+    fi
     if [ -d $destdir ];then
         echo "$destdir exists"
         cd $destdir
-        git remote set-url origin $repo
+        git remote set-url origin $git_repo
         git remote update
         git reset --hard
         git clean -x -f
         git checkout master
         git reset --hard remotes/origin/master
         if [[ -n "$GERRIT_REFSPEC" ]];then
-            git fetch origin $GERRIT_REFSPEC && git checkout FETCH_HEAD
+            git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
         fi
         git clean -x -f
     else
         echo "create $destdir"
         mkdir -p $destdir
-        git clone $repo $destdir
+        git clone $git_repo $destdir
         if [[ -n "$GERRIT_REFSPEC" ]];then
             # project=$(echo $repo|rev|cut -d '/' -f 1|rev)
             cd $destdir
-            git fetch $repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
+            git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
         fi
     fi
     cd $SCRIPT_DIR
@@ -109,8 +116,8 @@ fi
 
 cd $SCRIPT_DIR
 if [ "$source" != "local" ]; then
-  copygit2dir $WEB_SOURCE $WEB_HOME
-  copygit2dir $ADAPTER_SOURCE $ADAPTER_HOME
+  copygit2dir compass-web $WEB_HOME
+  copygit2dir compass-adapters $ADAPTER_HOME
 else 
   copylocal2dir $WEB_SOURCE $WEB_HOME
   copylocal2dir $ADAPTER_SOURCE $ADAPTER_HOME

@@ -13,11 +13,12 @@
 # limitations under the License.
 
 """database model."""
+from datetime import datetime
+from hashlib import md5
 import logging
 import simplejson as json
 import uuid
 
-from datetime import datetime
 from sqlalchemy import Column, ColumnDefault, Integer, String
 from sqlalchemy import Float, Enum, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy import UniqueConstraint
@@ -27,8 +28,51 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 from compass.utils import util
 
+from flask.ext.login import UserMixin
+from itsdangerous import URLSafeTimedSerializer
 
 BASE = declarative_base()
+#TODO(grace) SECRET_KEY should be generated when installing compass
+#and save to a config file or DB
+SECRET_KEY = "abcd"
+
+#This is used for generating a token by user's ID and
+#decode the ID from this token
+login_serializer = URLSafeTimedSerializer(SECRET_KEY)
+
+
+class User(BASE, UserMixin):
+    """User table."""
+    __tablename__ = 'user'
+    id = Column(Integer, primary_key=True)
+    email = Column(String(80), unique=True)
+    password = Column(String(225))
+    active = Column(Boolean, default=True)
+
+    def __init__(self, email, password, **kwargs):
+        self.email = email
+        self.password = self._set_password(password)
+
+    def __repr__(self):
+        return '<User name: %s>' % self.email
+
+    def _set_password(self, password):
+        return self._hash_password(password)
+
+    def get_password(self):
+        return self.password
+
+    def valid_password(self, password):
+        return self.password == self._hash_password(password)
+
+    def get_auth_token(self):
+        return login_serializer.dumps(self.id)
+
+    def is_active(self):
+        return self.active
+
+    def _hash_password(self, password):
+        return md5(password).hexdigest()
 
 
 class SwitchConfig(BASE):

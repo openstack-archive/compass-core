@@ -2,6 +2,8 @@ flask
 flask-script
 flask-restful
 flask-sqlalchemy
+flask-login
+flask-security
 celery
 netaddr
 paramiko

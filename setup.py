@@ -82,6 +82,8 @@ setup(
     # dependency
     install_requires=REQUIREMENTS,
     packages=find_packages(exclude=['compass.tests']),
+    include_package_data=True,
+    package_data = {'': ['compass/api/templates/*.jinja', 'comopass/api/static/js/*.js', '/compass/api/static/css/*.css', 'compass/api/static/img/*.png']},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',

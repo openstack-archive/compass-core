@@ -16,8 +16,9 @@
 import logging
 import simplejson as json
 import uuid
-
 from datetime import datetime
+import md5
+
 from sqlalchemy import Column, ColumnDefault, Integer, String
 from sqlalchemy import Float, Enum, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy import UniqueConstraint
@@ -27,8 +28,54 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 from compass.utils import util
 
+from flask.ext.login import UserMixin
+from itsdangerous import URLSafeTimedSerializer
 
 BASE = declarative_base()
+SECRET_KEY = "abcd"
+login_serializer = URLSafeTimedSerializer(SECRET_KEY)
+
+
+class User(BASE, UserMixin):
+    """ User table
+    """
+    __tablename__ = 'user'
+    id = Column(Integer, primary_key=True)
+    email = Column(String(80), unique=True)
+    password = Column(String(225))
+    active = Column(Boolean, default=True)
+    confirmed_at = Column(DateTime())
+
+    def __init__(self, email, password, **kwargs):
+        self.email = email
+        self.password = self._set_passowrd(password)
+
+    def __repr__(self):
+        return '<User name: %s>' % self.email
+
+    def _set_passowrd(self, password):
+        return self._hash_password(password)
+
+    def get_password(self):
+        return self.password
+
+    def valid_password(self, password, is_hashed=False):
+        if not is_hashed:
+            password = self._hash_password(password)
+        if self.password == password:
+            return True
+        else:
+            return False
+
+    def get_auth_token(self):
+        data = (self.id, self.password)
+        return login_serializer.dumps(data)
+
+    def is_active(self):
+        return self.active
+
+    def _hash_password(self, password):
+        return md5.new(password).hexdigest()
 
 
 class SwitchConfig(BASE):

@@ -39,6 +39,7 @@ from compass.db.model import Machine
 from compass.db.model import Role
 from compass.db.model import Switch
 from compass.db.model import SwitchConfig
+from compass.db.model import User
 from compass.tasks.client import celery
 from compass.utils import flags
 from compass.utils import logsetting
@@ -93,6 +94,7 @@ TABLE_MAPPING = {
     'cluster': Cluster,
     'clusterhost': ClusterHost,
     'logprogressinghistory': LogProgressingHistory,
+    'user': User
 }
 
 

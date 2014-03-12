@@ -17,15 +17,21 @@ import logging
 import netaddr
 import re
 import simplejson as json
-
-from flask.ext.restful import Resource
 from flask import request
+from flask import redirect
+from flask import url_for
+from flask import flash
+from flask import session as app_session
+from flask import render_template
+from flask.ext.restful import Resource
 from sqlalchemy.sql import and_
 from sqlalchemy.sql import or_
 
 from compass.api import app
 from compass.api import errors
 from compass.api import util
+from compass.api import auth
+from compass.api import login_manager
 from compass.db import database
 from compass.db.model import Adapter
 from compass.db.model import Cluster as ModelCluster
@@ -36,7 +42,126 @@ from compass.db.model import Machine as ModelMachine
 from compass.db.model import Role
 from compass.db.model import Switch as ModelSwitch
 from compass.db.model import SwitchConfig
+from compass.db.model import User as ModelUser
 from compass.tasks.client import celery
+
+from flask.ext.login import login_user
+from flask.ext.login import login_required
+from flask.ext.login import current_user
+from flask.ext.login import logout_user
+
+from flask.ext.wtf import Form
+from wtforms.fields import TextField
+from wtforms.fields import PasswordField
+from wtforms.fields import BooleanField
+from wtforms.validators import Required
+
+
+@login_manager.header_loader
+def load_header(token):
+    """Return a user object from token"""
+
+    max_age = app.config['REMEMBER_COOKIE_DURATION'].total_seconds()
+    user_info = auth.get_user_info_from_token(token, max_age)
+    if not user_info:
+        logging.info("No user can be found from the token!")
+        return None
+
+    user_id, password = user_info
+    return auth.authenticate_user(user_id=user_id, pwd=password)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user from user ID"""
+
+    return ModelUser.query.get(user_id)
+
+
+@app.route('/restricted')
+def restricted():
+    return render_template('restricted.jinja')
+
+
+@app.errorhandler(403)
+def forbidden_403(exception):
+    """Unathenticated user page"""
+    return render_template('forbidden.jinja'), 403
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    """User logout"""
+    logout_user()
+    flash('You have logged out!')
+    return redirect(url_for('index'))
+
+
+@app.route('/')
+def index():
+    """Index page"""
+    return render_template('index.jinja')
+
+
+@app.route('/token', methods=['POST'])
+def get_token():
+    """Get token from email and passowrd after user authentication"""
+
+    data = json.loads(request.data)
+    email = data['email']
+    password = data['password']
+
+    user = auth.authenticate_user(email=email, pwd=password, pwd_hashed=False)
+    if not user:
+        error_msg = "User cannot be found or email and password do not match!"
+        return errors.handle_invalid_user_info(
+            errors.ObjectDoesNotExist(error_msg)
+        )
+
+    token = user.get_auth_token()
+    login_user(user)
+
+    return util.make_json_response(
+        200, {"status": "OK", "token": token}
+    )
+
+
+class LoginForm(Form):
+    """Define login form"""
+    email = TextField('Email', validators=[Required()])
+    password = PasswordField('Password', validators=[Required()])
+    remember = BooleanField('Remember me', default=False)
+
+
+@app.route("/login", methods=['GET', 'POST'])
+def login():
+    """User login"""
+    if current_user.is_authenticated():
+        return redirect(url_for('index'))
+    else:
+        form = LoginForm()
+        if form.validate_on_submit():
+            email = form.email.data
+            password = form.password.data
+
+            user = auth.authenticate_user(email=email,
+                                          pwd=password,
+                                          pwd_hashed=False)
+            if not user:
+                flash('Wrong username or password!', 'error')
+                return render_template('login.jinja', form=form)
+
+            if login_user(user, remember=form.remember.data):
+                # Enable session expiration if user didnot choose to be
+                # remembered.
+                app_session.permanent = not form.remember.data
+                flash('Logged in successfully!', 'success')
+                return redirect(request.args.get('next') or url_for('index'))
+            else:
+                flash('This username is disabled!', 'error')
+
+        return render_template('login.jinja', form=form)
 
 
 class SwitchList(Resource):
@@ -594,9 +719,7 @@ class Cluster(Resource):
 
             if is_valid:
                 column = resources[resource]['column']
-                session.query(
-                    ModelCluster
-                ).filter_by(id=cluster_id).update(
+                session.query(ModelCluster).filter_by(id=cluster_id).update(
                     {column: json.dumps(value)}
                 )
             else:
@@ -1320,6 +1443,35 @@ class DashboardLinks(Resource):
         )
 
 
+class User(Resource):
+    ENDPOINT = '/users'
+
+    @login_required
+    def get(self, user_id):
+        """ Get user's information for specified ID
+        """
+        resp = {}
+        with database.session() as session:
+            user = session.query(ModelUser).filter_by(id=user_id).first()
+
+            if not user:
+                error_msg = "Cannot find the User which id is %s" % user_id
+                return errors.handle_not_exist(
+                    errors.ObjectDoesNotExist(error_msg)
+                    )
+            resp['id'] = user_id
+            resp['email'] = user.email
+            resp['link'] = {
+                "href": "/".join((self.ENDPOINT, str(user_id))),
+                "rel": "self"
+            }
+
+        return util.make_json_response(
+            200, {"status": "OK",
+                  "user": resp}
+            )
+
+
 TABLES = {
     'switch_config': {
         'name': SwitchConfig,
@@ -1359,6 +1511,7 @@ TABLES = {
 }
 
 
+@login_required
 @app.route("/export/<string:tname>", methods=['GET'])
 def export_csv(tname):
     """export to csv file."""
@@ -1438,6 +1591,9 @@ util.add_resource(HostInstallingProgress,
 util.add_resource(ClusterInstallingProgress,
                   '/clusters/<int:cluster_id>/progress')
 util.add_resource(DashboardLinks, '/dashboardlinks')
+util.add_resource(User,
+                  '/users',
+                  '/users/<int:user_id>')
 
 
 if __name__ == '__main__':

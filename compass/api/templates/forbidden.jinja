@@ -1,0 +1,10 @@
+{% extends 'layout.jinja' %}
+
+{% block title %}403 Forbidden{% endblock %}
+{% block content %}
+<h1>403 Forbidden</h1>
+<p class=text-error>
+Access to this page is forbidden for user
+<strong>{{ current_user.email }}</strong>.
+</p>
+{% endblock %}

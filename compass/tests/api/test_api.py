@@ -23,7 +23,6 @@ import os
 import simplejson as json
 import unittest2
 
-
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
@@ -32,6 +31,7 @@ reload(setting)
 
 
 from compass.api import app
+from compass.api import login_manager
 from compass.db import database
 from compass.db.model import Adapter
 from compass.db.model import Cluster
@@ -45,6 +45,10 @@ from compass.db.model import SwitchConfig
 from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import util
+
+app.config['TESTING'] = True
+app.config['WTF_CSRF_ENABLED'] = False
+login_manager.init_app(app)
 
 
 class ApiTestCase(unittest2.TestCase):
@@ -61,6 +65,7 @@ class ApiTestCase(unittest2.TestCase):
         logsetting.init()
         database.init(self.DATABASE_URL)
         database.create_db()
+
         self.test_client = app.test_client()
 
         # We do not want to send a real task as our test environment
@@ -832,21 +837,15 @@ class ClusterHostAPITest(ApiTestCase):
         return_value = self.test_client.get(url)
         self.assertEqual(200, return_value.status_code)
         config = json.loads(return_value.get_data())['config']
+
         expected_config = copy.deepcopy(test_config_data)
         expected_config['hostid'] = 1
         expected_config['hostname'] = 'host_01'
         expected_config['clusterid'] = 1
         expected_config['clustername'] = 'cluster_01'
         expected_config['fullname'] = 'host_01.1'
-        expected_config[
-            'networking'
-        ][
-            'interfaces'
-        ][
-            'management'
-        ][
-            'mac'
-        ] = "00:27:88:0c:01"
+        expected_config['networking']['interfaces']['management'][
+            'mac'] = "00:27:88:0c:01"
         expected_config['switch_port'] = ''
         expected_config['switch_ip'] = '192.168.1.1'
         expected_config['vlan'] = 0
@@ -856,24 +855,8 @@ class ClusterHostAPITest(ApiTestCase):
         """test put clusterhost config."""
         config = copy.deepcopy(self.test_config_data)
         config['roles'] = ['base']
-        config[
-            'networking'
-        ][
-            'interfaces'
-        ][
-            'management'
-        ][
-            'ip'
-        ] = '192.168.1.2'
-        config[
-            'networking'
-        ][
-            'interfaces'
-        ][
-            'tenant'
-        ][
-            'ip'
-        ] = '10.12.1.2'
+        config['networking']['interfaces']['management']['ip'] = '192.168.1.2'
+        config['networking']['interfaces']['tenant']['ip'] = '10.12.1.2'
 
         # 1. Try to put a config of the cluster host which does not exist
         url = '/clusterhosts/1000/config'
@@ -1593,6 +1576,28 @@ class TestExport(ApiTestCase):
             for export_row, expected_row in zip(resp_data, expected_data):
                 self.assertDictEqual(export_row, expected_row)
                 self.maxDiff = None
+
+
+class TestUser(ApiTestCase):
+    def setUp(self):
+        super(TestUser, self).setUp()
+
+    def tearDown(self):
+        super(TestUser, self).tearDown()
+
+    def test_get_user_by_id(self):
+        # Success to get a user
+        url = "/users/1"
+        return_value = self.test_client.get(url)
+
+        data = json.loads(return_value.get_data())
+        self.assertEqual(1, data['user']['id'])
+
+        # Try to get a nonexisting user
+        url = "/users/1000"
+        return_value = self.test_client.get(url)
+        self.assertEqual(404, return_value.status_code)
+
 
 if __name__ == '__main__':
     flags.init()

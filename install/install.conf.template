@@ -2,7 +2,7 @@
 # Config File for Compass Installer #
 #####################################
 # REPO_URL indicates the source where to download compass-web and compass-adapters from
-export REPO_URL=http://git.openstack.org
+export REPO_URL=https://review.openstack.org
 
 # OS_INSTALLER indicates the tool for OS provisioning, default is 'cobbler'.
 export OS_INSTALLER=cobbler

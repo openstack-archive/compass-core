@@ -18,7 +18,6 @@
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
-import functools
 import os
 import unittest2
 
@@ -30,10 +29,360 @@ from compass.utils import setting_wrapper as setting
 reload(setting)
 
 
+from compass.config_management.utils import config_reference
 from compass.config_management.utils import config_translator
-from compass.config_management.utils import config_translator_callbacks
 from compass.utils import flags
 from compass.utils import logsetting
+
+
+class TestKeyTranslator(unittest2.TestCase):
+    """test key translator class."""
+
+    def setUp(self):
+        super(TestKeyTranslator, self).setUp()
+        logsetting.init()
+
+    def tearDown(self):
+        super(TestKeyTranslator, self).tearDown()
+
+    def test_init(self):
+        # translated_keys should be callback or list of string or callback.
+        config_translator.KeyTranslator(
+            translated_keys=['/a/b/c', '/d/e'])
+        config_translator.KeyTranslator(
+            translated_keys=[u'/a/b/c', u'/d/e'])
+        config_translator.KeyTranslator(
+            translated_keys=(lambda sub_ref, ref_key: []))
+        config_translator.KeyTranslator(
+            translated_keys=[lambda sub_ref, ref_key: '/d/e'])
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys='/a/b/c')
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys={'/a/b/c': 'd/e'})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=[5, 6, 7])
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=[('5', '6')])
+
+    def test_init_translated_keys_noasterrisks(self):
+        # the key in translated key should not contain '*'.
+        self.assertRaises(
+            KeyError, config_translator.KeyTranslator,
+            translated_keys=['/a/*/b'])
+
+    def test_init_from_keys(self):
+        # the from keys should be dict of string to string.
+        config_translator.KeyTranslator(
+            translated_keys=['/a/b/c', '/d/e'], from_keys={'m': '/m/n'})
+        config_translator.KeyTranslator(
+            translated_keys=['/a/b/c', '/d/e'], from_keys={u'm': u'/m/n'})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_keys=['m'])
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_keys='m')
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_keys={5: 'm'})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_keys={'m': 5})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_keys={'m': ['/m/n']})
+
+    def test_init_from_keys_noasterisks(self):
+        # the value of the from_keys should not contain '*'.
+        self.assertRaises(
+            KeyError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_keys={'m': '/m/*/n'})
+
+    def test_init_from_values(self):
+        # from_values should be dict of string to string.
+        config_translator.KeyTranslator(
+            translated_keys=['/a/b/c'], from_values={'m': '/m'})
+        config_translator.KeyTranslator(
+            translated_keys=['/a/b/c'], from_values={u'm': u'/m'})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_values=['m'])
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_values='m')
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_values={5: 'm'})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_keys={'m': 5})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_values={'m': ['/m/n']})
+
+    def test_init_from_values_noasterisks(self):
+        # the value of the from_values should not contain '*'.
+        self.assertRaises(
+            KeyError, config_translator.KeyTranslator,
+            translated_keys=['/a/b/c'], from_values={'m': '/m/*/n'})
+
+    def test_init_override_conditions(self):
+        # override_conditions should be dict of string to string
+        config_translator.KeyTranslator(
+            translated_keys=['1/2/3', '/4/5/6'],
+            override_conditions={'hello': 'hi'})
+        config_translator.KeyTranslator(
+            translated_keys=['1/2/3', '/4/5/6'],
+            override_conditions={u'hello': u'hi'})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['1/2/3', '/4/5/6'],
+            override_conditions=['hello', 'hi'])
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['1/2/3', '/4/5/6'],
+            override_conditions='hello')
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['1/2/3', '/4/5/6'],
+            override_conditions={5: 'hi'})
+        self.assertRaises(
+            TypeError, config_translator.KeyTranslator,
+            translated_keys=['1/2/3', '/4/5/6'],
+            override_conditions={'hello': 5})
+
+    def test_init_override_conditions_noasterisks(self):
+        # the value in override_conditions should not contains '*'.
+        self.assertRaises(
+            KeyError, config_translator.KeyTranslator,
+            translated_keys=['1/2/3', '/4/5/6'],
+            override_conditions={'hello': 'hi*hi'})
+
+    def test_translate(self):
+        # test get translated keys.
+        # only keys in translated_keys is set in translted config.
+        config = {
+            'key1': 'abc',
+            'key2': 'bcd',
+            'key3': 'mnq'
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {}
+        translated_ref = config_reference.ConfigReference(translated_config)
+        translator = config_translator.KeyTranslator(
+            translated_keys=['key2', 'key3'])
+        translator.translate(ref, 'key1', translated_ref)
+        self.assertEqual(translated_config, {'key2': 'abc', 'key3': 'abc'})
+
+    def test_translate_translated_keys_callback(self):
+        # translated_keys can be callback to dynamically
+        # get the translated_keys.
+        config = {
+            'key1': 'abc',
+            'key2': 'bcd',
+            'key3': 'mnq'
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {}
+        translated_ref = config_reference.ConfigReference(translated_config)
+        translator = config_translator.KeyTranslator(
+            translated_keys=(
+                lambda sub_ref, ref_key: ['m%s' % ref_key, 'n%s' % ref_key]))
+        translator.translate(ref, 'key*', translated_ref)
+        self.assertEqual(
+            translated_config, {
+                'mkey1': 'abc', 'mkey2': 'bcd', 'mkey3': 'mnq',
+                'nkey1': 'abc', 'nkey2': 'bcd', 'nkey3': 'mnq',
+            }
+        )
+
+    def test_translate_translated_keys_each_key_callback(self):
+        # each translated key can be a callback to dynamically
+        # get the translated key.
+        config = {
+            'key1': 'abc',
+            'key2': 'bcd',
+            'key3': 'mnq'
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {}
+        translated_ref = config_reference.ConfigReference(translated_config)
+        translator = config_translator.KeyTranslator(
+            translated_keys=['key1', (lambda sub_ref, ref_key: 'mkey2')])
+        translator.translate(ref, 'key1', translated_ref)
+        self.assertEqual(
+            translated_config, {'key1': 'abc', 'mkey2': 'abc'})
+
+    def test_translate_from_keys(self):
+        # generate translated_keys from some keys from config.
+        config = {
+            'key': 'abc',
+            'key_suffix': 'A',
+            'key_prefix': 'B'
+        }
+
+        def _generate_key(sub_ref, ref_key, prefix='', suffix=''):
+            return '%s%s%s' % (prefix, ref_key, suffix)
+
+        def _generate_keys(sub_ref, ref_key, prefix='', suffix=''):
+            return ['%s%s%s' % (prefix, ref_key, suffix)]
+
+        ref = config_reference.ConfigReference(config)
+        translated_config = {}
+        translated_ref = config_reference.ConfigReference(translated_config)
+        translator = config_translator.KeyTranslator(
+            translated_keys=[_generate_key],
+            from_keys={'prefix': '/key_prefix', 'suffix': '/key_suffix'})
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'BkeyA': 'abc'})
+        translated_config = {}
+        translated_ref = config_reference.ConfigReference(translated_config)
+        translator = config_translator.KeyTranslator(
+            translated_keys=_generate_keys,
+            from_keys={'prefix': '/key_prefix', 'suffix': '/key_suffix'})
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'BkeyA': 'abc'})
+
+    def test_translate_translated_value(self):
+        # translated_value can be set explictly.
+        config = {
+            'key': 'abc',
+            'key_suffix': 'A',
+            'key_prefix': 'B'
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {}
+        translated_ref = config_reference.ConfigReference(translated_config)
+        translator = config_translator.KeyTranslator(
+            translated_keys=['mnq'],
+            translated_value='mnq')
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'mnq': 'mnq'})
+
+    def test_translated_value_by_callback_none(self):
+        # translated value can be generated from callback.
+        # the value will be ignored when generated translated_value is None.
+        config = {
+            'key': 'abc',
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {}
+        translated_ref = config_reference.ConfigReference(translated_config)
+
+        def _generate_none(
+            sub_ref, ref_key, translated_sub_ref, translated_key
+        ):
+            return None
+
+        translator = config_translator.KeyTranslator(
+            translated_keys=['mnq'],
+            translated_value=_generate_none)
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'mnq': None})
+
+    def test_translate_translated_value_by_callback(self):
+        # translated_value can be set from some field of config.
+        config = {
+            'key': 'abc',
+            'key_suffix': 'A',
+            'key_prefix': 'B'
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {}
+        translated_ref = config_reference.ConfigReference(translated_config)
+
+        def _generate_value(
+            sub_ref, ref_key, translated_sub_ref, translated_key,
+            prefix='', suffix=''
+        ):
+            return '%s%s%s' % (prefix, sub_ref.config, suffix)
+
+        translator = config_translator.KeyTranslator(
+            translated_keys=['mnq'],
+            translated_value=_generate_value,
+            from_values={'prefix': '/key_prefix', 'suffix': '/key_suffix'})
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'mnq': 'BabcA'})
+
+    def test_translate_nooverride(self):
+        # the translated key will be ignored when the key has already existed
+        # in translated config and override is False.
+        config = {
+            'key': 'abc',
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {'mnq': 'mnq'}
+        translated_ref = config_reference.ConfigReference(translated_config)
+        translator = config_translator.KeyTranslator(
+            translated_keys=['mnq'], override=False)
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'mnq': 'mnq'})
+
+    def test_translate_override(self):
+        # the translated config will be overrided if override param is True.
+        config = {
+            'key': 'abc',
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {'mnq': 'mnq'}
+        translated_ref = config_reference.ConfigReference(translated_config)
+        translator = config_translator.KeyTranslator(
+            translated_keys=['mnq'], override=True)
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'mnq': 'abc'})
+
+    def test_translate_override_by_callback(self):
+        # override param can be set from callback.
+        config = {
+            'key': 'abc',
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {'klm': 'klm', 'mnq': 'mnq'}
+        translated_ref = config_reference.ConfigReference(translated_config)
+
+        def _generate_override(
+            sub_ref, ref_key,
+            translated_sub_ref, translated_key
+        ):
+            return translated_key == 'klm'
+
+        translator = config_translator.KeyTranslator(
+            translated_keys=['klm', 'mnq'], override=_generate_override)
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'klm': 'abc', 'mnq': 'mnq'})
+
+    def test_translate_override_conditions(self):
+        # override param can be set from some config fields.
+        config = {
+            'key': 'abc',
+            'key_suffix': 'A',
+            'key_prefix': 'B'
+        }
+        ref = config_reference.ConfigReference(config)
+        translated_config = {'BmA': 'BmA', 'mnq': 'mnq'}
+        translated_ref = config_reference.ConfigReference(translated_config)
+
+        def _generate_override2(
+            sub_ref, ref_key,
+            translated_sub_ref, translated_key, prefix='', suffix='',
+        ):
+            return (
+                translated_key.startswith(prefix) and
+                translated_key.endswith(suffix))
+
+        translator = config_translator.KeyTranslator(
+            translated_keys=['BmA', 'mnq'],
+            override=_generate_override2,
+            override_conditions={
+                'prefix': '/key_prefix', 'suffix': '/key_suffix'
+            }
+        )
+        translator.translate(ref, 'key', translated_ref)
+        self.assertEqual(translated_config, {'BmA': 'abc', 'mnq': 'mnq'})
 
 
 class TestConfigTranslatorFunctions(unittest2.TestCase):
@@ -46,327 +395,171 @@ class TestConfigTranslatorFunctions(unittest2.TestCase):
     def tearDown(self):
         super(TestConfigTranslatorFunctions, self).tearDown()
 
-    def test_translate_1(self):
-        """config translate test."""
+    def test_init(self):
+        # mapping should be dict of string to list of KeyTranslator.
+        config_translator.ConfigTranslator(
+            mapping={
+                'key1': [config_translator.KeyTranslator(
+                    translated_keys=['abc']
+                )]
+            }
+        )
+        config_translator.ConfigTranslator(
+            mapping={
+                u'key1': [config_translator.KeyTranslator(
+                    translated_keys=['abc']
+                )]
+            }
+        )
+        self.assertRaises(
+            TypeError, config_translator.ConfigTranslator,
+            mapping=[config_translator.KeyTranslator(translated_keys=['abc'])]
+        )
+        self.assertRaises(
+            TypeError, config_translator.ConfigTranslator,
+            mapping=config_translator.KeyTranslator(translated_keys=['abc'])
+        )
+        self.assertRaises(
+            TypeError, config_translator.ConfigTranslator,
+            mapping={
+                'abc': config_translator.KeyTranslator(translated_keys=['abc'])
+            }
+        )
+        self.assertRaises(
+            TypeError, config_translator.ConfigTranslator,
+            mapping={
+                1: [config_translator.KeyTranslator(translated_keys=['abc'])]
+            }
+        )
+        self.assertRaises(
+            TypeError, config_translator.ConfigTranslator,
+            mapping={
+                'abc': [
+                    {
+                        'm': config_translator.KeyTranslator(
+                            translated_keys=['abc'])
+                    }
+                ]
+            }
+        )
+
+    def test_translate(self):
+        """test translate config."""
         config = {
-            'networking': {
-                'interfaces': {
-                    'management': {
-                        'mac': '00:00:00:01:02:03',
-                        'ip': '192.168.1.1',
-                        'netmask': '255.255.255.0',
-                        'promisc': 0,
-                        'nic': 'eth0',
-                        'gateway': '2.3.4.5',
-                        'dns_alias': 'hello.ods.com',
-                    },
-                    'floating': {
-                        'promisc': 1,
-                        'nic': 'eth1',
-                    },
-                    'storage': {
-                        'ip': '172.16.1.1',
-                        'nic': 'eth2',
-                    },
-                    'tenant': {
-                        'ip': '10.1.1.1',
-                        'netmask': '255.255.0.0',
-                        'nic': 'eth0',
-                    },
-                },
-                'global': {
-                    'name_servers': ['nameserver.ods.com'],
-                    'search_path': 'ods.com',
-                    'gateway': '10.0.0.1',
-                    'proxy': 'http://1.2.3.4:3128',
-                    'ntp_server': '1.2.3.4',
-                    'ignore_proxy': '127.0.0.1',
-                },
-            },
-        }
-        expected_config = {
-            'name_servers_search': 'ods.com',
-            'gateway': '10.0.0.1',
-            'modify_interface': {
-                'dnsname-eth0': 'hello.ods.com',
-                'ipaddress-eth2': '172.16.1.1',
-                'static-eth2': True,
-                'static-eth1': True,
-                'static-eth0': True,
-                'netmask-eth0': '255.255.255.0',
-                'ipaddress-eth0': '192.168.1.1',
-                'macaddress-eth0': '00:00:00:01:02:03',
-                'management-eth2': False,
-                'management-eth0': True,
-                'management-eth1': False
-            },
-            'ksmeta': {
-                'promisc_nics': 'eth1',
-                'ntp_server': '1.2.3.4',
-                'proxy': 'http://1.2.3.4:3128',
-                'ignore_proxy': '127.0.0.1'
-            }
+            'key1': 'abc',
+            'key2': 'bcd'
         }
         translator = config_translator.ConfigTranslator(
             mapping={
-                '/networking/global/gateway': [
+                'key1': [
                     config_translator.KeyTranslator(
-                        translated_keys=['/gateway']
+                        translated_keys=['mkey1']
                     )
                 ],
-                '/networking/global/nameservers': [
+                'key2': [
                     config_translator.KeyTranslator(
-                        translated_keys=['/name_servers']
-                    )
-                ],
-                '/networking/global/search_path': [
+                        translated_keys=['mkey2'],
+                        translated_value='mkey2'
+                    ),
                     config_translator.KeyTranslator(
-                        translated_keys=['/name_servers_search']
+                        translated_keys=['mkey2'],
+                        translated_value='nkey2'
                     )
-                ],
-                '/networking/global/proxy': [
-                    config_translator.KeyTranslator(
-                        translated_keys=['/ksmeta/proxy']
-                    )
-                ],
-                '/networking/global/ignore_proxy': [
-                    config_translator.KeyTranslator(
-                        translated_keys=['/ksmeta/ignore_proxy']
-                    )
-                ],
-                '/networking/global/ntp_server': [
-                    config_translator.KeyTranslator(
-                        translated_keys=['/ksmeta/ntp_server']
-                    )
-                ],
-                '/security/server_credentials/username': [
-                    config_translator.KeyTranslator(
-                        translated_keys=['/ksmeta/username']
-                    )
-                ],
-                '/security/server_credentials/password': [
-                    config_translator.KeyTranslator(
-                        translated_keys=['/ksmeta/password'],
-                        translated_value=(
-                            config_translator_callbacks.get_encrypted_value)
-                    )
-                ],
-                '/partition': [
-                    config_translator.KeyTranslator(
-                        translated_keys=['/ksmeta/partition']
-                    )
-                ],
-                '/networking/interfaces/*/mac': [
-                    config_translator.KeyTranslator(
-                        translated_keys=[functools.partial(
-                            config_translator_callbacks.get_key_from_pattern,
-                            to_pattern='/modify_interface/macaddress-%(nic)s'
-                        )],
-                        from_keys={'nic': '../nic'},
-                        override=functools.partial(
-                            config_translator_callbacks.override_path_has,
-                            should_exist='management')
-                    )
-                ],
-                '/networking/interfaces/*/ip': [
-                    config_translator.KeyTranslator(
-                        translated_keys=[functools.partial(
-                            config_translator_callbacks.get_key_from_pattern,
-                            to_pattern='/modify_interface/ipaddress-%(nic)s')],
-                        from_keys={'nic': '../nic'},
-                        override=functools.partial(
-                            config_translator_callbacks.override_path_has,
-                            should_exist='management')
-                    )
-                ],
-                '/networking/interfaces/*/netmask': [
-                    config_translator.KeyTranslator(
-                        translated_keys=[functools.partial(
-                            config_translator_callbacks.get_key_from_pattern,
-                            to_pattern='/modify_interface/netmask-%(nic)s')],
-                        from_keys={'nic': '../nic'},
-                        override=functools.partial(
-                            config_translator_callbacks.override_path_has,
-                            should_exist='management')
-                    )
-                ],
-                '/networking/interfaces/*/dns_alias': [
-                    config_translator.KeyTranslator(
-                        translated_keys=[functools.partial(
-                            config_translator_callbacks.get_key_from_pattern,
-                            to_pattern='/modify_interface/dnsname-%(nic)s')],
-                        from_keys={'nic': '../nic'},
-                        override=functools.partial(
-                            config_translator_callbacks.override_path_has,
-                            should_exist='management')
-                    )
-                ],
-                '/networking/interfaces/*/nic': [
-                    config_translator.KeyTranslator(
-                        translated_keys=[functools.partial(
-                            config_translator_callbacks.get_key_from_pattern,
-                            to_pattern='/modify_interface/static-%(nic)s')],
-                        from_keys={'nic': '../nic'},
-                        translated_value=True,
-                        override=functools.partial(
-                            config_translator_callbacks.override_path_has,
-                            should_exist='management'),
-                    ), config_translator.KeyTranslator(
-                        translated_keys=[functools.partial(
-                            config_translator_callbacks.get_key_from_pattern,
-                            to_pattern='/modify_interface/management-%(nic)s'
-                        )],
-                        from_keys={'nic': '../nic'},
-                        translated_value=functools.partial(
-                            config_translator_callbacks.override_path_has,
-                            should_exist='management'),
-                        override=functools.partial(
-                            config_translator_callbacks.override_path_has,
-                            should_exist='management')
-                    ), config_translator.KeyTranslator(
-                        translated_keys=['/ksmeta/promisc_nics'],
-                        from_values={'condition': '../promisc'},
-                        translated_value=config_translator_callbacks.add_value,
-                        override=True,
-                    )
-                ],
+                ]
             }
         )
-
         translated_config = translator.translate(config)
-        self.assertEqual(translated_config, expected_config)
+        self.assertEqual(translated_config,
+                         {'mkey1': 'abc', 'mkey2': 'mkey2'})
 
-    def test_translate_2(self):
-        """config translate test."""
+    def test_translate_nooverride(self):
+        # the later KeyTranslator will be ignored if the former one
+        # has already set the value.
+        config = {
+            'key1': 'abc',
+            'key2': 'bcd'
+        }
         translator = config_translator.ConfigTranslator(
             mapping={
-                '/networking/interfaces/management/ip': [
+                'key1': [
                     config_translator.KeyTranslator(
-                        translated_keys=[
-                            '/db/mysql/bind_address',
-                            '/mq/rabbitmg/bind_address',
-                            '/mq/rabbitmq/bind_address',
-                            '/endpoints/compute/metadata/host',
-                            '/endpoints/compute/novnc/host',
-                            '/endpoints/compute/service/host',
-                            '/endpoints/compute/xvpvnc/host',
-                            '/endpoints/ec2/admin/host',
-                            '/endpoints/ec2/service/host',
-                            '/endpoints/identity/admin/host',
-                            '/endpoints/identity/service/host',
-                            '/endpoints/image/registry/host',
-                            '/endpoints/image/service/host',
-                            '/endpoints/metering/service/host',
-                            '/endpoints/network/service/host',
-                            '/endpoints/volume/service/host',
-                        ],
-                        translated_value=(
-                            config_translator_callbacks.get_value_if),
-                        from_values={'condition': '/has_dashboard_roles'},
-                        override=config_translator_callbacks.override_if_any,
-                        override_conditions={
-                            'has_dashboard_roles': '/has_dashboard_roles'}
+                        translated_keys=['mkey1']
                     )
                 ],
+                'key2': [
+                    config_translator.KeyTranslator(
+                        translated_keys=['mkey2'],
+                        translated_value='mkey2'
+                    ),
+                    config_translator.KeyTranslator(
+                        translated_keys=['mkey2'],
+                        translated_value='nkey2',
+                        override=False
+                    )
+                ]
             }
         )
-        config1 = {
-            'networking': {
-                'interfaces': {
-                    'management': {
-                        'ip': '1.2.3.4',
-                    },
-                },
-            },
-            'has_dashboard_roles': True,
+        translated_config = translator.translate(config)
+        self.assertEqual(translated_config,
+                         {'mkey1': 'abc', 'mkey2': 'mkey2'})
+
+    def test_translate_override(self):
+        # the later KeyTranslator will override the former one
+        # if override is set.
+        config = {
+            'key1': 'abc',
+            'key2': 'bcd'
         }
-        expected_config1 = {
-            'db': {
-                'mysql': {
-                    'bind_address': '1.2.3.4'
-                }
-            },
-            'endpoints': {
-                'compute': {
-                    'novnc': {
-                        'host': '1.2.3.4'
-                    },
-                    'xvpvnc': {
-                        'host': '1.2.3.4'
-                    },
-                    'service': {
-                        'host': '1.2.3.4'
-                    },
-                    'metadata': {
-                        'host': '1.2.3.4'
-                    }
-                },
-                'network': {
-                    'service': {
-                        'host': '1.2.3.4'
-                    }
-                },
-                'image': {
-                    'registry': {
-                        'host': '1.2.3.4'
-                    },
-                    'service': {
-                        'host': '1.2.3.4'
-                    }
-                },
-                'metering': {
-                    'service': {
-                        'host': '1.2.3.4'
-                    }
-                },
-                'volume': {
-                    'service': {
-                        'host': '1.2.3.4'
-                    }
-                },
-                'ec2': {
-                    'admin': {
-                        'host': '1.2.3.4'
-                    },
-                    'service': {
-                        'host': '1.2.3.4'
-                    }
-                },
-                'identity': {
-                    'admin': {
-                        'host': '1.2.3.4'
-                    },
-                    'service': {
-                        'host': '1.2.3.4'
-                    }
-                }
-            },
-            'mq': {
-                'rabbitmg': {
-                    'bind_address': '1.2.3.4'
-                },
-                'rabbitmq': {
-                    'bind_address': '1.2.3.4'
-                }
+        translator = config_translator.ConfigTranslator(
+            mapping={
+                'key1': [
+                    config_translator.KeyTranslator(
+                        translated_keys=['mkey1']
+                    )
+                ],
+                'key2': [
+                    config_translator.KeyTranslator(
+                        translated_keys=['mkey2'],
+                        translated_value='mkey2'
+                    ),
+                    config_translator.KeyTranslator(
+                        translated_keys=['mkey2'],
+                        translated_value='nkey2',
+                        override=True
+                    )
+                ]
             }
-        }
-        translated_config1 = translator.translate(config1)
-        self.assertEqual(translated_config1, expected_config1)
+        )
+        translated_config = translator.translate(config)
+        self.assertEqual(translated_config,
+                         {'mkey1': 'abc', 'mkey2': 'nkey2'})
 
-        config2 = {
-            'networking': {
-                'interfaces': {
-                    'management': {
-                        'ip': '1.2.3.4',
-                    },
-                },
-            },
-            'has_dashboard_roles': False,
+    def test_translated_generated_value_none(self):
+        # When the generated value is None,
+        # the translated key will be ignored.
+        config = {
+            'key1': 'abc',
+            'key2': 'bcd'
         }
 
-        expected_config2 = None
-        translated_config2 = translator.translate(config2)
-        self.assertEqual(translated_config2, expected_config2)
+        def _generate_none(
+            sub_ref, ref_key, translated_sub_ref, translated_key
+        ):
+            return None
+
+        translator = config_translator.ConfigTranslator(
+            mapping={
+                'key1': [
+                    config_translator.KeyTranslator(
+                        translated_keys=['mkey1'],
+                        translated_value=_generate_none
+                    )
+                ]
+            }
+        )
+        translated_config = translator.translate(config)
+        self.assertEqual(translated_config,
+                         None)
 
 
 if __name__ == '__main__':

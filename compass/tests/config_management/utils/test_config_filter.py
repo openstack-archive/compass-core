@@ -40,53 +40,96 @@ class TestConfigFilter(unittest2.TestCase):
     def setUp(self):
         super(TestConfigFilter, self).setUp()
         logsetting.init()
+        self.config_ = {
+            '1': '1',
+            '2': {
+                '22': '22',
+                '33': {
+                    '333': '333',
+                    '44': '444'
+                }
+            },
+            '3': {'33': '44'}
+        }
 
     def tearDown(self):
         super(TestConfigFilter, self).tearDown()
 
-    def test_allows(self):
+    def test_init(self):
+        config_filter.ConfigFilter(
+            allows=['abc', 'def'], denies=['def', 'ghi'])
+        config_filter.ConfigFilter(
+            allows=[u'abc', u'def'], denies=[u'def', u'ghi'])
+
+    def test_init_allows(self):
+        # allows type should be a list of string.
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            allows={'abd': 'abc'})
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            allows='abc')
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            allows=[{'abc': 'bdc'}])
+
+    def test_init_denies(self):
+        # denies type should be a list of string.
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            denies={'abd': 'abc'})
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            denies='abc')
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            denies=[{'abc': 'bdc'}])
+
+    def test_allows_asterisks(self):
         """test allows rules."""
-        config = {'1': '1',
-                  '2': {'22': '22',
-                        '33': {'333': '333',
-                               '44': '444'}},
-                  '3': {'33': '44'}}
+        # keys in allows will be copied to dest.
+        # if '*' in allows, all keys will be copied to dest.
         allows = ['*', '3', '5']
         configfilter = config_filter.ConfigFilter(allows)
-        filtered_config = configfilter.filter(config)
-        self.assertEqual(filtered_config, config)
+        filtered_config = configfilter.filter(self.config_)
+        self.assertEqual(filtered_config, self.config_)
+
+    def test_allows_path(self):
         allows = ['/1', '2/22', '5']
         expected_config = {'1': '1', '2': {'22': '22'}}
         configfilter = config_filter.ConfigFilter(allows)
-        filtered_config = configfilter.filter(config)
+        filtered_config = configfilter.filter(self.config_)
         self.assertEqual(filtered_config, expected_config)
+
+    def test_allows_asterrisks_in_path(self):
         allows = ['*/33']
         expected_config = {'2': {'33': {'333': '333',
                                         '44': '444'}},
                            '3': {'33': '44'}}
         configfilter = config_filter.ConfigFilter(allows)
-        filtered_config = configfilter.filter(config)
+        filtered_config = configfilter.filter(self.config_)
         self.assertEqual(filtered_config, expected_config)
 
     def test_denies(self):
         """test denies rules."""
-        config = {'1': '1', '2': {'22': '22',
-                                  '33': {'333': '333',
-                                         '44': '444'}},
-                            '3': {'33': '44'}}
+        # keys in denies list will be removed from filtered config.
         denies = ['/1', '2/22', '2/33/333', '5']
         expected_config = {'2': {'33': {'44': '444'}}, '3': {'33': '44'}}
         configfilter = config_filter.ConfigFilter(denies=denies)
-        filtered_config = configfilter.filter(config)
+        filtered_config = configfilter.filter(self.config_)
         self.assertEqual(filtered_config, expected_config)
+
+    def test_denies_asterisks(self):
         denies = ['*']
         configfilter = config_filter.ConfigFilter(denies=denies)
-        filtered_config = configfilter.filter(config)
+        filtered_config = configfilter.filter(self.config_)
         self.assertIsNone(filtered_config)
+
+    def tet_deneis_asterisks_in_path(self):
         denies = ['*/33']
         expected_config = {'1': '1', '2': {'22': '22'}}
         configfilter = config_filter.ConfigFilter(denies=denies)
-        filtered_config = configfilter.filter(config)
+        filtered_config = configfilter.filter(self.config_)
         self.assertEqual(filtered_config, expected_config)
 
 

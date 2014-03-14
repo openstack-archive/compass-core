@@ -14,7 +14,8 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo pip install flask-script flask-restful Celery six discover unittest2 pychef requests
+sudo pip install -r $COMPASSDIR/requirements.txt
+sudo pip install -r $COMPASSDIR/test-requirements.txt
 if [[ "$?" != "0" ]]; then
     echo "failed to install pip packages"
     exit 1

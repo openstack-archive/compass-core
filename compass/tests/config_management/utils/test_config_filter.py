@@ -44,6 +44,30 @@ class TestConfigFilter(unittest2.TestCase):
     def tearDown(self):
         super(TestConfigFilter, self).tearDown()
 
+    def test_init(self):
+        config_filter.ConfigFilter(
+            allows=['abc', 'def'], denies=['def', 'ghi'])
+        config_filter.ConfigFilter(
+            allows=[u'abc', u'def'], denies=[u'def', u'ghi'])
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            allows={'abd': 'abc'})
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            allows='abc')
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            allows=[{'abc': 'bdc'}])
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            denies={'abd': 'abc'})
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            denies='abc')
+        self.assertRaises(
+            TypeError, config_filter.ConfigFilter,
+            denies=[{'abc': 'bdc'}])
+
     def test_allows(self):
         """test allows rules."""
         config = {'1': '1',

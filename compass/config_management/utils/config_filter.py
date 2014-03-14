@@ -19,6 +19,7 @@
 import logging
 
 from compass.config_management.utils import config_reference
+from compass.utils import util
 
 
 class ConfigFilter(object):
@@ -48,9 +49,10 @@ class ConfigFilter(object):
                     type(self.allows_), self.allows_))
 
         for i, allow in enumerate(self.allows_):
-            if not isinstance(allow, str):
+            if not util.is_instance(allow, [str, unicode]):
                 raise TypeError(
-                    'allows[%s] type is %s but expected type is str: %s' % (
+                    'allows[%s] type is %s but expected type '
+                    'is str or unicode: %s' % (
                         i, type(allow), allow))
 
     def _is_denies_valid(self):
@@ -61,9 +63,10 @@ class ConfigFilter(object):
                     type(self.denies_), self.denies_))
 
         for i, deny in enumerate(self.denies_):
-            if not isinstance(deny, str):
+            if not util.is_instance(deny, [str, unicode]):
                 raise TypeError(
-                    'denies[%s] type is %s but expected type is str: %s' % (
+                    'denies[%s] type is %s but expected type '
+                    'is str or unicode: %s' % (
                         i, type(deny), deny))
 
     def _is_valid(self):

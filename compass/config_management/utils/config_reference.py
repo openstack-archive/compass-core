@@ -63,9 +63,9 @@ class ConfigReference(object):
 
         :raises: TypeError
         """
-        if parent and not isinstance(parent, self.__class__):
+        if parent and not issubclass(parent.__class__, ConfigReference):
             raise TypeError('parent %s type should be %s'
-                            % (parent, self.__class__.__name__))\
+                            % (parent, ConfigReference))
 
         if parent_key and not util.is_instance(parent_key, [str, unicode]):
             raise TypeError('parent_key %s type should be [str, unicode]'

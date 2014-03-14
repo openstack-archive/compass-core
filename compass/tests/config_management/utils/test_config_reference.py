@@ -19,10 +19,69 @@
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
 import copy
+import os
 import unittest2
 
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
+
 from compass.config_management.utils import config_reference
+from compass.utils import flags
+from compass.utils import logsetting
 from compass.utils import util
+
+
+class TestCleanConfig(unittest2.TestCase):
+    """test clean_config function."""
+
+    def setUp(self):
+        super(TestCleanConfig, self).setUp()
+        logsetting.init()
+
+    def tearDown(self):
+        super(TestCleanConfig, self).tearDown()
+
+    def test_config_empty(self):
+        """test config is empty."""
+        self.assertIsNone(config_reference.get_clean_config(None))
+        self.assertIsNone(config_reference.get_clean_config({}))
+        self.assertEqual([], config_reference.get_clean_config([]))
+        self.assertEqual('', config_reference.get_clean_config(''))
+
+    def test_recursive_empty_dict(self):
+        """test config is recursively empty."""
+        self.assertIsNone(config_reference.get_clean_config({'test': {}}))
+        self.assertIsNone(config_reference.get_clean_config({'test': None}))
+
+    def test_nromal_dict(self):
+        """test config is normal dict."""
+        config_list = [
+            {'abc': 'abc'},
+            {'abc': [1, 2, 3]},
+            {'abc': {'1': '123'}},
+            [1, 2, 3],
+            'abc',
+        ]
+        for config in config_list:
+            self.assertEqual(config, config_reference.get_clean_config(config))
+
+    def test_partial_clean(self):
+        """test config is partial cleaned."""
+        config_and_cleans = [
+            ({'abc': 1, 'bcd': None}, {'abc': 1}),
+            ({'abc': 1, 'bcd': {}}, {'abc': 1}),
+            ({'abc': 1, 'bcd': {'m': {}}}, {'abc': 1}),
+            ({'abc': 1, 'b': {'m': {}, 'n': 2}}, {'abc': 1, 'b': {'n': 2}}),
+        ]
+        for config, expected_config in config_and_cleans:
+            self.assertEqual(
+                expected_config,
+                config_reference.get_clean_config(config))
 
 
 class TestConfigReference(unittest2.TestCase):
@@ -41,6 +100,21 @@ class TestConfigReference(unittest2.TestCase):
         config3 = {'5': {'7': 7}}
         ref3 = config_reference.ConfigReference(config3['5'], ref, '5')
         self.assertEqual(id(ref.config['5']), id(ref3.config))
+        config4 = {1: 2}
+        self.assertRaises(
+            TypeError, config_reference.ConfigReference, config4)
+        config5 = {'1': 2}
+        self.assertRaises(
+            TypeError, config_reference.ConfigReference,
+            config5, parent=object())
+        self.assertRaises(
+            TypeError, config_reference.ConfigReference,
+            config5, parent=ref3, parent_key=6)
+        config6 = {'2': 4}
+        config_reference.ConfigReference(config6, ref, '1')
+        self.assertEqual(
+            config,
+            {'1': {'2': 4}, '4': [5, 6, 7], '5': {'7': 7}, '8': 8})
 
     def test_ref(self):
         """test ref function."""
@@ -95,6 +169,15 @@ class TestConfigReference(unittest2.TestCase):
         self.assertNotIn('/1/3/7', ref)
         self.assertNotIn('/1/2/3/..', ref)
 
+    def test_getitem(self):
+        """test getitem function."""
+        config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
+        ref = config_reference.ConfigReference(config)
+        self.assertEqual(ref['1'], config['1'])
+        self.assertEqual(ref['1/2'], config['1']['2'])
+        self.assertEqual(ref['/1'], config['1'])
+        self.assertEqual(ref['1/2/../../4'], config['4'])
+
     def test_setitem(self):
         """test setitem function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
@@ -120,6 +203,17 @@ class TestConfigReference(unittest2.TestCase):
         del ref['1']
         self.assertNotIn('1', config)
         self.assertRaises(KeyError, ref.__delitem__, '9')
+
+    def test_len(self):
+        config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
+        ref = config_reference.ConfigReference(config)
+        self.assertEqual(len(ref), 5)
+
+    def test_bool(self):
+        ref = config_reference.ConfigReference({})
+        self.assertFalse(ref)
+        ref = config_reference.ConfigReference({'1': 1})
+        self.assertTrue(ref)
 
     def test_get(self):
         """test get function."""
@@ -158,9 +252,36 @@ class TestConfigReference(unittest2.TestCase):
         """test iter function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
-        keys = ref.keys()
-        self.assertEqual(set(keys), set(['1', '1/2', '1/10', '4', '8']))
+        items = dict(ref.items())
+        self.assertEqual({
+            '1': {'2': '3', '10': {}},
+            '1/2': '3',
+            '1/10': {},
+            '4': [5, 6, 7],
+            '8': 8}, items)
+        self.assertEqual(
+            set(ref.keys()),
+            set(['1', '1/2', '1/10', '4', '8']))
+
+    def test_match(self):
+        config = {'1': {'2': 'abcdef'}, '3': ['efg', 'hij', 'k']}
+        ref = config_reference.ConfigReference(config)
+        self.assertTrue(ref.match({'1/2': 'abcdef'}))
+        self.assertFalse(ref.match({'1/2': 'abceef'}))
+        self.assertTrue(ref.match({'1/2': '[a-z]+'}))
+        self.assertFalse(ref.match({'1/2': '[0-9]+'}))
+        self.assertTrue(ref.match({'3': 'efg'}))
+        self.assertFalse(ref.match({'3': 'm'}))
+        self.assertTrue(ref.match({'3': 'hij'}))
+
+    def test_filter(self):
+        config = {'1': {'2': 'abcdef', '4': 4}, '3': ['efg', 'hij', 'k']}
+        ref = config_reference.ConfigReference(config)
+        self.assertEqual(ref.filter(['1/2', '1/4', '5']),
+                         {'1/2': 'abcdef', '1/4': 4})
 
 
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

@@ -65,6 +65,12 @@ class KeyTranslator(object):
         if callable(self.translated_keys_):
             return
 
+        if not isinstance(self.translated_keys_, list):
+            raise TypeError(
+                'translated_keys %s type is %s while expected type is '
+                'list or callable' % (
+                    self.translated_keys_, type(self.translated_keys_)))
+
         for i, translated_key in enumerate(self.translated_keys_):
             if util.is_instance(translated_key, [str, unicode]):
                 if '*' in translated_key:
@@ -79,7 +85,18 @@ class KeyTranslator(object):
 
     def _is_valid_from_keys(self):
         """Check from keys are valid."""
+        if not isinstance(self.from_keys_, dict):
+            raise TypeError(
+                'from_keys %s type is %s while expected type is dict' % (
+                    self.from_keys_, type(self.from_keys_)))
+
         for mapping_key, from_key in self.from_keys_.items():
+            if not util.is_instance(mapping_key, [str, unicode]):
+                raise TypeError(
+                    'from_keys key %s type is %s while '
+                    'expected type is [str, unicode]' % (
+                        mapping_key, type(mapping_key)))
+
             if not util.is_instance(from_key, [str, unicode]):
                 raise TypeError(
                     'from_keys[%s] type is %s while '
@@ -93,7 +110,18 @@ class KeyTranslator(object):
 
     def _is_valid_from_values(self):
         """Check from values are valid."""
+        if not isinstance(self.from_values_, dict):
+            raise TypeError(
+                'from_values %s type is %s while expected type is dict' % (
+                    self.from_values_, type(self.from_values_)))
+
         for mapping_key, from_value in self.from_values_.items():
+            if not util.is_instance(mapping_key, [str, unicode]):
+                raise TypeError(
+                    'from_values key %s type is %s while '
+                    'expected type is [str, unicode]' % (
+                        mapping_key, type(mapping_key)))
+
             if not util.is_instance(from_value, [str, unicode]):
                 raise TypeError(
                     'from_values[%s] type is %s while '
@@ -107,8 +135,21 @@ class KeyTranslator(object):
 
     def _is_valid_override_conditions(self):
         """Check override conditions are valid."""
+        if not isinstance(self.override_conditions_, dict):
+            raise TypeError(
+                'override_conditions %s type is %s '
+                'while expected type is dict' % (
+                    self.override_conditions_,
+                    type(self.override_conditions_)))
+
         override_items = self.override_conditions_.items()
         for mapping_key, override_condition in override_items:
+            if not util.is_instance(mapping_key, [str, unicode]):
+                raise TypeError(
+                    'override_conditions key %s type is %s while '
+                    'expected type is [str, unicode]' % (
+                        mapping_key, type(mapping_key)))
+
             if not util.is_instance(override_condition, [str, unicode]):
                 raise TypeError(
                     'override_conditions[%s] type is %s '
@@ -188,7 +229,7 @@ class KeyTranslator(object):
                       translated_key, translated_sub_ref):
         """Get override."""
         if not callable(self.override_):
-            return self.override_
+            return bool(self.override_)
 
         override_condition_configs = {}
         override_items = self.override_conditions_.items()
@@ -216,6 +257,9 @@ class KeyTranslator(object):
                     ref_key, sub_ref, translated_key, translated_sub_ref)
 
                 if translated_value is None:
+                    logging.debug(
+                        'translated key %s will be ignored '
+                        'since translated value is None', translated_key)
                     continue
 
                 override = self._get_override(
@@ -247,16 +291,23 @@ class ConfigTranslator(object):
                     type(self.mapping_), self.mapping_))
 
         for key, values in self.mapping_.items():
+            if not util.is_instance(key, [str, unicode]):
+                raise TypeError(
+                    'mapping key %s type is %s while expected '
+                    'is str or unicode' % (key, type(key)))
+
             if not isinstance(values, list):
-                msg = 'mapping[%s] type is %s while expected type is list: %s'
-                raise TypeError(msg % (key, type(values), values))
+                raise TypeError(
+                    'mapping[%s] type is %s '
+                    'while expected type is list: %s' % (
+                        key, type(values), values))
 
             for i, value in enumerate(values):
                 if not isinstance(value, KeyTranslator):
-                    msg = (
+                    raise TypeError(
                         'mapping[%s][%d] type is %s '
-                        'while expected type is KeyTranslator: %s')
-                    raise TypeError(msg % (key, i, type(value), value))
+                        'while expected type is KeyTranslator: %s' % (
+                            key, i, type(value), value))
 
     def translate(self, config):
         """Translate config.

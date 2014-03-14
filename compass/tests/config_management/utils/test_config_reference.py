@@ -19,10 +19,69 @@
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
 import copy
+import os
 import unittest2
 
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
+
 from compass.config_management.utils import config_reference
+from compass.utils import flags
+from compass.utils import logsetting
 from compass.utils import util
+
+
+class TestCleanConfig(unittest2.TestCase):
+    """test clean_config function."""
+
+    def setUp(self):
+        super(TestCleanConfig, self).setUp()
+        logsetting.init()
+
+    def tearDown(self):
+        super(TestCleanConfig, self).tearDown()
+
+    def test_config_empty(self):
+        """test config is empty."""
+        self.assertIsNone(config_reference.get_clean_config(None))
+        self.assertIsNone(config_reference.get_clean_config({}))
+        self.assertEqual([], config_reference.get_clean_config([]))
+        self.assertEqual('', config_reference.get_clean_config(''))
+
+    def test_recursive_empty_dict(self):
+        """test config is recursively empty."""
+        self.assertIsNone(config_reference.get_clean_config({'test': {}}))
+        self.assertIsNone(config_reference.get_clean_config({'test': None}))
+
+    def test_nromal_dict(self):
+        """test config is normal dict."""
+        config_list = [
+            {'abc': 'abc'},
+            {'abc': [1, 2, 3]},
+            {'abc': {'1': '123'}},
+            [1, 2, 3],
+            'abc',
+        ]
+        for config in config_list:
+            self.assertEqual(config, config_reference.get_clean_config(config))
+
+    def test_partial_clean(self):
+        """test config is partial cleaned."""
+        config_and_cleans = [
+            ({'abc': 1, 'bcd': None}, {'abc': 1}),
+            ({'abc': 1, 'bcd': {}}, {'abc': 1}),
+            ({'abc': 1, 'bcd': {'m': {}}}, {'abc': 1}),
+            ({'abc': 1, 'b': {'m': {}, 'n': 2}}, {'abc': 1, 'b': {'n': 2}}),
+        ]
+        for config, expected_config in config_and_cleans:
+            self.assertEqual(
+                expected_config,
+                config_reference.get_clean_config(config))
 
 
 class TestConfigReference(unittest2.TestCase):
@@ -30,27 +89,71 @@ class TestConfigReference(unittest2.TestCase):
 
     def test_init(self):
         """test init function."""
+        # create ConfigReference instance.
         config = {'1': {'2': 3, '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
+        self.assertEqual(ref.config, config)
+        self.assertEqual(id(ref.config), id(config))
+
+        # create ConfigReference instance with parent param.
+        # it will add a key value pair in parent config if not exists.
         config2 = {'5': {'6': 6}}
         ref2 = config_reference.ConfigReference(config2['5'], ref, '5')
         expected_config = copy.deepcopy(config)
         util.merge_dict(expected_config, config2)
         self.assertEqual(ref.config, expected_config)
         self.assertEqual(id(ref.config['5']), id(ref2.config))
+        self.assertEqual(id(ref2.config), id(config2['5']))
+
+        # create ConfigReference instance with parent param.
+        # it will update the key value pair in parent config if it exists.
         config3 = {'5': {'7': 7}}
         ref3 = config_reference.ConfigReference(config3['5'], ref, '5')
+        expected_config = copy.deepcopy(config)
+        util.merge_dict(expected_config, config3)
+        self.assertEqual(ref.config, expected_config)
         self.assertEqual(id(ref.config['5']), id(ref3.config))
+        self.assertEqual(id(ref3.config), id(config3['5']))
+
+        # config key should be string.
+        config_reference.ConfigReference(1)
+        config_reference.ConfigReference('1')
+        config_reference.ConfigReference([1, 2])
+        config_reference.ConfigReference({'1': 2})
+        config_reference.ConfigReference({u'1': 2})
+        self.assertRaises(
+            TypeError, config_reference.ConfigReference, {1: 2})
+
+        # parent instance should be of ConfigReference.
+        self.assertRaises(
+            TypeError, config_reference.ConfigReference,
+            {'1': 2}, parent=object())
+
+        # parent key should be string.
+        self.assertRaises(
+            TypeError, config_reference.ConfigReference,
+            {'1': 2}, parent=ref3, parent_key=6)
 
     def test_ref(self):
         """test ref function."""
         config = {'1': {'2': 3, '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
+        # raise KeyError when accessing noexist key.
         self.assertRaises(KeyError, ref.ref, '')
         self.assertRaises(KeyError, ref.ref, '/1/2/4')
+        # . key returns the same reference.
+        self.assertEqual(id(ref.ref('.')), id(ref))
         self.assertEqual(ref.ref('.').config, config)
+        # .. key returns the same reference if ref itself
+        # is the top level reference.
+        self.assertEqual(id(ref.ref('..')), id(ref))
         self.assertEqual(ref.ref('..').config, config)
+        # / key returns the same reference if the ref itself is
+        # the top level reference.
+        self.assertEqual(id(ref.ref('/')), id(ref))
         self.assertEqual(ref.ref('/').config, config)
+
+        # ref(<key>) returns the reference of the <key>.
         self.assertEqual(ref.ref('1').config, config['1'])
         self.assertEqual(ref.ref('1/2').config, config['1']['2'])
         self.assertEqual(ref.ref('1/2/.').config, config['1']['2'])
@@ -58,15 +161,25 @@ class TestConfigReference(unittest2.TestCase):
         self.assertEqual(ref.ref('1/2//').config, config['1']['2'])
         self.assertEqual(ref.ref('/1').config, config['1'])
         self.assertEqual(ref.ref('/1/2').config, config['1']['2'])
+
+        # from sub ref, we can get the reference of it parent or root.
         subref = ref.ref('1')
+        self.assertEqual(id(subref.ref('..')), id(ref))
+        self.assertEqual(subref.ref('..').config, config)
+        self.assertEqual(id(subref.ref('../..')), id(ref))
+        self.assertEqual(subref.ref('../..').config, config)
+        self.assertEqual(id(subref.ref('/')), id(ref))
+        self.assertEqual(subref.ref('/').config, config)
+
+        # ref(<key>) of subref returns the reference of the <key>.
         self.assertEqual(subref.ref('2').config, config['1']['2'])
         self.assertEqual(subref.ref('2/..').config, config['1'])
-        self.assertEqual(subref.ref('..').config, config)
-        self.assertEqual(subref.ref('../..').config, config)
-        self.assertEqual(subref.ref('/').config, config)
         self.assertEqual(subref.ref('/4').config, config['4'])
         self.assertRaises(KeyError, subref.ref, '/4/5')
         self.assertRaises(KeyError, subref.ref, '/9')
+
+        # create sub reference if key does not exists and
+        # create_if_not_exist param is True.
         subref2 = ref.ref('9', True)
         self.assertEqual(ref.ref('9'), subref2)
 
@@ -74,6 +187,8 @@ class TestConfigReference(unittest2.TestCase):
         """test refs function."""
         config = {'1': {'2': 3, '10': {}}, '4': [5, 6, 7], '8': 8, '88': 88}
         ref = config_reference.ConfigReference(config)
+
+        # ref_keys will return all matching refs.
         refkeys = ref.ref_keys('1')
         self.assertEqual(set(refkeys), set(['1']))
         refkeys = ref.ref_keys('/1/*')
@@ -82,6 +197,8 @@ class TestConfigReference(unittest2.TestCase):
         self.assertEqual(set(refkeys), set(['1', '4', '8', '88']))
         refkeys = ref.ref_keys('8*')
         self.assertEqual(set(refkeys), set(['8', '88']))
+
+        # ref keys will raise KeyError if the param is empty.
         self.assertRaises(KeyError, ref.ref_keys, '')
 
     def test_contains(self):
@@ -94,6 +211,15 @@ class TestConfigReference(unittest2.TestCase):
         self.assertIn('/1/2/..', ref)
         self.assertNotIn('/1/3/7', ref)
         self.assertNotIn('/1/2/3/..', ref)
+
+    def test_getitem(self):
+        """test getitem function."""
+        config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
+        ref = config_reference.ConfigReference(config)
+        self.assertEqual(ref['1'], config['1'])
+        self.assertEqual(ref['1/2'], config['1']['2'])
+        self.assertEqual(ref['/1'], config['1'])
+        self.assertEqual(ref['1/2/../../4'], config['4'])
 
     def test_setitem(self):
         """test setitem function."""
@@ -119,7 +245,20 @@ class TestConfigReference(unittest2.TestCase):
         self.assertNotIn('2', config['1'])
         del ref['1']
         self.assertNotIn('1', config)
+
+        # del nonexist key will raise KeyError
         self.assertRaises(KeyError, ref.__delitem__, '9')
+
+    def test_len(self):
+        config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
+        ref = config_reference.ConfigReference(config)
+        self.assertEqual(len(ref), 5)
+
+    def test_bool(self):
+        ref = config_reference.ConfigReference({})
+        self.assertFalse(ref)
+        ref = config_reference.ConfigReference({'1': 1})
+        self.assertTrue(ref)
 
     def test_get(self):
         """test get function."""
@@ -149,8 +288,11 @@ class TestConfigReference(unittest2.TestCase):
         util.merge_dict(expected_config, config2)
         ref.update(config2)
         self.assertEqual(ref.config, expected_config)
+
+        # if override is False and ref config is not None, ignore the update.
         ref.update(10, False)
         self.assertEqual(ref.config, expected_config)
+        # if override is True, it will force update the config.
         ref.update(10)
         self.assertEqual(ref.config, 10)
 
@@ -158,9 +300,36 @@ class TestConfigReference(unittest2.TestCase):
         """test iter function."""
         config = {'1': {'2': '3', '10': {}}, '4': [5, 6, 7], '8': 8}
         ref = config_reference.ConfigReference(config)
-        keys = ref.keys()
-        self.assertEqual(set(keys), set(['1', '1/2', '1/10', '4', '8']))
+        items = dict(ref.items())
+        self.assertEqual({
+            '1': {'2': '3', '10': {}},
+            '1/2': '3',
+            '1/10': {},
+            '4': [5, 6, 7],
+            '8': 8}, items)
+        self.assertEqual(
+            set(ref.keys()),
+            set(['1', '1/2', '1/10', '4', '8']))
+
+    def test_match(self):
+        config = {'1': {'2': 'abcdef'}, '3': ['efg', 'hij', 'k']}
+        ref = config_reference.ConfigReference(config)
+        self.assertTrue(ref.match({'1/2': 'abcdef'}))
+        self.assertFalse(ref.match({'1/2': 'abceef'}))
+        self.assertTrue(ref.match({'1/2': '[a-z]+'}))
+        self.assertFalse(ref.match({'1/2': '[0-9]+'}))
+        self.assertTrue(ref.match({'3': 'efg'}))
+        self.assertFalse(ref.match({'3': 'm'}))
+        self.assertTrue(ref.match({'3': 'hij'}))
+
+    def test_filter(self):
+        config = {'1': {'2': 'abcdef', '4': 4}, '3': ['efg', 'hij', 'k']}
+        ref = config_reference.ConfigReference(config)
+        self.assertEqual(ref.filter(['1/2', '1/4', '5']),
+                         {'1/2': 'abcdef', '1/4': 4})
 
 
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

@@ -69,13 +69,15 @@ STORAGE_PROMISC = 0
 HOME_PERCENTAGE = 40
 TMP_PERCENTAGE = 10
 VAR_PERCENTAGE = 15
-ROLES_LIST = [['os-dashboard']]
+#ROLES_LIST = [['os-dashboard']]
 
 PRESET_VALUES = {
     'NAMESERVERS': '192.168.10.1',
     'NTP_SERVER': '192.168.10.1',
     'GATEWAY': '192.168.10.1',
     'PROXY': 'http://192.168.10.1:3128',
+    'ROLES_LIST': [['os-dashboard']],
+    'BUILD_TIMEOUT': '60'
 }
 print os.environ.get("NAMESERVERS")
 for v in PRESET_VALUES:
@@ -232,6 +234,7 @@ print 'set partition config to cluster %s status: %s, resp: %s' % (
 
 
 # set each host config in cluster.
+ROLES_LIST = PRESET_VALUES['ROLES_LIST']
 for host_id in host_ids:
     if ROLES_LIST:
         roles = ROLES_LIST.pop(0)
@@ -250,7 +253,8 @@ print 'deploy cluster %s status: %s, resp: %s' % (cluster_id, status, resp)
 
 
 # get intalling progress.
-timeout = time.time() + 60 * 60
+BUILD_TIMEOUT = PRESET_VALUES['BUILD_TIMEOUT']
+timeout = time.time() + BUILD_TIMEOUT * 60
 while True:
     status, resp = client.get_cluster_installing_progress(cluster_id)
     print 'get cluster %s installing progress status: %s, resp: %s' % (

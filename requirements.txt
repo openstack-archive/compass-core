@@ -2,6 +2,9 @@ flask
 flask-script
 flask-restful
 flask-sqlalchemy
+flask-login
+Flask-WTF
+itsdangerous
 celery
 netaddr
 paramiko

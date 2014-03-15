@@ -28,7 +28,7 @@ COMPASS_SERVER_URL = 'http://127.0.0.1/api'
 SWITCH_IP = '10.145.81.220'
 SWITCH_SNMP_VERSION = 'v2c'
 SWITCH_SNMP_COMMUNITY = 'public'
-MACHINES_TO_ADD = ['00:11:20:30:40:01']
+#MACHINES_TO_ADD = ['00:11:20:30:40:01']
 CLUSTER_NAME = 'cluster2'
 HOST_NAME_PREFIX = 'host'
 SERVER_USERNAME = 'root'
@@ -76,7 +76,8 @@ PRESET_VALUES = {
     'NTP_SERVER': '192.168.10.1',
     'GATEWAY': '192.168.10.1',
     'PROXY': 'http://192.168.10.1:3128',
-    'ROLES_LIST': [['os-dashboard']],
+    'ROLES_LIST': 'os-dashboard',
+    'MACHINES_TO_ADD': '00:11:20:30:40:01',
     'BUILD_TIMEOUT': 60
 }
 print os.environ.get("NAMESERVERS")
@@ -131,6 +132,7 @@ status, resp = client.get_machines(switch_id=switch_id)
 print 'get all machines under switch %s status: %s, resp: %s' % (
     switch_id, status, resp)
 machines = {}
+MACHINES_TO_ADD = PRESET_VALUES['MACHINES_TO_ADD'].split()
 for machine in resp['machines']:
     mac = machine['mac']
     if mac in MACHINES_TO_ADD:
@@ -234,7 +236,7 @@ print 'set partition config to cluster %s status: %s, resp: %s' % (
 
 
 # set each host config in cluster.
-ROLES_LIST = PRESET_VALUES['ROLES_LIST']
+ROLES_LIST = [PRESET_VALUES['ROLES_LIST'].split()]
 for host_id in host_ids:
     if ROLES_LIST:
         roles = ROLES_LIST.pop(0)

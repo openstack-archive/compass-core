@@ -281,13 +281,22 @@ status, resp = client.get_dashboard_links(cluster_id)
 print 'get cluster %s dashboardlinks status: %s, resp: %s' % (
     cluster_id, status, resp)
 dashboardlinks = resp['dashboardlinks']
-r = requests.get(dashboardlinks['os-dashboard'], verify=False)
-r.raise_for_status()
-match = re.search(r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)', r.text)
-if match:
-    print 'dashboard login page can be downloaded'
-else:
-    print (
-        'dashboard login page failed to be downloaded\n'
-        'the context is:\n%s\n') % r.text
-    raise Exception("os-dashboard is not properly installed!")
+for x in dashboardlinks.keys():
+    if x in ("os-dashboard", "os-single-controller"):
+        dashboardurl = dashboardlinks.get(x)
+        if dashboardurl is None:
+            raise Exception("No dashboard link is found")
+        else:
+            r = requests.get(dashboardurl, verify=False)
+            r.raise_for_status()
+            match = re.search(
+                r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)', r.text)
+            if match:
+                print 'dashboard login page can be downloaded'
+            else:
+                print (
+                    'dashboard login page failed to be downloaded\n'
+                    'the context is:\n%s\n') % r.text
+                raise Exception("os-dashboard is not properly installed!")
+    else:
+        raise Exception("Node with dashboard role not found")

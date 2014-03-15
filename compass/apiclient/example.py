@@ -264,10 +264,13 @@ while True:
     progress = resp['progress']
     if (
         progress['state'] not in ['UNINITIALIZED', 'INSTALLING'] or
-        progress['percentage'] >= 1.0 or
-        time.time() > timeout
+        progress['percentage'] >= 1.0
     ):
         break
+    if (
+        time.time() > timeout
+    ):
+        raise Exception("Timeout! The system is not ready in time.")
 
     for host_id in host_ids:
         status, resp = client.get_host_installing_progress(host_id)
@@ -281,13 +284,19 @@ status, resp = client.get_dashboard_links(cluster_id)
 print 'get cluster %s dashboardlinks status: %s, resp: %s' % (
     cluster_id, status, resp)
 dashboardlinks = resp['dashboardlinks']
-r = requests.get(dashboardlinks['os-dashboard'], verify=False)
-r.raise_for_status()
-match = re.search(r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)', r.text)
-if match:
-    print 'dashboard login page can be downloaded'
-else:
-    print (
-        'dashboard login page failed to be downloaded\n'
-        'the context is:\n%s\n') % r.text
-    raise Exception("os-dashboard is not properly installed!")
+for x in dashboardlinks.keys():
+    if x in ("os-dashboard", "os-controller"):
+        dashboardurl = dashboardlinks.get(x)
+        if dashboardurl is None:
+            raise Exception("No dashboard link is found")
+        r = requests.get(dashboardurl, verify=False)
+        r.raise_for_status()
+        match = re.search(
+            r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)', r.text)
+        if match:
+            print 'dashboard login page can be downloaded'
+            break
+        print (
+            'dashboard login page failed to be downloaded\n'
+            'the context is:\n%s\n') % r.text
+        raise Exception("os-dashboard is not properly installed!")

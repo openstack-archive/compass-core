@@ -281,7 +281,7 @@ status, resp = client.get_dashboard_links(cluster_id)
 print 'get cluster %s dashboardlinks status: %s, resp: %s' % (
     cluster_id, status, resp)
 dashboardlinks = resp['dashboardlinks']
-r = requests.get(dashboardlinks['os-dashboard'], verify=False)
+r = requests.get(dashboardlinks.values()[0], verify=False)
 r.raise_for_status()
 match = re.search(r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)', r.text)
 if match:

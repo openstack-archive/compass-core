@@ -83,7 +83,7 @@ class HDManager(object):
                           "No such vendor found!")
             return False
 
-        if instance.is_this_vendor(host, credential, sys_info):
+        if instance.is_this_vendor(sys_info):
             logging.info("[hdsdiscovery][hdmanager][is_valid_vendor]"
                          "vendor %s is correct!", vendor)
             return True
@@ -134,7 +134,7 @@ class HDManager(object):
                 logging.error('no instance %s load from %s', vname, vpath)
                 continue
 
-            if instance.is_this_vendor(host, credential, sys_info):
+            if instance.is_this_vendor(sys_info):
                 logging.info("[get_vendor]****Found vendor '%s'****", vname)
                 vendor = vname
                 break

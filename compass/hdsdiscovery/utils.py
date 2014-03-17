@@ -42,7 +42,7 @@ def load_module(mod_name, path, host=None, credential=None):
 
         return instance
     except ImportError as exc:
-        logging.error('No such plugin : %s', mod_name)
+        logging.error('No such module found: %s', mod_name)
         logging.exception(exc)
         return None
 
@@ -232,10 +232,7 @@ def snmpget_by_cl(host, credential, oid, timeout=8, retries=3):
     cmd = "snmpget -v %s -c %s -Ob -r %s -t %s %s %s" % (
         version, community, retries, timeout, host, oid)
     output = None
-    sub_p = subprocess.Popen(cmd, shell=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-    output, err = sub_p.communicate()
+    output, err = exec_command(cmd)
 
     if err:
         logging.error("[snmpget_by_cl] %s", err)
@@ -255,9 +252,8 @@ def snmpwalk_by_cl(host, credential, oid, timeout=5, retries=3):
     community = credential['community']
     cmd = "snmpwalk -v %s -c %s -Cc -r %s -t %s -Ob %s %s" % (
         version, community, retries, timeout, host, oid)
-    output = []
-    sub_p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-    output, err = sub_p.communicate()
+
+    output, err = exec_command(cmd)
 
     if err:
         logging.debug("[snmpwalk_by_cl] %s ", err)
@@ -278,3 +274,13 @@ def snmpwalk_by_cl(host, credential, oid, timeout=5, retries=3):
         result.append(temp)
 
     return result
+
+
+def exec_command(command):
+    """Execute command."""
+    sub_p = subprocess.Popen(command,
+                             shell=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    output, err = sub_p.communicate()
+    return (output, err)

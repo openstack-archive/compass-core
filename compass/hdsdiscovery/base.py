@@ -29,7 +29,7 @@ class BaseVendor(object):
     """Basic Vendor object."""
     __metaclass__ = ABCMeta
 
-    def is_this_vendor(self, host, credential, sys_info, **kwargs):
+    def is_this_vendor(self, sys_info, **kwargs):
         """Determine if the host is associated with this vendor.
            This function must be implemented by vendor itself
         """
@@ -47,9 +47,13 @@ class BaseSnmpVendor(BaseVendor):
         super(BaseSnmpVendor, self).__init__()
         self._matched_names = matched_names
 
-    def is_this_vendor(self, host, credential, sys_info, **kwargs):
-        """Determine if the host is associated with this vendor."""
-        if utils.is_valid_snmp_v2_credential(credential) and sys_info:
+    def is_this_vendor(self, sys_info, **kwargs):
+        """Determine if the switch belongs to this vendor by matching the
+           system information retrieved from the switch.
+           :param str sys_info: the system information retrieved from a switch
+           Return True
+        """
+        if sys_info:
             for name in self._matched_names:
                 if re.search(r"\b" + re.escape(name) + r"\b", sys_info,
                              re.IGNORECASE):

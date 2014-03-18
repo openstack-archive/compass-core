@@ -58,7 +58,7 @@ class HdsCheck(base.BaseCheck):
         yum_base = pkg_module.YumBase()
         uninstalled = []
         for package in ['net-snmp-utils', 'net-snmp', 'net-snmp-python']:
-            if not yum_base.rpmdb.searchNevra(name=package):
+            if len(yum_base.rpmdb.searchNevra(name=package)) == 0:
                 self.messages.append("[%s]Error: %s package is required "
                                      "for HDS" % (self.NAME, package))
                 uninstalled.append(package)

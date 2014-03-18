@@ -1,0 +1,168 @@
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: execute[Keystone: sleep] ran successfully
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: Processing directory[/etc/keystone] action create (openstack-identity::server line 73)
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: directory[/etc/keystone] owner changed to 163
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: directory[/etc/keystone] mode changed to 700
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: Processing directory[/etc/keystone/ssl] action create (openstack-identity::server line 79)
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: Processing file[/var/lib/keystone/keystone.db] action delete (openstack-identity::server line 87)
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: Processing execute[keystone-manage pki_setup] action run (openstack-identity::server line 91)
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: Processing template[/etc/keystone/keystone.conf] action create (openstack-identity::server line 140)
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: template[/etc/keystone/keystone.conf] backed up to /var/chef/backup/etc/keystone/keystone.conf.chef-20140221203911.069202
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: template[/etc/keystone/keystone.conf] updated file contents /etc/keystone/keystone.conf
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: template[/etc/keystone/keystone.conf] owner changed to 163
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: template[/etc/keystone/keystone.conf] mode changed to 644
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: template[/etc/keystone/keystone.conf] sending restart action to service[keystone] (immediate)
+Feb 21 20:39:11 server1.1  [2014-02-21T20:39:11-08:00] INFO: Processing service[keystone] action restart (openstack-identity::server line 64)
+Feb 21 20:39:12 server1.1  [2014-02-21T20:39:11-08:00] INFO: service[keystone] restarted
+Feb 21 20:39:12 server1.1  [2014-02-21T20:39:11-08:00] INFO: service[keystone] sending run action to execute[Keystone: sleep] (immediate)
+Feb 21 20:39:12 server1.1  [2014-02-21T20:39:11-08:00] INFO: Processing execute[Keystone: sleep] action run (openstack-identity::server line 58)
+Feb 21 20:39:22 server1.1  [2014-02-21T20:39:21-08:00] INFO: execute[Keystone: sleep] ran successfully
+Feb 21 20:39:22 server1.1  [2014-02-21T20:39:21-08:00] INFO: Processing template[/etc/keystone/default_catalog.templates] action create (openstack-identity::server line 158)
+Feb 21 20:39:22 server1.1  [2014-02-21T20:39:21-08:00] INFO: Processing execute[keystone-manage db_sync] action run (openstack-identity::server line 172)
+Feb 21 20:39:43 server1.1  [2014-02-21T20:39:42-08:00] INFO: execute[keystone-manage db_sync] ran successfully
+Feb 21 20:39:43 server1.1  [2014-02-21T20:39:42-08:00] INFO: Processing bash[bootstrap-keystone-admin] action run (openstack-identity::registration line 40)
+Feb 21 20:39:45 server1.1  [2014-02-21T20:39:44-08:00] INFO: bash[bootstrap-keystone-admin] ran successfully
+Feb 21 20:39:45 server1.1  [2014-02-21T20:39:44-08:00] INFO: Processing openstack-identity_register[Register 'admin' Tenant] action create_tenant (openstack-identity::registration line 80)
+Feb 21 20:39:45 server1.1  [2014-02-21T20:39:44-08:00] INFO: Tenant 'admin' already exists.. Not creating.
+Feb 21 20:39:45 server1.1  [2014-02-21T20:39:44-08:00] INFO: Tenant UUID: 87cf46951cc14159bd16b68e3eb96321
+Feb 21 20:39:45 server1.1  [2014-02-21T20:39:44-08:00] INFO: Processing openstack-identity_register[Register 'service' Tenant] action create_tenant (openstack-identity::registration line 80)
+Feb 21 20:39:46 server1.1  [2014-02-21T20:39:45-08:00] INFO: Created tenant 'service'
+Feb 21 20:39:46 server1.1  [2014-02-21T20:39:45-08:00] INFO: Processing openstack-identity_register[Register 'admin' Role] action create_role (openstack-identity::registration line 92)
+Feb 21 20:39:46 server1.1  [2014-02-21T20:39:45-08:00] INFO: Role 'admin' already exists.. Not creating.
+Feb 21 20:39:46 server1.1  [2014-02-21T20:39:45-08:00] INFO: Role UUID: 8070c199fc2647c9a50176d11256bebc
+Feb 21 20:39:46 server1.1  [2014-02-21T20:39:45-08:00] INFO: Processing openstack-identity_register[Register 'Member' Role] action create_role (openstack-identity::registration line 92)
+Feb 21 20:39:47 server1.1  [2014-02-21T20:39:46-08:00] INFO: Created Role 'Member'
+Feb 21 20:39:47 server1.1  [2014-02-21T20:39:46-08:00] INFO: Processing openstack-identity_register[Register 'compute' User] action create_user (openstack-identity::registration line 109)
+Feb 21 20:39:48 server1.1  [2014-02-21T20:39:47-08:00] INFO: Created user 'service' for tenant 'service'
+Feb 21 20:39:48 server1.1  [2014-02-21T20:39:47-08:00] INFO: Processing openstack-identity_register[Grant admin Role to service User in service Tenant] action grant_role (openstack-identity::registration line 119)
+Feb 21 20:39:49 server1.1  [2014-02-21T20:39:48-08:00] INFO: Granted Role 'admin' to User 'service' in Tenant 'service'
+Feb 21 20:39:49 server1.1  [2014-02-21T20:39:48-08:00] INFO: Processing openstack-identity_register[Register compute Service] action create_service (openstack-identity::registration line 131)
+Feb 21 20:39:50 server1.1  [2014-02-21T20:39:49-08:00] INFO: Created service 'nova'
+Feb 21 20:39:50 server1.1  [2014-02-21T20:39:49-08:00] INFO: Processing openstack-identity_register[Register compute Endpoint] action create_endpoint (openstack-identity::registration line 151)
+Feb 21 20:39:50 server1.1  [2014-02-21T20:39:50-08:00] INFO: Created endpoint for service type 'compute'
+Feb 21 20:39:50 server1.1  [2014-02-21T20:39:50-08:00] INFO: Processing openstack-identity_register[Register 'network' User] action create_user (openstack-identity::registration line 109)
+Feb 21 20:39:51 server1.1  [2014-02-21T20:39:50-08:00] INFO: User 'service' already exists for tenant 'service'
+Feb 21 20:39:51 server1.1  [2014-02-21T20:39:50-08:00] INFO: Processing openstack-identity_register[Grant admin Role to service User in service Tenant] action grant_role (openstack-identity::registration line 119)
+Feb 21 20:39:52 server1.1  [2014-02-21T20:39:51-08:00] INFO: Role 'admin' already granted to User 'service' in Tenant 'service'
+Feb 21 20:39:52 server1.1  [2014-02-21T20:39:51-08:00] INFO: Processing openstack-identity_register[Register network Service] action create_service (openstack-identity::registration line 131)
+Feb 21 20:39:53 server1.1  [2014-02-21T20:39:52-08:00] INFO: Created service 'quantum'
+Feb 21 20:39:53 server1.1  [2014-02-21T20:39:52-08:00] INFO: Processing openstack-identity_register[Register network Endpoint] action create_endpoint (openstack-identity::registration line 151)
+Feb 21 20:39:54 server1.1  [2014-02-21T20:39:53-08:00] INFO: Created endpoint for service type 'network'
+Feb 21 20:39:54 server1.1  [2014-02-21T20:39:53-08:00] INFO: Processing openstack-identity_register[Register 'volume' User] action create_user (openstack-identity::registration line 109)
+Feb 21 20:39:54 server1.1  [2014-02-21T20:39:53-08:00] INFO: User 'service' already exists for tenant 'service'
+Feb 21 20:39:54 server1.1  [2014-02-21T20:39:53-08:00] INFO: Processing openstack-identity_register[Grant admin Role to service User in service Tenant] action grant_role (openstack-identity::registration line 119)
+Feb 21 20:39:55 server1.1  [2014-02-21T20:39:54-08:00] INFO: Role 'admin' already granted to User 'service' in Tenant 'service'
+Feb 21 20:39:55 server1.1  [2014-02-21T20:39:54-08:00] INFO: Processing openstack-identity_register[Register volume Service] action create_service (openstack-identity::registration line 131)
+Feb 21 20:39:56 server1.1  [2014-02-21T20:39:55-08:00] INFO: Created service 'cinder'
+Feb 21 20:39:56 server1.1  [2014-02-21T20:39:55-08:00] INFO: Processing openstack-identity_register[Register volume Endpoint] action create_endpoint (openstack-identity::registration line 151)
+Feb 21 20:39:57 server1.1  [2014-02-21T20:39:56-08:00] INFO: Created endpoint for service type 'volume'
+Feb 21 20:39:57 server1.1  [2014-02-21T20:39:56-08:00] INFO: Processing openstack-identity_register[Register identity Service] action create_service (openstack-identity::registration line 131)
+Feb 21 20:39:57 server1.1  [2014-02-21T20:39:56-08:00] INFO: Created service 'keystone'
+Feb 21 20:39:57 server1.1  [2014-02-21T20:39:56-08:00] INFO: Processing openstack-identity_register[Register identity Endpoint] action create_endpoint (openstack-identity::registration line 151)
+Feb 21 20:39:58 server1.1  [2014-02-21T20:39:57-08:00] INFO: Created endpoint for service type 'identity'
+Feb 21 20:39:58 server1.1  [2014-02-21T20:39:57-08:00] INFO: Processing openstack-identity_register[Register 'image' User] action create_user (openstack-identity::registration line 109)
+Feb 21 20:39:59 server1.1  [2014-02-21T20:39:58-08:00] INFO: User 'service' already exists for tenant 'service'
+Feb 21 20:39:59 server1.1  [2014-02-21T20:39:58-08:00] INFO: Processing openstack-identity_register[Grant admin Role to service User in service Tenant] action grant_role (openstack-identity::registration line 119)
+Feb 21 20:40:00 server1.1  [2014-02-21T20:39:59-08:00] INFO: Role 'admin' already granted to User 'service' in Tenant 'service'
+Feb 21 20:40:00 server1.1  [2014-02-21T20:39:59-08:00] INFO: Processing openstack-identity_register[Register image Service] action create_service (openstack-identity::registration line 131)
+Feb 21 20:40:00 server1.1  [2014-02-21T20:40:00-08:00] INFO: Created service 'glance'
+Feb 21 20:40:00 server1.1  [2014-02-21T20:40:00-08:00] INFO: Processing openstack-identity_register[Register image Endpoint] action create_endpoint (openstack-identity::registration line 151)
+Feb 21 20:40:01 server1.1  [2014-02-21T20:40:00-08:00] INFO: Created endpoint for service type 'image'
+Feb 21 20:40:01 server1.1  [2014-02-21T20:40:00-08:00] INFO: Processing openstack-identity_register[Register 'object-store' User] action create_user (openstack-identity::registration line 109)
+Feb 21 20:40:02 server1.1  [2014-02-21T20:40:01-08:00] INFO: User 'service' already exists for tenant 'service'
+Feb 21 20:40:02 server1.1  [2014-02-21T20:40:01-08:00] INFO: Processing openstack-identity_register[Grant admin Role to service User in service Tenant] action grant_role (openstack-identity::registration line 119)
+Feb 21 20:40:03 server1.1  [2014-02-21T20:40:02-08:00] INFO: Role 'admin' already granted to User 'service' in Tenant 'service'
+Feb 21 20:40:03 server1.1  [2014-02-21T20:40:02-08:00] INFO: Processing openstack-identity_register[Register object-store Service] action create_service (openstack-identity::registration line 131)
+Feb 21 20:40:04 server1.1  [2014-02-21T20:40:03-08:00] INFO: Created service 'swift'
+Feb 21 20:40:04 server1.1  [2014-02-21T20:40:03-08:00] INFO: Processing openstack-identity_register[Create EC2 credentials for 'admin' user] action create_ec2_credentials (openstack-identity::registration line 166)
+Feb 21 20:40:05 server1.1  [2014-02-21T20:40:04-08:00] INFO: Created EC2 Credentials for User 'admin' in Tenant 'admin'
+Feb 21 20:40:05 server1.1  [2014-02-21T20:40:04-08:00] INFO: Processing openstack-identity_register[Create EC2 credentials for 'monitoring' user] action create_ec2_credentials (openstack-identity::registration line 166)
+Feb 21 20:40:07 server1.1  [2014-02-21T20:40:06-08:00] ERROR: Unable to create EC2 Credentials for User 'monitoring' in Tenant 'service'
+Feb 21 20:40:07 server1.1  [2014-02-21T20:40:06-08:00] ERROR: Error was: Could not lookup uuid for ec2-credentials:tenant=>service. Error was 'Client' object has no attribute 'auth_user_id'
+Feb 21 20:40:07 server1.1  (1)
+Feb 21 20:40:07 server1.1  [2014-02-21T20:40:06-08:00] INFO: Processing package[openstack-cinder] action upgrade (openstack-block-storage::cinder-common line 26)
+Feb 21 20:40:07 server1.1  [2014-02-21T20:40:06-08:00] INFO: package[openstack-cinder] installing openstack-cinder-2013.1.4-1.el6 from openstack repository
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: package[openstack-cinder] upgraded from uninstalled to 2013.1.4-1.el6
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: Processing directory[/etc/cinder] action create (openstack-block-storage::cinder-common line 44)
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/etc/cinder] owner changed to 165
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/etc/cinder] group changed to 165
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/etc/cinder] mode changed to 750
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: Processing template[/etc/cinder/cinder.conf] action create (openstack-block-storage::cinder-common line 51)
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: template[/etc/cinder/cinder.conf] backed up to /var/chef/backup/etc/cinder/cinder.conf.chef-20140221204110.415861
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: template[/etc/cinder/cinder.conf] updated file contents /etc/cinder/cinder.conf
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: template[/etc/cinder/cinder.conf] owner changed to 165
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: template[/etc/cinder/cinder.conf] mode changed to 644
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: Processing package[python-cinderclient] action upgrade (openstack-block-storage::api line 32)
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: Processing package[MySQL-python] action upgrade (openstack-block-storage::api line 41)
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: Processing directory[/var/cache/cinder] action create (openstack-block-storage::api line 46)
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/var/cache/cinder] created directory /var/cache/cinder
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/var/cache/cinder] owner changed to 165
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/var/cache/cinder] group changed to 165
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/var/cache/cinder] mode changed to 700
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: Processing directory[/var/lock/cinder] action create (openstack-block-storage::api line 52)
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/var/lock/cinder] created directory /var/lock/cinder
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/var/lock/cinder] owner changed to 165
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/var/lock/cinder] group changed to 165
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: directory[/var/lock/cinder] mode changed to 700
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: Processing service[cinder-api] action enable (openstack-block-storage::api line 58)
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: service[cinder-api] enabled
+Feb 21 20:41:11 server1.1  [2014-02-21T20:41:10-08:00] INFO: Processing execute[cinder-manage db sync] action run (openstack-block-storage::api line 71)
+Feb 21 20:41:30 server1.1  [2014-02-21T20:41:30-08:00] INFO: execute[cinder-manage db sync] ran successfully
+Feb 21 20:41:30 server1.1  [2014-02-21T20:41:30-08:00] INFO: Processing template[/etc/cinder/api-paste.ini] action create (openstack-block-storage::api line 73)
+Feb 21 20:41:30 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/api-paste.ini] backed up to /var/chef/backup/etc/cinder/api-paste.ini.chef-20140221204130.194587
+Feb 21 20:41:30 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/api-paste.ini] updated file contents /etc/cinder/api-paste.ini
+Feb 21 20:41:30 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/api-paste.ini] owner changed to 165
+Feb 21 20:41:30 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/api-paste.ini] mode changed to 644
+Feb 21 20:41:30 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/api-paste.ini] sending restart action to service[cinder-api] (immediate)
+Feb 21 20:41:30 server1.1  [2014-02-21T20:41:30-08:00] INFO: Processing service[cinder-api] action restart (openstack-block-storage::api line 58)
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: service[cinder-api] restarted
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: Processing template[/etc/cinder/policy.json] action create (openstack-block-storage::api line 88)
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/policy.json] backed up to /var/chef/backup/etc/cinder/policy.json.chef-20140221204130.442890
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/policy.json] updated file contents /etc/cinder/policy.json
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/policy.json] owner changed to 165
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/policy.json] mode changed to 644
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: template[/etc/cinder/policy.json] not queuing delayed action restart on service[cinder-api] (delayed), as it's already been queued
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: Processing package[MySQL-python] action upgrade (openstack-block-storage::scheduler line 45)
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: Processing service[cinder-scheduler] action enable (openstack-block-storage::scheduler line 50)
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: service[cinder-scheduler] enabled
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: Processing service[cinder-scheduler] action start (openstack-block-storage::scheduler line 50)
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: service[cinder-scheduler] started
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: Processing package[openstack-nova-common] action upgrade (openstack-compute::nova-common line 37)
+Feb 21 20:41:31 server1.1  [2014-02-21T20:41:30-08:00] INFO: package[openstack-nova-common] installing openstack-nova-common-2013.1.4-7.el6 from openstack repository
+Feb 21 20:41:52 server1.1  [2014-02-21T20:41:52-08:00] INFO: package[openstack-nova-common] upgraded from uninstalled to 2013.1.4-7.el6
+Feb 21 20:41:52 server1.1  [2014-02-21T20:41:52-08:00] INFO: Processing package[python-memcached] action install (openstack-compute::nova-common line 46)
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: Processing directory[/etc/nova] action create (openstack-compute::nova-common line 51)
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: directory[/etc/nova] owner changed to 162
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: directory[/etc/nova] group changed to 162
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: directory[/etc/nova] mode changed to 700
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: Processing directory[/etc/nova/rootwrap.d] action create (openstack-compute::nova-common line 59)
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: directory[/etc/nova/rootwrap.d] created directory /etc/nova/rootwrap.d
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: directory[/etc/nova/rootwrap.d] owner changed to 0
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: directory[/etc/nova/rootwrap.d] group changed to 0
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: directory[/etc/nova/rootwrap.d] mode changed to 700
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: Processing template[/etc/nova/nova.conf] action create (openstack-compute::nova-common line 134)
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/nova.conf] backed up to /var/chef/backup/etc/nova/nova.conf.chef-20140221204152.340272
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/nova.conf] updated file contents /etc/nova/nova.conf
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/nova.conf] owner changed to 162
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/nova.conf] mode changed to 644
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: Processing template[/etc/nova/rootwrap.conf] action create (openstack-compute::nova-common line 164)
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.conf] backed up to /var/chef/backup/etc/nova/rootwrap.conf.chef-20140221204152.347747
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.conf] updated file contents /etc/nova/rootwrap.conf
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.conf] group changed to 0
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.conf] mode changed to 644
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: Processing template[/etc/nova/rootwrap.d/api-metadata.filters] action create (openstack-compute::nova-common line 172)
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/api-metadata.filters] created file /etc/nova/rootwrap.d/api-metadata.filters
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/api-metadata.filters] updated file contents /etc/nova/rootwrap.d/api-metadata.filters
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/api-metadata.filters] owner changed to 0
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/api-metadata.filters] group changed to 0
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/api-metadata.filters] mode changed to 644
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: Processing template[/etc/nova/rootwrap.d/compute.filters] action create (openstack-compute::nova-common line 180)
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/compute.filters] created file /etc/nova/rootwrap.d/compute.filters
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/compute.filters] updated file contents /etc/nova/rootwrap.d/compute.filters
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/compute.filters] owner changed to 0
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/compute.filters] group changed to 0
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/compute.filters] mode changed to 644
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: Processing template[/etc/nova/rootwrap.d/network.filters] action create (openstack-compute::nova-common line 188)
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/network.filters] created file /etc/nova/rootwrap.d/network.filters
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/network.filters] updated file contents /etc/nova/rootwrap.d/network.filters
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/network.filters] owner changed to 0
+Feb 21 20:41:53 server1.1  [2014-02-21T20:41:52-08:00] INFO: template[/etc/nova/rootwrap.d/network.filters] group changed to 0

@@ -1,0 +1,61 @@
+05:51:20,534 INFO    : kernel command line: initrd=/images/CentOS-6.5-x86_64/initrd.img ksdevice=bootif lang= kssendmac text ks=http://10.145.88.211/cblr/svc/op/ks/system/server1.1 BOOT_IMAGE=/images/CentOS-6.5-x86_64/vmlinuz BOOTIF=01-00-0c-29-21-89-af 
+
+05:51:20,534 INFO    : text mode forced from cmdline
+05:51:20,534 DEBUG   : readNetInfo /tmp/s390net not found, early return
+05:51:20,534 INFO    : anaconda version 13.21.215 on x86_64 starting
+05:51:20,656 DEBUG   : Saving module ipv6
+05:51:20,656 DEBUG   : Saving module iscsi_ibft
+05:51:20,656 DEBUG   : Saving module iscsi_boot_sysfs
+05:51:20,656 DEBUG   : Saving module pcspkr
+05:51:20,656 DEBUG   : Saving module edd
+05:51:20,656 DEBUG   : Saving module floppy
+05:51:20,656 DEBUG   : Saving module iscsi_tcp
+05:51:20,656 DEBUG   : Saving module libiscsi_tcp
+05:51:20,656 DEBUG   : Saving module libiscsi
+05:51:20,656 DEBUG   : Saving module scsi_transport_iscsi
+05:51:20,656 DEBUG   : Saving module squashfs
+05:51:20,656 DEBUG   : Saving module cramfs
+05:51:20,656 DEBUG   : probing buses
+05:51:20,693 DEBUG   : waiting for hardware to initialize
+05:51:27,902 DEBUG   : probing buses
+05:51:27,925 DEBUG   : waiting for hardware to initialize
+05:51:47,187 INFO    : getting kickstart file
+05:51:47,196 INFO    : eth0 has link, using it
+05:51:47,208 INFO    : doing kickstart... setting it up
+05:51:47,208 DEBUG   : activating device eth0
+05:51:52,221 INFO    : wait_for_iface_activation (2502): device eth0 activated
+05:51:52,222 INFO    : file location: http://10.145.88.211/cblr/svc/op/ks/system/server1.1
+05:51:52,223 INFO    : transferring http://10.145.88.211/cblr/svc/op/ks/system/server1.1
+05:51:52,611 INFO    : setting up kickstart
+05:51:52,611 INFO    : kickstart forcing text mode
+05:51:52,611 INFO    : kickstartFromUrl
+05:51:52,612 INFO    : results of url ks, url http://10.145.88.211/cblr/links/CentOS-6.5-x86_64
+05:51:52,612 INFO    : trying to mount CD device /dev/sr0 on /mnt/stage2
+05:51:52,616 INFO    : drive status is CDS_TRAY_OPEN
+05:51:52,616 ERROR   : Drive tray reports open when it should be closed
+05:52:07,635 INFO    : no stage2= given, assuming http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img
+05:52:07,636 DEBUG   : going to set language to en_US.UTF-8
+05:52:07,636 INFO    : setting language to en_US.UTF-8
+05:52:07,654 INFO    : starting STEP_METHOD
+05:52:07,654 DEBUG   : loaderData->method is set, adding skipMethodDialog
+05:52:07,654 DEBUG   : skipMethodDialog is set
+05:52:07,663 INFO    : starting STEP_STAGE2
+05:52:07,663 INFO    : URL_STAGE_MAIN: url is http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img
+05:52:07,663 INFO    : transferring http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/updates.img
+05:52:07,780 ERROR   : failed to mount loopback device /dev/loop7 on /tmp/update-disk as /tmp/updates-disk.img: (null)
+05:52:07,780 ERROR   : Error mounting /dev/loop7 on /tmp/update-disk: No such file or directory
+05:52:07,780 INFO    : transferring http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/product.img
+05:52:07,814 ERROR   : Error downloading http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/product.img: HTTP response code said error
+05:52:07,815 INFO    : transferring http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img
+05:52:47,354 INFO    : mounted loopback device /mnt/runtime on /dev/loop0 as /tmp/install.img
+05:52:47,354 INFO    : got stage2 at url http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img
+05:52:47,403 INFO    : Loading SELinux policy
+05:52:48,130 INFO    : getting ready to spawn shell now
+05:52:48,359 INFO    : Running anaconda script /usr/bin/anaconda
+05:52:54,804 INFO    : CentOS Linux is the highest priority installclass, using it
+05:52:54,867 WARNING : /usr/lib/python2.6/site-packages/pykickstart/parser.py:713: DeprecationWarning: Script does not end with %end.  This syntax has been deprecated.  It may be removed from future releases, which will result in a fatal error from kickstart.  Please modify your kickstart file to use this updated syntax.
+  warnings.warn(_("%s does not end with %%end.  This syntax has been deprecated.  It may be removed from future releases, which will result in a fatal error from kickstart.  Please modify your kickstart file to use this updated syntax.") % _("Script"), DeprecationWarning)
+
+05:52:54,868 INFO    : Running kickstart %%pre script(s)
+05:52:54,868 WARNING : '/bin/sh' specified as full path
+05:52:56,966 INFO    : All kickstart %%pre script(s) have been run

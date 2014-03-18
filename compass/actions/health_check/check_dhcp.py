@@ -54,6 +54,7 @@ class DhcpCheck(base.BaseCheck):
             self.messages.append(
                 "[%s]Info: DHCP service is "
                 "not managed by Compass" % self.NAME)
+            self.code = 0
             return (self.code, self.messages)
 
         self.check_cobbler_dhcp_template()

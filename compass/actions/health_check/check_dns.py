@@ -50,7 +50,7 @@ class DnsCheck(base.BaseCheck):
         cobbler_settings = remote.get_settings()
         if cobbler_settings['manage_dns'] == 0:
             self.messages.append('[DNS]Info: DNS is not managed by Compass')
-            return (self.code, self.messages)
+            return (0, self.messages)
         self.check_cobbler_dns_template()
         print "[Done]"
         self.check_dns_service()

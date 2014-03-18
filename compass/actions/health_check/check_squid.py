@@ -52,7 +52,7 @@ class SquidCheck(base.BaseCheck):
             "/etc/squid/squid.conf")
         if not conf_err_msg == "":
             self._set_status(0, conf_err_msg)
-        elif int(oct(os.stat('/etc/squid/squid.conf').st_mode)) < 644:
+        elif int(oct(os.stat('/etc/squid/squid.conf').st_mode)) < 100644:
             self._set_status(
                 0,
                 "[%s]Error: squid.conf has incorrect "

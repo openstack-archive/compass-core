@@ -1,0 +1,371 @@
+apache = {
+    "no_conf": {
+        "mock_module": "os.path",
+        "mock_func": "exists",
+        "mock_return": False,
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "does not exist, please check your configurations",
+            ],
+        },
+    },
+    "no_serv": {
+        "mock_module": "commands",
+        "mock_func": "getoutput",
+        "mock_return": "",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "is not running",
+            ],
+        },
+    },
+    "no_port": {
+        "mock_module": "socket",
+        "mock_func": "getservbyport",
+        "mock_return": "",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "Apache is not listening on port 80",
+            ],
+        },
+    },
+    "no_redirect": {
+        "mock_module": "urllib2",
+        "mock_func": "urlopen",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "Compass web is not redirected by Apache",
+            ],
+        },
+    },
+}
+
+celery = {
+    "no_logfile_setting": {
+        "mock_module": "compass.actions.health_check.utils",
+        "mock_func": "validate_setting",
+        "mock_return": "no logfile defined",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "no logfile defined",
+            ],
+        },
+    },
+    "no_configdir_setting": {
+        "mock_module": "compass.actions.health_check.utils",
+        "mock_func": "validate_setting",
+        "mock_return": "no configdir defined",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "no configdir defined",
+            ],
+        },
+    },
+    "no_configfile_setting": {
+        "mock_module": "compass.actions.health_check.utils",
+        "mock_func": "validate_setting",
+        "mock_return": "no configfile defined",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "no configfile defined",
+            ],
+        },
+    },
+}
+
+dhcp = {
+    "not_by_cobbler": {
+        "mock_module": "xmlrpclib",
+        "mock_func": "Server",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "not managed by Compass",
+            ],
+        },
+    },
+}
+
+dns = {
+    "not_by_cobbler": {
+        "mock_module": "xmlrpclib",
+        "mock_func": "Server",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "not managed by Compass",
+            ],
+        },
+    },
+}
+
+hds = {
+    "no_net_snmp_utils": {
+        "mock_module": "yum",
+        "mock_func": "YumBase",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "net-snmp-utils package is required",
+            ],
+        },
+    },
+    "no_net_snmp": {
+        "mock_module": "yum",
+        "mock_func": "YumBase",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "net-snmp package is required"
+            ],
+        },
+    },
+    "no_net_snmp_python": {
+        "mock_module": "yum",
+        "mock_func": "YumBase",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "net-snmp-python package is required"
+            ],
+        },
+    },
+}
+
+misc = {
+    "no_running": {
+        "mock_module": "commands",
+        "mock_func": "getoutput",
+        "mock_return": "",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "ntpd",
+                "is not running",
+            ],
+        },
+    },
+    "no_rsyslog_conf": {
+        "mock_module": "compass.actions.health_check.utils",
+        "mock_func": "check_path",
+        "mock_return": "/etc/rsyslog.conf does not exist",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "/etc/rsyslog.conf",
+                "does not exist",
+            ],
+        },
+    },
+    "no_rsyslog_dot_d": {
+        "mock_module": "compass.actions.health_check.utils",
+        "mock_func": "check_path",
+        "mock_return": "/etc/rsyslog.d/ does not exist",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "/etc/rsyslog.d/",
+                "does not exist",
+            ],
+        },
+    },
+    "no_rsyslog_running": {
+        "mock_module": "commands",
+        "mock_func": "getoutput",
+        "mock_return": "",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "rsyslog",
+                "is not running",
+            ],
+        },
+    },
+    "not_disabled": {
+        "mock_module": "compass.actions.health_check.utils",
+        "mock_func": "check_chkconfig",
+        "mock_return": True,
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "is not disabled",
+            ],
+        },
+    },
+    "not_enabled": {
+        "mock_module": "compass.actions.health_check.utils",
+        "mock_func": "check_chkconfig",
+        "mock_return": False,
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "is disabled",
+            ],
+        },
+    },
+}
+
+os_installer = {
+    "no_distros": {
+        "mock_module": "xmlrpclib",
+        "mock_func": "Server",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "No Cobbler distros found"
+            ],
+        },
+    },
+    "no_profiles": {
+        "mock_module": "xmlrpclib",
+        "mock_func": "Server",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "No Cobbler profiles found",
+            ],
+        },
+    },
+    "no_ppa": {
+        "mock_module": "xmlrpclib",
+        "mock_func": "Server",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "No repository ppa_repo found",
+            ],
+        },
+    },
+}
+
+package_installer = {
+    "no_etc_chef_conf": {
+        "mock_module": "os.path",
+        "mock_func": "exists",
+        "mock_return": False,
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "/etc/chef-server/",
+                "does not exist",
+            ],
+        },
+    },
+    "no_opt_chef_conf": {
+        "mock_module": "os.path",
+        "mock_func": "exists",
+        "mock_return": False,
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "/opt/chef-server/",
+                "does not exist",
+            ],
+        },
+    },
+}
+
+squid = {
+    "no_squid_conf": {
+        "mock_module": "os.path",
+        "mock_func": "exists",
+        "mock_return": False,
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "/etc/squid/squid.conf",
+                "does not exist",
+            ],
+        },
+    },
+    "invalid_squid_conf_permission": {
+        "mock_module": "os",
+        "mock_func": "stat",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "squid.conf",
+                "permissions",
+            ],
+        },
+    },
+    "no_squid_var_path": {
+        "mock_module": "os.path",
+        "mock_func": "exists",
+        "mock_return": False,
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "/var/squid/",
+                "does not exist",
+            ],
+        },
+    },
+    "invalid_squid_ownership": {
+        "mock_module": "pwd",
+        "mock_func": "getpwuid",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "var/squid directory ownership",
+                "misconfigured",
+            ],
+        },
+    },
+    "no_squid_running": {
+        "mock_module": "commands",
+        "mock_func": "getoutput",
+        "mock_return": "",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "squid service does not seem",
+                "running",
+            ],
+        },
+    },
+    "no_listening_port": {
+        "mock_module": "socket",
+        "mock_func": "getservbyport",
+        "mock_return": "",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "squid is not listening",
+                "3128",
+            ],
+        },
+    },
+}
+
+tftp = {
+    "not_by_cobbler": {
+        "mock_module": "xmlrpclib",
+        "mock_func": "Server",
+        "mock_return": "self.dummy",
+        "expected": {
+            "code": 0,
+            "keywords": [
+                "tftp service is not managed by Compass",
+            ],
+        },
+    },
+}

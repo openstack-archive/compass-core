@@ -55,7 +55,7 @@ class TftpCheck(base.BaseCheck):
         if cobbler_settings['manage_tftp'] == 0:
             self.messages.append(
                 '[TFTP]Info: tftp service is not managed by Compass')
-            return (self.code, self.messages)
+            return (0, self.messages)
         self.check_tftp_dir()
         print "[Done]"
         self.check_tftp_service()

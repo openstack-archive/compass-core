@@ -87,7 +87,7 @@ class ApacheCheck(base.BaseCheck):
         except Exception:
             self._set_status(
                 0,
-                "[%s]Error: Apache is not running on Port 80."
+                "[%s]Error: Apache is not listening on port 80."
                 % self.NAME)
 
         return True

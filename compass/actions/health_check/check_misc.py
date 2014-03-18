@@ -86,7 +86,7 @@ class MiscCheck(base.BaseCheck):
         yum_base = pkg_module.YumBase()
         uninstalled = []
         for package in self.MISC_MAPPING["yum"]:
-            if not yum_base.rpmdb.searchNevra(name=package):
+            if len(yum_base.rpmdb.searchNevra(name=package)) == 0:
                 self._set_status(
                     0,
                     "[%s]Error: %s package is required"

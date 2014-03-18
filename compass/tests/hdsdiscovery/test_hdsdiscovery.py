@@ -18,8 +18,8 @@
 import os
 import unittest2
 
+from mock import Mock
 from mock import patch
-
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
@@ -31,8 +31,13 @@ reload(setting)
 from compass.hdsdiscovery.hdmanager import HDManager
 from compass.hdsdiscovery.vendors.huawei.huawei import Huawei
 from compass.hdsdiscovery.vendors.huawei.plugins.mac import Mac
+from compass.hdsdiscovery.vendors.ovswitch.plugins.mac import Mac as OVSMac
 from compass.utils import flags
 from compass.utils import logsetting
+
+
+SNMP_V2_CREDENTIALS = {'version': '2c',
+                       'community': 'public'}
 
 
 class HuaweiTest(unittest2.TestCase):
@@ -42,8 +47,6 @@ class HuaweiTest(unittest2.TestCase):
         super(HuaweiTest, self).setUp()
         logsetting.init()
         self.huawei = Huawei()
-        self.correct_host = '12.23.1.1'
-        self.correct_credentials = {'version': '2c', 'community': 'public'}
         self.sys_info = 'Huawei Technologies'
 
     def tearDown(self):
@@ -52,25 +55,14 @@ class HuaweiTest(unittest2.TestCase):
 
     def test_is_this_vendor(self):
         """test device vendor is haiwei."""
-        #Credential's keyword is incorrect
+        #Incorrect system information
+        incorrect_sys_info = "xxx"
         self.assertFalse(
-            self.huawei.is_this_vendor(self.correct_host,
-                                       {'username': 'root',
-                                        'password': 'root'},
-                                       self.sys_info))
-
-        #Incorrect version
-        self.assertFalse(
-            self.huawei.is_this_vendor(self.correct_host,
-                                       {'version': 'v1',
-                                        'community': 'public'},
-                                       self.sys_info))
+            self.huawei.is_this_vendor(incorrect_sys_info))
 
         #Correct vendor
         self.assertTrue(
-            self.huawei.is_this_vendor(self.correct_host,
-                                       self.correct_credentials,
-                                       self.sys_info))
+            self.huawei.is_this_vendor(self.sys_info))
 
 
 class HuaweiMacTest(unittest2.TestCase):
@@ -79,7 +71,7 @@ class HuaweiMacTest(unittest2.TestCase):
     def setUp(self):
         super(HuaweiMacTest, self).setUp()
         logsetting.init()
-        host = '12.23.1.1'
+        host = '192.168.1.1'
         credential = {'version': '2c', 'community': 'public'}
         self.mac_plugin = Mac(host, credential)
 
@@ -87,13 +79,34 @@ class HuaweiMacTest(unittest2.TestCase):
         del self.mac_plugin
         super(HuaweiMacTest, self).tearDown()
 
-    def test_process_data(self):
+    @patch("compass.hdsdiscovery.utils.snmpwalk_by_cl")
+    def test_process_data(self, mock_snmpwalk):
         """get progress data function."""
         # GET operation haven't been implemeneted.
         self.assertIsNone(self.mac_plugin.process_data('GET'))
 
+        # SNMP Walk Timeout
+        #utils.snmpwalk_by_cl = Mock(return_value=None)
+        mock_snmpwalk.return_value = None
+        self.assertIsNone(self.mac_plugin.process_data())
 
-from compass.hdsdiscovery.vendors.ovswitch.plugins.mac import Mac as OVSMac
+        # Successfully get MAC addresses from the switch
+        mock_snmp_walk_result = [
+            {"iid": "40.110.212.77.198.190.88.1.48", "value": "10"},
+            {"iid": "40.110.212.100.199.74.88.1.48", "value": "11"},
+            {"iid": "0.12.41.53.220.2.88.1.48", "value": "12"}
+        ]
+        expected_mac_info = [
+            {"mac": "28:6e:d4:4d:c6:be", "port": "1", "vlan": "88"},
+            {"mac": "28:6e:d4:64:c7:4a", "port": "2", "vlan": "88"},
+            {"mac": "00:0c:29:35:dc:02", "port": "3", "vlan": "88"}
+        ]
+        #utils.snmpwalk_by_cl = Mock(return_value=mock_snmp_walk_result)
+        mock_snmpwalk.return_value = mock_snmp_walk_result
+        self.mac_plugin.get_port = Mock()
+        self.mac_plugin.get_port.side_effect = ["1", "2", "3"]
+        result = self.mac_plugin.process_data()
+        self.assertEqual(expected_mac_info, result)
 
 
 class OVSMacTest(unittest2.TestCase):
@@ -126,7 +139,7 @@ class HDManagerTest(unittest2.TestCase):
         super(HDManagerTest, self).setUp()
         logsetting.init()
         self.manager = HDManager()
-        self.correct_host = '12.23.1.1'
+        self.correct_host = '127.0.0.1'
         self.correct_credential = {'version': '2c', 'community': 'public'}
 
     def tearDown(self):
@@ -137,17 +150,20 @@ class HDManagerTest(unittest2.TestCase):
     def test_get_vendor(self, sys_info_mock):
         """test get_vendor."""
         # Incorrect ip
-        self.assertIsNone(self.manager.get_vendor('1234.1.1.1',
-                                                  self.correct_credential)[0])
+        vendor, state, err = self.manager.get_vendor('1234.1.1.1',
+                                                     self.correct_credential)
+        self.assertIsNone(vendor)
+        self.assertEqual('error', state)
 
         # Incorrect credential
-        self.assertIsNone(
-            self.manager.get_vendor(self.correct_host,
-                                    {'version': '1v',
-                                     'community': 'private'})[0])
+        incorr_cred = {'version': '1v', 'community': 'private'}
+        vendor, state, err = self.manager.get_vendor(self.correct_host,
+                                                     incorr_cred)
+        self.assertIsNone(vendor)
+        self.assertEqual('error', state)
 
         # SNMP get system description Timeout
-        excepted_err_msg = 'Timeout: No Response from 12.23.1.1.'
+        excepted_err_msg = 'Timeout: No Response from 127.0.0.1.'
         sys_info_mock.return_value = (None, excepted_err_msg)
         result, state, err = self.manager.get_vendor(self.correct_host,
                                                      self.correct_credential)
@@ -171,34 +187,44 @@ class HDManagerTest(unittest2.TestCase):
         expected_vendor_names = ['huawei', 'hp', 'pica8']
         for info, expected_vendor in zip(sys_info, expected_vendor_names):
             sys_info_mock.return_value = (info, '')
-            result, state, err = self.manager\
-                                     .get_vendor(self.correct_host,
-                                                 self.correct_credential)
-            self.assertEqual(result, expected_vendor)
+            # the result is a tuple ($vendor, $state, $error_message)
+            result = self.manager.get_vendor(self.correct_host,
+                                             self.correct_credential)
+            self.assertEqual(result[0], expected_vendor)
 
     @patch('compass.hdsdiscovery.hdmanager.HDManager.get_sys_info')
     def test_is_valid_vendor(self, sys_info_mock):
         """test is_valid_vendor."""
-        #non-exsiting vendor
-        self.assertFalse(self.manager.is_valid_vendor(self.correct_host,
-                                                      self.correct_credential,
-                                                      'xxxx'))
+        #non-exsiting vendor under vendors directory
+        self.assertFalse(
+            self.manager.is_valid_vendor(self.correct_host,
+                                         self.correct_credential,
+                                         'xxxx')
+        )
+
         #No system description retrieved
         sys_info_mock.return_value = (None, 'TIMEOUT')
-        self.assertFalse(self.manager.is_valid_vendor(self.correct_host,
-                                                      self.correct_credential,
-                                                      'pica8'))
+        self.assertFalse(
+            self.manager.is_valid_vendor(self.correct_host,
+                                         self.correct_credential,
+                                         'pica8')
+        )
+
         #Incorrect vendor name
         sys_info = 'Pica8 XorPlus Platform Software'
         sys_info_mock.return_value = (sys_info, '')
-        self.assertFalse(self.manager.is_valid_vendor(self.correct_host,
-                                                      self.correct_credential,
-                                                      'huawei'))
+        self.assertFalse(
+            self.manager.is_valid_vendor(self.correct_host,
+                                         self.correct_credential,
+                                         'huawei')
+        )
 
         #Correct vendor name
-        self.assertTrue(self.manager.is_valid_vendor(self.correct_host,
-                                                     self.correct_credential,
-                                                     'pica8'))
+        self.assertTrue(
+            self.manager.is_valid_vendor(self.correct_host,
+                                         self.correct_credential,
+                                         'pica8')
+        )
 
     def test_learn(self):
         """test learn."""
@@ -211,21 +237,6 @@ class HDManagerTest(unittest2.TestCase):
         self.assertIsNone(self.manager.learn(self.correct_host,
                                              self.correct_credential,
                                              'xxxx', 'mac'))
-
-
-from compass.hdsdiscovery import utils
-
-
-class UtilsTest(unittest2.TestCase):
-    """hdsdiscovery util test class."""
-
-    def setUp(self):
-        super(UtilsTest, self).setUp()
-        logsetting.init()
-
-    def test_load_module(self):
-        """test load_module."""
-        self.assertIsNone(utils.load_module('xxx', 'fake/path/to/module'))
 
 
 if __name__ == '__main__':

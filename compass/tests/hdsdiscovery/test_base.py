@@ -30,6 +30,7 @@ reload(setting)
 
 from compass.hdsdiscovery.base import BaseSnmpMacPlugin
 from compass.hdsdiscovery.base import BaseSnmpVendor
+from compass.hdsdiscovery.error import TimeoutError
 from compass.utils import flags
 from compass.utils import logsetting
 
@@ -47,7 +48,7 @@ class TestBaseSnmpMacPlugin(unittest2.TestCase):
     def setUp(self):
         super(TestBaseSnmpMacPlugin, self).setUp()
         logsetting.init()
-        self.test_plugin = BaseSnmpMacPlugin('12.0.0.1',
+        self.test_plugin = BaseSnmpMacPlugin('127.0.0.1',
                                              {'version': '2c',
                                               'community': 'public'})
 
@@ -58,9 +59,15 @@ class TestBaseSnmpMacPlugin(unittest2.TestCase):
     @patch('compass.hdsdiscovery.utils.snmpget_by_cl')
     def test_get_port(self, mock_snmpget):
         """test snmp get port."""
+        # Successfully get port number
         mock_snmpget.return_value = 'IF-MIB::ifName.4 = STRING: ge-1/1/4'
         result = self.test_plugin.get_port('4')
         self.assertEqual('4', result)
+
+        # Failed to get port number, switch is timeout
+        mock_snmpget.side_effect = TimeoutError("Timeout")
+        result = self.test_plugin.get_port('4')
+        self.assertIsNone(result)
 
     @patch('compass.hdsdiscovery.utils.snmpget_by_cl')
     def test_get_vlan_id(self, mock_snmpget):
@@ -72,6 +79,11 @@ class TestBaseSnmpMacPlugin(unittest2.TestCase):
         mock_snmpget.return_value = 'Q-BRIDGE-MIB::dot1qPvid.4 = Gauge32: 100'
         result = self.test_plugin.get_vlan_id('4')
         self.assertEqual('100', result)
+
+        # Faild to query switch due to timeout
+        mock_snmpget.side_effect = TimeoutError("Timeout")
+        result = self.test_plugin.get_vlan_id('4')
+        self.assertIsNone(result)
 
     def test_get_mac_address(self):
         """tet snmp get mac address."""
@@ -100,33 +112,15 @@ class BaseTest(unittest2.TestCase):
         """test base snmp vendor."""
         fake = MockSnmpVendor()
 
-        credential = {"version": "2c",
-                      "community": "public"}
-        is_vendor = fake.is_this_vendor("12.0.0.1", credential,
-                                        "FakeVendor 1.1")
+        is_vendor = fake.is_this_vendor("FakeVendor 1.1")
 
         self.assertTrue(is_vendor)
 
         # check case-insensitive match
-
-        self.assertFalse(fake.is_this_vendor("12.0.0.1", credential,
-                         "fakevendor1.1"))
+        self.assertFalse(fake.is_this_vendor("fakevendor1.1"))
 
         # breaks word-boudary match
-        self.assertFalse(fake.is_this_vendor("12.0.0.1", credential,
-                         "FakeVendor1.1"))
-
-        # Not SNMP credentials
-        self.assertFalse(fake.is_this_vendor("12.0.0.1",
-                                             {"username": "root",
-                                              "password": "test123"},
-                                             "fakevendor1.1"))
-
-        # Not SNMP v2 credentials
-        self.assertFalse(fake.is_this_vendor("12.0.0.1",
-                                             {"version": "v1",
-                                              "community": "public"},
-                                             "fakevendor1.1"))
+        self.assertFalse(fake.is_this_vendor("FakeVendor1.1"))
 
 
 if __name__ == '__main__':

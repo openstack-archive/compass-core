@@ -1,0 +1,223 @@
+05:51:20,534 INFO    : kernel command line: initrd=/images/CentOS-6.5-x86_64/initrd.img ksdevice=bootif lang= kssendmac text ks=http://10.145.88.211/cblr/svc/op/ks/system/server1.1 BOOT_IMAGE=/images/CentOS-6.5-x86_64/vmlinuz BOOTIF=01-00-0c-29-21-89-af 
+
+05:51:20,534 INFO    : text mode forced from cmdline
+05:51:20,534 DEBUG   : readNetInfo /tmp/s390net not found, early return
+05:51:20,534 INFO    : anaconda version 13.21.215 on x86_64 starting
+05:51:20,656 DEBUG   : Saving module ipv6
+05:51:20,656 DEBUG   : Saving module iscsi_ibft
+05:51:20,656 DEBUG   : Saving module iscsi_boot_sysfs
+05:51:20,656 DEBUG   : Saving module pcspkr
+05:51:20,656 DEBUG   : Saving module edd
+05:51:20,656 DEBUG   : Saving module floppy
+05:51:20,656 DEBUG   : Saving module iscsi_tcp
+05:51:20,656 DEBUG   : Saving module libiscsi_tcp
+05:51:20,656 DEBUG   : Saving module libiscsi
+05:51:20,656 DEBUG   : Saving module scsi_transport_iscsi
+05:51:20,656 DEBUG   : Saving module squashfs
+05:51:20,656 DEBUG   : Saving module cramfs
+05:51:20,656 DEBUG   : probing buses
+05:51:20,693 DEBUG   : waiting for hardware to initialize
+05:51:27,902 DEBUG   : probing buses
+05:51:27,925 DEBUG   : waiting for hardware to initialize
+05:51:47,187 INFO    : getting kickstart file
+05:51:47,196 INFO    : eth0 has link, using it
+05:51:47,208 INFO    : doing kickstart... setting it up
+05:51:47,208 DEBUG   : activating device eth0
+05:51:52,221 INFO    : wait_for_iface_activation (2502): device eth0 activated
+05:51:52,222 INFO    : file location: http://10.145.88.211/cblr/svc/op/ks/system/server1.1
+05:51:52,223 INFO    : transferring http://10.145.88.211/cblr/svc/op/ks/system/server1.1
+05:51:52,611 INFO    : setting up kickstart
+05:51:52,611 INFO    : kickstart forcing text mode
+05:51:52,611 INFO    : kickstartFromUrl
+05:51:52,612 INFO    : results of url ks, url http://10.145.88.211/cblr/links/CentOS-6.5-x86_64
+05:51:52,612 INFO    : trying to mount CD device /dev/sr0 on /mnt/stage2
+05:51:52,616 INFO    : drive status is CDS_TRAY_OPEN
+05:51:52,616 ERROR   : Drive tray reports open when it should be closed
+05:52:07,635 INFO    : no stage2= given, assuming http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img
+05:52:07,636 DEBUG   : going to set language to en_US.UTF-8
+05:52:07,636 INFO    : setting language to en_US.UTF-8
+05:52:07,654 INFO    : starting STEP_METHOD
+05:52:07,654 DEBUG   : loaderData->method is set, adding skipMethodDialog
+05:52:07,654 DEBUG   : skipMethodDialog is set
+05:52:07,663 INFO    : starting STEP_STAGE2
+05:52:07,663 INFO    : URL_STAGE_MAIN: url is http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img
+05:52:07,663 INFO    : transferring http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/updates.img
+05:52:07,780 ERROR   : failed to mount loopback device /dev/loop7 on /tmp/update-disk as /tmp/updates-disk.img: (null)
+05:52:07,780 ERROR   : Error mounting /dev/loop7 on /tmp/update-disk: No such file or directory
+05:52:07,780 INFO    : transferring http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/product.img
+05:52:07,814 ERROR   : Error downloading http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/product.img: HTTP response code said error
+05:52:07,815 INFO    : transferring http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img
+05:52:47,354 INFO    : mounted loopback device /mnt/runtime on /dev/loop0 as /tmp/install.img
+05:52:47,354 INFO    : got stage2 at url http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img
+05:52:47,403 INFO    : Loading SELinux policy
+05:52:48,130 INFO    : getting ready to spawn shell now
+05:52:48,359 INFO    : Running anaconda script /usr/bin/anaconda
+05:52:54,804 INFO    : CentOS Linux is the highest priority installclass, using it
+05:52:54,867 WARNING : /usr/lib/python2.6/site-packages/pykickstart/parser.py:713: DeprecationWarning: Script does not end with %end.  This syntax has been deprecated.  It may be removed from future releases, which will result in a fatal error from kickstart.  Please modify your kickstart file to use this updated syntax.
+  warnings.warn(_("%s does not end with %%end.  This syntax has been deprecated.  It may be removed from future releases, which will result in a fatal error from kickstart.  Please modify your kickstart file to use this updated syntax.") % _("Script"), DeprecationWarning)
+
+05:52:54,868 INFO    : Running kickstart %%pre script(s)
+05:52:54,868 WARNING : '/bin/sh' specified as full path
+05:52:56,966 INFO    : All kickstart %%pre script(s) have been run
+05:52:57,017 INFO    : ISCSID is /usr/sbin/iscsid
+05:52:57,017 INFO    : no initiator set
+05:52:57,128 WARNING : '/usr/libexec/fcoe/fcoe_edd.sh' specified as full path
+05:52:57,137 INFO    : No FCoE EDD info found: No FCoE boot disk information is found in EDD!
+
+05:52:57,138 INFO    : no /etc/zfcp.conf; not configuring zfcp
+05:53:00,902 INFO    : created new libuser.conf at /tmp/libuser.WMDW9M with instPath="/mnt/sysimage"
+05:53:00,903 INFO    : anaconda called with cmdline = ['/usr/bin/anaconda', '--stage2', 'http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/images/install.img', '--kickstart', '/tmp/ks.cfg', '-T', '--selinux', '--lang', 'en_US', '--keymap', 'us', '--repo', 'http://10.145.88.211/cblr/links/CentOS-6.5-x86_64']
+05:53:00,903 INFO    : Display mode = t
+05:53:00,903 INFO    : Default encoding = utf-8 
+05:53:01,064 INFO    : Detected 2016M of memory
+05:53:01,064 INFO    : Swap attempt of 4032M
+05:53:01,398 INFO    : ISCSID is /usr/sbin/iscsid
+05:53:01,399 INFO    : no initiator set
+05:53:05,059 INFO    : setting installation environment hostname to server1
+05:53:05,104 WARNING : Timezone US/Pacific set in kickstart is not valid.
+05:53:05,276 INFO    : Detected 2016M of memory
+05:53:05,277 INFO    : Suggested swap size (4032 M) exceeds 10 % of disk space, using 10 % of disk space (3276 M) instead.
+05:53:05,277 INFO    : Swap attempt of 3276M
+05:53:05,453 WARNING : step installtype does not exist
+05:53:05,454 WARNING : step confirminstall does not exist
+05:53:05,454 WARNING : step complete does not exist
+05:53:05,454 WARNING : step complete does not exist
+05:53:05,454 WARNING : step complete does not exist
+05:53:05,454 WARNING : step complete does not exist
+05:53:05,455 WARNING : step complete does not exist
+05:53:05,455 WARNING : step complete does not exist
+05:53:05,455 WARNING : step complete does not exist
+05:53:05,455 WARNING : step complete does not exist
+05:53:05,455 WARNING : step complete does not exist
+05:53:05,456 WARNING : step complete does not exist
+05:53:05,456 WARNING : step complete does not exist
+05:53:05,456 WARNING : step complete does not exist
+05:53:05,456 WARNING : step complete does not exist
+05:53:05,456 WARNING : step complete does not exist
+05:53:05,457 WARNING : step complete does not exist
+05:53:05,457 INFO    : moving (1) to step setuptime
+05:53:05,458 DEBUG   : setuptime is a direct step
+22:53:05,458 WARNING : '/usr/sbin/hwclock' specified as full path
+22:53:06,002 INFO    : leaving (1) step setuptime
+22:53:06,003 INFO    : moving (1) to step autopartitionexecute
+22:53:06,003 DEBUG   : autopartitionexecute is a direct step
+22:53:06,138 INFO    : leaving (1) step autopartitionexecute
+22:53:06,138 INFO    : moving (1) to step storagedone
+22:53:06,138 DEBUG   : storagedone is a direct step
+22:53:06,138 INFO    : leaving (1) step storagedone
+22:53:06,139 INFO    : moving (1) to step enablefilesystems
+22:53:06,139 DEBUG   : enablefilesystems is a direct step
+22:53:10,959 DEBUG   : notifying kernel of 'change' event on device /sys/class/block/sda3
+22:53:41,215 DEBUG   : notifying kernel of 'change' event on device /sys/class/block/sda1
+22:53:57,388 DEBUG   : notifying kernel of 'change' event on device /sys/class/block/sda3
+22:54:14,838 DEBUG   : notifying kernel of 'change' event on device /sys/class/block/dm-0
+22:54:21,717 DEBUG   : notifying kernel of 'change' event on device /sys/class/block/dm-1
+22:54:27,576 DEBUG   : notifying kernel of 'change' event on device /sys/class/block/dm-2
+22:54:40,058 DEBUG   : notifying kernel of 'change' event on device /sys/class/block/dm-3
+22:54:41,949 INFO    : failed to set SELinux context for /mnt/sysimage: [Errno 95] Operation not supported
+22:54:41,950 DEBUG   : isys.py:mount()- going to mount /dev/mapper/server1-rootvol on /mnt/sysimage as ext3 with options defaults
+22:54:42,826 DEBUG   : isys.py:mount()- going to mount /dev/sda1 on /mnt/sysimage/boot as ext3 with options defaults
+22:54:43,148 DEBUG   : isys.py:mount()- going to mount //dev on /mnt/sysimage/dev as bind with options defaults,bind
+22:54:43,158 DEBUG   : isys.py:mount()- going to mount devpts on /mnt/sysimage/dev/pts as devpts with options gid=5,mode=620
+22:54:43,164 DEBUG   : isys.py:mount()- going to mount tmpfs on /mnt/sysimage/dev/shm as tmpfs with options defaults
+22:54:43,207 DEBUG   : isys.py:mount()- going to mount /dev/mapper/server1-homevol on /mnt/sysimage/home as ext3 with options defaults
+22:54:43,434 INFO    : failed to get default SELinux context for /proc: [Errno 2] No such file or directory
+22:54:43,435 DEBUG   : isys.py:mount()- going to mount proc on /mnt/sysimage/proc as proc with options defaults
+22:54:43,439 INFO    : failed to get default SELinux context for /proc: [Errno 2] No such file or directory
+22:54:43,496 DEBUG   : isys.py:mount()- going to mount sysfs on /mnt/sysimage/sys as sysfs with options defaults
+22:54:43,609 DEBUG   : isys.py:mount()- going to mount /dev/mapper/server1-tmpvol on /mnt/sysimage/tmp as ext3 with options defaults
+22:54:43,874 DEBUG   : isys.py:mount()- going to mount /dev/mapper/server1-varvol on /mnt/sysimage/var as ext3 with options defaults
+22:54:44,056 INFO    : leaving (1) step enablefilesystems
+22:54:44,057 INFO    : moving (1) to step bootloadersetup
+22:54:44,057 DEBUG   : bootloadersetup is a direct step
+22:54:44,061 INFO    : leaving (1) step bootloadersetup
+22:54:44,061 INFO    : moving (1) to step reposetup
+22:54:44,061 DEBUG   : reposetup is a direct step
+22:54:56,952 ERROR   : Error downloading treeinfo file: [Errno 14] PYCURL ERROR 22 - "The requested URL returned error: 404 Not Found"
+22:54:56,953 INFO    : added repository ppa_repo with URL http://10.145.88.211:80/cobbler/repo_mirror/ppa_repo/
+22:54:57,133 DEBUG   : Grabbing  http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/repodata/repomd.xml
+22:54:57,454 DEBUG   : Grabbing  http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/repodata/0e371b19e547b9d7a7e8acc4b8c0c7c074509d33653cfaef9e8f4fd1d62d95de-primary.sqlite.bz2
+22:54:58,637 DEBUG   : Grabbing  http://10.145.88.211/cblr/links/CentOS-6.5-x86_64/repodata/34bae2d3c9c78e04ed2429923bc095005af1b166d1a354422c4c04274bae0f59-c6-minimal-x86_64.xml
+22:54:58,971 INFO    : leaving (1) step reposetup
+22:54:58,971 INFO    : moving (1) to step basepkgsel
+22:54:58,972 DEBUG   : basepkgsel is a direct step
+22:54:58,986 WARNING : not adding Base group
+22:54:59,388 INFO    : leaving (1) step basepkgsel
+22:54:59,388 INFO    : moving (1) to step postselection
+22:54:59,388 DEBUG   : postselection is a direct step
+22:54:59,390 INFO    : selected kernel package for kernel
+22:54:59,848 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/fs/ext3/ext3.ko.gz
+22:54:59,848 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/fs/jbd/jbd.ko.gz
+22:54:59,848 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/fs/mbcache.ko.gz
+22:54:59,848 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/fcoe/fcoe.ko.gz
+22:54:59,848 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/fcoe/libfcoe.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/libfc/libfc.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/scsi_transport_fc.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/scsi_tgt.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/xts.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/lrw.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/gf128mul.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/sha256_generic.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/cbc.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-raid.ko.gz
+22:54:59,849 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-crypt.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-round-robin.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-multipath.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-snapshot.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-mirror.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-region-hash.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-log.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-zero.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/dm-mod.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/linear.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/raid10.ko.gz
+22:54:59,850 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/raid456.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/async_tx/async_raid6_recov.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/async_tx/async_pq.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/lib/raid6/raid6_pq.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/async_tx/async_xor.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/xor.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/async_tx/async_memcpy.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/crypto/async_tx/async_tx.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/raid1.ko.gz
+22:54:59,851 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/md/raid0.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/net/8021q/8021q.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/net/802/garp.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/net/802/stp.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/net/llc/llc.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/infiniband/hw/mlx4/mlx4_ib.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/net/mlx4/mlx4_en.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/net/mlx4/mlx4_core.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/infiniband/ulp/ipoib/ib_ipoib.ko.gz
+22:54:59,852 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/infiniband/core/ib_cm.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/infiniband/core/ib_sa.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/infiniband/core/ib_mad.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/infiniband/core/ib_core.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/sg.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/sd_mod.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/lib/crc-t10dif.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/net/e1000/e1000.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/sr_mod.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/cdrom/cdrom.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/misc/vmware_balloon.ko.gz
+22:54:59,853 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/message/fusion/mptspi.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/message/fusion/mptscsih.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/message/fusion/mptbase.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/scsi_transport_spi.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/ata/pata_acpi.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/ata/ata_generic.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/ata/ata_piix.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/net/ipv6/ipv6.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/firmware/iscsi_ibft.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/iscsi_boot_sysfs.ko.gz
+22:54:59,854 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/input/misc/pcspkr.ko.gz
+22:54:59,855 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/firmware/edd.ko.gz
+22:54:59,855 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/block/floppy.ko.gz
+22:54:59,855 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/iscsi_tcp.ko.gz
+22:54:59,855 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/libiscsi_tcp.ko.gz
+22:54:59,855 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/libiscsi.ko.gz
+22:54:59,855 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/drivers/scsi/scsi_transport_iscsi.ko.gz
+22:54:59,855 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/fs/squashfs/squashfs.ko.gz
+22:54:59,855 DEBUG   : Checking for DUD module /lib/modules/2.6.32-431.el6.x86_64/kernel/fs/cramfs/cramfs.ko.gz
+22:55:07,745 INFO    : leaving (1) step postselection
+22:55:07,745 INFO    : moving (1) to step install

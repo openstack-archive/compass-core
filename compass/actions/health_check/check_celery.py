@@ -47,38 +47,27 @@ class CeleryCheck(base.BaseCheck):
             'configdir': 'CELERYCONFIG_DIR',
             'configfile': 'CELERYCONFIG_FILE',
         }
-
+        unset = []
         res = health_check_utils.validate_setting('Celery',
                                                   self.config,
                                                   'CELERY_LOGFILE')
-        if res is True:
-            logfile = self.config.CELERY_LOGFILE
-        else:
-            logfile = ""
+        if res is False:
+            unset.append(setting_map["logfile"])
             self._set_status(0, res)
 
         res = health_check_utils.validate_setting('Celery',
                                                   self.config,
                                                   'CELERYCONFIG_DIR')
-        if res is True:
-            configdir = self.config.CELERYCONFIG_DIR
-        else:
-            configdir = ""
+        if res is False:
+            unset.append(setting_map["configdir"])
             self._set_status(0, res)
 
         res = health_check_utils.validate_setting('Celery',
                                                   self.config,
                                                   'CELERYCONFIG_FILE')
-        if res is True:
-            configfile = self.config.CELERYCONFIG_FILE
-        else:
-            configfile = ""
+        if res is False:
+            unset.append(setting_map["configdir"])
             self._set_status(0, res)
-
-        unset = []
-        for item in [logfile, configdir, configfile]:
-            if item == "":
-                unset.append(setting_map[item])
 
         if len(unset) != 0:
             self._set_status(0,

@@ -43,7 +43,9 @@ class TestDictMerge(unittest2.TestCase):
         super(TestDictMerge, self).tearDown()
 
     def test_simple_merge(self):
-        """simple test of merge."""
+        """simple test of merge
+           merge_dict performs in-place merge of rhs to lhs
+        """
         lhs = {1: 1}
         rhs = {2: 2}
         util.merge_dict(lhs, rhs)

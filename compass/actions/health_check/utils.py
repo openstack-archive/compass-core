@@ -55,7 +55,7 @@ def check_path(module_name, path):
     err_msg = ""
     if not os.path.exists(path):
         err_msg = (
-            "[%s]Error: %s does not exsit, "
+            "[%s]Error: %s does not exist, "
             "please check your configurations.") % (module_name, path)
     return err_msg
 

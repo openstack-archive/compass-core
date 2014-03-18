@@ -63,11 +63,11 @@ class ConfigReference(object):
 
         :raises: TypeError
         """
-        if parent and not isinstance(parent, self.__class__):
+        if parent and not isinstance(parent, ConfigReference):
             raise TypeError('parent %s type should be %s'
-                            % (parent, self.__class__.__name__))\
+                            % (parent, ConfigReference))
 
-        if parent_key and not util.is_instance(parent_key, [str, unicode]):
+        if parent_key and not isinstance(parent_key, basestring):
             raise TypeError('parent_key %s type should be [str, unicode]'
                             % parent_key)
 
@@ -90,7 +90,7 @@ class ConfigReference(object):
 
         if config and isinstance(config, dict):
             for key, value in config.items():
-                if not util.is_instance(key, [str, unicode]):
+                if not isinstance(key, basestring):
                     msg = 'key type is %s while expected is [str, unicode]: %s'
                     raise TypeError(msg % (type(key), key))
                 ConfigReference(value, self, key)
@@ -147,7 +147,7 @@ class ConfigReference(object):
 
         parts = []
 
-        if util.is_instance(path, [str, unicode]):
+        if isinstance(path, basestring):
             parts = path.split('/')
         else:
             parts = path

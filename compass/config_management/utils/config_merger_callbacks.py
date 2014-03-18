@@ -20,6 +20,7 @@ import copy
 import itertools
 import logging
 import netaddr
+import re
 
 from compass.utils import util
 
@@ -214,7 +215,14 @@ def _assign_roles_by_mins(role_bundles, lower_roles, unassigned_hosts,
                 bundled_mins[bundled_role])
             bundled_maxs[bundled_role] = _dec_max_min(
                 bundled_maxs[bundled_role])
-            lower_roles[host] = list(roles)
+            if host not in lower_roles:
+                lower_roles[host] = list(roles)
+            elif set(lower_roles[host]) & roles:
+                duplicated_roles = set(lower_roles[host]) & roles
+                raise ValueError(
+                    'duplicated roles %s on %s' % (duplicated_roles, host))
+            else:
+                lower_roles[host].extend(list(roles))
 
     logging.debug('assigned roles after assigning mins: %s', lower_roles)
     logging.debug('unassigned_hosts after assigning mins: %s',
@@ -311,10 +319,11 @@ def assign_roles(_upper_ref, _from_key, lower_refs, to_key,
 
 def assign_roles_by_host_numbers(upper_ref, from_key, lower_refs, to_key,
                                  policy_by_host_numbers={}, default={},
-                                 **_kwargs):
+                                 **kwargs):
     """Assign roles by role assign policy."""
     host_numbers = str(len(lower_refs))
-    policy_kwargs = copy.deepcopy(default)
+    policy_kwargs = copy.deepcopy(kwargs)
+    util.merge_dict(policy_kwargs, default)
     if host_numbers in policy_by_host_numbers:
         util.merge_dict(policy_kwargs, policy_by_host_numbers[host_numbers])
     else:
@@ -349,10 +358,25 @@ def assign_ips(_upper_ref, _from_key, lower_refs, to_key,
                **_kwargs):
     """Assign ips to hosts' configurations."""
     if not ip_start or not ip_end:
-        return {}
+        raise ValueError(
+            'ip_start %s or ip_end %s is empty' % (ip_start, ip_end))
+
+    if not re.match(r'^\d+\.\d+\.\d+\.\d+$', ip_start):
+        raise ValueError(
+            'ip_start %s formmat is not correct' % ip_start)
+
+    if not re.match(r'^\d+\.\d+\.\d+\.\d+$', ip_end):
+        raise ValueError(
+            'ip_end %s format is not correct' % ip_end)
+
     host_ips = {}
     unassigned_hosts = []
-    ips = netaddr.IPSet(netaddr.IPRange(ip_start, ip_end))
+    try:
+        ips = netaddr.IPSet(netaddr.IPRange(ip_start, ip_end))
+    except Exception:
+        raise ValueError(
+            'failed to create ip block [%s, %s]' % (ip_start, ip_end))
+
     for lower_key, lower_ref in lower_refs.items():
         ip_addr = lower_ref.get(to_key, '')
         if ip_addr:
@@ -368,6 +392,11 @@ def assign_ips(_upper_ref, _from_key, lower_refs, to_key,
         host = unassigned_hosts.pop(0)
         host_ips[host] = str(ip_addr)
 
+    if unassigned_hosts:
+        raise ValueError(
+            'there is no enough ips to assign to %s: [%s-%s]' % (
+                unassigned_hosts, ip_start, ip_end))
+
     logging.debug('assign %s: %s', to_key, host_ips)
     return host_ips
 
@@ -377,17 +406,34 @@ def assign_from_pattern(_upper_ref, _from_key, lower_refs, to_key,
     """assign to_key by pattern."""
     host_values = {}
     upper_configs = {}
+    if set(upper_keys) & set(lower_keys):
+        raise KeyError(
+            'overlap between upper_keys %s and lower_keys %s' % (
+                upper_keys, lower_keys))
+
     for key in upper_keys:
+        if key not in kwargs:
+            raise KeyError(
+                'param %s is missing' % key)
+
         upper_configs[key] = kwargs[key]
 
     for lower_key, _ in lower_refs.items():
         group = copy.deepcopy(upper_configs)
         for key in lower_keys:
+            if key not in kwargs:
+                raise KeyError('param %s is missing' % key)
+
+            if not isinstance(kwargs[key], dict):
+                raise KeyError(
+                    'param %s type is %s while expected type is dict' % (
+                        kwargs[key], type(kwargs[key])))
+
             group[key] = kwargs[key][lower_key]
 
         try:
             host_values[lower_key] = pattern % group
-        except Exception as error:
+        except KeyError as error:
             logging.error('failed to assign %s[%s] = %s %% %s',
                           lower_key, to_key, pattern, group)
             raise error
@@ -401,16 +447,29 @@ def assign_noproxy(_upper_ref, _from_key, lower_refs,
                    hostnames={}, ips={}, **_kwargs):
     """Assign no proxy to hosts."""
     no_proxy_list = copy.deepcopy(default)
+    if not clusterid:
+        raise KeyError(
+            'clusterid %s is empty' % clusterid)
 
     for lower_key, _ in lower_refs.items():
+        if lower_key not in hostnames:
+            raise KeyError(
+                'lower_key %s is not in hostnames %s' % (
+                    lower_key, hostnames))
+
+        if lower_key not in ips:
+            raise KeyError(
+                'lower_key %s is not in ips %s' % (
+                    lower_key, ips))
+
         mapping = {
             'clusterid': clusterid,
-            'hostname': hostnames.get(lower_key, ''),
-            'ip': ips.get(lower_key, '')
+            'hostname': hostnames[lower_key],
+            'ip': ips[lower_key]
         }
         try:
             no_proxy_list.append(noproxy_pattern % mapping)
-        except Exception as error:
+        except KeyError as error:
             logging.error('failed to assign %s[%s] = %s %% %s',
                           lower_key, to_key, noproxy_pattern, mapping)
             raise error
@@ -423,7 +482,7 @@ def assign_noproxy(_upper_ref, _from_key, lower_refs,
     return host_no_proxy
 
 
-def override_if_empty(lower_ref, _ref_key):
+def override_if_empty(_upper_ref, _ref_key, lower_ref, _to_key):
     """Override if the configuration value is empty."""
     if not lower_ref.config:
         return True

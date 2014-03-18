@@ -54,7 +54,7 @@ class ConfigMapping(object):
         self.override_ = override
         self.override_conditions_ = override_conditions
         self.value_ = value
-        self._is_valid()
+        self.is_valid()
 
     def __repr__(self):
         return (
@@ -70,36 +70,20 @@ class ConfigMapping(object):
 
     def _is_valid_path_list(self):
         """Check path_list are valid."""
-        if not isinstance(self.path_list_, list):
-            raise TypeError(
-                'path_list %s type is %s while expected type is list' % (
-                    self.path_list_, type(self.path_list_)))
-
         for i, path in enumerate(self.path_list_):
-            if not isinstance(path, basestring):
+            if not isinstance(path, str):
                 raise TypeError(
                     'path_list[%d] type is %s while '
-                    'expected type is str or unicode: %s' % (
+                    'expected type is str: %s' % (
                         i, type(path), path))
 
     def _is_valid_from_upper_keys(self):
         """Check from_upper_keys are valid."""
-        if not isinstance(self.from_upper_keys_, dict):
-            raise TypeError(
-                'from_upper_keys type is %s while expected is dict',
-                type(self.from_upper_keys_))
-
         for mapping_key, from_upper_key in self.from_upper_keys_.items():
-            if not isinstance(mapping_key, basestring):
-                raise TypeError(
-                    'key %s in from_upper_keys type is %s'
-                    'while expected type is str or unicode' % (
-                        mapping_key, type(mapping_key)))
-
-            if not isinstance(from_upper_key, basestring):
+            if not isinstance(from_upper_key, str):
                 raise TypeError(
                     'from_upper_keys[%s] type is %s'
-                    'while expected type is str or unicode: %s' % (
+                    'while expected type is str: %s' % (
                         mapping_key, type(from_upper_key), from_upper_key))
 
             if '*' in from_upper_key:
@@ -109,22 +93,11 @@ class ConfigMapping(object):
 
     def _is_valid_from_lower_keys(self):
         """Check from_lower_keys are valid."""
-        if not isinstance(self.from_lower_keys_, dict):
-            raise TypeError(
-                'from_lower_keys type is %s while expected type is dict',
-                type(self.from_lower_keys_))
-
         for mapping_key, from_lower_key in self.from_lower_keys_.items():
-            if not isinstance(mapping_key, basestring):
-                raise TypeError(
-                    'key %s in from_lower_keys type is %s'
-                    'while expected type is str or unicode: %s' % (
-                        mapping_key, type(mapping_key)))
-
-            if not isinstance(from_lower_key, basestring):
+            if not isinstance(from_lower_key, str):
                 raise TypeError(
                     'from_lower_keys[%s] type'
-                    'is %s while expected type is str or unicode: %s' % (
+                    'is %s while expected type is str: %s' % (
                         mapping_key, type(from_lower_key), from_lower_key))
 
             if '*' in from_lower_key:
@@ -147,30 +120,14 @@ class ConfigMapping(object):
 
     def _is_valid_to_key(self):
         """Check to_key is valid."""
-        if not isinstance(self.to_key_, basestring):
-            raise TypeError(
-                'to_key %s type is %s '
-                'while expected type is [str, unicode]' % (
-                    self.to_key_, type(self.to_key_)))
-
         if '*' in self.to_key_:
             raise KeyError('to_key %s contains *' % self.to_key_)
 
     def _is_valid_override_conditions(self):
         """Check override conditions are valid."""
-        if not isinstance(self.override_conditions_, dict):
-            raise TypeError(
-                'override_conditions type is %s while expected type is dict',
-                type(self.override_conditions_))
         override_items = self.override_conditions_.items()
         for mapping_key, override_condition in override_items:
-            if not isinstance(mapping_key, basestring):
-                raise TypeError(
-                    'overrid_conditions key %s type is %s '
-                    'while expected type is [str, unicode]' % (
-                        mapping_key, type(mapping_key)))
-
-            if not isinstance(override_condition, basestring):
+            if not util.is_instance(override_condition, [str, unicode]):
                 raise TypeError(
                     'override_conditions[%s] type is %s '
                     'while expected type is [str, unicode]: %s' % (
@@ -182,7 +139,7 @@ class ConfigMapping(object):
                     'override_conditions[%s] %s contains *' % (
                         mapping_key, override_condition))
 
-    def _is_valid(self):
+    def is_valid(self):
         """Check ConfigMapping instance is valid."""
         self._is_valid_path_list()
         self._is_valid_from_keys()
@@ -242,10 +199,10 @@ class ConfigMapping(object):
 
             return lower_values
 
-        return self.value_(sub_ref, ref_key, lower_sub_refs, self.to_key_,
-                           **sub_configs)
+        return self.value_(sub_ref, ref_key, lower_sub_refs,
+                           self.to_key_, **sub_configs)
 
-    def _get_override(self, ref_key, sub_ref, to_key, lower_to_ref):
+    def _get_override(self, ref_key, sub_ref):
         """Get override from ref_key, ref from ref_key."""
         if not callable(self.override_):
             return bool(self.override_)
@@ -254,13 +211,13 @@ class ConfigMapping(object):
         override_items = self.override_conditions_.items()
         for mapping_key, override_condition in override_items:
             if override_condition in sub_ref:
-                override_condition_configs[mapping_key] = (
-                    sub_ref[override_condition])
+                override_condition_configs[mapping_key] = \
+                    sub_ref[override_condition]
             else:
                 logging.info('%s no override condition %s in %s',
                              self, override_condition, ref_key)
 
-        return self.override_(sub_ref, ref_key, lower_to_ref, to_key,
+        return self.override_(sub_ref, ref_key,
                               **override_condition_configs)
 
     def merge(self, upper_ref, lower_refs):
@@ -291,8 +248,7 @@ class ConfigMapping(object):
 
                 value = values[lower_key]
                 lower_to_ref = lower_sub_ref.setdefault(self.to_key_)
-                override = self._get_override(
-                    ref_key, sub_ref, self.to_key_, lower_to_ref)
+                override = self._get_override(self.to_key_, lower_to_ref)
                 lower_to_ref.update(value, override)
 
 
@@ -305,25 +261,18 @@ class ConfigMerger(object):
         :param mappings: list of :class:`ConfigMapping` instance
         """
         self.mappings_ = mappings
-        self._is_valid()
+        self.is_valid()
 
     def __repr__(self):
         return '%s[mappings=%s]' % (self.__class__.__name__, self.mappings_)
 
-    def _is_valid(self):
+    def is_valid(self):
         """Check ConfigMerger instance is valid."""
         if not isinstance(self.mappings_, list):
             raise TypeError(
                 '%s mapping type is %s while expect type is list: %s' % (
                     self.__class__.__name__, type(self.mappings_),
                     self.mappings_))
-
-        for i, mapping in enumerate(self.mappings_):
-            if not isinstance(mapping, ConfigMapping):
-                raise TypeError(
-                    '%s mappings[%s] type is %s '
-                    'while expected type is ConfigMapping' % (
-                        self.__class__.__name__, i, type(mapping)))
 
     def merge(self, upper_config, lower_configs):
         """Merge cluster config to host configs.

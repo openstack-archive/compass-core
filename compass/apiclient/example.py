@@ -80,9 +80,8 @@ PRESET_VALUES = {
     'MACHINES_TO_ADD': '00:11:20:30:40:01',
     'BUILD_TIMEOUT': 60
 }
-print os.environ.get("NAMESERVERS")
 for v in PRESET_VALUES:
-    if os.environ.get(v):
+    if v in os.environ.keys():
         PRESET_VALUES[v] = os.environ.get(v)
         print (v + PRESET_VALUES[v] + " is set by env variables")
     else:

@@ -1,3 +1,4 @@
+daemon
 flask
 flask-script
 flask-restful

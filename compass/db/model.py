@@ -180,8 +180,8 @@ class Machine(BASE):
         super(Machine, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<Machine %r: port=%r vlan=%r switch=%r>'\
-            % (self.mac, self.port, self.vlan, self.switch)
+        return '<Machine %r: port=%r vlan=%r switch=%r>' % (
+            self.mac, self.port, self.vlan, self.switch)
 
 
 class HostState(BASE):
@@ -308,7 +308,10 @@ class Cluster(BASE):
     security_config = Column(Text)
     networking_config = Column(Text)
     partition_config = Column(Text)
-    adapter_id = Column(Integer, ForeignKey('adapter.id'))
+    adapter_id = Column(Integer, ForeignKey('adapter.id',
+                                            onupdate='CASCADE',
+                                            ondelete='SET NULL'),
+                        nullable=True)
     raw_config = Column(Text)
     adapter = relationship("Adapter", backref=backref('clusters',
                                                       lazy='dynamic'))
@@ -486,8 +489,10 @@ class ClusterHost(BASE):
     __table_args__ = (UniqueConstraint('cluster_id', 'hostname',
                                        name='unique_host'),)
 
-    cluster = relationship("Cluster", backref=backref('hosts', lazy='dynamic'))
-    machine = relationship("Machine", backref=backref('host', uselist=False))
+    cluster = relationship("Cluster",
+                           backref=backref('hosts', lazy='dynamic'))
+    machine = relationship("Machine",
+                           backref=backref('host', uselist=False))
 
     def __init__(self, **kwargs):
         if 'hostname' not in kwargs or not kwargs['hostname']:

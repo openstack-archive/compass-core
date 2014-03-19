@@ -180,8 +180,8 @@ class Machine(BASE):
         super(Machine, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<Machine %r: port=%r vlan=%r switch=%r>'\
-            % (self.mac, self.port, self.vlan, self.switch)
+        return '<Machine %r: port=%r vlan=%r switch=%r>' % (
+            self.mac, self.port, self.vlan, self.switch)
 
 
 class HostState(BASE):

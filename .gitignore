@@ -30,6 +30,7 @@ pip-log.txt
 nosetests.xml
 .testrepository
 cover
+coverage.xml
 # Translations
 *.mo
 

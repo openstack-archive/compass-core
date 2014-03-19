@@ -1,8 +1,10 @@
+daemon
 flask
 flask-script
 flask-restful
 flask-sqlalchemy
 celery
+lockfile
 netaddr
 paramiko
 simplejson

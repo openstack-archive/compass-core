@@ -28,14 +28,16 @@ def get_key_from_pattern(
     match = re.match(from_pattern, path)
     if not match:
         return None
+
     group = match.groupdict()
     util.merge_dict(group, kwargs)
     try:
         translated_key = to_pattern % group
-    except Exception as error:
+    except KeyError as error:
         logging.error('failed to get translated key from %s %% %s',
                       to_pattern, group)
         raise error
+
     return translated_key
 
 

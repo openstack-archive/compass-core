@@ -120,6 +120,7 @@ class TestEndToEnd(unittest2.TestCase):
         config_globals = {}
         config_locals = {}
         execfile(config_file_path, config_globals, config_locals)
+        print config_locals['ADAPTERS']
         self._prepare_database(config_locals)
         cluster_hosts = {}
         with database.session() as session:
@@ -240,7 +241,7 @@ class TestEndToEnd(unittest2.TestCase):
     def tearDown(self):
         database.drop_db()
         self._unmock_lock()
-        #shutil.rmtree('/tmp/mocklogs/')
+        shutil.rmtree('/tmp/mocklogs/')
         super(TestEndToEnd, self).tearDown()
 
     def test_1(self):

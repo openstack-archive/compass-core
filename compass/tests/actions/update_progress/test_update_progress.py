@@ -234,13 +234,14 @@ class TestEndToEnd(unittest2.TestCase):
         logsetting.init()
         database.create_db()
         self._mock_lock()
+        os.makedirs('/tmp/mocklogs/')
         os.system = mock.Mock()
         self.progress_checker_ = {}
 
     def tearDown(self):
         database.drop_db()
         self._unmock_lock()
-        #shutil.rmtree('/tmp/mocklogs/')
+        shutil.rmtree('/tmp/mocklogs/')
         super(TestEndToEnd, self).tearDown()
 
     def test_1(self):

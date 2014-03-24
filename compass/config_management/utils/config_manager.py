@@ -553,10 +553,10 @@ class ConfigManager(object):
         """clean clusters and hosts of each cluster."""
         logging.debug('clean cluster_hosts: %s', cluster_hosts)
         for clusterid, hostids in cluster_hosts.items():
+            all_hostids = self.get_cluster_hosts(clusterid)
             self.clean_host_configs(hostids,
                                     os_version=os_versions[clusterid],
                                     target_system=target_systems[clusterid])
-            all_hostids = self.get_cluster_hosts(clusterid)
             if set(all_hostids) == set(hostids):
                 self.clean_cluster_config(
                     clusterid,

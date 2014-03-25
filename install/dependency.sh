@@ -8,7 +8,7 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo easy_install pip==1.2.1
+sudo easy_install pip>=1.5.1
 if [[ "$?" != "0" ]]; then
     echo "failed to install easy install"
     exit 1

@@ -397,7 +397,7 @@ class Client(object):
         """parse arguments to network data."""
         data = {}
         possible_keys = [
-            'nameservers', 'search_path', 'gateway', 'proxy', 'ntp_server']
+            'nameservers', 'search_path', 'gateway', 'proxy', 'ntp_server', 'ha_vip']
         for key, value in kwargs.items():
             if key in possible_keys:
                 data.setdefault('global', {})[key] = value

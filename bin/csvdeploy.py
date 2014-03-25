@@ -298,7 +298,6 @@ class _APIClient(Client):
         print "Start to deploy the cluster!....."
         deploy_req = {"deploy": deploy_list}
         code, resp = self.deploy_hosts(cluster_id, raw_data=deploy_req)
-        print "======>resp-----%s" % resp
         print "---Cluster Info---"
         print "cluster_id  url"
         print ("    %s     %s"

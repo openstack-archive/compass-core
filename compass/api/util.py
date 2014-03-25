@@ -227,7 +227,8 @@ def is_valid_networking_config(config):
             "search_path": {"req": 1, "validator": ""},
             "gateway": {"req": 1, "validator": is_valid_gateway},
             "proxy": {"req": 0, "validator": ""},
-            "ntp_server": {"req": 0, "validator": ""}
+            "ntp_server": {"req": 0, "validator": ""},
+            "ha_vip": {"req": 0, "validator": is_valid_ip}
         }
         is_valid_format, err = is_valid_keys(global_section, global_config,
                                              "global")

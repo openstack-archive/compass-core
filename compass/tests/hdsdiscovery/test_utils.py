@@ -71,19 +71,19 @@ class UtilsTest(unittest2.TestCase):
                                               incorr_credentials,
                                               oid))
         # Switch timeout, failed to execute SNMPGET
-        mock_exec_command.return_value = (None, "Timeout")
+        mock_exec_command.return_value = (1, None, "Timeout")
         with self.assertRaises(TimeoutError):
             utils.snmpget_by_cl(self.host, self.credentials, oid)
 
         # Successfully get system information
-        mock_exec_command.return_value = ("Huawei Technologies", None)
+        mock_exec_command.return_value = (0, "Huawei Technologies", None)
         result = utils.snmpget_by_cl(self.host, self.credentials, oid)
         self.assertEqual("Huawei Technologies", result)
 
     def test_snmpwalk_by_cl(self):
         oid = "BRIDGE-MIB::dot1dTpFdbPort"
         # the result of SNMPWALK is None
-        utils.exec_command = Mock(return_value=(None, None))
+        utils.exec_command = Mock(return_value=(0, None, None))
         result = utils.snmpwalk_by_cl(self.host, self.credentials, oid)
         self.assertEqual([], result)
 
@@ -94,7 +94,7 @@ class UtilsTest(unittest2.TestCase):
             {"iid": "0.12.41.112.143.193", "value": "47"},
             {"iid": "0.12.41.139.17.124", "value": "47"}
         ]
-        utils.exec_command = Mock(return_value=(return_value, None))
+        utils.exec_command = Mock(return_value=(0, return_value, None))
         result = utils.snmpwalk_by_cl(self.host, self.credentials, oid)
         self.assertEqual(expected_result, result)
 

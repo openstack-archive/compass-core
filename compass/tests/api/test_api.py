@@ -367,7 +367,8 @@ class TestClusterAPI(ApiTestCase):
             "proxy": "",
             "ntp_server": "",
             "nameservers": "8.8.8.8",
-            "search_path": "ods.com,ods1.com"}}
+            "search_path": "ods.com,ods1.com",
+            "ha_vip": "192.168.20.1"}}
 
     def setUp(self):
         super(TestClusterAPI, self).setUp()
@@ -1141,7 +1142,8 @@ class TestAPIWorkFlow(ApiTestCase):
                 "search_path": "ods.com",
                 "gateway": "192.168.1.1",
                 "proxy": "http://127.0.0.1:3128",
-                "ntp_server": "127.0.0.1"
+                "ntp_server": "127.0.0.1",
+                "ha_vip": ""
             }
         }
     }
@@ -1378,7 +1380,8 @@ class TestExport(ApiTestCase):
                 "search_path": "ods.com",
                 "gateway": "192.168.1.1",
                 "proxy": "http://127.0.0.1:3128",
-                "ntp_server": "127.0.0.1"
+                "ntp_server": "127.0.0.1",
+                "ha_vip": ""
             }
         }
     }
@@ -1590,7 +1593,6 @@ class TestExport(ApiTestCase):
             for export_row, expected_row in zip(resp_data, expected_data):
                 self.assertDictEqual(export_row, expected_row)
                 self.maxDiff = None
-
 
 if __name__ == '__main__':
     flags.init()

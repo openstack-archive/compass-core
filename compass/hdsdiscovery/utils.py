@@ -231,10 +231,10 @@ def snmpget_by_cl(host, credential, oid, timeout=8, retries=3):
     community = credential['community']
     cmd = "snmpget -v %s -c %s -Ob -r %s -t %s %s %s" % (
         version, community, retries, timeout, host, oid)
-    output = None
-    output, err = exec_command(cmd)
 
-    if err:
+    returncode, output, err = exec_command(cmd)
+
+    if returncode and err:
         logging.error("[snmpget_by_cl] %s", err)
         raise TimeoutError(err.strip('\n'))
 
@@ -253,9 +253,9 @@ def snmpwalk_by_cl(host, credential, oid, timeout=5, retries=3):
     cmd = "snmpwalk -v %s -c %s -Cc -r %s -t %s -Ob %s %s" % (
         version, community, retries, timeout, host, oid)
 
-    output, err = exec_command(cmd)
+    returncode, output, err = exec_command(cmd)
 
-    if err:
+    if returncode and err:
         logging.debug("[snmpwalk_by_cl] %s ", err)
         raise TimeoutError(err)
 
@@ -278,10 +278,11 @@ def snmpwalk_by_cl(host, credential, oid, timeout=5, retries=3):
 
 def exec_command(command):
     """Execute command.
-       Return a tuple of output and error message(None if no error).
+       Return a tuple: returncode, output and error message(None if no error).
     """
     sub_p = subprocess.Popen(command,
                              shell=True,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-    return sub_p.communicate()
+    output, err_msg = sub_p.communicate()
+    return (sub_p.returncode, output, err_msg)

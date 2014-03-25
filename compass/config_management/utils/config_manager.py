@@ -47,13 +47,28 @@ CLUSTER_HOST_MERGER = ConfigMerger(
             override=config_merger_callbacks.override_if_empty
         ),
         ConfigMapping(
+            path_list=['/config_mapping']
+        ),
+        ConfigMapping(
+            path_list=['/role_mapping']
+        ),
+        ConfigMapping(
             path_list=['/dashboard_roles'],
             from_lower_keys={'lower_values': '/roles'},
             to_key='/has_dashboard_roles',
             value=config_merger_callbacks.has_intersection
         ),
         ConfigMapping(
-            path_list=['/role_mapping'],
+            path_list=['/dashboard_roles'],
+            from_lower_keys={'lower_values': '/roles'},
+            to_key='/dashboard_roles',
+            value=config_merger_callbacks.get_intersection
+        ),
+        ConfigMapping(
+            path_list=['/haproxy_roles'],
+            from_lower_keys={'lower_values': '/roles'},
+            to_key='/haproxy_roles',
+            value=config_merger_callbacks.get_intersection
         ),
         ConfigMapping(
             path_list=[
@@ -61,6 +76,7 @@ CLUSTER_HOST_MERGER = ConfigMerger(
                 '/networking/global/gateway',
                 '/networking/global/proxy',
                 '/networking/global/ntp_server',
+                '/networking/global/ha_vip',
                 '/networking/interfaces/*/netmask',
                 '/networking/interfaces/*/nic',
                 '/networking/interfaces/*/promisc',
@@ -98,7 +114,41 @@ CLUSTER_HOST_MERGER = ConfigMerger(
             to_key='search_path',
             value=functools.partial(
                 config_merger_callbacks.assign_from_pattern,
-                upper_keys=['search_path', 'clusterid'])
+                upper_keys=['search_path', 'clusterid']
+            )
+        ),
+        ConfigMapping(
+            path_list=['/networking/global/ha_vip'],
+            to_key='/haproxy/router_id',
+            value=functools.partial(
+                config_merger_callbacks.assign_by_order,
+                orders=config_merger_callbacks.generate_order(0, -1)
+            ),
+            from_upper_keys={'prefix': '/haproxy/router_id_prefix'},
+            from_lower_keys={'conditions': '/haproxy_roles'},
+        ),
+        ConfigMapping(
+            path_list=['/networking/global/ha_vip'],
+            to_key='/haproxy/priority',
+            value=functools.partial(
+                config_merger_callbacks.assign_by_order,
+                orders=config_merger_callbacks.generate_order(0, -1)
+            ),
+            from_upper_keys={'prefix': '/haproxy/default_priority'},
+            from_lower_keys={'conditions': '/haproxy_roles'},
+        ),
+        ConfigMapping(
+            path_list=['/networking/global/ha_vip'],
+            to_key='/haproxy/state',
+            value=functools.partial(
+                config_merger_callbacks.assign_by_order,
+                prefix=''
+            ),
+            from_upper_keys={
+                'orders': '/haproxy/states_to_assign',
+                'default_order': '/haproxy/default_state',
+            },
+            from_lower_keys={'conditions': '/haproxy_roles'}
         )])
 
 

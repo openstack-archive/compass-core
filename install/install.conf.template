@@ -57,10 +57,3 @@ export WEB_SOURCE=${WEB_SOURCE:-'compass-web'}
 export ADAPTER_SOURCE=${ADAPTER_SOURCE:-'compass-adapters'}
 export SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export COMPASSDIR=${SCRIPT_DIR}/..
-
-# Set test script variables
-export NAMESERVERS=$ipaddr
-export NTP_SERVER=$ipaddr
-export GATEWAY=$ipaddr
-export PROXY=http://$ipaddr:3128
-

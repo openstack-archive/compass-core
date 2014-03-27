@@ -44,7 +44,7 @@ CLUSTER_HOST_MERGER = ConfigMerger(
                 'default': 'default'},
             to_key='/roles',
             value=config_merger_callbacks.assign_roles_by_host_numbers,
-            override=config_merger_callbacks.override_if_empty
+            override=True
         ),
         ConfigMapping(
             path_list=['/config_mapping']

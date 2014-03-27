@@ -353,6 +353,23 @@ def has_intersection(upper_ref, from_key, _lower_refs, _to_key,
     return has
 
 
+def get_intersection(upper_ref, from_key, _lower_refs, _to_key,
+                     lower_values={}, **_kwargs):
+    """Get intersection of upper config and  lower values."""
+    intersections = {}
+    for lower_key, lower_value in lower_values.items():
+        values = set(lower_value)
+        intersection = values.intersection(set(upper_ref.config))
+        logging.debug(
+            'lower_key %s values %s intersection'
+            'with from_key %s value %s: %s',
+            lower_key, values, from_key, upper_ref.config, intersection)
+        if intersection:
+            intersections[lower_key] = list(intersection)
+
+    return intersections
+
+
 def assign_ips(_upper_ref, _from_key, lower_refs, to_key,
                ip_start='192.168.0.1', ip_end='192.168.0.254',
                **_kwargs):
@@ -399,6 +416,33 @@ def assign_ips(_upper_ref, _from_key, lower_refs, to_key,
 
     logging.debug('assign %s: %s', to_key, host_ips)
     return host_ips
+
+
+def generate_order(start=0, end=-1):
+    """generate order num."""
+    while start < end or end < 0:
+        yield start
+        start += 1
+
+
+def assign_by_order(_upper_ref, _from_key, lower_refs, _to_key,
+                    prefix='',
+                    orders=[], default_order=0,
+                    conditions={}, **kwargs):
+    """assign to_key by order."""
+    host_values = {}
+    orders = iter(orders)
+    for lower_key, _ in lower_refs.items():
+        if lower_key in conditions and conditions[lower_key]:
+            try:
+                order = orders.next()
+            except StopIteration:
+                order = default_order
+
+            host_values[lower_key] = prefix + type(prefix)(order)
+
+    logging.debug('assign orders: %s', host_values)
+    return host_values
 
 
 def assign_from_pattern(_upper_ref, _from_key, lower_refs, to_key,

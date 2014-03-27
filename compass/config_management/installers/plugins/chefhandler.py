@@ -17,6 +17,7 @@
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@gmail.com>
 """
 import fnmatch
+import functools
 import logging
 
 from compass.config_management.installers import package_installer
@@ -30,49 +31,12 @@ from compass.utils import util
 TO_CLUSTER_TRANSLATORS = {
     'openstack': ConfigTranslator(
         mapping={
-            '/security/console_credentials': [KeyTranslator(
-                translated_keys=['credential/identity/users/admin'],
-            )],
-            '/security/service_credentials': [KeyTranslator(
-                translated_keys=[
-                    '/credential/identity/users/compute',
-                    '/credential/identity/users/image',
-                    '/credential/identity/users/metering',
-                    '/credential/identity/users/network',
-                    '/credential/identity/users/object-store',
-                    '/credential/identity/users/volume',
-                    '/credential/mysql/compute',
-                    '/credential/mysql/dashboard',
-                    '/credential/mysql/identity',
-                    '/credential/mysql/image',
-                    '/credential/mysql/metering',
-                    '/credential/mysql/network',
-                    '/credential/mysql/volume',
-                ]
-            )],
-            '/security/service_credentials/password': [KeyTranslator(
-                translated_keys=[
-                    '/credential/mysql/super/password',
-                ]
-            )],
-            '/networking/interfaces/management/nic': [KeyTranslator(
-                translated_keys=['/networking/control/interface'],
-            )],
-            '/networking/global/ntp_server': [KeyTranslator(
-                translated_keys=['/ntp/ntpserver']
-            )],
-            '/networking/interfaces/storage/nic': [KeyTranslator(
-                translated_keys=['/networking/storage/interface']
-            )],
-            '/networking/interfaces/public/nic': [KeyTranslator(
-                translated_keys=['/networking/public/interface']
-            )],
-            '/networking/interfaces/tenant/nic': [KeyTranslator(
-                translated_keys=[
-                    '/networking/tenant/interface',
-                    '/networking/plugins/ovs/gre/local_ip_interface'
-                ]
-            )],
+            '/config_mapping': [KeyTranslator(
+                translated_keys=(
+                    config_translator_callbacks.get_keys_from_config_mapping),
+                translated_value=(
+                    config_translator_callbacks.get_value_from_config_mapping)
+            )]
         }
     ),
 }
@@ -84,11 +48,17 @@ FROM_CLUSTER_TRANSLATORS = {
             '/role_assign_policy': [KeyTranslator(
                 translated_keys=['/role_assign_policy']
             )],
-            '/dashboard_roles': [KeyTranslator(
-                translated_keys=['/dashboard_roles']
+            '/config_mapping': [KeyTranslator(
+                translated_keys=['/config_mapping']
             )],
             '/role_mapping': [KeyTranslator(
                 translated_keys=['/role_mapping']
+            )],
+            '/read_config_mapping': [KeyTranslator(
+                translated_keys=(
+                    config_translator_callbacks.get_keys_from_config_mapping),
+                translated_value=(
+                    config_translator_callbacks.get_value_from_config_mapping)
             )],
         }
     ),
@@ -105,6 +75,45 @@ TO_HOST_TRANSLATORS = {
                 translated_value=(
                     config_translator_callbacks.get_value_from_role_mapping),
                 from_values={'mapping': '/role_mapping'}
+            ), KeyTranslator(
+                translated_keys=[functools.partial(
+                    config_translator_callbacks.get_key_from_pattern,
+                    to_pattern='/node_mapping/%(node_name)s'
+                )],
+                from_keys={'node_name': '/node_name'}
+            )],
+            '/haproxy_roles': [KeyTranslator(
+                translated_keys=['/ha/status'],
+                translated_value='enable',
+                override=config_translator_callbacks.override_if_any,
+                override_conditions={'haproxy_roles': '/haproxy_roles'}
+            )],
+            '/haproxy/router_id': [KeyTranslator(
+                translated_keys=[functools.partial(
+                    config_translator_callbacks.get_key_from_pattern,
+                    to_pattern='/ha/keepalived/router_ids/%(node_name)s'
+                )],
+                from_keys={'node_name': '/node_name'}
+            )],
+            '/haproxy/priority': [KeyTranslator(
+                translated_keys=[functools.partial(
+                    config_translator_callbacks.get_key_from_pattern,
+                    to_pattern=(
+                        '/ha/keepalived/instance_name/'
+                        'priorities/%(node_name)s'
+                    )
+                )],
+                from_keys={'node_name': '/node_name'}
+            )],
+            '/haproxy/state': [KeyTranslator(
+                translated_keys=[functools.partial(
+                    config_translator_callbacks.get_key_from_pattern,
+                    to_pattern=(
+                        '/ha/keepalived/instance_name/'
+                        'states/%(node_name)s'
+                    )
+                )],
+                from_keys={'node_name': '/node_name'}
             )],
         }
     ),
@@ -306,6 +315,12 @@ class Installer(package_installer.Installer):
             bag, clusterid, target_system)
         bag_item_dict = dict(bag_item)
         util.merge_dict(bag_item_dict, global_bag_item, False)
+        util.merge_dict(config, {
+            'client_name': self._get_client_name(
+                config['fullname'], target_system),
+            'node_name': self._get_node_name(
+                config['fullname'], target_system)
+        })
         translated_config = TO_HOST_TRANSLATORS[target_system].translate(
             config)
         util.merge_dict(bag_item_dict, translated_config)

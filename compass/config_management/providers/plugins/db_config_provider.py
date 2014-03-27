@@ -40,6 +40,8 @@ CLUSTER_DENIES = []
 HOST_ALLOWS = [
     '/roles',
     '/has_dashboard_roles',
+    '/dashboard_roles',
+    '/haproxy_roles',
     '/networking/interfaces/*/ip'
 ]
 HOST_DENIES = []

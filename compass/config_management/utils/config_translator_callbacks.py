@@ -41,6 +41,15 @@ def get_key_from_pattern(
     return translated_key
 
 
+def get_keys_from_config_mapping(ref, _path, **kwargs):
+    """get translated keys from config."""
+    config = ref.config
+    translated_keys = config.keys()
+    logging.debug('got translated_keys %s from config mapping %s',
+                  translated_keys, config)
+    return translated_keys
+
+
 def get_keys_from_role_mapping(ref, _path, mapping={}, **_kwargs):
     """get translated keys from roles."""
     roles = ref.config
@@ -54,6 +63,32 @@ def get_keys_from_role_mapping(ref, _path, mapping={}, **_kwargs):
     logging.debug('got translated_keys %s from roles %s and mapping %s',
                   translated_keys, roles, mapping)
     return translated_keys
+
+
+def get_value_from_config_mapping(
+    ref, _path, _translated_ref, translated_path, **kwargs
+):
+    """get translated_value from config and translated_path."""
+    config = ref.config
+    if translated_path not in config:
+        return None
+
+    value = config[translated_path]
+    if isinstance(value, basestring):
+        translated_value = ref.get(value)
+        logging.debug('got translated_value %s from %s',
+                      translated_value, value)
+    else:
+        for value_in_list in value:
+            translated_value = ref.get(value_in_list)
+            logging.debug('got translated_value %s from %s',
+                          translated_value, value_in_list)
+            if translated_value:
+                break
+
+    logging.debug('got translated_value %s from translated_path %s',
+                  translated_value, translated_path)
+    return translated_value
 
 
 def get_value_from_role_mapping(
@@ -70,8 +105,20 @@ def get_value_from_role_mapping(
             continue
 
         value = mapping[role][translated_path]
-        translated_value = ref.get(value)
-        logging.debug('got translated_value %s from %s and roles %s',
+        if isinstance(value, basestring):
+            translated_value = ref.get(value)
+            logging.debug('got translated_value %s from %s',
+                          translated_value, value)
+        else:
+            for value_in_list in value:
+                translated_value = ref.get(value_in_list)
+                logging.debug('got translated_value %s from %s',
+                              translated_value, value_in_list)
+                if translated_value:
+                    break
+
+        logging.debug('got translated_value %s from roles %s '
+                      'and translated_path %s',
                       translated_value, roles, translated_path)
         return translated_value
 

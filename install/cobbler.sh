@@ -257,7 +257,14 @@ else
     echo "/mnt/${IMAGE_NAME}-${IMAGE_ARCH} is imported" 
 fi
 else
-echo "distro $IMAGE_NAME has already existed"
+echo "distro ${IMAGE_NAME}-${IMAGE_ARCH} has already existed"
+sudo cobbler distro edit --name=${IMAGE_NAME}-${IMAGE_ARCH} --arch=${IMAGE_ARCH} --breed=redhat
+if [[ "$?" != "0" ]]; then
+    echo "failed to edit distro ${IMAGE_NAME}-${IMAGE_ARCH}"
+    exit 1
+else
+    echo "distro ${IMAGE_NAME}-${IMAGE_ARCH} is updated"
+fi
 fi
 
 # add profile
@@ -278,7 +285,7 @@ else
 fi
 else
 echo "profile $IMAGE_NAME has already existed."
-sudo cobbler profile edit --name="${IMAGE_NAME}-${IMAGE_ARCH}" --repo=ppa_repo
+sudo cobbler profile edit --name="${IMAGE_NAME}-${IMAGE_ARCH}" --repo=ppa_repo --distro="${IMAGE_NAME}-${IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${IMAGE_NAME}-${IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
 if [[ "$?" != "0" ]]; then
     echo "failed to edit profile ${IMAGE_NAME}-${IMAGE_ARCH}"
     exit 1

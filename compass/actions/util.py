@@ -37,11 +37,13 @@ def lock(lock_name, blocking=True, timeout=10):
             yield instance_lock
         else:
             logging.info('lock %s is already hold', lock_name)
+            yield None
 
     except Exception as error:
         logging.info(
             'redis fails to acquire the lock %s', lock_name)
         logging.exception(error)
+        yield None
 
     finally:
         instance_lock.acquired_until = 0

@@ -396,11 +396,11 @@ class Client(object):
     def parse_networking(cls, kwargs):
         """parse arguments to network data."""
         data = {}
-        possible_keys = [
+        global_keys = [
             'nameservers', 'search_path', 'gateway',
             'proxy', 'ntp_server', 'ha_vip']
         for key, value in kwargs.items():
-            if key in possible_keys:
+            if key in global_keys:
                 data.setdefault('global', {})[key] = value
             else:
                 if '_' not in key:
@@ -430,6 +430,8 @@ class Client(object):
         :type proxy: str.
         :param ntp_server: ntp server ip address to sync timestamp.
         :type ntp_server: str.
+        :param ha_vip: ha vip address to run ha proxy.
+        :type ha_vip: str.
         :param <interface>_ip_start: start ip address to host's interface.
         :type <interface>_ip_start: str.
         :param <interface>_ip_end: end ip address to host's interface.

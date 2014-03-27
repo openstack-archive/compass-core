@@ -78,7 +78,14 @@ TO_HOST_TRANSLATORS = {
             ), KeyTranslator(
                 translated_keys=[functools.partial(
                     config_translator_callbacks.get_key_from_pattern,
-                    to_pattern='/node_mapping/%(node_name)s'
+                    to_pattern='/node_mapping/%(node_name)s/roles'
+                )],
+                from_keys={'node_name': '/node_name'}
+            )],
+            '/networking/interfaces/management/ip': [KeyTranslator(
+                translated_keys=[functools.partial(
+                    config_translator_callbacks.get_key_from_pattern,
+                    to_pattern='/node_mapping/%(node_name)s/management_ip'
                 )],
                 from_keys={'node_name': '/node_name'}
             )],

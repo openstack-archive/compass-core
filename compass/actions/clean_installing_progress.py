@@ -32,8 +32,12 @@ def clean_installing_progress(cluster_hosts):
     .. note::
         The function should be called out of database session.
     """
-    with util.lock('serialized_action'):
-        logging.debug(
+    with util.lock('serialized_action') as lock:
+        if not lock:
+            raise Exception(
+                'failed to acquire lock to clean installation progress')
+
+        logging.info(
             'clean installing progress of cluster_hosts: %s',
             cluster_hosts)
         with database.session():

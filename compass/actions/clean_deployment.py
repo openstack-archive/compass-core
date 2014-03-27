@@ -32,7 +32,11 @@ def clean_deployment(cluster_hosts):
     .. note::
         The function should be called out of database session.
     """
-    with util.lock('serialized_action'):
+    with util.lock('serialized_action') as lock:
+        if not lock:
+            raise Exception(
+                'failed to acquire lock to clean deployment')
+
         logging.debug('clean cluster_hosts: %s', cluster_hosts)
         with database.session():
             cluster_hosts, os_versions, target_systems = (

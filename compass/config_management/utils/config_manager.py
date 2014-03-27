@@ -44,7 +44,7 @@ CLUSTER_HOST_MERGER = ConfigMerger(
                 'default': 'default'},
             to_key='/roles',
             value=config_merger_callbacks.assign_roles_by_host_numbers,
-            override=config_merger_callbacks.override_if_empty
+            override=True
         ),
         ConfigMapping(
             path_list=['/config_mapping']
@@ -132,7 +132,8 @@ CLUSTER_HOST_MERGER = ConfigMerger(
             to_key='/haproxy/priority',
             value=functools.partial(
                 config_merger_callbacks.assign_by_order,
-                orders=config_merger_callbacks.generate_order(0, -1)
+                orders=config_merger_callbacks.generate_order(0, -1),
+                reverse=True
             ),
             from_upper_keys={'prefix': '/haproxy/default_priority'},
             from_lower_keys={'conditions': '/haproxy_roles'},

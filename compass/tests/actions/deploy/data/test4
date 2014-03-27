@@ -85,14 +85,14 @@ HOSTS_BY_CLUSTER = {
             'mac': '00:00:01:02:03:04',
             'mutable': False,
             'config_data': json.dumps({
-                'networking': {
+                'netwoon.dumps(king': {
                     'interfaces': {
                         'management': {
                             'ip': '192.168.20.100',
                         },
                     },
                 },
-                'roles': ["os-single-controller", "os-network", "os-compute-worker"],
+                'roles': ["os-dashboard"],
             }),
         },
     ],
@@ -157,7 +157,7 @@ chef_MOCK = {
                'os-compute-worker': {
                }
            },
-           'dashboard_roles': ['os-single-controller'],
+           'dashboard_roles': ['os-single-controller', 'os-dashboard'],
            'role_assign_policy': {
                'default':{
                    'bundles': [],
@@ -210,7 +210,7 @@ cobbler_EXPECTED = {
             'tool': 'chef',
             'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
             'proxy': 'http://192.168.20.254:3128',
-            'run_list': '"role[os-single-controller]","role[os-compute-worker]","role[os-network]"',
+            'run_list': '"role[os-dashboard]"',
             'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100',
             'ntp_server': '192.168.20.254',
             'chef_client_name': 'openstack.host1.1',
@@ -253,44 +253,6 @@ chef_EXPECTED = {
                 'tenant': {'interface': 'eth0'}
             },
             'ntp': {'ntpserver': '192.168.20.254'},
-            'db': {
-                'mysql': {
-                    'bind_address': '192.168.20.100'
-                }
-            },
-            'dashboard_roles': ['os-single-controller'],
-            'mq': {
-                'rabbitmq': {'bind_address': '192.168.20.100'}
-            },
-            'endpoints': {
-                'compute': {
-                    'novnc': {'host': '192.168.20.100'},
-                    'xvpvnc': {'host': '192.168.20.100'},
-                    'service': {'host': '192.168.20.100'},
-                    'metadata': {'host': '192.168.20.100'}
-                },
-                'network': {
-                    'service': {'host': '192.168.20.100'}
-                },
-                'image': {
-                    'registry': {'host': '192.168.20.100'},
-                    'service': {'host': '192.168.20.100'}
-                },
-                'metering': {
-                    'service': {'host': '192.168.20.100'}
-                },
-                'volume': {
-                    'service': {'host': '192.168.20.100'}
-                },
-                'ec2': {
-                    'admin': {'host': '192.168.20.100'},
-                    'service': {'host': '192.168.20.100'}
-                },
-                'identity': {
-                    'admin': {'host': u'192.168.20.100'},
-                    'service': {'host': u'192.168.20.100'}
-                },
-            },
         },
     },
 }

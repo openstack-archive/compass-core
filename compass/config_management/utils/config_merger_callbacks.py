@@ -154,6 +154,9 @@ def _update_assigned_roles(lower_refs, to_key, bundle_mapping,
                 bundled_role = bundle_mapping[role]
                 bundled_roles.add(bundled_role)
                 roles |= set(role_bundles[bundled_role])
+            else:
+                roles.add(role)
+
         for bundled_role in bundled_roles:
             bundled_maxs[bundled_role] = _dec_max_min(
                 bundled_maxs[bundled_role])
@@ -303,15 +306,21 @@ def assign_roles(_upper_ref, _from_key, lower_refs, to_key,
     lower_roles, unassigned_hosts = _update_assigned_roles(
         lower_refs, to_key, bundle_mapping, role_bundles,
         bundled_maxs, bundled_mins)
-    _update_exclusive_roles(bundled_exclusives, lower_roles, unassigned_hosts,
-                            bundled_maxs, bundled_mins, role_bundles)
+    if not unassigned_hosts:
+        logging.debug(
+            'there is not unassigned hosts, assigned roles by host is: %s',
+            lower_roles)
+    else:
+        _update_exclusive_roles(
+            bundled_exclusives, lower_roles, unassigned_hosts,
+            bundled_maxs, bundled_mins, role_bundles)
+        _assign_roles_by_mins(
+            role_bundles, lower_roles, unassigned_hosts,
+            bundled_maxs, bundled_mins)
+        _assign_roles_by_maxs(
+            role_bundles, lower_roles, unassigned_hosts,
+            bundled_maxs)
 
-    _assign_roles_by_mins(
-        role_bundles, lower_roles, unassigned_hosts,
-        bundled_maxs, bundled_mins)
-    _assign_roles_by_maxs(
-        role_bundles, lower_roles, unassigned_hosts,
-        bundled_maxs)
     _sort_roles(lower_roles, roles)
 
     return lower_roles
@@ -427,12 +436,16 @@ def generate_order(start=0, end=-1):
 
 def assign_by_order(_upper_ref, _from_key, lower_refs, _to_key,
                     prefix='',
-                    orders=[], default_order=0,
+                    orders=[], default_order=0, reverse=False,
                     conditions={}, **kwargs):
     """assign to_key by order."""
     host_values = {}
     orders = iter(orders)
-    for lower_key, _ in lower_refs.items():
+    lower_keys = lower_refs.keys()
+    if reverse:
+        lower_keys = reversed(lower_keys)
+
+    for lower_key in lower_keys:
         if lower_key in conditions and conditions[lower_key]:
             try:
                 order = orders.next()

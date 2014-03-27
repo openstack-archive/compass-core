@@ -407,6 +407,10 @@ class TestEndToEnd(unittest2.TestCase):
         """test multi clusters multi hosts."""
         self._test('test3')
 
+    def test_4(self):
+        """test deploy unexist roles."""
+        self._test('test4')
+
 
 if __name__ == '__main__':
     flags.init()

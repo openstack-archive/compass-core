@@ -96,7 +96,7 @@ class TestAssignRoles(unittest2.TestCase):
         assigned = config_merger_callbacks.assign_roles(
             None, None, lower_refs, 'roles', roles=self.roles_,
             maxs=self.maxs_, default_min=self.default_min_)
-        self.assertEqual(assigned, {1: ['control', 'api', 'compute']})
+        self.assertEqual(assigned, {1: ['control', 'api', 'compute', 'mysql']})
 
     def test_assign_roles_allinone_roles_set_less_roles(self):
         lower_configs = {
@@ -105,10 +105,10 @@ class TestAssignRoles(unittest2.TestCase):
         lower_refs = {}
         for hostid, config in lower_configs.items():
             lower_refs[hostid] = config_reference.ConfigReference(config)
-        self.assertRaises(
-            ValueError, config_merger_callbacks.assign_roles,
+        assigned = config_merger_callbacks.assign_roles(
             None, None, lower_refs, 'roles', roles=self.roles_,
             maxs=self.maxs_, default_min=self.default_min_)
+        self.assertEqual(assigned, {1: ['control', 'api']})
 
     def test_assign_roles_allinone_exclusives(self):
         exclusives = ['control']

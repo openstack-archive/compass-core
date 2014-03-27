@@ -72,9 +72,14 @@ def update_progress(cluster_hosts):
        After the progress got updated, these information will be stored back
        to the log_progressing_history for next time run.
     """
-    with util.lock('log_progressing', blocking=False):
-        logging.debug('update installing progress of cluster_hosts: %s',
-                      cluster_hosts)
+    with util.lock('log_progressing', blocking=False) as lock:
+        if not lock:
+            logging.error(
+                'failed to acquire lock to calculate installation progress')
+            return
+
+        logging.info('update installing progress of cluster_hosts: %s',
+                     cluster_hosts)
         os_versions = {}
         target_systems = {}
         with database.session():

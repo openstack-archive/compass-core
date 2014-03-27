@@ -145,7 +145,7 @@ class FileReader(object):
             if history:
                 if history.position >= self.position_:
                     logging.error(
-                        '%s history position %s is ahead of currrent '
+                        '%s history position %s is ahead of current '
                         'position %s',
                         self.pathname_,
                         history.position,

@@ -67,9 +67,9 @@ STORAGE_NETMASK = '255.255.255.0'
 STORAGE_IP_GATEWAY = '172.16.100.1'
 STORAGE_NIC = 'eth0'
 STORAGE_PROMISC = 0
-HOME_PERCENTAGE = 40
-TMP_PERCENTAGE = 10
-VAR_PERCENTAGE = 15
+HOME_PERCENTAGE = 5
+TMP_PERCENTAGE = 5
+VAR_PERCENTAGE = 10
 #ROLES_LIST = [['os-dashboard']]
 
 PRESET_VALUES = {
@@ -230,8 +230,8 @@ print 'set networking config to cluster %s status: %s, resp: %s' % (
 status, resp = client.set_partition(
     cluster_id,
     home_percentage=HOME_PERCENTAGE,
-    tmp_partition_percentage=TMP_PERCENTAGE,
-    var_partition_percentage=VAR_PERCENTAGE)
+    tmp_percentage=TMP_PERCENTAGE,
+    var_percentage=VAR_PERCENTAGE)
 print 'set partition config to cluster %s status: %s, resp: %s' % (
     cluster_id, status, resp)
 

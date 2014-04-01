@@ -15,14 +15,17 @@ export NIC=installation
  
 # DHCP config
 # SUBNET variable specifies the subnet for DHCP server. Example: 192.168.0.0/16 
-export SUBNET=192.168.10.0/24
+export ipaddr=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+export ipnet=$(ip address| grep "global $NIC" |cut -f 6 -d ' ')
+export SUBNET=$(ipcalc $ipnet -n |cut -f 2 -d '=')/$(ipcalc $ipnet -p |cut -f 2 -d '=')
 # DHCP option router  address(Default is your management interface IP address )"
 export OPTION_ROUTER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 # The IP range for DHCP clients (Default: local subnet start from 100 to 254)
-export IP_RANGE='192.168.10.100 192.168.10.254'
+export ip_start=`echo $ipaddr |cut -d. -f'1 2 3'`.128
+export ip_end=`echo $ipaddr |cut -d. -f'1 2 3'`.254
+export IP_RANGE=`$ip_start $ip_end`
 # TFTP server's IP address(Default: Management Interface/eth0 IP)
 export NEXTSERVER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
-export ipaddr=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 # the domains covered by nameserver
 export NAMESERVER_DOMAINS=ods.com
 

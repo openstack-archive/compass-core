@@ -8,3 +8,6 @@ virsh start pxe01
 virsh list
 source compass-core/install/install.conf.template
 /usr/bin/python /tmp/test.py
+if [ "$tempest" == "true" ]; then
+    ./tempest_run.sh
+fi

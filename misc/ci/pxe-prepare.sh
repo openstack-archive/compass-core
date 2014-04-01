@@ -16,7 +16,7 @@ fi
 virt-install --accelerate --hvm --connect qemu:///system \
     --network=bridge:installation,mac=00:11:20:30:40:01 --pxe \
     --network=network:default \
-    --name pxe01 --ram=4096 \
+    --name pxe01 --ram=8192 \
     --disk /tmp/pxe01.raw,format=raw \
     --vcpus=10 \
     --graphics vnc,listen=0.0.0.0 --noautoconsole \

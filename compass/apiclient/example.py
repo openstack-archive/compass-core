@@ -285,6 +285,8 @@ status, resp = client.get_dashboard_links(cluster_id)
 print 'get cluster %s dashboardlinks status: %s, resp: %s' % (
     cluster_id, status, resp)
 dashboardlinks = resp['dashboardlinks']
+if not dashboardlinks.keys():
+    raise Exception("Dashboard link is not found!")
 for x in dashboardlinks.keys():
     if x in ("os-dashboard", "os-controller"):
         dashboardurl = dashboardlinks.get(x)

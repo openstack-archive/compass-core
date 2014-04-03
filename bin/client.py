@@ -77,13 +77,11 @@ flags.add('host_roles',
           ),
           default='')
 flags.add('deployment_timeout',
-          type='int',
-          help='deployment timeout',
-          default=60 * 60)
+          help='deployment timeout in minutes',
+          default=60)
 flags.add('progress_update_check_interval',
-          type='int',
-          help='progress update status check interval',
-          default=30)
+          help='progress update status check interval in seconds',
+          default=60)
 flags.add('dashboard_role',
           help='dashboard role name',
           default='os-dashboard')
@@ -447,7 +445,7 @@ def _deploy_clusters(client, cluster_hosts):
 
 def _get_installing_progress(client, cluster_hosts):
     """get intalling progress."""
-    timeout = time.time() + flags.OPTIONS.deployment_timeout
+    timeout = time.time() + 60 * float(flags.OPTIONS.deployment_timeout)
     clusters_progress = {}
     hosts_progress = {}
     install_finished = False
@@ -510,7 +508,7 @@ def _get_installing_progress(client, cluster_hosts):
                 'there are some clusters/hosts in installing.'
                 'sleep %s seconds and retry',
                 flags.OPTIONS.progress_update_check_interval)
-            time.sleep(flags.OPTIONS.progress_update_check_interval)
+            time.sleep(float(flags.OPTIONS.progress_update_check_interval))
         else:
             install_finished = True
             logging.info('all clusters/hosts are installed.')

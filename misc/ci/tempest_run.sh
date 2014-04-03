@@ -98,7 +98,7 @@ iniset /etc/tempest/tempest.conf network public_router_id ''
 iniset /etc/tempest/tempest.conf network quantum_available true
 #Start a smoke test against cloud without object storage and aws related tests 
 #as they are unavailable for now
-if [ $tempest_full == true ]; then
+if [[ $tempest_full == true ]]; then
     nosetests --logging-format '%(asctime)-15s %(message)s' --with-xunit -sv --attr=type=smoke \
                              --xunit-file=nosetests-smoke.xml tempest -e object_storage -e boto
 else

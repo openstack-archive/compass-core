@@ -104,7 +104,7 @@ for i in `seq $VIRT_NUM`; do
     if [ -z "$machines" ]; then
         machines="${mac}"
     else
-        machines="${machines,${mac}"
+        machines="${machines},${mac}"
     fi
 
     if [ $roles_offset -lt ${#roles_list[@]} ]; then
@@ -114,7 +114,7 @@ for i in `seq $VIRT_NUM`; do
         host_roles="host${i}="
     fi
 
-    if [ -z "$host_roles_list" ]l then
+    if [ -z "$host_roles_list" ]; then
         host_roles_list="$host_roles"
     else
         host_roles_list="${host_roles_list};$host_roles"

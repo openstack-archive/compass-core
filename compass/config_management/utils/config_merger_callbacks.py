@@ -501,9 +501,13 @@ def assign_from_pattern(_upper_ref, _from_key, lower_refs, to_key,
 def assign_noproxy(_upper_ref, _from_key, lower_refs,
                    to_key, default=[], clusterid=None,
                    noproxy_pattern='',
-                   hostnames={}, ips={}, **_kwargs):
+                   hostnames={}, ips={}, **kwargs):
     """Assign no proxy to hosts."""
     no_proxy_list = copy.deepcopy(default)
+    for _, value in kwargs.items():
+        if value:
+            no_proxy_list.append(value)
+
     if not clusterid:
         raise KeyError(
             'clusterid %s is empty' % clusterid)

@@ -136,6 +136,7 @@ if [ "$tempest" == "true" ]; then
         git clean -x -f -d -q
         git checkout grizzly-eol
     fi
+    cd /tmp/tempest
     pip install -e .
 fi
 

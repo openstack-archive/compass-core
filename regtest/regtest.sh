@@ -125,8 +125,13 @@ echo "machines: $machines"
 echo "host roles: $host_roles_list"
 virsh list
 
-ln -sf /var/log/cobbler/anamon cobbler_logs
-ln -sf /var/log/compass compass_logs
+# Avoid infinite relative symbolic links
+if [[ ! -L cobbler_logs ]]; then
+    ln -s /var/log/cobbler/anamon cobbler_logs
+fi
+if [[ ! -L compass_logs ]]; then
+    ln -s /var/log/compass compass_logs
+fi
 CLIENT_SCRIPT=/opt/compass/bin/client.py
 /opt/compass/bin/refresh.sh
 if [[ "$?" != "0" ]]; then
@@ -134,8 +139,28 @@ if [[ "$?" != "0" ]]; then
     exit 1 
 fi
 
-${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}"
-if [[ "$?" != "0" ]]; then
+${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}"
+rc=$?
+# Tear down machines after the test
+virtmachines_to_rm=$(virsh list --name)
+for virtmachine in $virtmachines_to_rm; do
+    echo "destroy $virtmachine"
+    virsh destroy $virtmachine
+    if [[ "$?" != "0" ]]; then
+        echo "destroy instance $virtmachine failed"
+        exit 1
+    fi
+done
+virtmachines_to_rm=$(virsh list --all --name)
+for virtmachine in $virtmachines_to_rm; do
+    echo "undefine $virtmachine"
+    virsh undefine $virtmachine
+    if [[ "$?" != "0" ]]; then
+        echo "undefine instance $virtmachine failed"
+        exit 1
+    fi
+done
+if [[ "$rc" != "0" ]]; then
     echo "deploy cluster failed"
     exit 1
 fi

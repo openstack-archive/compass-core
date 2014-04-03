@@ -202,7 +202,7 @@ def _poll_switches(client):
                         msg = 'failed to update switch %s' % switch_ip
                         raise Exception(msg)
 
-                time.sleep(10)
+                time.sleep(60)
                 remain_retries -= 1
             else:
                 msg = 'max retries reached for switch %s' % switch_ip

@@ -68,7 +68,7 @@ fi
 #Initialize cloud environment for test and Tempest config file
 cp etc/tempest.conf.sample /etc/tempest/tempest.conf
 nova_api_host=`knife data bag show openstack openstack_1 | shyaml get-value endpoints.compute.service.host`
-sshpass -p 'root' scp -o StrictHostKeyChecking=no -r root@$nova_api_host:/root/openrc /root/.
+sshpass -p 'root' scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r root@$nova_api_host:/root/openrc /root/.
 source /root/openrc
 demo_tenant_id=`keystone tenant-create --name demo |grep " id " |awk '{print $4}'`
 alt_demo_tenant_id=`keystone tenant-create --name alt_demo |grep " id " |awk '{print $4}'`
@@ -98,7 +98,7 @@ iniset /etc/tempest/tempest.conf network public_router_id ''
 iniset /etc/tempest/tempest.conf network quantum_available true
 #Start a smoke test against cloud without object storage and aws related tests 
 #as they are unavailable for now
-if [ $tempest_full == true ]; then
+if [[ $tempest_full == true ]]; then
     nosetests --logging-format '%(asctime)-15s %(message)s' --with-xunit -sv --attr=type=smoke \
                              --xunit-file=nosetests-smoke.xml tempest -e object_storage -e boto
 else

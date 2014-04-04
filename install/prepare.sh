@@ -123,6 +123,22 @@ else
   copylocal2dir $ADAPTER_SOURCE $ADAPTER_HOME
 fi
 
+if [ "$tempest" == "true" ]; then
+    if [[ ! -e /tmp/tempest ]]; then
+        git clone http://git.openstack.org/openstack/tempest /tmp/tempest
+        cd /tmp/tempest
+        git checkout grizzly-eol
+    else
+        cd /tmp/tempest
+        git remote set-url origin http://git.openstack.org/openstack/tempest
+        git remote update
+        git reset --hard
+        git clean -x -f -d -q
+        git checkout grizzly-eol
+    fi
+    pip install -e .
+fi
+
 download()
 {
     url=$1

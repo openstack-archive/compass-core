@@ -209,6 +209,17 @@ do
     sudo cp /tmp/$f /var/lib/cobbler/repo_mirror/ppa_repo/
 done
 
+ppa_repo_rsyslog_packages="json-c-0.10-2.el6.$IMAGE_ARCH.rpm
+                           libestr-0.1.9-1.el6.$IMAGE_ARCH.rpm
+                           libgt-0.3.11-1.el6.$IMAGE_ARCH.rpm
+                           liblogging-1.0.4-1.el6.$IMAGE_ARCH.rpm
+                           rsyslog-7.6.3-1.el6.$IMAGE_ARCH.rpm"
+for f in $ppa_repo_rsyslog_packages
+do
+    download http://rpms.adiscon.com/v7-stable/epel-6/${IMAGE_ARCH}/RPMS/$f $f
+    sudo cp /tmp/$f /var/lib/cobbler/repo_mirror/ppa_repo/
+done
+
 # download chef client for ppa repo
 download http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
 sudo cp /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm /var/lib/cobbler/repo_mirror/ppa_repo/

@@ -154,6 +154,20 @@ class Installer(package_installer.Installer):
         """get client name."""
         return cls._get_node_name(fullname, target_system)
 
+    def _update_host_attributes(self, config, target_system):
+        """chef manage node attributes."""
+        from chef import Node
+        roles = config['roles']
+        node_name = "%s.%s" % (target_system, config['fullname'])
+        node = Node(node_name, api=self.api_)
+        node['cluster'] = self._cluster_databag_name(
+            config['clusterid'],
+            target_system)
+
+        for role in roles:
+            node.run_list.append('role[%s]' % role)
+        node.save()
+
     @classmethod
     def _get_node_name(cls, fullname, target_system):
         """get node name."""
@@ -163,10 +177,6 @@ class Installer(package_installer.Installer):
         """get os installer config."""
         return {
             '%s_url' % self.NAME: self.installer_url_,
-            'run_list': ','.join(
-                ['"role[%s]"' % role for role in config['roles'] if role]),
-            'cluster_databag': self._cluster_databag_name(
-                config['clusterid'], target_system),
             'chef_client_name': self._get_client_name(
                 config['fullname'], target_system),
             'chef_node_name': self._get_node_name(
@@ -310,6 +320,7 @@ class Installer(package_installer.Installer):
         """reinstall host."""
         self._clean_client(hostid, config, target_system, **kwargs)
         self._clean_node(hostid, config, target_system, **kwargs)
+        self._update_host_attributes(config, target_system)
 
     def update_host_config(self, hostid, config, target_system, **kwargs):
         """update host cnfig."""
@@ -337,5 +348,6 @@ class Installer(package_installer.Installer):
 
         bag_item.save()
 
+        self._update_host_attributes(config, target_system)
 
 package_installer.register(Installer)

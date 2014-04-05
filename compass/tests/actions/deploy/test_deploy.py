@@ -203,10 +203,39 @@ class TestEndToEnd(unittest2.TestCase):
                 """mock save."""
                 configs[in_self.bag_item_name_] = in_self.config_
 
+
+        class _mockNode():
+            """mock chef node class."""
+            def __init__(in_self, node_name, api):
+                in_self.node_name = node_name
+                in_self.api_ = api
+                in_self.run_list = []
+
+            def __setattr__(in_self, attr_name, attr_value):
+                if attr_name == 'run_list':
+                    in_self.run_list = _mockRunList(
+                        in_self.node_name,
+                        in_self.api_)
+
+
+        class _mockRunList(collections.Set):
+            def __init__(in_self, node_name, api):
+                in_self.node_name = node_name
+                in_self.config_ = [] 
+
+            def __len__(in_self, api):
+                return len(in_self.config_)
+
+            def __getitem__(in_self):
+                return in_self.config_ 
+
+            def append(in_self, role):
+                in_self.config_.append(role)
+
         self.chef_databagitem_backup_ = chef.DataBagItem
         chef.DataBagItem = mock.Mock(side_effect=_mockDict)
         self.chef_client_backup_ = chef.Client
-        chef.Client = mock.Mock()
+        chef.Client = mock.Mock(side_effect=_mockNode)
         chef.Client.return_value.delete = mock.Mock()
         self.chef_node_backup_ = chef.Node
         chef.Node = mock.Mock()

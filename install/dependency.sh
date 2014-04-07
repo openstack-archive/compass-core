@@ -2,7 +2,7 @@
 
 echo 'Installing Required packages for Compass...'
 if [ "$tempest" == "true" ]; then
-    sudo yum install -y virt-install libvirt qemu-kvm libxml2-devel libxslt-devel python-devel sshpass
+    sudo yum install -y virt-install libvirt qemu-kvm libxml2-devel libxslt-devel python-devel sshpass openssl-devel
 fi
 sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python git wget python-setuptools python-netaddr python-flask python-flask-sqlalchemy python-amqplib amqp python-paramiko python-mock mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp net-snmp-python python-daemon unzip openssl openssl098e ca-certificates redis python-redis
 if [[ "$?" != "0" ]]; then

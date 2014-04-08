@@ -143,7 +143,25 @@ if [[ "$?" != "0" ]]; then
     exit 1 
 fi
 
-${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}"
+if [[ "$USE_POLL_SWITCHES" == "0" || "$USE_POLL_SWITCHES" == "false" ]]; then
+    POLL_SWITCHES_FLAG="nopoll_switches"
+    TMP_SWITCH_MACHINE_FILE=$(mktemp)
+    > ${TMP_SWITCH_MACHINE_FILE}
+    for switch_ip in ${SWITCH_IPS//,/ }; do
+        echo "switch,${switch_ip},huawei,${SWITCH_VERSION},${SWITCH_COMMUNITY},under_monitoring" >> ${TMP_SWITCH_MACHINE_FILE}
+        switch_port=1
+        for mac in ${machines//,/ }; do
+            echo "machine,${switch_ip},${switch_port},1,${mac}" > ${TMP_SWITCH_MACHINE_FILE}
+            let switch_port+=1
+        done
+        break
+    done
+    /opt/compass/bin/manage_db.py set_switch_machines --switch_machines_file ${TMP_SWITCH_MACHINE_FILE}
+else
+    POLL_SWITCHES_FLAG="poll_switches"
+fi
+
+${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG}
 rc=$?
 # Tear down machines after the test
 if [[ $rc != 0 ]]; then

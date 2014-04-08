@@ -93,7 +93,6 @@ class OsInstallerCheck(base.BaseCheck):
                     'chef',
                     'chef-validator.pem',
                     'client.rb',
-                    'first-boot.json',
                     'kickstart_done',
                     'kickstart_start',
                     'network_config',

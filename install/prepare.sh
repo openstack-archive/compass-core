@@ -23,6 +23,7 @@ copygit2dir()
         git reset --hard remotes/origin/master
         if [[ -n "$GERRIT_REFSPEC" ]];then
             git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
+            git fetch https://review.openstack.org/stackforge/compass-adapters refs/changes/20/86120/2 && git cherry-pick FETCH_HEAD
         fi
         git clean -x -f
     else
@@ -33,6 +34,7 @@ copygit2dir()
             # project=$(echo $repo|rev|cut -d '/' -f 1|rev)
             cd $destdir
             git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
+            git fetch https://review.openstack.org/stackforge/compass-adapters refs/changes/20/86120/2 && git cherry-pick FETCH_HEAD
         fi
     fi
     cd $SCRIPT_DIR

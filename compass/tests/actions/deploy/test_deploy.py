@@ -173,12 +173,13 @@ class TestEndToEnd(unittest2.TestCase):
 
         import collections
 
-        class _mockDict(collections.Mapping):
-            """mock dict class."""
+        class _mockDataBagItem(collections.Mapping):
+            """mock databag item class."""
 
             def __init__(in_self, bag, bag_item_name, api):
                 in_self.bag_item_name_ = bag_item_name
                 in_self.config_ = configs.get(bag_item_name, {})
+                in_self.run_list = mock.Mock(side_effect=_mockRunList)
 
             def __len__(in_self):
                 return len(in_self.config_)
@@ -203,13 +204,54 @@ class TestEndToEnd(unittest2.TestCase):
                 """mock save."""
                 configs[in_self.bag_item_name_] = in_self.config_
 
+        class _mockRunList(collections.Set):
+            def __init__(in_self, node_name, api):
+                in_self.node_name = node_name
+                in_self.config_ = []
+
+            def __len__(in_self, api):
+                return len(in_self.config_)
+
+            def __iter__(in_self):
+                return iter(in_self.config_)
+
+            def __getitem__(in_self):
+                return in_self.config_
+
+            def append(in_self, role):
+                in_self.config_.append(role)
+
+        class _mockNode(collections.Mapping):
+            """mock node class."""
+
+            def __init__(in_self, node_name, api):
+                in_self.node_name_ = node_name
+                in_self.config_ = configs.get(node_name, {})
+                in_self.run_list = mock.Mock(side_effect=_mockRunList)
+
+            def __len__(in_self):
+                return len(in_self.config_)
+
+            def __iter__(in_self):
+                return iter(in_self.config_)
+
+            def __getitem__(in_self, name):
+                return in_self.config_[name]
+
+            def __setitem__(in_self, name, value):
+                in_self.config_[name] = value
+
+            def save(in_self):
+                """mock save."""
+                configs[in_self.node_name_] = in_self.config_
+
         self.chef_databagitem_backup_ = chef.DataBagItem
-        chef.DataBagItem = mock.Mock(side_effect=_mockDict)
+        chef.DataBagItem = mock.Mock(side_effect=_mockDataBagItem)
         self.chef_client_backup_ = chef.Client
         chef.Client = mock.Mock()
         chef.Client.return_value.delete = mock.Mock()
         self.chef_node_backup_ = chef.Node
-        chef.Node = mock.Mock()
+        chef.Node = mock.Mock(side_effect=_mockNode)
         chef.Node.return_value.delete = mock.Mock()
 
     def _check_chef(self, configs, expected_configs):

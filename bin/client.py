@@ -37,6 +37,12 @@ flags.add('switch_credential',
 flags.add('switch_max_retries', type='int',
           help='max retries of poll switch',
           default=-1)
+flags.add('switch_retry_interval', type='int',
+          help='interval to repoll switch',
+          default=10)
+flags.add_bool('poll_switches',
+               help='if the client polls switches',
+               default=True)
 flags.add('machines',
           help='comma separated mac addresses of machines',
           default='')
@@ -161,50 +167,52 @@ def _poll_switches(client):
         else:
             logging.info('switch %s is already added', switch_ip)
 
-    for switch_ip, switch in all_switches.items():
-        switch_id = switch['id']
-        # if the switch is not in under_monitoring, wait for the
-        # poll switch task update the switch information and change
-        # the switch state.
-        remain_retries = flags.OPTIONS.switch_max_retries
-        while True:
-            if remain_retries != 0:
-                logging.info(
-                    'waiting for the switch %s into under_monitoring',
-                    switch_ip)
-                status, resp = client.get_switch(switch_id)
-                logging.info('get switch %s status: %s, resp: %s',
-                             switch_ip, status, resp)
-                if status >= 400:
-                    msg = 'failed to get switch %s' % switch_ip
-                    raise Exception(msg)
-
-                switch = resp['switch']
-                all_switches[switch_ip] = switch
-                if switch['state'] == 'notsupported':
-                    msg = 'switch %s is not supported', switch_ip
-                    raise Exception(msg)
-                elif switch['state'] in ['initialized', 'repolling']:
-                    logging.info('switch %s is not updated', switch_ip)
-                else:
-                    if switch['state'] == 'under_monitoring':
-                        logging.info('switch %s is ready', switch_ip)
-                        try:
-                            return _get_machines(client)
-                        except Exception as error:
-                            logging.exception(error)
-
-                    status, resp = client.update_switch(
-                        switch_id, switch_ip, **switch_credential)
-                    if status >= 400:
-                        msg = 'failed to update switch %s' % switch_ip
-                        raise Exception(msg)
-
-                time.sleep(10)
-                remain_retries -= 1
-            else:
-                msg = 'max retries reached for switch %s' % switch_ip
+    remain_retries = flags.OPTIONS.switch_max_retries
+    while True:
+        time.sleep(flags.OPTIONS.switch_retry_interval)
+        for switch_ip, switch in all_switches.items():
+            switch_id = switch['id']
+            # if the switch is not in under_monitoring, wait for the
+            # poll switch task update the switch information and change
+            # the switch state.
+            logging.info(
+                'waiting for the switch %s into under_monitoring',
+                switch_ip)
+            status, resp = client.get_switch(switch_id)
+            logging.info('get switch %s status: %s, resp: %s',
+                         switch_ip, status, resp)
+            if status >= 400:
+                msg = 'failed to get switch %s' % switch_ip
                 raise Exception(msg)
+
+            switch = resp['switch']
+            all_switches[switch_ip] = switch
+
+            if switch['state'] == 'notsupported':
+                msg = 'switch %s is not supported', switch_ip
+                raise Exception(msg)
+            elif switch['state'] in ['initialized', 'repolling']:
+                logging.info('switch %s is not updated', switch_ip)
+            elif switch['state'] == 'under_monitoring':
+                logging.info('switch %s is ready', switch_ip)
+
+        try:
+            return _get_machines(client)
+        except Exception:
+            logging.error('failed to get all machines')
+
+        if remain_retries > 0:
+            for switch_ip, switch in all_switches.items():
+                status, resp = client.update_switch(
+                    switch_id, switch_ip, **switch_credential)
+                if status >= 400:
+                    msg = 'failed to update switch %s' % switch_ip
+                    raise Exception(msg)
+
+            remain_retries -= 1
+        else:
+            msg = 'max retries reached'
+            raise Exception(msg)
 
 
 def _get_adapter(client):
@@ -566,7 +574,11 @@ def main():
     flags.init()
     logsetting.init()
     client = _get_client()
-    machines = _poll_switches(client)
+    if flags.OPTIONS.poll_switches:
+        machines = _poll_switches(client)
+    else:
+        machines = _get_machines(client)
+
     adapter_id = _get_adapter(client)
     cluster_hosts = _add_cluster(client, adapter_id, machines)
     _set_cluster_security(client, cluster_hosts)

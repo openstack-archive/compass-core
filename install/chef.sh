@@ -36,9 +36,8 @@ fi
 # configure chef client and knife
 rpm -q chef
 if [[ "$?" != "0" ]]; then
-    download http://www.opscode.com/chef/install.sh chef_install.sh
-    sudo chmod 755 /tmp/chef_install.sh
-    sudo /tmp/chef_install.sh
+    download http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
+    rpm -ivh /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
     if [[ "$?" != "0" ]]; then
         echo "chef install failed"
         exit 1

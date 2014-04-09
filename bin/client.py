@@ -36,7 +36,7 @@ flags.add('switch_credential',
           default='version=v2c,community=public')
 flags.add('switch_max_retries', type='int',
           help='max retries of poll switch',
-          default=-1)
+          default=5)
 flags.add('switch_retry_interval', type='int',
           help='interval to repoll switch',
           default=10)
@@ -195,7 +195,6 @@ def _poll_switches(client):
                 logging.info('switch %s is not updated', switch_ip)
             elif switch['state'] == 'under_monitoring':
                 logging.info('switch %s is ready', switch_ip)
-
         try:
             return _get_machines(client)
         except Exception:

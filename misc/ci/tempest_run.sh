@@ -45,7 +45,6 @@ pip install tox==1.6.1
 #Install setuptools twice so that it is really upgraded
 pip install -U setuptools
 pip install -U setuptools
-pip install shyaml
 yum install -y libxml2-devel libxslt-devel python-devel sshpass
 if [[ ! -e /tmp/tempest ]]; then
     git clone http://git.openstack.org/openstack/tempest /tmp/tempest
@@ -67,7 +66,7 @@ if [[ ! -e /etc/tempest ]]; then
 fi
 #Initialize cloud environment for test and Tempest config file
 cp etc/tempest.conf.sample /etc/tempest/tempest.conf
-nova_api_host=`knife data bag show openstack openstack_1 | shyaml get-value endpoints.compute.service.host`
+nova_api_host=`knife data bag show openstack openstack_1|grep management_ip |head -1 |awk '{print$2}'`
 sshpass -p 'root' scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r root@$nova_api_host:/root/openrc /root/.
 source /root/openrc
 demo_tenant_id=`keystone tenant-create --name demo |grep " id " |awk '{print $4}'`

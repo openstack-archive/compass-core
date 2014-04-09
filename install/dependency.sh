@@ -19,7 +19,6 @@ fi
 if [ "$tempest" == "true" ]; then
     sudo pip install -U setuptools 
     sudo pip install -U setuptools
-    sudo pip install -U shyaml
 fi
 sudo pip install -r $COMPASSDIR/requirements.txt
 sudo pip install -r $COMPASSDIR/test-requirements.txt

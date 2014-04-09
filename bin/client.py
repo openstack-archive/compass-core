@@ -127,7 +127,7 @@ def _get_machines(client):
         msg = 'machines %s is missing' % (
             list(machines_to_add - set(machines.values()))
         )
-        raise Exception(msg)
+        print (msg)
 
     return machines
 
@@ -195,11 +195,10 @@ def _poll_switches(client):
                 logging.info('switch %s is not updated', switch_ip)
             elif switch['state'] == 'under_monitoring':
                 logging.info('switch %s is ready', switch_ip)
-
-        try:
-            return _get_machines(client)
-        except Exception:
-            logging.error('failed to get all machines')
+                try:
+                    return _get_machines(client)
+                except Exception:
+                    logging.error('failed to get all machines')
 
         if remain_retries > 0:
             for switch_ip, switch in all_switches.items():

@@ -63,6 +63,14 @@ while [ $1 ]; do
   shift
 done
 
+# convert ip address to int
+ipaddr_convert()
+{
+    ipaddr=$1
+    IFS=. read -r a b c d <<< "$ipaddr"
+    printf '%d\n' "$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
+}
+
 # Load variables
 source $DIR/install.conf
 loadvars()
@@ -79,13 +87,6 @@ loadvars()
                 export $(echo $1)="$2"
                 break
             else
-                if [ "$1" == "NIC" ]; then
-                    sudo ip addr |grep $input >& /dev/null
-                    if [ $? -ne 0 ]; then
-                        echo "There is not any IP address assigned to the NIC '$input' yet, please assign an IP address first."
-                        exit 1
-                    fi
-                fi
                 echo "You have entered $input"
                 export $(echo $1)="$input"
                 break
@@ -95,21 +96,86 @@ loadvars()
 }
 
 loadvars NIC "eth0"
+sudo ifconfig $NIC
+if [ $? -ne 0 ]; then
+  echo "There is no nic '$NIC' yet"
+  exit 1
+fi
+sudo ifconfig $NIC | grep 'inet addr:' >& /dev/null
+if [ $? -ne 0 ]; then
+    echo "There is not any IP address assigned to the NIC '$NIC' yet, please assign an IP address first."
+    exit 1
+fi
+
 export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
 export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
-export range=$(echo "$(echo "$ipaddr"|cut -f 1 -d '.').$(echo "$ipaddr"|cut -f 2 -d '.').$(echo "$ipaddr"|cut -f 3 -d '.').100 $(echo "$ipaddr"|cut -f 1 -d '.').$(echo "$ipaddr"|cut -f 2 -d '.').$(echo "$ipaddr"|cut -f 3 -d '.').250")
-export ipnet=$(ip address| grep "global $NIC" |cut -f 6 -d ' ')
-loadvars SUBNET $(ipcalc $ipnet -n |cut -f 2 -d '=')/$(ipcalc $ipnet -p |cut -f 2 -d '=')
+export netaddr=$(ipcalc $ipaddr $netmask -n |cut -f 2 -d '=')
+export netprefix=$(ipcalc $ipaddr $netmask -p |cut -f 2 -d '=')
+loadvars SUBNET ${netaddr}/${netprefix}
+ipcalc $SUBNET -c
+if [ $? -ne 0 ]; then
+    echo "subnet $SUBNET format should be x.x.x.x/x"
+    exit 1
+fi
+export netaddr=$(ipcalc $SUBNET -n |cut -f 2 -d '=')
+export netprefix=$(ipcalc $SUBNET -p |cut -f 2 -d '=')
+export netmask=$(ipcalc $SUBNET -m |cut -f 2 -d '=')
+export expected_subnet=${netaddr}/${netprefix}
+if [[ "$SUBNET" != "$expected_subnet" ]]; then
+    echo "expected subnet should be $expected_subnet"
+    exit 1
+fi
 loadvars OPTION_ROUTER $(route -n | grep '^0.0.0.0' | xargs | cut -d ' ' -f 2)
-loadvars IP_RANGE "$range"
+ipcalc $OPTION_ROUTER -c
+if [ $? -ne 0 ]; then
+    echo "router $OPTION_ROUTER format should be x.x.x.x"
+    exit 1
+fi
+export ip_start=$(echo "$ipaddr"|cut -f 1,2,3 -d '.')."100"
+export ip_end=$(echo "$ipaddr"|cut -f 1,2,3 -d '.')."250"
+loadvars IP_START "$ip_start"
+ipcalc $IP_START -c
+if [ $? -ne 0 ]; then
+    echo "ip start $IP_START format should be x.x.x.x"
+    exit 1
+fi
+ip_start_net=$(ipcalc $IP_START $netmask -n |cut -f 2 -d '=')
+if [[ "$ip_start_net" != "$netaddr" ]]; then
+    echo "ip start $IP_START is not in $SUBNET"
+    exit 1
+fi
+loadvars IP_END "$ip_end"
+ipcalc $IP_END -c
+if [ $? -ne 0 ]; then
+    echo "ip end $IP_END format should be x.x.x.x"
+    exit 1
+fi
+ip_end_net=$(ipcalc $IP_END $netmask -n |cut -f 2 -d '=')
+if [[ "$ip_end_net" != "$netaddr" ]]; then
+    echo "ip end $IP_END is not in $SUBNET"
+    exit 1
+fi
+ip_start_int=$(ipaddr_convert $IP_START)
+ip_end_int=$(ipaddr_convert $IP_END)
+let ip_range=${ip_end_int}-${ip_start_int}
+if [ $ip_range -le 0 ]; then
+    echo "there is no available ips to assign between $IP_START and $IP_END"
+    exit 1
+fi
+echo "there will be at most $ip_range hosts deployed."
 loadvars NEXTSERVER $ipaddr
+ipcalc $NEXTSERVER -c
+if [ $? -ne 0 ]; then
+    echo "next server $NEXTSERVER format should be x.x.x.x"
+    exit 1
+fi
 loadvars NAMESERVER_DOMAINS "ods.com"
 if [[ -n $source ]] && [ $source = "local" ];then
-loadvars WEB_SOURCE ${COMPASSDIR}/../web
-loadvars ADAPTER_SOURCE ${COMPASSDIR}/../misc
+loadvars WEB_SOURCE ${COMPASSDIR}/../../compass-web
+loadvars ADAPTER_SOURCE ${COMPASSDIR}/../../compass-adapters
 else
-loadvars WEB_SOURCE $REPO_URL'/stackforge/compass-web'
-loadvars ADAPTER_SOURCE $REPO_URL'/stackforge/compass-adapters' 
+loadvars REPO_URL 'http://git.openstack.org/stackforge'
+loadvars GERRIT_URL 'https://review.openstack.org/stackforge'
 fi
 
 echo "script dir: $SCRIPT_DIR"

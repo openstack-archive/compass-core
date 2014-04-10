@@ -91,7 +91,7 @@ class BootCLI(object):
             pretty_print("Checking Module: %s" % module,
                          "============================")
             chk = check.BootCheck()
-            method = "chk.check_" + module + "()"
+            method = "chk._check_" + module + "()"
             res = eval(method)
             print "\n".join(msg for msg in res[1])
 

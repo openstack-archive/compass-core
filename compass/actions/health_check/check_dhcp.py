@@ -60,6 +60,7 @@ class DhcpCheck(base.BaseCheck):
         self.check_cobbler_dhcp_template()
         print "[Done]"
         self.check_dhcp_service()
+        self.check_dhcp_netmask()
         print "[Done]"
         if self.code == 1:
             self.messages.append(
@@ -145,10 +146,30 @@ class DhcpCheck(base.BaseCheck):
 
         return True
 
+    def check_dhcp_netmask(self):
+        with open('/etc/dhcp/dhcpd.conf') as conf_reader:
+            lines = conf_reader.readlines()
+            for line in lines:
+                if re.search('^subnet', line):
+                    elm_list = line.split(' ')
+                    break
+            subnet_ip = elm_list[1]
+            netmask = elm_list[-2]
+            subnet_ip_elm = subnet_ip.split('.')
+            netmask_elm = netmask.split('.')
+            for index, digit in enumerate(subnet_ip_elm):
+                if int(digit) & int(netmask_elm[index]) != int(digit):
+                    self._set_status(
+                        0,
+                        "[%s]Info: DHCP subnet IP and "
+                        "netmask do not match" % self.NAME)
+                    break
+        return True
+
     def check_dhcp_service(self):
         """Checks if DHCP is running on port 67."""
         print "Checking DHCP service......",
-        if 'dhcp' not in commands.getoutput('ps -ef'):
+        if not commands.getoutput('pgrep dhcp'):
             self._set_status(
                 0,
                 "[%s]Error: dhcp service does not "

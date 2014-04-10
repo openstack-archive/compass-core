@@ -1,53 +1,52 @@
 #!/bin/bash
 # prepare the installation
 
-copygit2dir()
-{
-    project=$1
-    destdir=$2
-    if [ -z "$REPO_URL" ];then
-        git_repo=http://git.openstack.org/stackforge/$project
-        gerrit_repo=https://review.openstack.org/stackforge/$project
-    else
-        git_repo=$REPO_URL/stackforge/$project
-        gerrit_repo=$REPO_URL/stackforge/$project
-    fi
-    if [ -d $destdir ];then
-        echo "$destdir exists"
-        cd $destdir
-        git remote set-url origin $git_repo
-        git remote update
-        git reset --hard
-        git clean -x -f
-        git checkout master
-        git reset --hard remotes/origin/master
-        if [[ -n "$GERRIT_REFSPEC" ]];then
-            git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
-        fi
-        git clean -x -f
-    else
-        echo "create $destdir"
-        mkdir -p $destdir
-        git clone $git_repo $destdir
-        if [[ -n "$GERRIT_REFSPEC" ]];then
-            # project=$(echo $repo|rev|cut -d '/' -f 1|rev)
-            cd $destdir
-            git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
-        fi
-    fi
-    cd $SCRIPT_DIR
-}
-
-copylocal2dir()
+copy2dir()
 {
     repo=$1
     destdir=$2
-    if [ -d $destdir ];then
-        echo "$destdir exists"
+    if [[ "$repo" =~ https?:// ]]; then
+        if [ -d $destdir -o -L $destdir ]; then
+            cd $destdir
+            git status &> /dev/null
+            if [ $? -ne 0 ]; then
+                echo "$destdir is not git repo"
+                rm -rf $destdir
+            fi
+            cd -
+        fi
+
+        if [ -d $destdir -o -L $destdir ]; then
+            echo "$destdir exists"
+            cd $destdir
+            git remote set-url origin $repo
+            git remote update
+            git reset --hard
+            git clean -x -f
+            git checkout master
+            git reset --hard remotes/origin/master
+        else
+            echo "create $destdir"
+            mkdir -p $destdir
+            git clone $repo $destdir
+            cd $destdir
+        fi
+        gerrit_repo=$3
+        if [ -z $gerrit_repo ]; then
+            if [[ -n "$GERRIT_REFSPEC" ]];then
+                git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
+            fi
+        fi
+        git clean -x -f
     else
-        mkdir -p $destdir
+       rm -rf $destdir
+       sudo cp -rf $repo $destdir
     fi
-    sudo cp -rf $repo/* $destdir
+    if [ ! -d $destdir -a ! -L $destdir ]; then
+        echo "failed to copy $repo to $destdir"
+        exit 1
+    fi
+    cd $SCRIPT_DIR
 }
 
 # Create backup dir
@@ -115,13 +114,8 @@ else
 fi
 
 cd $SCRIPT_DIR
-if [ "$source" != "local" ]; then
-  copygit2dir compass-web $WEB_HOME
-  copygit2dir compass-adapters $ADAPTER_HOME
-else 
-  copylocal2dir $WEB_SOURCE $WEB_HOME
-  copylocal2dir $ADAPTER_SOURCE $ADAPTER_HOME
-fi
+copy2dir $WEB_SOURCE $WEB_HOME $WEB_GERRIT_URL
+copy2dir $ADAPTERS_SOURCE $ADAPTERS_HOME $ADAPTERS_GERRIT_URL
 
 if [ "$tempest" == "true" ]; then
     if [[ ! -e /tmp/tempest ]]; then
@@ -144,16 +138,20 @@ download()
 {
     url=$1
     package=${2:-$(basename $url)}
-    if [[ -f /tmp/${package} ]]; then
+    if [[ -f /tmp/${package} -o -L /tmp/${package} ]]; then
         echo "$package already exists"
     else
-        wget -c --progress=bar:force -O /tmp/${package}.tmp $url
-        if [[ "$?" != "0" ]]; then
-            echo "failed to download $package"
-            exit 1
+        if [[ "$url" =~ (http|https|ftp):// ]]; then
+            wget -c --progress=bar:force -O /tmp/${package}.tmp $url
+            if [[ "$?" != "0" ]]; then
+                echo "failed to download $package"
+                exit 1
+            else
+                echo "successfully download $package"
+                cp -rf /tmp/${package}.tmp /tmp/${package}
+            fi
         else
-            echo "successfully download $package"
-            cp -rf /tmp/${package}.tmp /tmp/${package}
+            cp -rf $url /tmp/${package}
         fi
     fi
 }
@@ -206,3 +204,9 @@ sudo cp -rf $COMPASSDIR/misc/snmp/snmp.conf /etc/snmp/snmp.conf
 sudo chmod 644 /etc/snmp/snmp.conf
 sudo mkdir -p /var/lib/net-snmp/mib_indexes
 sudo chmod 755 /var/lib/net-snmp/mib_indexes
+
+# generate ssh key
+if [ ! -e $HOME/.ssh/id_rsa.pub ]; then
+    rm -rf $HOME/.ssh/id_rsa
+    ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -q -N ''
+fi

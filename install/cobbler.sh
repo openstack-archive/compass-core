@@ -32,7 +32,7 @@ sudo sed -i '/SELINUX/s/enforcing/disabled/' /etc/selinux/config
 # update cobbler settings
 sudo cp -rn /etc/cobbler/settings /root/backup/cobbler/
 sudo rm -f /etc/cobbler/settings
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/settings /etc/cobbler/settings
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/settings /etc/cobbler/settings
 sudo sed -i "s/next_server:[ \t]*\$next_server/next_server: $NEXTSERVER/g" /etc/cobbler/settings
 sudo sed -i "s/server:[ \t]*\$ipaddr/server: $ipaddr/g" /etc/cobbler/settings
 sudo sed -i "s/default_name_servers:[ \t]*\['\$ipaddr'\]/default_name_servers: \['$ipaddr'\]/g" /etc/cobbler/settings
@@ -45,26 +45,26 @@ sudo chmod 644 /etc/cobbler/settings
 # update dhcp.template
 sudo cp -rn /etc/cobbler/dhcp.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/dhcp.template
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/dhcp.template /etc/cobbler/dhcp.template
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/dhcp.template /etc/cobbler/dhcp.template
 subnet=$(ipcalc $SUBNET -n |cut -f 2 -d '=')
 sudo sed -i "s/subnet \$subnet netmask \$netmask/subnet $subnet netmask $netmask/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option routers \$gateway/option routers $OPTION_ROUTER/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option subnet-mask \$netmask/option subnet-mask $netmask/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $ipaddr/g" /etc/cobbler/dhcp.template
-sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_RANGE/g" /etc/cobbler/dhcp.template
+sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_START $IP_END/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/local-address \$ipaddr/local-address $ipaddr/g" /etc/cobbler/dhcp.template
 sudo chmod 644 /etc/cobbler/dhcp.template
 
 # update tftpd.template
 sudo cp -rn /etc/cobbler/tftpd.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/tftpd.template
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/tftpd.template /etc/cobbler/tftpd.template
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/tftpd.template /etc/cobbler/tftpd.template
 sudo chmod 644 /etc/cobbler/tftpd.template
 
 # update named.template
 sudo cp -rn /etc/cobbler/named.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/named.template
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/named.template /etc/cobbler/named.template
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/named.template /etc/cobbler/named.template
 sudo sed -i "s/listen-on port 53 { \$ipaddr; }/listen-on port 53 \{ $ipaddr; \}/g" /etc/cobbler/named.template
 subnet_escaped=$(echo $SUBNET | sed -e 's/[\/&]/\\&/g')
 sudo sed -i "s/allow-query { 127.0.0.0\/8; \$subnet; }/allow-query \{ 127.0.0.0\/8; $subnet_escaped; \}/g" /etc/cobbler/named.template
@@ -73,14 +73,14 @@ sudo chmod 644 /etc/cobbler/named.template
 # update zone.template
 sudo cp -rn /etc/cobbler/zone.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/zone.template
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/zone.template /etc/cobbler/zone.template
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/zone.template /etc/cobbler/zone.template
 sudo sed -i "s/\$hostname IN A \$ipaddr/$HOSTNAME IN A $ipaddr/g" /etc/cobbler/zone.template
 sudo chmod 644 /etc/cobbler/zone.template
 
 # update modules.conf
 sudo cp -rn /etc/cobbler/modules.conf /root/backup/cobbler/
 sudo rm -f /etc/cobbler/modules.conf
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/modules.conf /etc/cobbler/modules.conf
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/modules.conf /etc/cobbler/modules.conf
 sudo chmod 644 /etc/cobbler/modules.conf
 
 echo "setting up cobbler web password: default user is cobbler"
@@ -94,18 +94,18 @@ sudo cp -rn /var/lib/cobbler/snippets /root/backup/cobbler/
 sudo cp -rn /var/lib/cobbler/kickstarts/ /root/backup/cobbler/
 sudo cp -rn /var/lib/cobbler/triggers /root/backup/cobbler/
 sudo rm -rf /var/lib/cobbler/snippets/*
-sudo cp -rf $ADAPTER_HOME/cobbler/snippets/* /var/lib/cobbler/snippets/
-sudo cp -rf $ADAPTER_HOME/cobbler/triggers/* /var/lib/cobbler/triggers/
+sudo cp -rf $ADAPTERS_HOME/cobbler/snippets/* /var/lib/cobbler/snippets/
+sudo cp -rf $ADAPTERS_HOME/cobbler/triggers/* /var/lib/cobbler/triggers/
 sudo chmod 777 /var/lib/cobbler/snippets
 sudo chmod -R 666 /var/lib/cobbler/snippets/*
 sudo chmod -R 755 /var/lib/cobbler/triggers
 sudo sed -i "s/# \$compass_ip \$compass_hostname/$ipaddr $HOSTNAME/g" /var/lib/cobbler/snippets/hosts
 sudo rm -f /var/lib/cobbler/kickstarts/default.ks
-sudo cp -rf $ADAPTER_HOME/cobbler/kickstarts/default.ks /var/lib/cobbler/kickstarts/
+sudo cp -rf $ADAPTERS_HOME/cobbler/kickstarts/default.ks /var/lib/cobbler/kickstarts/
 sudo chmod 666 /var/lib/cobbler/kickstarts/default.ks
 sudo mkdir /var/www/cblr_ks
 sudo chmod 755 /var/www/cblr_ks
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/cobbler.conf /etc/httpd/conf.d/
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/cobbler.conf /etc/httpd/conf.d/
 chmod 644 /etc/httpd/conf.d/cobbler.conf
 
 sudo cp -rn /etc/xinetd.d /root/backup/

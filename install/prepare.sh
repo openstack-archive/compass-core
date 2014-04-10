@@ -5,13 +5,8 @@ copygit2dir()
 {
     project=$1
     destdir=$2
-    if [ -z "$REPO_URL" ];then
-        git_repo=http://git.openstack.org/stackforge/$project
-        gerrit_repo=https://review.openstack.org/stackforge/$project
-    else
-        git_repo=$REPO_URL/stackforge/$project
-        gerrit_repo=$REPO_URL/stackforge/$project
-    fi
+    git_repo=$REPO_URL/$project
+    gerrit_repo=$GERRIT_URL/$project
     if [ -d $destdir ];then
         echo "$destdir exists"
         cd $destdir

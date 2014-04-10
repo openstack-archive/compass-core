@@ -51,7 +51,7 @@ sudo sed -i "s/subnet \$subnet netmask \$netmask/subnet $subnet netmask $netmask
 sudo sed -i "s/option routers \$gateway/option routers $OPTION_ROUTER/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option subnet-mask \$netmask/option subnet-mask $netmask/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $ipaddr/g" /etc/cobbler/dhcp.template
-sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_RANGE/g" /etc/cobbler/dhcp.template
+sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_START $IP_END/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/local-address \$ipaddr/local-address $ipaddr/g" /etc/cobbler/dhcp.template
 sudo chmod 644 /etc/cobbler/dhcp.template
 

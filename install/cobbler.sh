@@ -32,7 +32,7 @@ sudo sed -i '/SELINUX/s/enforcing/disabled/' /etc/selinux/config
 # update cobbler settings
 sudo cp -rn /etc/cobbler/settings /root/backup/cobbler/
 sudo rm -f /etc/cobbler/settings
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/settings /etc/cobbler/settings
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/settings /etc/cobbler/settings
 sudo sed -i "s/next_server:[ \t]*\$next_server/next_server: $NEXTSERVER/g" /etc/cobbler/settings
 sudo sed -i "s/server:[ \t]*\$ipaddr/server: $ipaddr/g" /etc/cobbler/settings
 sudo sed -i "s/default_name_servers:[ \t]*\['\$ipaddr'\]/default_name_servers: \['$ipaddr'\]/g" /etc/cobbler/settings
@@ -45,26 +45,26 @@ sudo chmod 644 /etc/cobbler/settings
 # update dhcp.template
 sudo cp -rn /etc/cobbler/dhcp.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/dhcp.template
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/dhcp.template /etc/cobbler/dhcp.template
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/dhcp.template /etc/cobbler/dhcp.template
 subnet=$(ipcalc $SUBNET -n |cut -f 2 -d '=')
 sudo sed -i "s/subnet \$subnet netmask \$netmask/subnet $subnet netmask $netmask/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option routers \$gateway/option routers $OPTION_ROUTER/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option subnet-mask \$netmask/option subnet-mask $netmask/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $ipaddr/g" /etc/cobbler/dhcp.template
-sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_RANGE/g" /etc/cobbler/dhcp.template
+sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_START $IP_END/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/local-address \$ipaddr/local-address $ipaddr/g" /etc/cobbler/dhcp.template
 sudo chmod 644 /etc/cobbler/dhcp.template
 
 # update tftpd.template
 sudo cp -rn /etc/cobbler/tftpd.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/tftpd.template
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/tftpd.template /etc/cobbler/tftpd.template
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/tftpd.template /etc/cobbler/tftpd.template
 sudo chmod 644 /etc/cobbler/tftpd.template
 
 # update named.template
 sudo cp -rn /etc/cobbler/named.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/named.template
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/named.template /etc/cobbler/named.template
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/named.template /etc/cobbler/named.template
 sudo sed -i "s/listen-on port 53 { \$ipaddr; }/listen-on port 53 \{ $ipaddr; \}/g" /etc/cobbler/named.template
 subnet_escaped=$(echo $SUBNET | sed -e 's/[\/&]/\\&/g')
 sudo sed -i "s/allow-query { 127.0.0.0\/8; \$subnet; }/allow-query \{ 127.0.0.0\/8; $subnet_escaped; \}/g" /etc/cobbler/named.template
@@ -73,14 +73,14 @@ sudo chmod 644 /etc/cobbler/named.template
 # update zone.template
 sudo cp -rn /etc/cobbler/zone.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/zone.template
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/zone.template /etc/cobbler/zone.template
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/zone.template /etc/cobbler/zone.template
 sudo sed -i "s/\$hostname IN A \$ipaddr/$HOSTNAME IN A $ipaddr/g" /etc/cobbler/zone.template
 sudo chmod 644 /etc/cobbler/zone.template
 
 # update modules.conf
 sudo cp -rn /etc/cobbler/modules.conf /root/backup/cobbler/
 sudo rm -f /etc/cobbler/modules.conf
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/modules.conf /etc/cobbler/modules.conf
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/modules.conf /etc/cobbler/modules.conf
 sudo chmod 644 /etc/cobbler/modules.conf
 
 echo "setting up cobbler web password: default user is cobbler"
@@ -94,18 +94,19 @@ sudo cp -rn /var/lib/cobbler/snippets /root/backup/cobbler/
 sudo cp -rn /var/lib/cobbler/kickstarts/ /root/backup/cobbler/
 sudo cp -rn /var/lib/cobbler/triggers /root/backup/cobbler/
 sudo rm -rf /var/lib/cobbler/snippets/*
-sudo cp -rf $ADAPTER_HOME/cobbler/snippets/* /var/lib/cobbler/snippets/
-sudo cp -rf $ADAPTER_HOME/cobbler/triggers/* /var/lib/cobbler/triggers/
+sudo cp -rf $ADAPTERS_HOME/cobbler/snippets/* /var/lib/cobbler/snippets/
+sudo cp -rf $HOME/.ssh/id_rsa.pub /var/lib/cobbler/snippets/
+sudo cp -rf $ADAPTERS_HOME/cobbler/triggers/* /var/lib/cobbler/triggers/
 sudo chmod 777 /var/lib/cobbler/snippets
 sudo chmod -R 666 /var/lib/cobbler/snippets/*
 sudo chmod -R 755 /var/lib/cobbler/triggers
 sudo sed -i "s/# \$compass_ip \$compass_hostname/$ipaddr $HOSTNAME/g" /var/lib/cobbler/snippets/hosts
 sudo rm -f /var/lib/cobbler/kickstarts/default.ks
-sudo cp -rf $ADAPTER_HOME/cobbler/kickstarts/default.ks /var/lib/cobbler/kickstarts/
+sudo cp -rf $ADAPTERS_HOME/cobbler/kickstarts/default.ks /var/lib/cobbler/kickstarts/
 sudo chmod 666 /var/lib/cobbler/kickstarts/default.ks
 sudo mkdir /var/www/cblr_ks
 sudo chmod 755 /var/www/cblr_ks
-sudo cp -rf $ADAPTER_HOME/cobbler/conf/cobbler.conf /etc/httpd/conf.d/
+sudo cp -rf $ADAPTERS_HOME/cobbler/conf/cobbler.conf /etc/httpd/conf.d/
 chmod 644 /etc/httpd/conf.d/cobbler.conf
 
 sudo cp -rn /etc/xinetd.d /root/backup/
@@ -205,8 +206,7 @@ ppa_repo_packages="ntp-4.2.6p5-1.el6.${IMAGE_TYPE,,}.$IMAGE_ARCH.rpm
                     ntpdate-4.2.6p5-1.el6.${IMAGE_TYPE,,}.${IMAGE_ARCH}.rpm"
 for f in $ppa_repo_packages
 do
-    download ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f
-    sudo cp /tmp/$f /var/lib/cobbler/repo_mirror/ppa_repo/
+    download ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/ppa_repo/
 done
 
 ppa_repo_rsyslog_packages="json-c-0.10-2.el6.$IMAGE_ARCH.rpm
@@ -216,13 +216,12 @@ ppa_repo_rsyslog_packages="json-c-0.10-2.el6.$IMAGE_ARCH.rpm
                            rsyslog-7.6.3-1.el6.$IMAGE_ARCH.rpm"
 for f in $ppa_repo_rsyslog_packages
 do
-    download http://rpms.adiscon.com/v7-stable/epel-6/${IMAGE_ARCH}/RPMS/$f $f
+    download http://rpms.adiscon.com/v7-stable/epel-6/${IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/ppa_repo/
     sudo cp /tmp/$f /var/lib/cobbler/repo_mirror/ppa_repo/
 done
 
 # download chef client for ppa repo
-download http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
-sudo cp /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm /var/lib/cobbler/repo_mirror/ppa_repo/
+download $CHEF_CLIENT copy /var/lib/cobbler/repo_mirror/ppa_repo/
 cd ..
 sudo createrepo ppa_repo
 if [[ "$?" != "0" ]]; then
@@ -236,8 +235,7 @@ sudo cobbler reposync
 
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
-download "$IMAGE_SOURCE" ${IMAGE_NAME}-${IMAGE_ARCH}.iso
-sudo cp /tmp/${IMAGE_NAME}-${IMAGE_ARCH}.iso /var/lib/cobbler/iso/
+download "$IMAGE_SOURCE" ${IMAGE_NAME}-${IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/
 sudo mkdir -p /mnt/${IMAGE_NAME}-${IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${IMAGE_NAME}-${IMAGE_ARCH} ") -eq 0 ]; then
 sudo mount -o loop /var/lib/cobbler/iso/${IMAGE_NAME}-${IMAGE_ARCH}.iso /mnt/${IMAGE_NAME}-${IMAGE_ARCH}

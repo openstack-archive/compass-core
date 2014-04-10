@@ -49,9 +49,9 @@ sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
 sudo mkdir -p /var/chef/cookbooks/		
 sudo mkdir -p /var/chef/databags/		
 sudo mkdir -p /var/chef/roles/		
-sudo cp -r $ADAPTER_HOME/chef/cookbooks/* /var/chef/cookbooks/		
-sudo cp -r $ADAPTER_HOME/chef/databags/* /var/chef/databags/		
-sudo cp -r $ADAPTER_HOME/chef/roles/* /var/chef/roles/
+sudo cp -r $ADAPTERS_HOME/chef/cookbooks/* /var/chef/cookbooks/		
+sudo cp -r $ADAPTERS_HOME/chef/databags/* /var/chef/databags/		
+sudo cp -r $ADAPTERS_HOME/chef/roles/* /var/chef/roles/
 
 sudo chmod +x /opt/compass/bin/addcookbooks.py	
 sudo chmod +x /opt/compass/bin/adddatabags.py

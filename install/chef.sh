@@ -6,15 +6,7 @@ sudo mkdir -p /root/backup/chef
 
 sudo rpm -q chef-server
 if [[ "$?" != "0" ]]; then
-    if [[ ! -e /tmp/chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm ]]; then
-        sudo rpm -Uvh $CHEF_SRV
-    else
-        sudo rpm -Uvh /tmp/chef-server-11.0.8-1.el6.${IMAGE_ARCH}.rpm
-    fi
-if [[ "$?" != "0" ]]; then
-    echo "failed to rpm install $CHEF_SRV"
-    exit 1
-fi
+    download $CHEF_SRV chef-server install
 else
     echo "chef-server has already installed"
 fi
@@ -36,14 +28,7 @@ fi
 # configure chef client and knife
 rpm -q chef
 if [[ "$?" != "0" ]]; then
-    download http://opscode-omnibus-packages.s3.amazonaws.com/el/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
-    rpm -ivh /tmp/chef-11.8.0-1.el6.${IMAGE_ARCH}.rpm
-    if [[ "$?" != "0" ]]; then
-        echo "chef install failed"
-        exit 1
-    else
-        echo "chef is installed"
-    fi
+    download $CHEF_CLIENT chef-client install
 else
     echo "chef has already installed"
 fi

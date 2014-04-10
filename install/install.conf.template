@@ -14,21 +14,24 @@ export PACKAGE_INSTALLER=chef
 export NIC=installation
  
 # DHCP config
-# SUBNET variable specifies the subnet for DHCP server. Example: 192.168.0.0/16 
+# SUBNET variable specifies the subnet for DHCP server. Example: 192.168.0.0/16
+export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
 export ipaddr=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
-export ipnet=$(ip address| grep "global $NIC" |cut -f 6 -d ' ')
-export SUBNET=$(ipcalc $ipnet -n |cut -f 2 -d '=')/$(ipcalc $ipnet -p |cut -f 2 -d '=')
+export SUBNET=$(ipcalc $ipaddr $netmask -n |cut -f 2 -d '=')/$(ipcalc $ipaddr $netmask -p |cut -f 2 -d '=')
 # DHCP option router  address(Default is your management interface IP address )"
 export OPTION_ROUTER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 # The IP range for DHCP clients (Default: local subnet start from 100 to 254)
-export ip_start=`echo $ipaddr |cut -d. -f'1 2 3'`.128
-export ip_end=`echo $ipaddr |cut -d. -f'1 2 3'`.254
-export IP_RANGE="$ip_start $ip_end"
+export IP_START=`echo $ipaddr |cut -d. -f'1 2 3'`.128
+export IP_END=`echo $ipaddr |cut -d. -f'1 2 3'`.254
 # TFTP server's IP address(Default: Management Interface/eth0 IP)
 export NEXTSERVER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 # the domains covered by nameserver
 export NAMESERVER_DOMAINS=ods.com
-
+# the repo url
+export WEB_SOURCE='http://git.openstack.org/stackforge'/compass-web
+export ADAPTERS_SOURCE='http://git.openstack.org/stackforge/compass-adapters'
+export WEB_GERRIT_URL='https://review.openstack.org/stackforge/compass-web'
+export ADAPTERS_GERRIT_URL='https://review.openstack.org/stackforge/compass-adapters'
 # set the default cobbler user "cobbler" password, if not set, the default will be cobbler/cobbler
 export CBLR_USER=cobbler
 export CBLR_PASSWD=cobbler
@@ -55,9 +58,9 @@ export CHEF_PASSWD=root1234
 
 # Set Compass-web and Compass-adpater variables
 export WEB_HOME=${WEB_HOME:='/tmp/web'}
-export ADAPTER_HOME=${ADAPTER_HOME:-'/tmp/adapter'}
+export ADAPTERS_HOME=${ADAPTERS_HOME:-'/tmp/adapter'}
 export WEB_SOURCE=${WEB_SOURCE:-'compass-web'}
-export ADAPTER_SOURCE=${ADAPTER_SOURCE:-'compass-adapters'}
+export ADAPTERS_SOURCE=${ADAPTERS_SOURCE:-'compass-adapters'}
 export SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export COMPASSDIR=${SCRIPT_DIR}/..
 

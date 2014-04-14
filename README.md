@@ -1,12 +1,12 @@
 Compass
 =======
 
-A Deoployment Automation System. See Wiki page at https://wiki.openstack.org/wiki/Compass.
+A Deployment Automation System. See Wiki page at https://wiki.openstack.org/wiki/Compass.
 
 How to install Compass?
 -----------------------
- 1. Run `git clone https://github.com/huawei-cloud/compass`
- 2. Run `cd compass` to the Compass project directory.
+ 1. Run `git clone https://github.com/stackforge/compass-core`
+ 2. Run `cd compass-core` to the Compass project directory.
  3. Run `./install/install.sh` to setup compass environment. Please note that before you execute `install.sh`, you may setup your environment variables in `install/install.conf`, explanations and examples of those variables can be found in `install.conf`.
  4. Run `source /etc/profile` to setup compass profile.
  5. Run `./bin/refresh.sh` to initialize database.

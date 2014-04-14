@@ -1,7 +1,7 @@
 Compass
 =======
 
-A Deoployment Automation System. See Wiki page at https://wiki.openstack.org/wiki/Compass.
+A Deployment Automation System. See Wiki page at https://wiki.openstack.org/wiki/Compass.
 
 How to install Compass?
 -----------------------

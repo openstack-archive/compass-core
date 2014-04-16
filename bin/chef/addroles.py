@@ -37,8 +37,10 @@ def main():
     roles_dir = flags.OPTIONS.roles_dir
 
     for item in os.listdir(roles_dir):
-        role_file = os.path.join(roles_dir, item)
-        rolelist.append(role_file)
+        if item.endswith('.rb'):
+            rolelist.append(os.path.join(roles_dir, item))
+        else:
+            logging.info('ignore %s in %s', item, roles_dir)
 
     for role in rolelist:
         logging.info('add role %s', role)

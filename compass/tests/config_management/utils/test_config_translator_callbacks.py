@@ -72,29 +72,29 @@ class TestAddValue(unittest2.TestCase):
     def test_add_value_if_not_exist(self):
         config = 'hello'
         ref = config_reference.ConfigReference(config)
-        translated_config = ''
+        translated_config = None
         translated_ref = config_reference.ConfigReference(translated_config)
         new_value = config_translator_callbacks.add_value(
-            ref, None, translated_ref, None, condition=True)
-        self.assertEqual(new_value, 'hello')
+            ref, None, translated_ref, None)
+        self.assertEqual(new_value, ['hello'])
 
     def test_add_value(self):
         config = 'hello'
         ref = config_reference.ConfigReference(config)
-        translated_config = 'hi'
+        translated_config = ['hi']
         translated_ref = config_reference.ConfigReference(translated_config)
         new_value = config_translator_callbacks.add_value(
-            ref, None, translated_ref, None, condition=True)
-        self.assertEqual(new_value, 'hi,hello')
+            ref, None, translated_ref, None)
+        self.assertEqual(new_value, ['hi', 'hello'])
 
     def test_ignore_add_value(self):
         config = 'hello'
         ref = config_reference.ConfigReference(config)
-        translated_config = 'hi'
+        translated_config = ['hi']
         translated_ref = config_reference.ConfigReference(translated_config)
         new_value = config_translator_callbacks.add_value(
             ref, None, translated_ref, None, condition=False)
-        self.assertEqual(new_value, 'hi')
+        self.assertEqual(new_value, ['hi'])
 
 
 if __name__ == '__main__':

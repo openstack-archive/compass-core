@@ -44,23 +44,24 @@ sudo sed -i "/COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/
 sudo sed -i "/CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
 sudo sed -i "s/\$compass_ip/$ipaddr/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
+sudo sed -i "s/\$compass_testmode/$TESTMODE/g" /etc/compass/global_config
 
 # add cookbooks, databags and roles
 sudo chmod +x /opt/compass/bin/addcookbooks.py	
 sudo chmod +x /opt/compass/bin/adddatabags.py
 sudo chmod +x /opt/compass/bin/addroles.py
 
-sudo /opt/compass/bin/addcookbooks.py  --cookbooks_dir=/var/chef/cookbooks
+sudo /opt/compass/bin/addcookbooks.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add cookbooks"
     exit 1
 fi
-sudo /opt/compass/bin/adddatabags.py   --databags_dir=/var/chef/databags
+sudo /opt/compass/bin/adddatabags.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add databags"
     exit 1
 fi
-sudo /opt/compass/bin/addroles.py      --roles_dir=/var/chef/roles
+sudo /opt/compass/bin/addroles.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add roles"
     exit 1
@@ -68,8 +69,15 @@ fi
 
 # copy the chef validatation keys to cobbler snippets
 sudo cp -rf /etc/chef-server/chef-validator.pem /var/lib/cobbler/snippets/chef-validator.pem
+if [[ "$?" != "0" ]]; then
+    echo "failed to copy chef validation keys to cobbler snippets"
+    exit 1
+fi
 
-sudo sh /opt/compass/bin/refresh.sh
+sudo /opt/compass/bin/refresh.sh
+if [[ "$?" != "0" ]]; then
+    echo "failed to refresh compassd service
+fi
 
 sudo service httpd status
 if [[ "$?" != "0" ]]; then

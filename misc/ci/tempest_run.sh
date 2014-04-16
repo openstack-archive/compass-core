@@ -78,7 +78,7 @@ private_net_id=`quantum net-create --tenant_id $demo_tenant_id private |grep " i
 quantum subnet-create --tenant_id $demo_tenant_id --ip_version 4 --gateway 10.1.0.1  $private_net_id 10.10.0.0/24
 router_id=`quantum router-create --tenant_id $demo_tenant_id router1|grep " id " |awk '{print$4}'`
 public_net_id=`quantum net-create public -- --router:external=True |grep " id " |awk '{print$4}'`
-quantum subnet-create --ip_version 4 $public_net_id 172.24.4.0/28 -- --enable_dhcp=False
+quantum subnet-create --ip_version 4 $public_net_id 172.24.4.0/24 -- --enable_dhcp=False
 quantum router-gateway-set $router_id $public_net_id
 iniset /etc/tempest/tempest.conf identity uri $OS_AUTH_URL
 iniset /etc/tempest/tempest.conf identity admin_username $OS_USERNAME
@@ -95,15 +95,23 @@ iniset /etc/tempest/tempest.conf whitebox whitebox_enabled false
 iniset /etc/tempest/tempest.conf network public_network_id $public_net_id
 iniset /etc/tempest/tempest.conf network public_router_id ''
 iniset /etc/tempest/tempest.conf network quantum_available true
+iniset /etc/tempest/tempest.conf network tenant_network_cidr '172.16.2.128/25'
+
 #Start a smoke test against cloud without object storage and aws related tests 
 #as they are unavailable for now
 if [[ $tempest_full == true ]]; then
     nosetests --logging-format '%(asctime)-15s %(message)s' --with-xunit -sv --attr=type=smoke \
                              --xunit-file=nosetests-smoke.xml tempest -e object_storage -e boto
+    if [[ $tempest_network == true ]]; then
+    nosetests tempest.tests.network.test_network_basic_ops
+    fi
 else
     nosetests --logging-format '%(asctime)-15s %(message)s' --with-xunit --xunit-file=nosetests-smoke.xml \
 -sv --attr=type=smoke --tests="\
 tempest.tests.compute.servers.test_server_addresses:ServerAddressesTest.test_list_server_addresses,\
 tempest.tests.compute.servers.test_create_server:ServersTestAutoDisk.test_verify_server_details,\
 tempest.tests.volume.test_volumes_get:VolumesGetTest.test_volume_create_get_delete"
+    if [[ $tempest_network == true ]]; then
+    nosetests tempest.tests.network.test_network_basic_ops
+    fi
 fi

@@ -2,7 +2,7 @@
 #
 
 echo "Installing cobbler related packages"
-sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah  python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart -y
+sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart
 if [[ "$?" != "0" ]]; then
     echo "failed to install cobbler related packages"
     exit 1

@@ -36,12 +36,11 @@ copy2dir()
             cd $destdir
         fi
         gerrit_repo=$3
-        if [ -z $gerrit_repo ]; then
+        if [[ ! -z $gerrit_repo ]]; then
             if [[ -n "$GERRIT_REFSPEC" ]];then
                 git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
                 if [ $? -ne 0 ]; then
                     echo "failed to git fetch $gerrit_repo $GERRIT_REFSPEC"
-                    exit 1
                 fi
             fi
         fi
@@ -130,12 +129,12 @@ if [ -z $WEB_SOURCE ]; then
     echo "web source $WEB_SOURCE is not set"
     exit 1
 fi
-copy2dir $WEB_SOURCE $WEB_HOME $WEB_GERRIT_URL
+copy2dir "$WEB_SOURCE" "$WEB_HOME" "$WEB_GERRIT_URL"
 if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir $ADAPTERS_SOURCE $ADAPTERS_HOME $ADAPTERS_GERRIT_URL
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "$ADAPTERS_GERRIT_URL"
 
 if [ "$tempest" == "true" ]; then
     if [[ ! -e /tmp/tempest ]]; then

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo 'Installing Required packages for Compass...'
-sudo yum update -y
+sudo yum update -y --skip-broken
 if [ "$tempest" == "true" ]; then
     sudo yum install -y virt-install libvirt qemu-kvm libxml2-devel libxslt-devel python-devel sshpass openssl-devel
 fi

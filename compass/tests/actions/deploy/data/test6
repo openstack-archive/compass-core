@@ -14,9 +14,15 @@ SWITCHES = [
 MACHINES_BY_SWITCH = {
     '1.2.3.4': [
         {'mac': '00:00:01:02:03:04', 'port': 1, 'vlan': 1},
-        {'mac': '00:00:01:02:03:05', 'port': 1, 'vlan': 1},
-        {'mac': '00:00:01:02:03:06', 'port': 1, 'vlan': 1},
-        {'mac': '00:00:01:02:03:07', 'port': 1, 'vlan': 1},
+        {'mac': '00:00:01:02:03:05', 'port': 2, 'vlan': 1},
+        {'mac': '00:00:01:02:03:06', 'port': 3, 'vlan': 1},
+        {'mac': '00:00:01:02:03:07', 'port': 4, 'vlan': 1},
+        {'mac': '00:00:01:02:03:08', 'port': 5, 'vlan': 1},
+        {'mac': '00:00:01:02:03:09', 'port': 6, 'vlan': 1},
+        {'mac': '00:00:01:02:03:10', 'port': 7, 'vlan': 1},
+        {'mac': '00:00:01:02:03:11', 'port': 8, 'vlan': 1},
+        {'mac': '00:00:01:02:03:12', 'port': 9, 'vlan': 1},
+        {'mac': '00:00:01:02:03:13', 'port': 10, 'vlan': 1},
     ],
 }
 CLUSTERS = [
@@ -79,67 +85,7 @@ CLUSTERS = [
             },
         }),
         'partition_config': json.dumps('/home 20%%;/tmp 10%%;/var 30%%;'),
-    }, {
-        'name': 'cluster2',
-        'adapter': 'CentOS_openstack',
-        'mutable': False,
-        'security_config': json.dumps({
-            'server_credentials': {
-                'username': 'root', 'password': 'huawei'
-            },
-            'service_credentials': {
-                'username': 'service', 'password': 'huawei'
-            },
-            'console_credentials': {
-                'username': 'admin', 'password': 'huawei'
-            }
-        }),
-        'networking_config': json.dumps({
-            'interfaces': {
-                'management': {
-                    'nic': 'eth0',
-                    'promisc': 0,
-                    'netmask': '255.255.255.0',
-                    'ip_end': '192.168.20.200',
-                    'gateway': '',
-                    'ip_start': '192.168.20.110'
-                },
-                'storage': {
-                    'nic': 'eth0',
-                    'promisc': 0,
-                    'netmask': '255.255.254.0',
-                    'ip_end': '10.145.88.200',
-                    'gateway': '10.145.88.1',
-                    'ip_start': '10.145.88.110'
-                },
-                'public': {
-                    'nic': 'eth2',
-                    'promisc': 1,
-                    'netmask': '255.255.254.0',
-                    'ip_end': '10.145.88.255',
-                    'gateway': '10.145.88.1',
-                    'ip_start': '10.145.88.110'
-                },
-                'tenant': {
-                    'nic': 'eth0',
-                    'promisc': 0,
-                    'netmask': '255.255.254.0',
-                    'ip_end': '10.145.88.120',
-                    'gateway': '10.145.88.1',
-                    'ip_start': '10.145.88.110'
-                }
-            },
-            'global': {
-                'nameservers': '192.168.20.254',
-                'proxy': 'http://192.168.20.254:3128',
-                'ntp_server': '192.168.20.254',
-                'search_path': 'ods.com',
-                'gateway': '10.145.88.1'
-            },
-        }),
-        'partition_config': json.dumps('/home 20%%;/tmp 10%%;/var 30%%;'),
     },
-
 ]
 HOSTS_BY_CLUSTER = {
     'cluster1': [
@@ -155,9 +101,10 @@ HOSTS_BY_CLUSTER = {
                         },
                     },
                 },
-                'roles': ["os-single-controller"],
+                'roles': [],
             }),
-        }, {
+        },
+        {
             'hostname': 'host2',
             'mac': '00:00:01:02:03:05',
             'mutable': False,
@@ -169,38 +116,127 @@ HOSTS_BY_CLUSTER = {
                         },
                     },
                 },
-                'roles': ["os-network", "os-compute-worker"],
+                'roles': [],
             }),
         },
-    ],
-    'cluster2': [
         {
-            'hostname': 'host1',
+            'hostname': 'host3',
             'mac': '00:00:01:02:03:06',
             'mutable': False,
             'config_data': json.dumps({
                 'networking': {
                     'interfaces': {
                         'management': {
-                            'ip': '192.168.20.110',
+                            'ip': '192.168.20.102',
                         },
                     },
                 },
-                'roles': ["os-single-controller"],
+                'roles': [],
             }),
-        }, {
-            'hostname': 'host2',
+        },
+        {
+            'hostname': 'host4',
             'mac': '00:00:01:02:03:07',
             'mutable': False,
             'config_data': json.dumps({
                 'networking': {
                     'interfaces': {
                         'management': {
-                            'ip': '192.168.20.111',
+                            'ip': '192.168.20.103',
                         },
                     },
                 },
-                'roles': ["os-network", "os-compute-worker"],
+                'roles': ["os-compute-worker"],
+            }),
+        },
+        {
+            'hostname': 'host5',
+            'mac': '00:00:01:02:03:08',
+            'mutable': False,
+            'config_data': json.dumps({
+                'networking': {
+                    'interfaces': {
+                        'management': {
+                            'ip': '192.168.20.104',
+                        },
+                    },
+                },
+                'roles': [],
+            }),
+        },
+        {
+            'hostname': 'host6',
+            'mac': '00:00:01:02:03:09',
+            'mutable': False,
+            'config_data': json.dumps({
+                'networking': {
+                    'interfaces': {
+                        'management': {
+                            'ip': '192.168.20.105',
+                        },
+                    },
+                },
+                'roles': [],
+            }),
+        },
+        {
+            'hostname': 'host7',
+            'mac': '00:00:01:02:03:10',
+            'mutable': False,
+            'config_data': json.dumps({
+                'networking': {
+                    'interfaces': {
+                        'management': {
+                            'ip': '192.168.20.106',
+                        },
+                    },
+                },
+                'roles': [],
+            }),
+        },
+        {
+            'hostname': 'host8',
+            'mac': '00:00:01:02:03:11',
+            'mutable': False,
+            'config_data': json.dumps({
+                'networking': {
+                    'interfaces': {
+                        'management': {
+                            'ip': '192.168.20.107',
+                        },
+                    },
+                },
+                'roles': [],
+            }),
+        },
+        {
+            'hostname': 'host9',
+            'mac': '00:00:01:02:03:12',
+            'mutable': False,
+            'config_data': json.dumps({
+                'networking': {
+                    'interfaces': {
+                        'management': {
+                            'ip': '192.168.20.108',
+                        },
+                    },
+                },
+                'roles': [],
+            }),
+        },
+        {
+            'hostname': 'host10',
+            'mac': '00:00:01:02:03:13',
+            'mutable': False,
+            'config_data': json.dumps({
+                'networking': {
+                    'interfaces': {
+                        'management': {
+                            'ip': '192.168.20.109',
+                        },
+                    },
+                },
+                'roles': [],
             }),
         },
     ],
@@ -220,9 +256,8 @@ chef_MOCK = {
                     'os-network': 'openstack network node',
                     'os-compute-worker': 'openstack nova node'
                 },
-                'dashboard_roles': ['os-single-controller'],
                 'config_mapping': {
-     	       '/credential/identity/users/admin': '/security/console_credentials',
+        	    '/credential/identity/users/admin': '/security/console_credentials',
                     '/credential/identity/users/compute': '/security/service_credentials',
                     '/credential/identity/users/image': '/security/service_credentials',
                     '/credential/identity/users/metering': '/security/service_credentials',
@@ -267,6 +302,7 @@ chef_MOCK = {
                     'os-compute-worker': {
                     }
                 },
+                'dashboard_roles': ['os-single-controller'],
                 'role_assign_policy': {
                     'default':{
                         'bundles': [],
@@ -282,7 +318,7 @@ chef_MOCK = {
                             'exclusives':[]
                         },
                         '2': {
-                            'bundles': [['os-network', 'os-compute-worker']],
+                            'bundles': [['os-compute-worker','os-network']],
                             'exclusives':['os-single-controller']
                         },
                     },
@@ -307,9 +343,8 @@ cobbler_EXPECTED = {
             'netmask-eth0': '255.255.255.0',
             'ipaddress-eth0': u'192.168.20.100',
             'netmask-eth2': '255.255.254.0',
-            'macaddress-eth0': '00:00:01:02:03:04',
             'management-eth2': False,
-           'management-eth0': True
+            'management-eth0': True
         },
         'name_servers': '192.168.20.254',
         'gateway': '10.145.88.1',
@@ -320,7 +355,6 @@ cobbler_EXPECTED = {
             'tool': 'chef',
             'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
             'proxy': 'http://192.168.20.254:3128',
-            'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100,host2.1,192.168.20.101',
             'ntp_server': '192.168.20.254',
             'chef_client_name': 'host1.1',
             'chef_node_name': u'host1.1'
@@ -339,39 +373,6 @@ cobbler_EXPECTED = {
             'netmask-eth0': '255.255.255.0',
             'ipaddress-eth0': u'192.168.20.101',
             'netmask-eth2': '255.255.254.0',
-            'macaddress-eth0': '00:00:01:02:03:05',
-            'management-eth2': False,
-           'management-eth0': True
-        },
-        'name_servers': '192.168.20.254',
-        'gateway': '10.145.88.1',
-        'ksmeta': {
-            'username': u'root',
-            'promisc_nics': 'eth2',
-            'chef_url': 'https://localhost/',
-            'tool': 'chef',
-            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
-            'proxy': 'http://192.168.20.254:3128',
-            'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100,host2.1,192.168.20.101',
-            'ntp_server': '192.168.20.254',
-            'chef_client_name': 'host2.1',
-            'chef_node_name': u'host2.1'
-        },
-    },{
-        'profile': 'CentOS',
-        'name_servers_search': '2.ods.com ods.com',
-        'name': 'host1.2',
-        'hostname': 'host1',
-        'modify_interface': {
-            'dnsname-eth2': 'floating-host1.2.ods.com',
-            'dnsname-eth0': u'host1.2.ods.com',
-            'ipaddress-eth2': '10.145.88.110',
-            'static-eth2': True,
-            'static-eth0': True,
-            'netmask-eth0': '255.255.255.0',
-            'ipaddress-eth0': u'192.168.20.110',
-            'netmask-eth2': '255.255.254.0',
-            'macaddress-eth0': '00:00:01:02:03:06',
             'management-eth2': False,
             'management-eth0': True
         },
@@ -384,28 +385,26 @@ cobbler_EXPECTED = {
             'tool': 'chef',
             'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
             'proxy': 'http://192.168.20.254:3128',
-            'ignore_proxy': '127.0.0.1,localhost,host1.2,192.168.20.110,host2.2,192.168.20.111',
             'ntp_server': '192.168.20.254',
-            'chef_client_name': 'host1.2',
-            'chef_node_name': u'host1.2'
+            'chef_client_name': 'host2.1',
+            'chef_node_name': u'host2.1'
         },
     },{
         'profile': 'CentOS',
-        'name_servers_search': '2.ods.com ods.com',
-        'name': 'host2.2',
-        'hostname': 'host2',
+        'name_servers_search': '1.ods.com ods.com',
+        'name': 'host3.1',
+        'hostname': 'host3',
         'modify_interface': {
-            'dnsname-eth2': 'floating-host2.2.ods.com',
-            'dnsname-eth0': u'host2.2.ods.com',
-            'ipaddress-eth2': '10.145.88.111',
+            'dnsname-eth2': 'floating-host3.1.ods.com',
+            'dnsname-eth0': u'host3.1.ods.com',
+            'ipaddress-eth2': '10.145.88.102',
             'static-eth2': True,
             'static-eth0': True,
             'netmask-eth0': '255.255.255.0',
-            'ipaddress-eth0': u'192.168.20.111',
+            'ipaddress-eth0': u'192.168.20.102',
             'netmask-eth2': '255.255.254.0',
-            'macaddress-eth0': '00:00:01:02:03:07',
             'management-eth2': False,
-           'management-eth0': True
+            'management-eth0': True
         },
         'name_servers': '192.168.20.254',
         'gateway': '10.145.88.1',
@@ -416,10 +415,219 @@ cobbler_EXPECTED = {
             'tool': 'chef',
             'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
             'proxy': 'http://192.168.20.254:3128',
-            'ignore_proxy': '127.0.0.1,localhost,host1.2,192.168.20.110,host2.2,192.168.20.111',
             'ntp_server': '192.168.20.254',
-            'chef_client_name': 'host2.2',
-            'chef_node_name': u'host2.2'
+            'chef_client_name': 'host3.1',
+            'chef_node_name': u'host3.1'
+        },
+    },{
+        'profile': 'CentOS',
+        'name_servers_search': '1.ods.com ods.com',
+        'name': 'host4.1',
+        'hostname': 'host4',
+        'modify_interface': {
+            'dnsname-eth2': 'floating-host4.1.ods.com',
+            'dnsname-eth0': u'host4.1.ods.com',
+            'ipaddress-eth2': '10.145.88.103',
+            'static-eth2': True,
+            'static-eth0': True,
+            'netmask-eth0': '255.255.255.0',
+            'ipaddress-eth0': u'192.168.20.103',
+            'netmask-eth2': '255.255.254.0',
+            'management-eth2': False,
+            'management-eth0': True
+        },
+        'name_servers': '192.168.20.254',
+        'gateway': '10.145.88.1',
+        'ksmeta': {
+            'username': u'root',
+            'promisc_nics': 'eth2',
+            'chef_url': 'https://localhost/',
+            'tool': 'chef',
+            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
+            'proxy': 'http://192.168.20.254:3128',
+            'ntp_server': '192.168.20.254',
+            'chef_client_name': 'host4.1',
+            'chef_node_name': u'host4.1'
+        },
+    },{
+        'profile': 'CentOS',
+        'name_servers_search': '1.ods.com ods.com',
+        'name': 'host5.1',
+        'hostname': 'host5',
+        'modify_interface': {
+            'dnsname-eth2': 'floating-host5.1.ods.com',
+            'dnsname-eth0': u'host5.1.ods.com',
+            'ipaddress-eth2': '10.145.88.104',
+            'static-eth2': True,
+            'static-eth0': True,
+            'netmask-eth0': '255.255.255.0',
+            'ipaddress-eth0': u'192.168.20.104',
+            'netmask-eth2': '255.255.254.0',
+            'management-eth2': False,
+            'management-eth0': True
+        },
+        'name_servers': '192.168.20.254',
+        'gateway': '10.145.88.1',
+        'ksmeta': {
+            'username': u'root',
+            'promisc_nics': 'eth2',
+            'chef_url': 'https://localhost/',
+            'tool': 'chef',
+            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
+            'proxy': 'http://192.168.20.254:3128',
+            'ntp_server': '192.168.20.254',
+            'chef_client_name': 'host5.1',
+            'chef_node_name': u'host5.1'
+        },
+    }, {
+        'profile': 'CentOS',
+        'name_servers_search': '1.ods.com ods.com',
+        'name': 'host6.1',
+        'hostname': 'host6',
+        'modify_interface': {
+            'dnsname-eth2': 'floating-host6.1.ods.com',
+            'dnsname-eth0': u'host6.1.ods.com',
+            'ipaddress-eth2': '10.145.88.105',
+            'static-eth2': True,
+            'static-eth0': True,
+            'netmask-eth0': '255.255.255.0',
+            'ipaddress-eth0': u'192.168.20.105',
+            'netmask-eth2': '255.255.254.0',
+            'management-eth2': False,
+            'management-eth0': True
+        },
+        'name_servers': '192.168.20.254',
+        'gateway': '10.145.88.1',
+        'ksmeta': {
+            'username': u'root',
+            'promisc_nics': 'eth2',
+            'chef_url': 'https://localhost/',
+            'tool': 'chef',
+            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
+            'proxy': 'http://192.168.20.254:3128',
+            'ntp_server': '192.168.20.254',
+            'chef_client_name': 'host6.1',
+            'chef_node_name': u'host6.1'
+        },
+    },{
+        'profile': 'CentOS',
+        'name_servers_search': '1.ods.com ods.com',
+        'name': 'host7.1',
+        'hostname': 'host7',
+        'modify_interface': {
+            'dnsname-eth2': 'floating-host7.1.ods.com',
+            'dnsname-eth0': u'host7.1.ods.com',
+            'ipaddress-eth2': '10.145.88.106',
+            'static-eth2': True,
+            'static-eth0': True,
+            'netmask-eth0': '255.255.255.0',
+            'ipaddress-eth0': u'192.168.20.106',
+            'netmask-eth2': '255.255.254.0',
+            'management-eth2': False,
+            'management-eth0': True
+        },
+        'name_servers': '192.168.20.254',
+        'gateway': '10.145.88.1',
+        'ksmeta': {
+            'username': u'root',
+            'promisc_nics': 'eth2',
+            'chef_url': 'https://localhost/',
+            'tool': 'chef',
+            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
+            'proxy': 'http://192.168.20.254:3128',
+            'ntp_server': '192.168.20.254',
+            'chef_client_name': 'host7.1',
+            'chef_node_name': u'host7.1'
+        },
+    },{
+        'profile': 'CentOS',
+        'name_servers_search': '1.ods.com ods.com',
+        'name': 'host8.1',
+        'hostname': 'host8',
+        'modify_interface': {
+            'dnsname-eth2': 'floating-host8.1.ods.com',
+            'dnsname-eth0': u'host8.1.ods.com',
+            'ipaddress-eth2': '10.145.88.107',
+            'static-eth2': True,
+            'static-eth0': True,
+            'netmask-eth0': '255.255.255.0',
+            'ipaddress-eth0': u'192.168.20.107',
+            'netmask-eth2': '255.255.254.0',
+            'management-eth2': False,
+            'management-eth0': True
+        },
+        'name_servers': '192.168.20.254',
+        'gateway': '10.145.88.1',
+        'ksmeta': {
+            'username': u'root',
+            'promisc_nics': 'eth2',
+            'chef_url': 'https://localhost/',
+            'tool': 'chef',
+            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
+            'proxy': 'http://192.168.20.254:3128',
+            'ntp_server': '192.168.20.254',
+            'chef_client_name': 'host8.1',
+            'chef_node_name': u'host8.1'
+        },
+    },{
+        'profile': 'CentOS',
+        'name_servers_search': '1.ods.com ods.com',
+        'name': 'host9.1',
+        'hostname': 'host9',
+        'modify_interface': {
+            'dnsname-eth2': 'floating-host9.1.ods.com',
+            'dnsname-eth0': u'host9.1.ods.com',
+            'ipaddress-eth2': '10.145.88.108',
+            'static-eth2': True,
+            'static-eth0': True,
+            'netmask-eth0': '255.255.255.0',
+            'ipaddress-eth0': u'192.168.20.108',
+            'netmask-eth2': '255.255.254.0',
+            'management-eth2': False,
+            'management-eth0': True
+        },
+        'name_servers': '192.168.20.254',
+        'gateway': '10.145.88.1',
+        'ksmeta': {
+            'username': u'root',
+            'promisc_nics': 'eth2',
+            'chef_url': 'https://localhost/',
+            'tool': 'chef',
+            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
+            'proxy': 'http://192.168.20.254:3128',
+            'ntp_server': '192.168.20.254',
+            'chef_client_name': 'host9.1',
+            'chef_node_name': u'host9.1'
+        },
+    },{
+        'profile': 'CentOS',
+        'name_servers_search': '1.ods.com ods.com',
+        'name': 'host10.1',
+        'hostname': 'host10',
+        'modify_interface': {
+            'dnsname-eth2': 'floating-host10.1.ods.com',
+            'dnsname-eth0': u'host10.1.ods.com',
+            'ipaddress-eth2': '10.145.88.109',
+            'static-eth2': True,
+            'static-eth0': True,
+            'netmask-eth0': '255.255.255.0',
+            'ipaddress-eth0': u'192.168.20.109',
+            'netmask-eth2': '255.255.254.0',
+            'management-eth2': False,
+            'management-eth0': True
+        },
+        'name_servers': '192.168.20.254',
+        'gateway': '10.145.88.1',
+        'ksmeta': {
+            'username': u'root',
+            'promisc_nics': 'eth2',
+            'chef_url': 'https://localhost/',
+            'tool': 'chef',
+            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
+            'proxy': 'http://192.168.20.254:3128',
+            'ntp_server': '192.168.20.254',
+            'chef_client_name': 'host10.1',
+            'chef_node_name': u'host10.1'
         },
     }],
 }
@@ -435,26 +643,68 @@ chef_EXPECTED = {
         },
         'host2.1': {
             'roles': {
-                'openstack': ['os-network', 'os-compute-worker'],
+                'openstack': ['os-network'],
             },
             'cluster': '1',
-            'run_list': ['role[os-network]', 'role[os-compute-worker]']
+            'run_list': ['role[os-network]']
         },
-        'host1.2': {
+        'host3.1': {
             'roles': {
-                'openstack': ['os-single-controller'],
+                'openstack': ['os-compute-worker'],
             },
-            'cluster': '2',
-            'run_list': ['role[os-single-controller]']
+            'cluster': '1',
+            'run_list': ['role[os-compute-worker]']
         },
-        'host2.2': {
+        'host4.1': {
             'roles': {
-                'openstack': ['os-network', 'os-compute-worker'],
+                'openstack': ['os-compute-worker'],
             },
-            'cluster': '2',
-            'run_list': ['role[os-network]', 'role[os-compute-worker]']
+            'cluster': '1',
+            'run_list': ['role[os-compute-worker]']
         },
-        'openstack': {
+        'host5.1': {
+            'roles': {
+                'openstack': ['os-compute-worker'],
+            },
+            'cluster': '1',
+            'run_list': ['role[os-compute-worker]']
+        },
+        'host6.1': {
+            'roles': {
+                'openstack': ['os-compute-worker'],
+            },
+            'cluster': '1',
+            'run_list': ['role[os-compute-worker]']
+        },
+        'host7.1': {
+            'roles': {
+                'openstack': ['os-compute-worker'],
+            },
+            'cluster': '1',
+            'run_list': ['role[os-compute-worker]']
+        },
+        'host8.1': {
+            'roles': {
+                'openstack': ['os-compute-worker'],
+            },
+            'cluster': '1',
+            'run_list': ['role[os-compute-worker]']
+        },
+        'host9.1': {
+            'roles': {
+                'openstack': ['os-compute-worker'],
+            },
+            'cluster': '1',
+            'run_list': ['role[os-compute-worker]']
+        },
+        'host10.1': {
+            'roles': {
+                'openstack': ['os-compute-worker'],
+            },
+            'cluster': '1',
+            'run_list': ['role[os-compute-worker]']
+        },
+        'openstack': { 
             '1': {
                 'credential': {
                     'identity': {
@@ -522,76 +772,6 @@ chef_EXPECTED = {
                     'identity': {
                         'admin': {'host': u'192.168.20.100'},
                         'service': {'host': u'192.168.20.100'}
-                    },
-                },
-            },
-            '2': {
-                'credential': {
-                    'identity': {
-                        'users': {
-                            'compute': {'username': 'service', 'password': 'huawei'},
-                            'network': {'username': 'service', 'password': 'huawei'},
-                            'admin': {'username': 'admin', 'password': 'huawei'},
-                            'image': {'username': 'service', 'password': 'huawei'},
-                            'metering': {'username': 'service', 'password': 'huawei'},
-                            'volume': {'username': 'service', 'password': 'huawei'},
-                            'object-store': {'username': 'service', 'password': 'huawei'}
-                        }
-                    },
-                    'mysql': {
-                        'compute': {'username': 'service', 'password': 'huawei'},
-                        'network': {'username': 'service', 'password': 'huawei'},
-                        'image': {'username': 'service', 'password': 'huawei'},
-                        'metering': {'username': 'service', 'password': 'huawei'},
-                        'volume': {'username': 'service', 'password': 'huawei'},
-                        'dashboard': {'username': 'service', 'password': 'huawei'},
-                        'super': {'password': 'huawei'},
-                        'identity': {'username': 'service', 'password': 'huawei'}
-                    }
-                },
-                'networking': {
-                    'control': {'interface': 'eth0'},
-                    'storage': {'interface': 'eth0'},
-                    'public': {'interface': 'eth2'},
-                    'tenant': {'interface': 'eth0'}
-                },
-                'ntp': {'ntpserver': '192.168.20.254'},
-                'db': {
-                    'mysql': {
-                        'bind_address': '192.168.20.110'
-                    }
-                },
-                'dashboard_roles': ['os-single-controller'],
-                'mq': {
-                    'rabbitmq': {'bind_address': '192.168.20.110'}
-                },
-                'endpoints': {
-                    'compute': {
-                        'novnc': {'host': '192.168.20.110'},
-                        'xvpvnc': {'host': '192.168.20.110'},
-                        'service': {'host': '192.168.20.110'},
-                        'metadata': {'host': '192.168.20.110'}
-                    },
-                    'network': {
-                        'service': {'host': '192.168.20.110'}
-                    },
-                    'image': {
-                        'registry': {'host': '192.168.20.110'},
-                        'service': {'host': '192.168.20.110'}
-                    },
-                    'metering': {
-                        'service': {'host': '192.168.20.110'}
-                    },
-                    'volume': {
-                        'service': {'host': '192.168.20.110'}
-                    },
-                    'ec2': {
-                        'admin': {'host': '192.168.20.110'},
-                        'service': {'host': '192.168.20.110'}
-                    },
-                    'identity': {
-                        'admin': {'host': u'192.168.20.110'},
-                        'service': {'host': u'192.168.20.110'}
                     },
                 },
             },

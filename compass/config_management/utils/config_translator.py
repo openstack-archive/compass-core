@@ -247,6 +247,7 @@ class KeyTranslator(object):
 
     def translate(self, ref, key, translated_ref):
         """Translate content in ref[key] to translated_ref."""
+        logging.debug('translate %s', key)
         for ref_key, sub_ref in ref.ref_items(key):
             translated_keys = self._get_translated_keys(ref_key, sub_ref)
             for translated_key in translated_keys:

@@ -14,7 +14,6 @@ SWITCHES = [
 MACHINES_BY_SWITCH = {
     '1.2.3.4': [
         {'mac': '00:00:01:02:03:04', 'port': 1, 'vlan': 1},
-        {'mac': '00:00:01:02:03:05', 'port': 2, 'vlan': 2},
     ],
 }
 CLUSTERS = [
@@ -93,24 +92,9 @@ HOSTS_BY_CLUSTER = {
                         },
                     },
                 },
-                'roles': ["os-single-controller"],
-            }),
-        },{
-            'hostname': 'host2',
-            'mac': '00:00:01:02:03:05',
-            'mutable': False,
-            'config_data': json.dumps({
-                'networking': {
-                    'interfaces': {
-                        'management': {
-                            'ip': '192.168.20.101',
-                        },
-                    },
-                },
-                'roles': ["os-network", "os-compute-worker"],
+                'roles': ["os-single-controller", "os-network", "os-compute-worker"],
             }),
         },
-
     ],
 }
 
@@ -128,7 +112,13 @@ chef_MOCK = {
                     'os-network': 'openstack network node',
                     'os-compute-worker': 'openstack nova node'
                 },
-                'dashboard_roles': ['os-single-controller'],
+                'test_roles': {
+                    'default': ['test-synclog']
+                },
+                'debugging': {
+                    'debug': 'False',
+                    'verbose': 'False'
+                },
                 'config_mapping': {
      	       '/credential/identity/users/admin': '/security/console_credentials',
                     '/credential/identity/users/compute': '/security/service_credentials',
@@ -175,6 +165,7 @@ chef_MOCK = {
                     'os-compute-worker': {
                     }
                 },
+                'dashboard_roles': ['os-single-controller'],
                 'role_assign_policy': {
                     'default':{
                         'bundles': [],
@@ -182,7 +173,9 @@ chef_MOCK = {
                         'roles': ['os-single-controller', 'os-network', 'os-compute-worker'],
                         'default_min': 1,
                         'default_max': 1,
-                        'maxs': {'os-compute-worker':-1}
+                        'maxs': {'os-compute-worker': -1},
+                        'default_dependencies': [],
+                        'dependencies': {'default': ['test-synclog']}
                     },
                     'policy_by_host_numbers':{
                         '1': {
@@ -222,48 +215,16 @@ cobbler_EXPECTED = {
         'name_servers': '192.168.20.254',
         'gateway': '10.145.88.1',
         'ksmeta': {
-            'username': 'root',
-            'promisc_nics': 'eth2',
-            'chef_url': 'https://localhost/',
-            'tool': 'chef',
-            'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
-            'proxy': 'http://192.168.20.254:3128',
-            'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100,host2.1,192.168.20.101',
-            'ntp_server': '192.168.20.254',
-            'chef_client_name': 'host1.1',
-            'chef_node_name': 'host1.1'
-        },
-    },{
-        'profile': 'CentOS',
-        'name_servers_search': '1.ods.com ods.com',
-        'name': 'host2.1',
-        'hostname': 'host2',
-        'modify_interface': {
-            'dnsname-eth2': 'floating-host2.1.ods.com',
-            'dnsname-eth0': 'host2.1.ods.com',
-            'ipaddress-eth2': '10.145.88.101',
-            'static-eth2': True,
-            'static-eth0': True,
-            'netmask-eth0': '255.255.255.0',
-            'ipaddress-eth0': u'192.168.20.101',
-            'netmask-eth2': '255.255.254.0',
-            'macaddress-eth0': '00:00:01:02:03:05',
-            'management-eth2': False,
-           'management-eth0': True
-        },
-        'name_servers': '192.168.20.254',
-        'gateway': '10.145.88.1',
-        'ksmeta': {
             'username': u'root',
             'promisc_nics': 'eth2',
             'chef_url': 'https://localhost/',
             'tool': 'chef',
             'partition': '/home 20%%;/tmp 10%%;/var 30%%;',
             'proxy': 'http://192.168.20.254:3128',
-            'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100,host2.1,192.168.20.101',
+            'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100',
             'ntp_server': '192.168.20.254',
-            'chef_client_name': 'host2.1',
-            'chef_node_name': 'host2.1'
+            'chef_client_name': 'host1.1',
+            'chef_node_name': u'host1.1'
         },
     }],
 }
@@ -272,17 +233,10 @@ chef_EXPECTED = {
     'expected_configs': {
         'host1.1': {
             'roles': {
-                'openstack': ['os-single-controller'],
+                'openstack': ['test-synclog', 'os-single-controller', 'os-network', 'os-compute-worker'],
             },
             'cluster': '1',
-            'run_list': ['role[os-single-controller]']
-        },
-        'host2.1': {
-            'roles': {
-                'openstack': ['os-network', 'os-compute-worker'],
-            },
-            'cluster': '1',
-            'run_list': ['role[os-network]', 'role[os-compute-worker]']
+            'run_list': ['role[test-synclog]', 'role[os-single-controller]', 'role[os-network]', 'role[os-compute-worker]']
         },
         'openstack': {
             '1': {
@@ -315,11 +269,37 @@ chef_EXPECTED = {
                     'public': {'interface': 'eth2'},
                     'tenant': {'interface': 'eth0'}
                 },
+                'debugging': {
+                    'debug': 'True',
+                    'verbose': 'True'
+                },
                 'ntp': {'ntpserver': '192.168.20.254'},
                 'db': {
                     'mysql': {
                         'bind_address': '192.168.20.100'
                     }
+                },
+                'role_assign_policy': {
+                    'default':{
+                        'bundles': [],
+                        'exclusives': ['os-single-controller', 'os-network'],
+                        'roles': ['os-single-controller', 'os-network', 'os-compute-worker'],
+                        'default_min': 1,
+                        'default_max': 1,
+                        'maxs': {'os-compute-worker':-1},
+                        'default_dependencies': [],
+                        'dependencies': {'default': ['test-synclog']}
+                    },
+                    'policy_by_host_numbers':{
+                        '1': {
+                            'bundles': [['os-single-controller', 'os-network', 'os-compute-worker']],
+                            'exclusives':[]
+                        },
+                        '2': {
+                            'bundles': [['os-network', 'os-compute-worker']],
+                            'exclusives':['os-single-controller']
+                        },
+                    },
                 },
                 'dashboard_roles': ['os-single-controller'],
                 'mq': {

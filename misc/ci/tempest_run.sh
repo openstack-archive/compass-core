@@ -66,7 +66,28 @@ if [[ ! -e /etc/tempest ]]; then
 fi
 #Initialize cloud environment for test and Tempest config file
 cp etc/tempest.conf.sample /etc/tempest/tempest.conf
-nova_api_host=`knife data bag show openstack openstack_1|grep management_ip |head -1 |awk '{print$2}'`
+nova_api_host=''
+bash +e
+for node in `knife node list`; do
+    knife node show $node -r | grep "role[os-compute-worker]"
+    if [ $? -ne 0 ]; then
+        continue
+    fi
+    ip_line=$(knife node show $node | grep 'IP:')
+    if [ $? -ne 0 ]; then
+        continue
+    fi
+    ip_str=$(echo $ip_line | awk '{print $2}')
+    if [ -z $ip_str ]; then
+        continue
+    fi
+    nova_api_host=$ip_str
+    break
+done
+if [ -z $nova_api_host ]; then
+    exit 1
+fi
+bash -e
 sshpass -p 'root' scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r root@$nova_api_host:/root/openrc /root/.
 source /root/openrc
 demo_tenant_id=`keystone tenant-create --name demo |grep " id " |awk '{print $4}'`

@@ -36,12 +36,11 @@ copy2dir()
             cd $destdir
         fi
         gerrit_repo=$3
-        if [ -z $gerrit_repo ]; then
+        if [[ ! -z $gerrit_repo ]]; then
             if [[ -n "$GERRIT_REFSPEC" ]];then
                 git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
                 if [ $? -ne 0 ]; then
                     echo "failed to git fetch $gerrit_repo $GERRIT_REFSPEC"
-                    exit 1
                 fi
             fi
         fi
@@ -130,12 +129,12 @@ if [ -z $WEB_SOURCE ]; then
     echo "web source $WEB_SOURCE is not set"
     exit 1
 fi
-copy2dir $WEB_SOURCE $WEB_HOME $WEB_GERRIT_URL
+copy2dir "$WEB_SOURCE" "$WEB_HOME" "$WEB_GERRIT_URL"
 if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir $ADAPTERS_SOURCE $ADAPTERS_HOME $ADAPTERS_GERRIT_URL
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "$ADAPTERS_GERRIT_URL"
 
 if [ "$tempest" == "true" ]; then
     if [[ ! -e /tmp/tempest ]]; then
@@ -200,6 +199,33 @@ download()
 
 # download js mvc
 download http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip $JS_MVC.zip unzip $WEB_HOME/public/
+
+# download cobbler related packages
+ppa_repo_packages="ntp-4.2.6p5-1.el6.${IMAGE_TYPE,,}.$IMAGE_ARCH.rpm
+                    openssh-clients-5.3p1-94.el6.${IMAGE_ARCH}.rpm
+                    iproute-2.6.32-31.el6.${IMAGE_ARCH}.rpm
+                    wget-1.12-1.8.el6.${IMAGE_ARCH}.rpm
+                    ntpdate-4.2.6p5-1.el6.${IMAGE_TYPE,,}.${IMAGE_ARCH}.rpm"
+for f in $ppa_repo_packages
+do
+    download ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f
+done
+
+ppa_repo_rsyslog_packages="json-c-0.10-2.el6.$IMAGE_ARCH.rpm
+                           libestr-0.1.9-1.el6.$IMAGE_ARCH.rpm
+                           libgt-0.3.11-1.el6.$IMAGE_ARCH.rpm
+                           liblogging-1.0.4-1.el6.$IMAGE_ARCH.rpm
+                           rsyslog-7.6.3-1.el6.$IMAGE_ARCH.rpm"
+for f in $ppa_repo_rsyslog_packages
+do
+    download http://rpms.adiscon.com/v7-stable/epel-6/${IMAGE_ARCH}/RPMS/$f $f
+done
+
+download "$IMAGE_SOURCE" ${IMAGE_NAME}-${IMAGE_ARCH}.iso
+download $CHEF_CLIENT chef-client
+
+# download chef related packages
+download $CHEF_SRV chef-server
 
 # Install net-snmp
 sudo cp -rn /etc/snmp/snmp.conf /root/backup/

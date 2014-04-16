@@ -74,6 +74,9 @@ def _get_bundled_exclusives(exclusives, bundle_mapping):
 
 def _get_max(lhs, rhs):
     """Get max value."""
+    if lhs < 0 and rhs < 0:
+        return min(lhs, rhs)
+
     if lhs < 0:
         return lhs
 
@@ -86,10 +89,10 @@ def _get_max(lhs, rhs):
 def _get_min(lhs, rhs):
     """Get min value."""
     if lhs < 0:
-        return rhs
+        return max(rhs, 0)
 
     if rhs < 0:
-        return lhs
+        return max(lhs, 0)
 
     return min(lhs, rhs)
 
@@ -106,19 +109,18 @@ def _get_bundled_max_mins(maxs, mins, default_max, default_min, role_bundles):
     """Get max and mins for each bundled role."""
     bundled_maxs = {}
     bundled_mins = {}
-    default_min = max(default_min, 0)
-    default_max = _get_max(default_max, default_min)
 
     for bundled_role, roles in role_bundles.items():
         bundled_min = None
         bundled_max = None
         for role in roles:
-            new_max = maxs.get(role, default_max)
-            new_min = mins.get(role, default_min)
+            new_max = maxs.get(role, maxs.get('default', default_max))
+            new_min = mins.get(role, mins.get('default', default_min))
+            new_max = _get_max(new_max, new_min)
             if bundled_min is None:
                 bundled_min = new_min
             else:
-                bundled_min = min(bundled_min, max(new_min, 0))
+                bundled_min = _get_min(bundled_min, new_min)
 
             if bundled_max is None:
                 bundled_max = new_max
@@ -130,7 +132,7 @@ def _get_bundled_max_mins(maxs, mins, default_max, default_min, role_bundles):
             bundled_min = default_min
 
         if bundled_max is None:
-            bundled_max = max(default_max, bundled_min)
+            bundled_max = _get_max(default_max, bundled_min)
 
         bundled_mins[bundled_role] = bundled_min
         bundled_maxs[bundled_role] = bundled_max
@@ -288,16 +290,68 @@ def _sort_roles(lower_roles, roles):
 
         lower_roles[lower_key] = updated_roles
 
+    logging.debug('sorted roles are %s', lower_roles)
+
+
+def _update_dependencies(lower_roles, default_dependencies, dependencies):
+    """update dependencies to lower roles."""
+    for lower_key, roles in lower_roles.items():
+        new_roles = []
+        for role in roles:
+            new_dependencies = dependencies.get(
+                role, dependencies.get('default', default_dependencies)
+            )
+            for new_dependency in new_dependencies:
+                if new_dependency not in new_roles:
+                    new_roles.append(new_dependency)
+
+            if role not in new_roles:
+                new_roles.append(role)
+
+        lower_roles[lower_key] = new_roles
+
+    logging.debug(
+        'roles after adding dependencies %s default dependencies %s are: %s',
+        dependencies, default_dependencies, lower_roles)
+
+
+def _update_post_roles(lower_roles, default_post_roles, post_roles):
+    """update post roles to lower roles."""
+    for lower_key, roles in lower_roles.items():
+        new_roles = []
+        for role in reversed(roles):
+            new_post_roles = post_roles.get(
+                role, post_roles.get('default', default_post_roles)
+            )
+            for new_post_role in reversed(new_post_roles):
+                if new_post_role not in new_roles:
+                    new_roles.append(new_post_role)
+
+            if role not in new_roles:
+                new_roles.append(role)
+
+        lower_roles[lower_key] = list(reversed(new_roles))
+
+    logging.debug(
+        'roles after adding post roles %s default %s are: %s',
+        post_roles, default_post_roles, lower_roles)
+
 
 def assign_roles(_upper_ref, _from_key, lower_refs, to_key,
                  roles=[], maxs={}, mins={}, default_max=-1,
-                 default_min=0, exclusives=[], bundles=[], **_kwargs):
+                 default_min=0, exclusives=[], bundles=[],
+                 default_dependencies=[], dependencies={},
+                 default_post_roles=[], post_roles={}, **_kwargs):
     """Assign roles to lower configs."""
     logging.debug(
         'assignRoles with roles=%s, maxs=%s, mins=%s, '
-        'default_max=%s, default_min=%s, exclusives=%s, bundles=%s',
+        'default_max=%s, default_min=%s, exclusives=%s, bundles=%s'
+        'default_dependencies=%s, dependencies=%s'
+        'default_post_roles=%s, post_roles=%s',
         roles, maxs, mins, default_max,
-        default_min, exclusives, bundles)
+        default_min, exclusives, bundles,
+        default_dependencies, dependencies,
+        default_post_roles, post_roles)
     bundle_mapping, role_bundles = _get_role_bundle_mapping(roles, bundles)
     bundled_exclusives = _get_bundled_exclusives(exclusives, bundle_mapping)
     bundled_maxs, bundled_mins = _get_bundled_max_mins(
@@ -322,6 +376,8 @@ def assign_roles(_upper_ref, _from_key, lower_refs, to_key,
             bundled_maxs)
 
     _sort_roles(lower_roles, roles)
+    _update_dependencies(lower_roles, default_dependencies, dependencies)
+    _update_post_roles(lower_roles, default_post_roles, post_roles)
 
     return lower_roles
 

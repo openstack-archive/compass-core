@@ -167,19 +167,25 @@ class TestEndToEnd(unittest2.TestCase):
     def _mock_chef(self, configs):
         """mock chef."""
         self.chef_autoconfigure_backup_ = chef.autoconfigure
-        chef.chef_databag_backup_ = chef.DataBag
         chef.autoconfigure = mock.Mock()
-        chef.DataBag = mock.Mock()
-
         import collections
+
+        class _mockDataBag(object):
+            """mock databag class."""
+            def __init__(in_self, bag_name, api):
+                in_self.name = bag_name
 
         class _mockDataBagItem(collections.Mapping):
             """mock databag item class."""
 
             def __init__(in_self, bag, bag_item_name, api):
+                in_self.bag_name_ = bag.name
                 in_self.bag_item_name_ = bag_item_name
-                in_self.config_ = configs.get(bag_item_name, {})
-                in_self.run_list = mock.Mock(side_effect=_mockRunList)
+                in_self.config_ = configs.get(
+                    in_self.bag_name_, {}
+                ).get(
+                    bag_item_name, {}
+                )
 
             def __len__(in_self):
                 return len(in_self.config_)
@@ -202,24 +208,18 @@ class TestEndToEnd(unittest2.TestCase):
 
             def save(in_self):
                 """mock save."""
-                configs[in_self.bag_item_name_] = in_self.config_
+                configs.setdefault(
+                    in_self.bag_name_, {}
+                )[
+                    in_self.bag_item_name_
+                ] = in_self.config_
 
-        class _mockRunList(collections.Set):
-            def __init__(in_self, node_name, api):
-                in_self.node_name = node_name
-                in_self.config_ = []
+        class _mockClient(object):
+            def __init__(in_self, client_name, api):
+                pass
 
-            def __len__(in_self, api):
-                return len(in_self.config_)
-
-            def __iter__(in_self):
-                return iter(in_self.config_)
-
-            def __getitem__(in_self):
-                return in_self.config_
-
-            def append(in_self, role):
-                in_self.config_.append(role)
+            def delete(in_self):
+                pass
 
         class _mockNode(collections.Mapping):
             """mock node class."""
@@ -227,7 +227,7 @@ class TestEndToEnd(unittest2.TestCase):
             def __init__(in_self, node_name, api):
                 in_self.node_name_ = node_name
                 in_self.config_ = configs.get(node_name, {})
-                in_self.run_list = mock.Mock(side_effect=_mockRunList)
+                in_self.run_list = []
 
             def __len__(in_self):
                 return len(in_self.config_)
@@ -241,18 +241,28 @@ class TestEndToEnd(unittest2.TestCase):
             def __setitem__(in_self, name, value):
                 in_self.config_[name] = value
 
+            def delete(in_self):
+                del configs[in_self.node_name_]
+
+            def to_dict(in_self):
+                return in_self.config_
+
+            def get(in_self, key, default=None):
+                return in_self.config_.get(key, default)
+
             def save(in_self):
                 """mock save."""
                 configs[in_self.node_name_] = in_self.config_
+                configs[in_self.node_name_]['run_list'] = in_self.run_list
 
+        chef.chef_databag_backup_ = chef.DataBag
+        chef.DataBag = mock.Mock(side_effect=_mockDataBag)
         self.chef_databagitem_backup_ = chef.DataBagItem
         chef.DataBagItem = mock.Mock(side_effect=_mockDataBagItem)
         self.chef_client_backup_ = chef.Client
-        chef.Client = mock.Mock()
-        chef.Client.return_value.delete = mock.Mock()
+        chef.Client = mock.Mock(side_effect=_mockClient)
         self.chef_node_backup_ = chef.Node
         chef.Node = mock.Mock(side_effect=_mockNode)
-        chef.Node.return_value.delete = mock.Mock()
 
     def _check_chef(self, configs, expected_configs):
         """check chef config is generated correctly."""
@@ -377,7 +387,7 @@ class TestEndToEnd(unittest2.TestCase):
                     host.cluster = clusters[cluster_name]
                     session.add(host)
 
-    def _mock_setting(self):
+    def _mock_setting(self, mock_global_config_filename='global_config'):
         self.backup_os_installer_ = setting.OS_INSTALLER
         self.backup_package_installer_ = setting.PACKAGE_INSTALLER
         self.backup_cobbler_url_ = setting.COBBLER_INSTALLER_URL
@@ -392,7 +402,7 @@ class TestEndToEnd(unittest2.TestCase):
         setting.CONFIG_DIR = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             'data')
-        setting.GLOBAL_CONFIG_FILENAME = 'global_config'
+        setting.GLOBAL_CONFIG_FILENAME = mock_global_config_filename
         setting.CONFIG_FILE_FORMAT = 'python'
 
     def _unmock_setting(self):
@@ -452,6 +462,16 @@ class TestEndToEnd(unittest2.TestCase):
     def test_4(self):
         """test deploy unexist roles."""
         self._test('test4')
+
+    def test_5(self):
+        """test deploy roles with testmode disabled."""
+        self._unmock_setting()
+        self._mock_setting('global_config2')
+        self._test('test5')
+
+    def test_6(self):
+        """test deploy on 10 host."""
+        self._test('test6')
 
 
 if __name__ == '__main__':

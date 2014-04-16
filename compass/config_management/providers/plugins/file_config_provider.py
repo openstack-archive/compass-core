@@ -61,6 +61,8 @@ class FileProvider(config_provider.ConfigProvider):
         config_globals = {}
         config_locals = {}
         content = ''
+        logging.debug('read config from %s and format is %s',
+                      filename, config_format)
         try:
             with open(filename) as file_handler:
                 content = file_handler.read()

@@ -21,16 +21,44 @@ import logging
 from compass.config_management.utils import config_reference
 
 
+class AllowRule(object):
+    """class to define allow rule."""
+
+    def __init__(self, check=None):
+        self.check_ = check
+
+    def allow(self, key, ref):
+        """Check if the ref is OK to add to filtered config."""
+        if not self.check_:
+            return True
+        else:
+            return self.check_(key, ref)
+
+
+class DenyRule(object):
+    def __init__(self, check=None):
+        self.check_ = check
+
+    def deny(self, key, ref):
+        """Check if the ref is OK to del from filtered config."""
+        if not self.check_:
+            return True
+        else:
+            return self.check_(key, ref)
+
+
 class ConfigFilter(object):
     """config filter based on allows and denies rules."""
 
-    def __init__(self, allows=['*'], denies=[]):
+    def __init__(self, allows={'*': AllowRule()}, denies={}):
         """Constructor
 
-        :param allows: glob path to copy to the filtered configuration.
-        :type allows: list of str
-        :param denies: glob path to remove from the filtered configuration.
-        :type denies: list of str
+        :param allows: dict of glob path and allow rule to copy to the
+                       filtered configuration.
+        :type allows: dict of str to AllowRule
+        :param denies: dict of glob path and deny rule to remove from
+                       the filtered configuration.
+        :type denies: dict of str to DenyRule
         """
         self.allows_ = allows
         self.denies_ = denies
@@ -42,31 +70,41 @@ class ConfigFilter(object):
 
     def _is_allows_valid(self):
         """Check if allows are valid."""
-        if not isinstance(self.allows_, list):
+        if not isinstance(self.allows_, dict):
             raise TypeError(
-                'allows type is %s but expected type is list: %s' % (
+                'allows type is %s but expected type is dict: %s' % (
                     type(self.allows_), self.allows_))
 
-        for i, allow in enumerate(self.allows_):
-            if not isinstance(allow, basestring):
+        for allow_key, allow_rule in self.allows_.items():
+            if not isinstance(allow_key, basestring):
                 raise TypeError(
-                    'allows[%s] type is %s but expected type '
-                    'is str or unicode: %s' % (
-                        i, type(allow), allow))
+                    'allow_key %s type is %s but expected type '
+                    'is str or unicode' % (allow_key, type(allow_rule)))
+
+            if not isinstance(allow_rule, AllowRule):
+                raise TypeError(
+                    'allows[%s] %s type is %s but expected type '
+                    'is AllowRule' % (
+                        allow_key, allow_rule, type(allow_rule)))
 
     def _is_denies_valid(self):
         """Check if denies are valid."""
-        if not isinstance(self.denies_, list):
+        if not isinstance(self.denies_, dict):
             raise TypeError(
-                'denies type is %s but expected type is list: %s' % (
+                'denies type is %s but expected type is dict: %s' % (
                     type(self.denies_), self.denies_))
 
-        for i, deny in enumerate(self.denies_):
-            if not isinstance(deny, basestring):
+        for deny_key, deny_rule in self.denies_.items():
+            if not isinstance(deny_key, basestring):
                 raise TypeError(
-                    'denies[%s] type is %s but expected type '
+                    'deny_key %s type is %s but expected type '
                     'is str or unicode: %s' % (
-                        i, type(deny), deny))
+                        deny_key, deny_rule, type(deny_rule)))
+
+            if not isinstance(deny_rule, DenyRule):
+                raise TypeError(
+                    'denies[%s] %s type is %s but expected type '
+                    'is DenyRule' % (deny_key, deny_rule, type(deny_rule)))
 
     def _is_valid(self):
         """Check if config filter is valid."""
@@ -92,22 +130,25 @@ class ConfigFilter(object):
 
     def _filter_allows(self, ref, filtered_ref):
         """copy ref config with the allows to filtered ref."""
-        for allow in self.allows_:
-            if not allow:
-                continue
-
-            logging.debug('filter by allow rule %s', allow)
-            for sub_key, sub_ref in ref.ref_items(allow):
-                logging.debug('%s is added to filtered config', sub_key)
-                filtered_ref.setdefault(sub_key).update(sub_ref.config)
+        for allow_key, allow_rule in self.allows_.items():
+            logging.debug('filter by allow rule %s', allow_key)
+            for sub_key, sub_ref in ref.ref_items(allow_key):
+                if allow_rule.allow(sub_key, sub_ref):
+                    logging.debug('%s is added to filtered config', sub_key)
+                    filtered_ref.setdefault(sub_key).update(sub_ref.config)
+                else:
+                    logging.debug('%s is ignored to add to filtered config',
+                                  sub_key)
 
     def _filter_denies(self, filtered_ref):
         """remove config from filter_ref by denies."""
-        for deny in self.denies_:
-            if not deny:
-                continue
-
-            logging.debug('filter by deny rule %s', deny)
-            for ref_key in filtered_ref.ref_keys(deny):
-                logging.debug('%s is removed from filtered config', ref_key)
-                del filtered_ref[ref_key]
+        for deny_key, deny_rule in self.denies_.items():
+            logging.debug('filter by deny rule %s', deny_key)
+            for ref_key, ref in filtered_ref.ref_items(deny_key):
+                if deny_rule.deny(ref_key, ref):
+                    logging.debug('%s is removed from filtered config',
+                                  ref_key)
+                    del filtered_ref[ref_key]
+                else:
+                    logging.debug('%s is ignored to del from filtered config',
+                                  ref_key)

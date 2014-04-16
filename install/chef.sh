@@ -25,19 +25,19 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo mkdir -p /var/chef/cookbooks/		
-sudo cp -r $ADAPTERS_HOME/chef/cookbooks/* /var/chef/cookbooks/		
+sudo mkdir -p /var/chef/cookbooks/
+sudo cp -r $ADAPTERS_HOME/chef/cookbooks/* /var/chef/cookbooks/
 if [ $? -ne 0 ]; then
     echo "failed to copy cookbooks to /var/chef/cookbooks/"
     exit 1
 fi
-sudo mkdir -p /var/chef/databags/		
-sudo cp -r $ADAPTERS_HOME/chef/databags/* /var/chef/databags/		
+sudo mkdir -p /var/chef/databags/
+sudo cp -r $ADAPTERS_HOME/chef/databags/* /var/chef/databags/
 if [ $? -ne 0 ]; then
     echo "failed to copy databags to /var/chef/databags/"
     exit 1
 fi
-sudo mkdir -p /var/chef/roles/		
+sudo mkdir -p /var/chef/roles/
 sudo cp -r $ADAPTERS_HOME/chef/roles/* /var/chef/roles/
 if [ $? -ne 0 ]; then
     echo "failed to copy roles to /var/chef/roles/"

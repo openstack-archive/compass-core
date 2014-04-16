@@ -21,6 +21,7 @@ import os.path
 
 from compass.config_management.providers import config_provider
 from compass.config_management.utils import config_filter
+from compass.config_management.utils import config_filter_callbacks
 from compass.db import database
 from compass.db.model import Adapter
 from compass.db.model import Cluster
@@ -35,16 +36,49 @@ from compass.db.model import SwitchConfig
 from compass.utils import setting_wrapper as setting
 
 
-CLUSTER_ALLOWS = ['/security', '/networking', '/partition']
-CLUSTER_DENIES = []
-HOST_ALLOWS = [
-    '/roles',
-    '/has_dashboard_roles',
-    '/dashboard_roles',
-    '/haproxy_roles',
-    '/networking/interfaces/*/ip'
-]
-HOST_DENIES = []
+GET_CLUSTER_ALLOWS = {
+    '*': config_filter.AllowRule()
+}
+GET_CLUSTER_DENIES = {
+    '/networking/global/ha_vip': config_filter.DenyRule(
+        check=config_filter_callbacks.deny_if_empty)
+}
+GET_HOST_ALLOWS = {
+    '*': config_filter.AllowRule()
+}
+GET_HOST_DENIES = {
+    '/roles': config_filter.DenyRule(
+        check=config_filter_callbacks.deny_if_empty
+    ),
+    '/dashboard_roles': config_filter.DenyRule(
+        check=config_filter_callbacks.deny_if_empty
+    ),
+    '/haproxy_roles': config_filter.DenyRule(
+        check=config_filter_callbacks.deny_if_empty
+    ),
+}
+UPDATE_CLUSTER_ALLOWS = {
+    '/security': config_filter.AllowRule(),
+    '/networking': config_filter.AllowRule(),
+    '/partition': config_filter.AllowRule()
+}
+UPDATE_CLUSTER_DENIES = {
+    '/networking/global/ha_vip': config_filter.DenyRule(
+        check=config_filter_callbacks.deny_if_empty)
+}
+UPDATE_HOST_ALLOWS = {
+    '/roles': config_filter.AllowRule(
+        check=config_filter_callbacks.allow_if_not_empty),
+    '/has_dashboard_roles': config_filter.AllowRule(),
+    '/dashboard_roles': config_filter.AllowRule(
+        check=config_filter_callbacks.allow_if_not_empty
+    ),
+    '/haproxy_roles': config_filter.AllowRule(
+        check=config_filter_callbacks.allow_if_not_empty
+    ),
+    '/networking/interfaces/*/ip': config_filter.AllowRule()
+}
+UPDATE_HOST_DENIES = {}
 
 
 class DBProvider(config_provider.ConfigProvider):
@@ -55,10 +89,14 @@ class DBProvider(config_provider.ConfigProvider):
        session scope.
     """
     NAME = 'db'
-    CLUSTER_FILTER = config_filter.ConfigFilter(
-        CLUSTER_ALLOWS, CLUSTER_DENIES)
-    HOST_FILTER = config_filter.ConfigFilter(
-        HOST_ALLOWS, HOST_DENIES)
+    GET_CLUSTER_FILTER = config_filter.ConfigFilter(
+        GET_CLUSTER_ALLOWS, GET_CLUSTER_DENIES)
+    GET_HOST_FILTER = config_filter.ConfigFilter(
+        GET_HOST_ALLOWS, GET_HOST_DENIES)
+    UPDATE_CLUSTER_FILTER = config_filter.ConfigFilter(
+        UPDATE_CLUSTER_ALLOWS, UPDATE_CLUSTER_DENIES)
+    UPDATE_HOST_FILTER = config_filter.ConfigFilter(
+        UPDATE_HOST_ALLOWS, UPDATE_HOST_DENIES)
 
     def __init__(self):
         pass
@@ -67,19 +105,28 @@ class DBProvider(config_provider.ConfigProvider):
         """Get cluster config from db."""
         session = database.current_session()
         cluster = session.query(Cluster).filter_by(id=clusterid).first()
-        if cluster:
-            return cluster.config
-        else:
+        if not cluster:
             return {}
+
+        return self.GET_CLUSTER_FILTER.filter(cluster.config)
 
     def get_host_config(self, hostid):
         """Get host config from db."""
         session = database.current_session()
         host = session.query(ClusterHost).filter_by(id=hostid).first()
-        if host:
-            return host.config
-        else:
+        if not host:
             return {}
+
+        return self.GET_HOST_FILTER.filter(host.config)
+
+    def update_cluster_config(self, clusterid, config):
+        """Update cluster config to db."""
+        session = database.current_session()
+        cluster = session.query(Cluster).filter_by(id=clusterid).first()
+        if not cluster:
+            return
+
+        cluster.config = self.UPDATE_CLUSTER_FILTER.filter(config)
 
     def update_host_config(self, hostid, config):
         """Update host config to db."""
@@ -88,8 +135,7 @@ class DBProvider(config_provider.ConfigProvider):
         if not host:
             return
 
-        filtered_config = self.HOST_FILTER.filter(config)
-        host.config = filtered_config
+        host.config = self.UPDATE_HOST_FILTER.filter(config)
 
     def update_adapters(self, adapters, roles_per_target_system):
         """Update adapter config to db."""

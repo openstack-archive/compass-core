@@ -639,7 +639,6 @@ class ConfigManager(object):
                                   target_systems):
         """update clusters and hosts of each cluster configs."""
         logging.debug('update cluster_hosts: %s', cluster_hosts)
-
         for clusterid, hostids in cluster_hosts.items():
             global_config = self.get_global_config(
                 os_version=os_versions[clusterid],

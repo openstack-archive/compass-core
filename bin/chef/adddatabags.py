@@ -45,7 +45,10 @@ def main():
         databag_items = []
         databagitem_dir = os.path.join(databags_dir, databag)
         for item in os.listdir(databagitem_dir):
-            databag_items.append(os.path.join(databagitem_dir, item))
+            if item.endswith('.json'):
+                databag_items.append(os.path.join(databagitem_dir, item))
+            else:
+                logging.info('ignore %s in %s', item, databagitem_dir)
 
         for databag_item in databag_items:
             logging.info('add databag item %s to databag %s',

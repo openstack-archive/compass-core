@@ -28,6 +28,53 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
+FROM_GLOBAL_TRANSLATORS = {
+    'openstack': ConfigTranslator(
+        mapping={
+            '/read_config_mapping': [KeyTranslator(
+                translated_keys=(
+                    config_translator_callbacks.get_keys_from_config_mapping),
+                translated_value=(
+                    config_translator_callbacks.get_value_from_config_mapping)
+            )],
+            '/test_roles': [KeyTranslator(
+                translated_keys=['/test_roles']
+            )],
+        }
+    ),
+}
+
+TO_GLOBAL_TRANSLATORS = {
+    'openstack': ConfigTranslator(
+        mapping={
+            '/test_roles/*': [KeyTranslator(
+                translated_keys=[
+                    functools.partial(
+                        config_translator_callbacks.get_key_from_pattern,
+                        from_pattern=r'^/test_roles/(?P<role>.*)$',
+                        to_pattern=(
+                            '/role_assign_policy/default'
+                            '/dependencies/%(role)s'
+                        )
+                    )
+                ],
+                from_values={'testmode': '/testmode'},
+                translated_value=functools.partial(
+                    config_translator_callbacks.add_value,
+                    check_value_callback=(
+                        lambda value, value_list: (
+                            set(value) & set(value_list))
+                    ),
+                    add_value_callback=(
+                        lambda value, value_list: value_list.extend(value)
+                    )
+                ),
+                override=True
+            )],
+        }
+    ),
+}
+
 TO_CLUSTER_TRANSLATORS = {
     'openstack': ConfigTranslator(
         mapping={
@@ -36,11 +83,18 @@ TO_CLUSTER_TRANSLATORS = {
                     config_translator_callbacks.get_keys_from_config_mapping),
                 translated_value=(
                     config_translator_callbacks.get_value_from_config_mapping)
-            )]
+            )],
+            '/testmode': [KeyTranslator(
+                translated_keys=['/debugging/debug', '/debugging/verbose'],
+                translated_value=functools.partial(
+                    config_translator_callbacks.set_value,
+                    return_value_callback=lambda value: str(value)
+                ),
+                override=True
+            )],
         }
     ),
 }
-
 
 FROM_CLUSTER_TRANSLATORS = {
     'openstack': ConfigTranslator(
@@ -53,12 +107,6 @@ FROM_CLUSTER_TRANSLATORS = {
             )],
             '/role_mapping': [KeyTranslator(
                 translated_keys=['/role_mapping']
-            )],
-            '/read_config_mapping': [KeyTranslator(
-                translated_keys=(
-                    config_translator_callbacks.get_keys_from_config_mapping),
-                translated_value=(
-                    config_translator_callbacks.get_value_from_config_mapping)
             )],
         }
     ),
@@ -137,6 +185,7 @@ class Installer(package_installer.Installer):
         self.installer_url_ = setting.CHEF_INSTALLER_URL
         self.global_databag_name_ = setting.CHEF_GLOBAL_DATABAG_NAME
         self.api_ = chef.autoconfigure()
+        self.tmp_global_databags_ = {}
         logging.debug('%s instance created', self)
 
     def __repr__(self):
@@ -225,6 +274,13 @@ class Installer(package_installer.Installer):
         return self._get_databag_item(
             bag, self.global_databag_name_)
 
+    def get_global_config(self, target_system, **kwargs):
+        """get global config."""
+        bag = self._get_databag(target_system)
+        bag_item = dict(self._get_global_databag_item(bag))
+        self.tmp_global_databags_[target_system] = bag_item
+        return FROM_GLOBAL_TRANSLATORS[target_system].translate(bag_item)
+
     def _get_cluster_databag_item(self, bag, clusterid, target_system):
         """get cluster databag item."""
         return self._get_databag_item(
@@ -232,8 +288,8 @@ class Installer(package_installer.Installer):
 
     def get_cluster_config(self, clusterid, target_system, **kwargs):
         """get cluster config."""
+        global_bag_item = self.tmp_global_databags_[target_system]
         bag = self._get_databag(target_system)
-        global_bag_item = dict(self._get_global_databag_item(bag))
         bag_item = dict(self._get_cluster_databag_item(
             bag, clusterid, target_system))
         util.merge_dict(bag_item, global_bag_item, False)
@@ -256,13 +312,21 @@ class Installer(package_installer.Installer):
                           'config %s target_system %s',
                           clusterid, config, target_system)
 
+    def update_global_config(self, config, target_system, **kwargs):
+        """update global config."""
+        global_bag_item = self.tmp_global_databags_[target_system]
+        translated_config = TO_GLOBAL_TRANSLATORS[target_system].translate(
+            config)
+
+        util.merge_dict(global_bag_item, translated_config, override=True)
+
     def update_cluster_config(self, clusterid, config,
                               target_system, **kwargs):
         """update cluster config."""
         self.clean_cluster_config(clusterid, config,
                                   target_system, **kwargs)
+        global_bag_item = self.tmp_global_databags_[target_system]
         bag = self._get_databag(target_system)
-        global_bag_item = dict(self._get_global_databag_item(bag))
         bag_item = self._get_cluster_databag_item(
             bag, clusterid, target_system)
         bag_item_dict = dict(bag_item)
@@ -327,8 +391,8 @@ class Installer(package_installer.Installer):
         self.clean_host_config(hostid, config,
                                target_system=target_system, **kwargs)
         clusterid = config['clusterid']
+        global_bag_item = self.tmp_global_databags_[target_system]
         bag = self._get_databag(target_system)
-        global_bag_item = dict(self._get_global_databag_item(bag))
         bag_item = self._get_cluster_databag_item(
             bag, clusterid, target_system)
         bag_item_dict = dict(bag_item)

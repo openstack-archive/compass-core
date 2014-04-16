@@ -38,6 +38,7 @@ def get_key_from_pattern(
                       to_pattern, group)
         raise error
 
+    logging.debug('got translated key %s for %s', translated_key, path)
     return translated_key
 
 
@@ -78,13 +79,18 @@ def get_value_from_config_mapping(
         translated_value = ref.get(value)
         logging.debug('got translated_value %s from %s',
                       translated_value, value)
-    else:
+    elif isinstance(value, list):
         for value_in_list in value:
             translated_value = ref.get(value_in_list)
             logging.debug('got translated_value %s from %s',
                           translated_value, value_in_list)
-            if translated_value:
+            if translated_value is not None:
                 break
+
+    else:
+        logging.error('unexpected type %s: %s',
+                      type(value), value)
+        translated_value = None
 
     logging.debug('got translated_value %s from translated_path %s',
                   translated_value, translated_path)
@@ -109,13 +115,17 @@ def get_value_from_role_mapping(
             translated_value = ref.get(value)
             logging.debug('got translated_value %s from %s',
                           translated_value, value)
-        else:
+        elif isinstance(value, list):
             for value_in_list in value:
                 translated_value = ref.get(value_in_list)
                 logging.debug('got translated_value %s from %s',
                               translated_value, value_in_list)
-                if translated_value:
+                if translated_value is not None:
                     break
+        else:
+            logging.error('unexpected type %s: %s',
+                          type(value), value)
+            translated_value = None
 
         logging.debug('got translated_value %s from roles %s '
                       'and translated_path %s',
@@ -149,28 +159,74 @@ def get_encrypted_value(ref, _path, _translated_ref, _translated_path,
     return crypt.crypt(ref.config, crypt_method)
 
 
-def get_value_if(ref, _path, _translated_ref, _translated_path,
-                 condition=False, **_kwargs):
-    """Get value if condition is true."""
-    if not condition:
-        return None
-    return ref.config
+def set_value(ref, _path, _translated_ref,
+              _translated_path,
+              return_value_callback=None, **kwargs):
+    """Set value into translated config."""
+    condition = True
+    for _, arg in kwargs.items():
+        if not arg:
+            condition = False
+
+    if condition:
+        translated_value = ref.config
+    else:
+        translated_value = None
+
+    if not return_value_callback:
+        return translated_value
+    else:
+        return return_value_callback(translated_value)
 
 
 def add_value(ref, _path, translated_ref,
-              _translated_path, condition='', **_kwargs):
-    """Append value into translated config if condition."""
+              translated_path,
+              get_value_callback=None,
+              check_value_callback=None,
+              add_value_callback=None,
+              return_value_callback=None, **kwargs):
+    """Append value into translated config."""
     if not translated_ref.config:
         value_list = []
     else:
-        value_list = [
-            value for value in translated_ref.config.split(',') if value
-        ]
+        if not get_value_callback:
+            value_list = translated_ref.config
+        else:
+            value_list = get_value_callback(translated_ref.config)
 
-    if condition and ref.config not in value_list:
-        value_list.append(ref.config)
+    logging.debug('%s value list is %s', translated_path, value_list)
+    if not isinstance(value_list, list):
+        raise TypeError(
+            '%s value %s type %s but expected type is list' % (
+                translated_path, value_list, type(value_list)))
 
-    return ','.join(value_list)
+    condition = True
+    for _, arg in kwargs.items():
+        if not arg:
+            condition = False
+
+    logging.debug('%s add_value condition is %s', translated_path, condition)
+    if condition:
+        if not check_value_callback:
+            value_in_list = ref.config in value_list
+        else:
+            value_in_list = check_value_callback(ref.config, value_list)
+
+        if value_in_list:
+            logging.debug('%s found value %s in %s',
+                          translated_path, value_list, value_in_list)
+
+        if not value_in_list:
+            if not add_value_callback:
+                value_list.append(ref.config)
+            else:
+                add_value_callback(ref.config, value_list)
+
+    logging.debug('%s value %s after added', translated_path, value_list)
+    if not return_value_callback:
+        return value_list
+    else:
+        return return_value_callback(value_list)
 
 
 def override_if_any(_ref, _path, _translated_ref, _translated_path, **kwargs):

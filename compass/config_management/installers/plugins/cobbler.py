@@ -118,9 +118,15 @@ TO_HOST_TRANSLATOR = ConfigTranslator(
                 should_exist='management')
         ), KeyTranslator(
             translated_keys=['/ksmeta/promisc_nics'],
-            from_values={'condition': '../promisc'},
-            translated_value=config_translator_callbacks.add_value,
-            override=True,
+            from_values={'promisc': '../promisc'},
+            translated_value=functools.partial(
+                config_translator_callbacks.add_value,
+                get_value_callback=lambda config: [
+                    value for value in config.split(',') if value
+                ],
+                return_value_callback=lambda values: ','.join(values)
+            ),
+            override=True
         )],
     }
 )

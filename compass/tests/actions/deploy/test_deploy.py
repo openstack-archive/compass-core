@@ -377,7 +377,7 @@ class TestEndToEnd(unittest2.TestCase):
                     host.cluster = clusters[cluster_name]
                     session.add(host)
 
-    def _mock_setting(self):
+    def _mock_setting(self, mock_global_config_filename='global_config'):
         self.backup_os_installer_ = setting.OS_INSTALLER
         self.backup_package_installer_ = setting.PACKAGE_INSTALLER
         self.backup_cobbler_url_ = setting.COBBLER_INSTALLER_URL
@@ -392,7 +392,7 @@ class TestEndToEnd(unittest2.TestCase):
         setting.CONFIG_DIR = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             'data')
-        setting.GLOBAL_CONFIG_FILENAME = 'global_config'
+        setting.GLOBAL_CONFIG_FILENAME = mock_global_config_filename
         setting.CONFIG_FILE_FORMAT = 'python'
 
     def _unmock_setting(self):
@@ -452,6 +452,18 @@ class TestEndToEnd(unittest2.TestCase):
     def test_4(self):
         """test deploy unexist roles."""
         self._test('test4')
+
+    def test_5(self):
+        """test deploy roles with testmode disabled."""
+        self._unmock_setting()
+        self._mock_setting('global_config2')
+        self._test('test5')
+
+    def test_6(self):
+        """test deploy roles with testmode enabled."""
+        self._unmock_setting()
+        self._mock_setting('global_config3')
+        self._test('test6')
 
 
 if __name__ == '__main__':

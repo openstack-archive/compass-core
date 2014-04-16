@@ -120,82 +120,84 @@ cobbler_MOCK = {
 } 
 
 chef_MOCK = {
-   'configs': {
-       'env_default': {
-           'all_roles': {
-               'os-single-controller': 'openstack controller node',
-               'os-network': 'openstack network node',
-               'os-compute-worker': 'openstack nova node'
-           },
-           'dashboard_roles': ['os-single-controller'],
-           'config_mapping': {
-	       '/credential/identity/users/admin': '/security/console_credentials',
-               '/credential/identity/users/compute': '/security/service_credentials',
-               '/credential/identity/users/image': '/security/service_credentials',
-               '/credential/identity/users/metering': '/security/service_credentials',
-               '/credential/identity/users/network': '/security/service_credentials',
-               '/credential/identity/users/object-store': '/security/service_credentials',
-               '/credential/identity/users/volume': '/security/service_credentials',
-               '/credential/mysql/compute': '/security/service_credentials',
-               '/credential/mysql/dashboard': '/security/service_credentials',
-               '/credential/mysql/identity': '/security/service_credentials',
-               '/credential/mysql/image': '/security/service_credentials',
-               '/credential/mysql/metering': '/security/service_credentials',
-               '/credential/mysql/network': '/security/service_credentials',
-               '/credential/mysql/volume': '/security/service_credentials',
-               '/credential/mysql/super/password': '/security/service_credentials/password',
-               '/networking/control/interface': '/networking/interfaces/management/nic',
-               '/ntp/ntpserver': '/networking/global/ntp_server',
-               '/networking/storage/interface': '/networking/interfaces/storage/nic',
-               '/networking/public/interface': '/networking/interfaces/public/nic',
-               '/networking/tenant/interface': '/networking/interfaces/tenant/nic',
-               '/networking/plugins/ovs/gre/local_ip_interface': '/networking/interfaces/tenant/nic',
-           },
-           'role_mapping': {
-               'os-single-controller': {
-                   '/db/mysql/bind_address': '/networking/interfaces/management/ip',
-                   '/mq/rabbitmq/bind_address': '/networking/interfaces/management/ip',
-                   '/endpoints/compute/metadata/host': '/networking/interfaces/management/ip',
-                   '/endpoints/compute/novnc/host': '/networking/interfaces/management/ip',
-                   '/endpoints/compute/service/host': '/networking/interfaces/management/ip',
-                   '/endpoints/compute/xvpvnc/host': '/networking/interfaces/management/ip',
-                   '/endpoints/ec2/admin/host': '/networking/interfaces/management/ip',
-                   '/endpoints/ec2/service/host': '/networking/interfaces/management/ip',
-                   '/endpoints/identity/admin/host': '/networking/interfaces/management/ip',
-                   '/endpoints/identity/service/host': '/networking/interfaces/management/ip',
-                   '/endpoints/image/registry/host': '/networking/interfaces/management/ip',
-                   '/endpoints/image/service/host': '/networking/interfaces/management/ip',
-                   '/endpoints/metering/service/host': '/networking/interfaces/management/ip',
-                   '/endpoints/network/service/host': '/networking/interfaces/management/ip',
-                   '/endpoints/volume/service/host': '/networking/interfaces/management/ip'
-               },
-               'os-network': {
-               },
-               'os-compute-worker': {
-               }
-           },
-           'role_assign_policy': {
-               'default':{
-                   'bundles': [],
-                   'exclusives': ['os-single-controller', 'os-network'],
-                   'roles': ['os-single-controller', 'os-compute-worker', 'os-network'],
-                   'default_min': 1,
-                   'default_max': 1,
-                   'maxs': {'os-compute-worker':-1}
-               },
-               'policy_by_host_numbers':{
-                   '1': {
-                       'bundles': [['os-single-controller','os-compute-worker','os-network']],
-                       'exclusives':[]
-                   },
-                   '2': {
-                       'bundles': [['os-compute-worker','os-network']],
-                       'exclusives':['os-single-controller']
-                   },
-               },
-           },
-       },
-   },
+    'configs': {
+        'openstack': {
+            'env_default': {
+                'all_roles': {
+                    'os-single-controller': 'openstack controller node',
+                    'os-network': 'openstack network node',
+                    'os-compute-worker': 'openstack nova node'
+                },
+                'dashboard_roles': ['os-single-controller'],
+                'config_mapping': {
+     	       '/credential/identity/users/admin': '/security/console_credentials',
+                    '/credential/identity/users/compute': '/security/service_credentials',
+                    '/credential/identity/users/image': '/security/service_credentials',
+                    '/credential/identity/users/metering': '/security/service_credentials',
+                    '/credential/identity/users/network': '/security/service_credentials',
+                    '/credential/identity/users/object-store': '/security/service_credentials',
+                    '/credential/identity/users/volume': '/security/service_credentials',
+                    '/credential/mysql/compute': '/security/service_credentials',
+                    '/credential/mysql/dashboard': '/security/service_credentials',
+                    '/credential/mysql/identity': '/security/service_credentials',
+                    '/credential/mysql/image': '/security/service_credentials',
+                    '/credential/mysql/metering': '/security/service_credentials',
+                    '/credential/mysql/network': '/security/service_credentials',
+                    '/credential/mysql/volume': '/security/service_credentials',
+                    '/credential/mysql/super/password': '/security/service_credentials/password',
+                    '/networking/control/interface': '/networking/interfaces/management/nic',
+                    '/ntp/ntpserver': '/networking/global/ntp_server',
+                    '/networking/storage/interface': '/networking/interfaces/storage/nic',
+                    '/networking/public/interface': '/networking/interfaces/public/nic',
+                    '/networking/tenant/interface': '/networking/interfaces/tenant/nic',
+                    '/networking/plugins/ovs/gre/local_ip_interface': '/networking/interfaces/tenant/nic',
+                },
+                'role_mapping': {
+                    'os-single-controller': {
+                        '/db/mysql/bind_address': '/networking/interfaces/management/ip',
+                        '/mq/rabbitmq/bind_address': '/networking/interfaces/management/ip',
+                        '/endpoints/compute/metadata/host': '/networking/interfaces/management/ip',
+                        '/endpoints/compute/novnc/host': '/networking/interfaces/management/ip',
+                        '/endpoints/compute/service/host': '/networking/interfaces/management/ip',
+                        '/endpoints/compute/xvpvnc/host': '/networking/interfaces/management/ip',
+                        '/endpoints/ec2/admin/host': '/networking/interfaces/management/ip',
+                        '/endpoints/ec2/service/host': '/networking/interfaces/management/ip',
+                        '/endpoints/identity/admin/host': '/networking/interfaces/management/ip',
+                        '/endpoints/identity/service/host': '/networking/interfaces/management/ip',
+                        '/endpoints/image/registry/host': '/networking/interfaces/management/ip',
+                        '/endpoints/image/service/host': '/networking/interfaces/management/ip',
+                        '/endpoints/metering/service/host': '/networking/interfaces/management/ip',
+                        '/endpoints/network/service/host': '/networking/interfaces/management/ip',
+                        '/endpoints/volume/service/host': '/networking/interfaces/management/ip'
+                    },
+                    'os-network': {
+                    },
+                    'os-compute-worker': {
+                    }
+                },
+                'role_assign_policy': {
+                    'default':{
+                        'bundles': [],
+                        'exclusives': ['os-single-controller', 'os-network'],
+                        'roles': ['os-single-controller', 'os-network', 'os-compute-worker'],
+                        'default_min': 1,
+                        'default_max': 1,
+                        'maxs': {'os-compute-worker':-1}
+                    },
+                    'policy_by_host_numbers':{
+                        '1': {
+                            'bundles': [['os-single-controller', 'os-network', 'os-compute-worker']],
+                            'exclusives':[]
+                        },
+                        '2': {
+                            'bundles': [['os-network', 'os-compute-worker']],
+                            'exclusives':['os-single-controller']
+                        },
+                    },
+                },
+            },
+        },
+    },
 }
 
 cobbler_EXPECTED = {
@@ -228,8 +230,8 @@ cobbler_EXPECTED = {
             'proxy': 'http://192.168.20.254:3128',
             'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100,host2.1,192.168.20.101',
             'ntp_server': '192.168.20.254',
-            'chef_client_name': 'openstack.host1.1',
-            'chef_node_name': 'openstack.host1.1'
+            'chef_client_name': 'host1.1',
+            'chef_node_name': 'host1.1'
         },
     },{
         'profile': 'CentOS',
@@ -260,81 +262,97 @@ cobbler_EXPECTED = {
             'proxy': 'http://192.168.20.254:3128',
             'ignore_proxy': '127.0.0.1,localhost,host1.1,192.168.20.100,host2.1,192.168.20.101',
             'ntp_server': '192.168.20.254',
-            'chef_client_name': 'openstack.host2.1',
-            'chef_node_name': 'openstack.host2.1'
+            'chef_client_name': 'host2.1',
+            'chef_node_name': 'host2.1'
         },
     }],
 }
   
 chef_EXPECTED = {
     'expected_configs': {
-        'openstack_1': {
-            'credential': {
-                'identity': {
-                    'users': {
+        'host1.1': {
+            'roles_per_target_system': {
+                'openstack': ['os-single-controller'],
+            },
+            'cluster': '1',
+            'run_list': ['role[os-single-controller]']
+        },
+        'host2.1': {
+            'roles_per_target_system': {
+                'openstack': ['os-network', 'os-compute-worker'],
+            },
+            'cluster': '1',
+            'run_list': ['role[os-network]', 'role[os-compute-worker]']
+        },
+        'openstack': {
+            '1': {
+                'credential': {
+                    'identity': {
+                        'users': {
+                            'compute': {'username': 'service', 'password': 'huawei'},
+                            'network': {'username': 'service', 'password': 'huawei'},
+                            'admin': {'username': 'admin', 'password': 'huawei'},
+                            'image': {'username': 'service', 'password': 'huawei'},
+                            'metering': {'username': 'service', 'password': 'huawei'},
+                            'volume': {'username': 'service', 'password': 'huawei'},
+                            'object-store': {'username': 'service', 'password': 'huawei'}
+                        }
+                    },
+                    'mysql': {
                         'compute': {'username': 'service', 'password': 'huawei'},
                         'network': {'username': 'service', 'password': 'huawei'},
-                        'admin': {'username': 'admin', 'password': 'huawei'},
                         'image': {'username': 'service', 'password': 'huawei'},
                         'metering': {'username': 'service', 'password': 'huawei'},
                         'volume': {'username': 'service', 'password': 'huawei'},
-                        'object-store': {'username': 'service', 'password': 'huawei'}
+                        'dashboard': {'username': 'service', 'password': 'huawei'},
+                        'super': {'password': 'huawei'},
+                        'identity': {'username': 'service', 'password': 'huawei'}
                     }
                 },
-                'mysql': {
-                    'compute': {'username': 'service', 'password': 'huawei'},
-                    'network': {'username': 'service', 'password': 'huawei'},
-                    'image': {'username': 'service', 'password': 'huawei'},
-                    'metering': {'username': 'service', 'password': 'huawei'},
-                    'volume': {'username': 'service', 'password': 'huawei'},
-                    'dashboard': {'username': 'service', 'password': 'huawei'},
-                    'super': {'password': 'huawei'},
-                    'identity': {'username': 'service', 'password': 'huawei'}
-                }
-            },
-            'networking': {
-                'control': {'interface': 'eth0'},
-                'storage': {'interface': 'eth0'},
-                'public': {'interface': 'eth2'},
-                'tenant': {'interface': 'eth0'}
-            },
-            'ntp': {'ntpserver': '192.168.20.254'},
-            'db': {
-                'mysql': {
-                    'bind_address': '192.168.20.100'
-                }
-            },
-            'dashboard_roles': ['os-single-controller'],
-            'mq': {
-                'rabbitmq': {'bind_address': '192.168.20.100'}
-            },
-            'endpoints': {
-                'compute': {
-                    'novnc': {'host': '192.168.20.100'},
-                    'xvpvnc': {'host': '192.168.20.100'},
-                    'service': {'host': '192.168.20.100'},
-                    'metadata': {'host': '192.168.20.100'}
+                'networking': {
+                    'control': {'interface': 'eth0'},
+                    'storage': {'interface': 'eth0'},
+                    'public': {'interface': 'eth2'},
+                    'tenant': {'interface': 'eth0'}
                 },
-                'network': {
-                    'service': {'host': '192.168.20.100'}
+                'ntp': {'ntpserver': '192.168.20.254'},
+                'db': {
+                    'mysql': {
+                        'bind_address': '192.168.20.100'
+                    }
                 },
-                'image': {
-                    'registry': {'host': '192.168.20.100'},
-                    'service': {'host': '192.168.20.100'}
+                'dashboard_roles': ['os-single-controller'],
+                'mq': {
+                    'rabbitmq': {'bind_address': '192.168.20.100'}
                 },
-                'metering': {
-                    'service': {'host': '192.168.20.100'}
-                },
-                'volume': {
-                    'service': {'host': '192.168.20.100'}
-                },
-                'ec2': {
-                    'admin': {'host': '192.168.20.100'},
-                    'service': {'host': '192.168.20.100'}
-                },
-                'identity': {
-                    'admin': {'host': u'192.168.20.100'},
-                    'service': {'host': u'192.168.20.100'}
+                'endpoints': {
+                    'compute': {
+                        'novnc': {'host': '192.168.20.100'},
+                        'xvpvnc': {'host': '192.168.20.100'},
+                        'service': {'host': '192.168.20.100'},
+                        'metadata': {'host': '192.168.20.100'}
+                    },
+                    'network': {
+                        'service': {'host': '192.168.20.100'}
+                    },
+                    'image': {
+                        'registry': {'host': '192.168.20.100'},
+                        'service': {'host': '192.168.20.100'}
+                    },
+                    'metering': {
+                        'service': {'host': '192.168.20.100'}
+                    },
+                    'volume': {
+                        'service': {'host': '192.168.20.100'}
+                    },
+                    'ec2': {
+                        'admin': {'host': '192.168.20.100'},
+                        'service': {'host': '192.168.20.100'}
+                    },
+                    'identity': {
+                        'admin': {'host': u'192.168.20.100'},
+                        'service': {'host': u'192.168.20.100'}
+                    },
                 },
             },
         },

@@ -67,4 +67,4 @@ export NAMESERVERS=$ipaddr
 export NTP_SERVER=$ipaddr
 export GATEWAY=$ipaddr
 export PROXY=http://$ipaddr:3128
-
+export TESTMODE=${TESTMODE:-"True"}

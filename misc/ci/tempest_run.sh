@@ -96,7 +96,10 @@ iniset /etc/tempest/tempest.conf network public_network_id $public_net_id
 iniset /etc/tempest/tempest.conf network public_router_id ''
 iniset /etc/tempest/tempest.conf network quantum_available true
 iniset /etc/tempest/tempest.conf network tenant_network_cidr '172.16.2.128/25'
-
+# wait for nova-compute to report health to nova-conductor
+# In some scenarios, nova-compute is up before conductor and has to retry
+# to register to conductor and there is some wait time between retries.
+timeout 180s sh -c "while ! nova service-list |grep nova-compute; do sleep 3; done"
 #Start a smoke test against cloud without object storage and aws related tests 
 #as they are unavailable for now
 if [[ $tempest_full == true ]]; then

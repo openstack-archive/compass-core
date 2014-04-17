@@ -96,7 +96,7 @@ iniset /etc/tempest/tempest.conf network public_network_id $public_net_id
 iniset /etc/tempest/tempest.conf network public_router_id ''
 iniset /etc/tempest/tempest.conf network quantum_available true
 iniset /etc/tempest/tempest.conf network tenant_network_cidr '172.16.2.128/25'
-
+nova service-list
 #Start a smoke test against cloud without object storage and aws related tests 
 #as they are unavailable for now
 if [[ $tempest_full == true ]]; then

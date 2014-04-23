@@ -75,11 +75,12 @@ keystone user-create --name demo --pass secret --tenant $demo_tenant_id
 keystone user-create --name alt_demo --pass secret --tenant $alt_demo_tenant_id
 image_id=`glance image-list |grep 'cirros'|awk '{print$2}'`
 private_net_id=`quantum net-create --tenant_id $demo_tenant_id private |grep " id " |awk '{print$4}'`
-quantum subnet-create --tenant_id $demo_tenant_id --ip_version 4 --gateway 10.1.0.1  $private_net_id 10.10.0.0/24
+private_subnet_id=`quantum subnet-create --tenant_id $demo_tenant_id --ip_version 4 --gateway 10.10.0.1  $private_net_id 10.10.0.0/24|grep " id "|awk '{print$4}'`
 router_id=`quantum router-create --tenant_id $demo_tenant_id router1|grep " id " |awk '{print$4}'`
 public_net_id=`quantum net-create public -- --router:external=True |grep " id " |awk '{print$4}'`
 quantum subnet-create --ip_version 4 $public_net_id 172.24.4.0/24 -- --enable_dhcp=False
 quantum router-gateway-set $router_id $public_net_id
+quantum router-interface-add router1 $private_subnet_id
 iniset /etc/tempest/tempest.conf identity uri $OS_AUTH_URL
 iniset /etc/tempest/tempest.conf identity admin_username $OS_USERNAME
 iniset /etc/tempest/tempest.conf identity admin_password $OS_PASSWORD

@@ -5,6 +5,7 @@ copy2dir()
 {
     repo=$1
     destdir=$2
+    git_branch=master
     if [[ "$repo" =~ (git|http|https|ftp):// ]]; then
         if [[ -d $destdir || -L $destdir ]]; then
             cd $destdir
@@ -23,8 +24,8 @@ copy2dir()
             git remote update
             git reset --hard
             git clean -x -f
-            git checkout master
-            git reset --hard remotes/origin/master
+            git checkout $git_branch
+            git reset --hard remotes/origin/$git_branch
         else
             echo "create $destdir"
             mkdir -p $destdir
@@ -34,17 +35,25 @@ copy2dir()
                 exit 1
             fi
             cd $destdir
+            git reset --hard remotes/origin/$git_branch
         fi
-        gerrit_repo=$3
-        if [[ ! -z $gerrit_repo ]]; then
-            if [[ -n "$GERRIT_REFSPEC" ]];then
-                git fetch $gerrit_repo $GERRIT_REFSPEC && git checkout FETCH_HEAD
-                if [ $? -ne 0 ]; then
-                    echo "failed to git fetch $gerrit_repo $GERRIT_REFSPEC"
-                fi
+        if [[ ! -z $ZUUL_REF || ! -z $GERRIT_REFSPEC ]]; then
+            if [[ ! -z $ZUUL_REF ]]; then
+                git_repo=$ZUUL_URL/$3
+                git_ref=$ZUUL_REF
+                git_branch=$ZUUL_BRANCH
+            elif [[ ! -z $GERRIT_REFSPEC ]]; then
+                git_repo=http://$GERRIT_HOST/$3
+                git_ref=$GERRIT_REFSPEC
+                git_branch=$GERRIT_BRANCH
             fi
+            git reset --hard remotes/origin/$git_branch
+            git fetch $git_repo $git_ref && git checkout FETCH_HEAD
+            if [ $? -ne 0 ]; then
+                echo "failed to git fetch $git_repo $git_ref"
+            fi
+            git clean -x -f
         fi
-        git clean -x -f
     else
         sudo rm -rf $destdir
         sudo cp -rf $repo $destdir
@@ -129,12 +138,12 @@ if [ -z $WEB_SOURCE ]; then
     echo "web source $WEB_SOURCE is not set"
     exit 1
 fi
-copy2dir "$WEB_SOURCE" "$WEB_HOME" "$WEB_GERRIT_URL"
+copy2dir "$WEB_SOURCE" "$WEB_HOME" "stackforge/compass-web"
 if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "$ADAPTERS_GERRIT_URL"
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters"
 
 if [ "$tempest" == "true" ]; then
     if [[ ! -e /tmp/tempest ]]; then

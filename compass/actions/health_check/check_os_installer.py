@@ -85,27 +85,33 @@ class OsInstallerCheck(base.BaseCheck):
         path_map = {
             'match_kickstart': (
                 '/var/lib/cobbler/kickstarts/',
-                ['default.ks', ]
+                ['default.ks', 'default.seed']
             ),
             'match_snippets': (
                 '/var/lib/cobbler/snippets/',
                 [
-                    'chef',
-                    'chef-validator.pem',
-                    'client.rb',
                     'kickstart_done',
                     'kickstart_start',
-                    'network_config',
-                    'ntp.conf',
-                    'partition_disks',
-                    'partition_select',
-                    'post_anamon',
-                    'post_install_network_config',
-                    'pre_anamon',
-                    'pre_install_network_config',
-                    'rsyslogchef',
-                    'rsyslogconf',
-                    'yum.conf',
+                    'kickstart_pre_partition_disks',
+                    'kickstart_partition_disks',
+                    'kickstart_pre_anamon',
+                    'kickstart_post_anamon',
+                    'kickstart_pre_install_network_config',
+                    'kickstart_network_config',
+                    'kickstart_post_install_network_config',
+                    'kickstart_chef',
+                    'kickstart_ntp',
+                    'kickstart_yum_repo_config',
+                    'preseed_pre_partition_disks',
+                    'preseed_partition_disks',
+                    'preseed_pre_anamon',
+                    'preseed_post_anamon',
+                    'preseed_pre_install_network_config',
+                    'preseed_network_config',
+                    'preseed_post_install_network_config',
+                    'preseed_chef',
+                    'preseed_ntp',
+                    'preseed_apt_repo_config',
                 ]
             ),
             'match_ks_mirror': (
@@ -114,7 +120,7 @@ class OsInstallerCheck(base.BaseCheck):
             ),
             'match_repo_mirror': (
                 '/var/www/cobbler/',
-                ['repo_mirror/ppa_repo']
+                ['repo_mirror']
             ),
             'match_iso': (
                 '/var/lib/cobbler/',

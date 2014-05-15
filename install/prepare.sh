@@ -13,6 +13,8 @@ copy2dir()
             if [ $? -ne 0 ]; then
                 echo "$destdir is not git repo"
                 rm -rf $destdir
+            else
+                echo "$destdir is git repo"
             fi
             cd -
         fi
@@ -33,6 +35,8 @@ copy2dir()
             if [ $? -ne 0 ]; then
                 echo "failed to git clone $repo $destdir"
                 exit 1
+            else
+                echo "git clone $repo $destdir suceeded"
             fi
             cd $destdir
             git reset --hard remotes/origin/$git_branch
@@ -60,11 +64,15 @@ copy2dir()
         if [ $? -ne 0 ]; then
             echo "failed to copy $repo to $destdir"
             exit 1
+        else
+            echo "copy $repo to $destdir succeeded"
         fi
     fi
     if [[ ! -d $destdir && ! -L $destdir ]]; then
-        echo "$destdir doest not exist"
+        echo "$destdir does not exist"
         exit 1
+    else
+        echo "$destdir is ready"
     fi
     cd $SCRIPT_DIR
 }
@@ -139,6 +147,7 @@ if [ -z $WEB_SOURCE ]; then
     exit 1
 fi
 copy2dir "$WEB_SOURCE" "$WEB_HOME" "stackforge/compass-web"
+
 if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
@@ -148,6 +157,10 @@ copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters"
 if [ "$tempest" == "true" ]; then
     if [[ ! -e /tmp/tempest ]]; then
         git clone http://git.openstack.org/openstack/tempest /tmp/tempest
+        if [[ "$?" != "0" ]]; then
+            echo "failed to git clone tempest project"
+            exit 1
+        fi
         cd /tmp/tempest
         git checkout grizzly-eol
     else
@@ -171,6 +184,7 @@ download()
         echo "$package already exists"
     else
         if [[ "$url" =~ (http|https|ftp):// ]]; then
+            echo "downloading $url to /tmp/${package}"
             wget -c --progress=bar:force -O /tmp/${package}.tmp $url
             if [[ "$?" != "0" ]]; then
                 echo "failed to download $package"
@@ -188,6 +202,7 @@ download()
         fi
     fi
     if [[ "$action" == "install" ]]; then
+        echo "install /tmp/$package"
         sudo rpm -Uvh /tmp/$package
         if [[ "$?" != "0" ]]; then
             echo "failed to install $package"
@@ -196,45 +211,58 @@ download()
             echo "$package is installed"
         fi
     elif [[ "$action" == "copy" ]]; then
+        echo "copy /tmp/$package to $destdir"
         destdir=$4
         sudo cp /tmp/$package $destdir
     elif [[ "$action" == "unzip" ]]; then
         unzipped_package=${package%%.zip}
+        destdir=$4
+        echo "unzip /tmp/$package to /tmp/$unzipped_package and copy to $destdir"
         sudo rm -rf /tmp/$unzipped_package
-        sudo unzip -o /tmp/$package /tmp/
+        pushd `pwd`
+        cd /tmp
+        sudo unzip -o /tmp/$package
+        popd
         sudo cp -rf /tmp/$unzipped_package/. $destdir
     fi
 }
 
 # download js mvc
-download http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip $JS_MVC.zip unzip $WEB_HOME/public/
+download http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip $JS_MVC.zip unzip $WEB_HOME/public/ || exit $?
 
 # download cobbler related packages
-ppa_repo_packages="ntp-4.2.6p5-1.el6.${IMAGE_TYPE,,}.$IMAGE_ARCH.rpm
-                    openssh-clients-5.3p1-94.el6.${IMAGE_ARCH}.rpm
-                    iproute-2.6.32-31.el6.${IMAGE_ARCH}.rpm
-                    wget-1.12-1.8.el6.${IMAGE_ARCH}.rpm
-                    ntpdate-4.2.6p5-1.el6.${IMAGE_TYPE,,}.${IMAGE_ARCH}.rpm"
-for f in $ppa_repo_packages
-do
-    download ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f
+centos_ppa_repo_packages="
+ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
+openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+iproute-2.6.32-31.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm"
+
+for f in $centos_ppa_repo_packages; do
+    download ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f || exit $?
 done
 
-ppa_repo_rsyslog_packages="json-c-0.10-2.el6.$IMAGE_ARCH.rpm
-                           libestr-0.1.9-1.el6.$IMAGE_ARCH.rpm
-                           libgt-0.3.11-1.el6.$IMAGE_ARCH.rpm
-                           liblogging-1.0.4-1.el6.$IMAGE_ARCH.rpm
-                           rsyslog-7.6.3-1.el6.$IMAGE_ARCH.rpm"
-for f in $ppa_repo_rsyslog_packages
-do
-    download http://rpms.adiscon.com/v7-stable/epel-6/${IMAGE_ARCH}/RPMS/$f $f
+centos_ppa_repo_rsyslog_packages="
+json-c-0.10-2.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+libestr-0.1.9-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+libgt-0.3.11-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+liblogging-1.0.4-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+rsyslog-7.6.3-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
+
+for f in $centos_ppa_repo_rsyslog_packages; do
+    download http://rpms.adiscon.com/v7-stable/epel-6/${IMAGE_ARCH}/RPMS/$f $f || exit $?
 done
 
-download "$IMAGE_SOURCE" ${IMAGE_NAME}-${IMAGE_ARCH}.iso
-download $CHEF_CLIENT chef-client
+download $CHEF_CLIENT `basename $CHEF_CLIENT` || exit $?
+download $CENTOS_CHEF_CLIENT `basename $CENTOS_CHEF_CLIENT` || exit $?
+download $UBUNTU_CHEF_CLIENT `basename $UBUNTU_CHEF_CLIENT` || exit $?
 
 # download chef related packages
-download $CHEF_SRV chef-server
+download $CHEF_SRV chef-server || exit $?
+
+# download os images
+download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
+download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
 
 # Install net-snmp
 sudo cp -rn /etc/snmp/snmp.conf /root/backup/

@@ -30,28 +30,47 @@ export NAMESERVER_DOMAINS=ods.com
 # the repo url
 export WEB_SOURCE='http://git.openstack.org/stackforge'/compass-web
 export ADAPTERS_SOURCE='http://git.openstack.org/stackforge/compass-adapters'
-export WEB_GERRIT_URL='https://review.openstack.org/stackforge/compass-web'
-export ADAPTERS_GERRIT_URL='https://review.openstack.org/stackforge/compass-adapters'
 # set the default cobbler user "cobbler" password, if not set, the default will be cobbler/cobbler
 export CBLR_USER=cobbler
 export CBLR_PASSWD=cobbler
 
 # IMAGE_SOURCE is where you host your CentOS image
-#export IMAGE_SOURCE=http://12.234.32.58/software/OS/centos/centos6.4/CentOS-6.4-x86_64-minimal.iso
 export IMAGE_TYPE=${IMAGE_TYPE:-"CentOS"}
+export IMAGE_TYPE_OTHER=${IMAGE_TYPE_OTHER:-"el"}
 export IMAGE_VERSION_MAJOR=${IMAGE_VERSION_MAJOR:-"6"}
 export IMAGE_VERSION_MINOR=${IMAGE_VERSION_MINOR:-"5"}
 export IMAGE_VERSION=${IMAGE_VERSION:-"${IMAGE_VERSION_MAJOR}.${IMAGE_VERSION_MINOR}"}
 export IMAGE_NAME=${IMAGE_NAME:-"${IMAGE_TYPE}-${IMAGE_VERSION}"}
 export IMAGE_ARCH=${IMAGE_ARCH:-"x86_64"}
-export IMAGE_SOURCE=${IMAGE_SOURCE:-"http://mirror.rackspace.com/${IMAGE_TYPE}/${IMAGE_VERSION_MAJOR}/isos/${IMAGE_ARCH}/${IMAGE_TYPE}-${IMAGE_VERSION}-${IMAGE_ARCH}-minimal.iso"}
+
+export CENTOS_IMAGE_TYPE=${CENTOS_IMAGE_TYPE:-"CentOS"}
+export CENTOS_IMAGE_TYPE_OTHER=${CENTOS_IMAGE_TYPE_OTHER:-"el"}
+export CENTOS_IMAGE_VERSION_MAJOR=${CENTOS_IMAGE_VERSION_MAJOR:-"6"}
+export CENTOS_IMAGE_VERSION_MINOR=${CENTOS_IMAGE_VERSION_MINOR:-"5"}
+export CENTOS_IMAGE_VERSION=${CENTOS_IMAGE_VERSION:-"${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_VERSION_MINOR}"}
+export CENTOS_IMAGE_NAME=${CENTOS_IMAGE_NAME:-"${CENTOS_IMAGE_TYPE}-${CENTOS_IMAGE_VERSION}"}
+export CENTOS_IMAGE_ARCH=${CENTOS_IMAGE_ARCH:-"x86_64"}
+export CENTOS_IMAGE_SOURCE=${CENTOS_IMAGE_SOURCE:-"http://mirror.rackspace.com/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION_MAJOR}/isos/${CENTOS_IMAGE_ARCH}/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}-minimal.iso"}
+
+export UBUNTU_IMAGE_TYPE=${UBUNTU_IMAGE_TYPE:-"Ubuntu"}
+export UBUNTU_IMAGE_VERSION_MAJOR=${UBUNTU_IMAGE_VERSION_MAJOR:-"13"}
+export UBUNTU_IMAGE_VERSION_MINOR=${UBUNTU_IMAGE_VERSION_MINOR:-"04"}
+export UBUNTU_IMAGE_VERSION=${UBUNTU_IMAGE_VERSION:-"${UBUNTU_IMAGE_VERSION_MAJOR}.${UBUNTU_IMAGE_VERSION_MINOR}"}
+export UBUNTU_IMAGE_NAME=${UBUNTU_IMAGE_NAME:-"${UBUNTU_IMAGE_TYPE}-${UBUNTU_IMAGE_VERSION}"}
+export UBUNTU_IMAGE_ARCH=${UBUNTU_IMAGE_ARCH:-"x86_64"}
+export UBUNTU_IMAGE_ARCH_OTHER=${UBUNTU_IMAGE_ARCH_OTHER:-"amd64"}
+export UBUNTU_IMAGE_SOURCE=${UBUNTU_IMAGE_SOURCE:-"http://releases.ubuntu.com/${UBUNTU_IMAGE_VERSION}/${UBUNTU_IMAGE_TYPE,,}-${UBUNTU_IMAGE_VERSION}-server-${UBUNTU_IMAGE_ARCH_OTHER}.iso"}
+
 export COBBLER_PASSWORD=${COBBLER_PASSWORD:-"cobbler"}
 
 # Currently the use of Javascript MVC is set to version 3.2.4
 export JS_MVC=javascriptmvc-3.2.4
 
 # set the chef packages download path 
-export CHEF_SRV=http://opscode-omnibus-packages.s3.amazonaws.com/el/6/x86_64/chef-server-11.0.8-1.el6.x86_64.rpm
+export CHEF_SRV=${CHEF_SRV:-"http://opscode-omnibus-packages.s3.amazonaws.com/${IMAGE_TYPE_OTHER}/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-server-11.0.8-1.${IMAGE_TYPE_OTHER}${IMAGE_VERSION_MAJOR}.${IMAGE_ARCH}.rpm"}
+export CHEF_CLIENT=${CHEF_CLIENT:-"http://opscode-omnibus-packages.s3.amazonaws.com/${IMAGE_TYPE_OTHER}/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/chef-11.8.0-1.${IMAGE_TYPE_OTHER}${IMAGE_VERSION_MAJOR}.${IMAGE_ARCH}.rpm"}
+export CENTOS_CHEF_CLIENT=${CENTOS_CHEF_CLIENT:-"http://opscode-omnibus-packages.s3.amazonaws.com/${CENTOS_IMAGE_TYPE_OTHER}/${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/chef-11.8.0-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"}
+export UBUNTU_CHEF_CLIENT=${UBUNTU_CHEF_CLIENT:-"http://opscode-omnibus-packages.s3.amazonaws.com/${UBUNTU_IMAGE_TYPE,,}/${UBUNTU_IMAGE_VERSION}/${UBUNTU_IMAGE_ARCH}/chef_11.8.0-1.${UBUNTU_IMAGE_TYPE,,}.${UBUNTU_IMAGE_VERSION}_${UBUNTU_IMAGE_ARCH_OTHER}.deb"}
 
 # Set Chef password for Chef web UI
 export CHEF_PASSWD=root1234

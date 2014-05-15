@@ -55,28 +55,30 @@ sudo /opt/compass/bin/addcookbooks.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add cookbooks"
     exit 1
+else
+    echo "cookbooks are added to chef server"
 fi
 sudo /opt/compass/bin/adddatabags.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add databags"
     exit 1
+else
+    echo "databags are added to chef server"
 fi
 sudo /opt/compass/bin/addroles.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add roles"
     exit 1
-fi
-
-# copy the chef validatation keys to cobbler snippets
-sudo cp -rf /etc/chef-server/chef-validator.pem /var/lib/cobbler/snippets/chef-validator.pem
-if [[ "$?" != "0" ]]; then
-    echo "failed to copy chef validation keys to cobbler snippets"
-    exit 1
+else
+    echo "roles are added to chef server"
 fi
 
 sudo /opt/compass/bin/refresh.sh
 if [[ "$?" != "0" ]]; then
-    echo "failed to refresh compassd service
+    echo "failed to refresh compassd service"
+    exit 1
+else
+    echo "compassed service is refreshed"
 fi
 
 sudo service httpd status
@@ -86,6 +88,13 @@ if [[ "$?" != "0" ]]; then
 else
     echo "httpd has already started"
 fi
+
+mkdir -p /var/log/redis
+chown -R redis:root /var/log/redis
+mkdir -p /var/lib/redis/
+chown -R redis:root /var/lib/redis
+mkdir -p /var/run/redis
+chown -R redis:root /var/run/redis
 
 sudo service redis status
 if [[ "$?" != "0" ]]; then
@@ -101,4 +110,10 @@ if [[ "$?" != "0" ]]; then
     exit 1
 else
     echo "compassd has already started"
+fi
+
+sudo compass check
+if [[ "$?" != "0" ]]; then
+    echo "compass check failed"
+    exit 1
 fi

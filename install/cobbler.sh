@@ -2,7 +2,7 @@
 #
 
 echo "Installing cobbler related packages"
-sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart
+sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart reprepro
 if [[ "$?" != "0" ]]; then
     echo "failed to install cobbler related packages"
     exit 1
@@ -95,15 +95,16 @@ sudo cp -rn /var/lib/cobbler/kickstarts/ /root/backup/cobbler/
 sudo cp -rn /var/lib/cobbler/triggers /root/backup/cobbler/
 sudo rm -rf /var/lib/cobbler/snippets/*
 sudo cp -rf $ADAPTERS_HOME/cobbler/snippets/* /var/lib/cobbler/snippets/
-sudo cp -rf $HOME/.ssh/id_rsa.pub /var/lib/cobbler/snippets/
 sudo cp -rf $ADAPTERS_HOME/cobbler/triggers/* /var/lib/cobbler/triggers/
 sudo chmod 777 /var/lib/cobbler/snippets
 sudo chmod -R 666 /var/lib/cobbler/snippets/*
 sudo chmod -R 755 /var/lib/cobbler/triggers
-sudo sed -i "s/# \$compass_ip \$compass_hostname/$ipaddr $HOSTNAME/g" /var/lib/cobbler/snippets/hosts
 sudo rm -f /var/lib/cobbler/kickstarts/default.ks
+sudo rm -f /var/lib/cobbler/kickstarts/default.seed
 sudo cp -rf $ADAPTERS_HOME/cobbler/kickstarts/default.ks /var/lib/cobbler/kickstarts/
+sudo cp -rf $ADAPTERS_HOME/cobbler/kickstarts/default.seed /var/lib/cobbler/kickstarts/
 sudo chmod 666 /var/lib/cobbler/kickstarts/default.ks
+sudo chmod 666 /var/lib/cobbler/kickstarts/default.seed
 sudo mkdir /var/www/cblr_ks
 sudo chmod 755 /var/www/cblr_ks
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/cobbler.conf /etc/httpd/conf.d/
@@ -120,6 +121,8 @@ sudo service iptables status
 if [[ "$?" == "0" ]]; then
     echo "iptables is running"
     exit 1
+else
+    echo "iptables is already stopped"
 fi
 
 echo "disable selinux temporarily"
@@ -130,176 +133,322 @@ sudo service cobblerd restart
 sudo cobbler get-loaders
 sudo cobbler sync
 sudo service xinetd restart
-sudo cobbler check
 
 echo "Checking if httpd is running"
 sudo service httpd status
 if [[ "$?" == "0" ]]; then
-  echo "httpd is running."
+    echo "httpd is running."
 else
-  echo "httpd is not running"
-  exit 1
+    echo "httpd is not running"
+    exit 1
 fi
 
 echo "Checking if dhcpd is running"
 sudo service dhcpd status
 if [[ "$?" == "0" ]]; then
-  echo "dhcpd is running."
+    echo "dhcpd is running."
 else
-  echo "dhcpd is not running"
-  exit 1
+    echo "dhcpd is not running"
+    exit 1
 fi
 
 echo "Checking if named is running"
 sudo service named status
 if [[ "$?" == "0" ]]; then
-  echo "named is running."
+    echo "named is running."
 else
-  echo "named is not running"
-  exit 1
+    echo "named is not running"
+    exit 1
 fi
 
 echo "Checking if xinetd is running"
 sudo service xinetd status
 if [[ "$?" == "0" ]]; then
-  echo "xinetd is running."
+    echo "xinetd is running."
 else
-  echo "xinetd is not running"
-  exit 1
+    echo "xinetd is not running"
+    exit 1
 fi
 
 echo "Checking if cobblerd is running"
+sudo service cobblerd status
 if [[ "$?" == "0" ]]; then
-  echo "cobblerd is running."
+    echo "cobblerd is running."
 else
-  echo "cobblerd is not running"
-  exit 1
+    echo "cobblerd is not running"
+    exit 1
 fi
 
-# create repo
-sudo mkdir -p /var/lib/cobbler/repo_mirror/ppa_repo
-found_ppa_repo=0
+# create centos repo
+sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_ppa_repo
+found_centos_ppa_repo=0
 for repo in $(cobbler repo list); do
-if [ "$repo" == "ppa_repo" ]; then
-found_ppa_repo=1
-fi
+    if [ "$repo" == "centos_ppa_repo" ]; then
+        found_centos_ppa_repo=1
+    fi
 done
 
-if [ "$found_ppa_repo" == "0" ]; then
-sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/ppa_repo --name=ppa_repo --mirror-locally=Y
-if [[ "$?" != "0" ]]; then
-    echo "failed to add ppa_repo"
-    exit 1
+if [ "$found_centos_ppa_repo" == "0" ]; then
+    sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_ppa_repo --name=centos_ppa_repo --mirror-locally=Y --arch=${CENTOS_IMAGE_ARCH}
+    if [[ "$?" != "0" ]]; then
+        echo "failed to add centos_ppa_repo"
+        exit 1
+    else
+        echo "centos_ppa_repo is added"
+    fi
 else
-    echo "ppa_repo is added"
-fi
-else
-echo "repo ppa_repo has already existed."
+    echo "repo centos_ppa_repo has already existed."
 fi
 
 # download packages
-cd /var/lib/cobbler/repo_mirror/ppa_repo/
-ppa_repo_packages="ntp-4.2.6p5-1.el6.${IMAGE_TYPE,,}.$IMAGE_ARCH.rpm
-                    openssh-clients-5.3p1-94.el6.${IMAGE_ARCH}.rpm
-                    iproute-2.6.32-31.el6.${IMAGE_ARCH}.rpm
-                    wget-1.12-1.8.el6.${IMAGE_ARCH}.rpm
-                    ntpdate-4.2.6p5-1.el6.${IMAGE_TYPE,,}.${IMAGE_ARCH}.rpm"
-for f in $ppa_repo_packages
-do
-    download ftp://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/ppa_repo/
+cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+centos_ppa_repo_packages="
+ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
+openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+iproute-2.6.32-31.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm"
+for f in $centos_ppa_repo_packages; do
+    download ftp://rpmfind.net/linux/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION_MAJOR}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
 done
 
-ppa_repo_rsyslog_packages="json-c-0.10-2.el6.$IMAGE_ARCH.rpm
-                           libestr-0.1.9-1.el6.$IMAGE_ARCH.rpm
-                           libgt-0.3.11-1.el6.$IMAGE_ARCH.rpm
-                           liblogging-1.0.4-1.el6.$IMAGE_ARCH.rpm
-                           rsyslog-7.6.3-1.el6.$IMAGE_ARCH.rpm"
-for f in $ppa_repo_rsyslog_packages
-do
-    download http://rpms.adiscon.com/v7-stable/epel-6/${IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/ppa_repo/
+centos_ppa_repo_rsyslog_packages="
+json-c-0.10-2.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+libestr-0.1.9-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+libgt-0.3.11-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+liblogging-1.0.4-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+rsyslog-7.6.3-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
+for f in $centos_ppa_repo_rsyslog_packages; do
+    download http://rpms.adiscon.com/v7-stable/epel-{CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
 done
 
-# download chef client for ppa repo
-download $CHEF_CLIENT `basename $CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/ppa_repo/
+# download chef client for centos ppa repo
+download $CENTOS_CHEF_CLIENT `basename $CENTOS_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+
+# create centos repo
 cd ..
-sudo createrepo ppa_repo
+sudo createrepo centos_ppa_repo
 if [[ "$?" != "0" ]]; then
-    echo "failed to createrepo ppa_repo"
+    echo "failed to createrepo centos_ppa_repo"
     exit 1
 else
-    echo "ppa_repo is created"
+    echo "centos_ppa_repo is created"
+fi
+
+# create ubuntu repo
+sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo
+found_ubuntu_ppa_repo=0
+for repo in $(cobbler repo list); do
+    if [ "$repo" == "ubuntu_ppa_repo" ]; then
+        found_ubuntu_ppa_repo=1
+    fi
+done
+
+if [ "$found_ubuntu_ppa_repo" == "0" ]; then
+    sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/ubuntu_ppa_repo --name=ubuntu_ppa_repo --mirror-locally=Y --arch=${UBUNTU_IMAGE_ARCH} --apt-dists=ppa --apt-components=main
+    if [[ "$?" != "0" ]]; then
+        echo "failed to add ubuntu_ppa_repo"
+        exit 1
+    else
+        echo "ubuntu_ppa_repo is added"
+    fi
+else
+    echo "repo ubuntu_ppa_repo has already existed."
+fi
+
+cd /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/
+if [ ! -e /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf/distributions ]; then
+    echo "create ubuntu ppa repo distribution"
+    mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf
+    cat << EOF > /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf/distributions
+Origin: ppa
+Label: ppa_repo
+Suite: stable
+Codename: ppa
+Version: 0.1
+Architectures: i386 amd64 source
+Components: main
+Description: ppa repo
+EOF
+    chmod 644 /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf/distributions
+else
+    echo "ubuntu ppa repo distribution file exists."
+fi
+
+# download chef client for ubuntu ppa repo
+download $UBUNTU_CHEF_CLIENT `basename $UBUNTU_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/ || exit $?
+
+cd ..
+find ubuntu_ppa_repo -name \*.deb -exec reprepro -Vb ubuntu_ppa_repo includedeb ppa {} \;
+if [ "$?" != "0" ]; then
+    echo "failed to create ubuntu_ppa_repo"
+    exit 1
+else
+    echo  "ubuntu_ppa_repo is created"
 fi
 
 sudo cobbler reposync
+if [[ "$?" != "0" ]]; then
+    echo "cobbler reposync failed"
+    exit 1
+else
+    echo "cobbler repos are synced"
+fi
 
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
-download "$IMAGE_SOURCE" ${IMAGE_NAME}-${IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/
-sudo mkdir -p /mnt/${IMAGE_NAME}-${IMAGE_ARCH}
-if [ $(mount | grep -c "/mnt/${IMAGE_NAME}-${IMAGE_ARCH} ") -eq 0 ]; then
-sudo mount -o loop /var/lib/cobbler/iso/${IMAGE_NAME}-${IMAGE_ARCH}.iso /mnt/${IMAGE_NAME}-${IMAGE_ARCH}
-if [[ "$?" != "0" ]]; then
-    echo "failed to mount image /mnt/${IMAGE_NAME}-${IMAGE_ARCH}"
-    exit 1
+download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+sudo mkdir -p /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
+if [ $(mount | grep -c "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} ") -eq 0 ]; then
+    sudo mount -o loop /var/lib/cobbler/iso/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
+    if [[ "$?" != "0" ]]; then
+        echo "failed to mount image /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is mounted"
+    fi
 else
-    echo "/mnt/${IMAGE_NAME}-${IMAGE_ARCH} is mounted"
+    echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already mounted"
 fi
+
+download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+sudo mkdir -p /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
+if [ $(mount | grep -c "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} ") -eq 0 ]; then
+    sudo mount -o loop /var/lib/cobbler/iso/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
+    if [[ "$?" != "0" ]]; then
+        echo "failed to mount image /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is mounted"
+    fi
 else
-echo "/mnt/${IMAGE_NAME}-${IMAGE_ARCH} has already mounted"
+    echo "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already mounted"
 fi
 
 # add distro
-found_distro=0
+found_centos_distro=0
 for distro in $(cobbler distro list); do
-if [ "$distro" == "${IMAGE_NAME}-${IMAGE_ARCH}" ]; then
-found_distro=1
-fi
+    if [ "$distro" == "${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" ]; then
+        found_centos_distro=1
+    fi
 done
 
-if [ "$found_distro" == "0" ]; then
-sudo cobbler import --path=/mnt/${IMAGE_NAME}-${IMAGE_ARCH} --name=${IMAGE_NAME} --arch=${IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
-if [[ "$?" != "0" ]]; then
-    echo "failed to import /mnt/${IMAGE_NAME}-${IMAGE_ARCH}"
-    exit 1
+if [ "$found_centos_distro" == "0" ]; then
+    sudo cobbler import --path=/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} --name=${CENTOS_IMAGE_NAME} --arch=${CENTOS_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
+    if [[ "$?" != "0" ]]; then
+        echo "failed to import /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is imported" 
+    fi
 else
-    echo "/mnt/${IMAGE_NAME}-${IMAGE_ARCH} is imported" 
+    echo "distro ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already existed"
+    sudo cobbler distro edit --name=${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} --arch=${CENTOS_IMAGE_ARCH} --breed=redhat
+    if [[ "$?" != "0" ]]; then
+        echo "failed to edit distro ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "distro ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is updated"
+    fi
 fi
+
+found_ubuntu_distro=0
+for distro in $(cobbler distro list); do
+    if [ "$distro" == "${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" ]; then
+        found_ubuntu_distro=1
+    fi
+done
+
+if [ "$found_ubuntu_distro" == "0" ]; then
+    sudo cobbler import --path=/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --name=${UBUNTU_IMAGE_NAME} --arch=${UBUNTU_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
+    if [[ "$?" != "0" ]]; then
+        echo "failed to import /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is imported" 
+    fi
 else
-echo "distro ${IMAGE_NAME}-${IMAGE_ARCH} has already existed"
-sudo cobbler distro edit --name=${IMAGE_NAME}-${IMAGE_ARCH} --arch=${IMAGE_ARCH} --breed=redhat
-if [[ "$?" != "0" ]]; then
-    echo "failed to edit distro ${IMAGE_NAME}-${IMAGE_ARCH}"
-    exit 1
-else
-    echo "distro ${IMAGE_NAME}-${IMAGE_ARCH} is updated"
-fi
+    echo "distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed"
+    sudo cobbler distro edit --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --arch=${UBUNTU_IMAGE_ARCH} --breed=ubuntu
+    if [[ "$?" != "0" ]]; then
+        echo "failed to edit distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is updated"
+    fi
 fi
 
 # add profile
-found_profile=0
+centos_found_profile=0
 for profile in $(cobbler profile list); do
-if [ "$profile" == "${IMAGE_NAME}-${IMAGE_ARCH}" ]; then
-found_profile=1
-fi
+    if [ "$profile" == "${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" ]; then
+        centos_found_profile=1
+    fi
 done
 
-if [ "$found_profile" == "0" ]; then
-sudo cobbler profile add --name="${IMAGE_NAME}-${IMAGE_ARCH}" --repo=ppa_repo --distro="${IMAGE_NAME}-${IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${IMAGE_NAME}-${IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+if [ "$centos_found_profile" == "0" ]; then
+    sudo cobbler profile add --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+    if [[ "$?" != "0" ]]; then
+        echo "failed to add profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is added"
+    fi
+else
+    echo "profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already existed."
+    sudo cobbler profile edit --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+    if [[ "$?" != "0" ]]; then
+        echo "failed to edit profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is updated"
+    fi
+fi
+
+ubuntu_found_profile=0
+for profile in $(cobbler profile list); do
+    if [ "$profile" == "${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" ]; then
+        ubuntu_found_profile=1
+    fi
+done
+
+if [ "$ubuntu_found_profile" == "0" ]; then
+    sudo cobbler profile add --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
+    if [[ "$?" != "0" ]]; then
+        echo "failed to add profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is added"
+    fi
+else
+    echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed."
+    sudo cobbler profile edit --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
+    if [[ "$?" != "0" ]]; then
+        echo "failed to edit profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
+        exit 1
+    else
+        echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is updated"
+    fi
+fi
+
+#clean ubuntu repo
+sudo cobbler repo remove --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
+
+sudo cobbler reposync
 if [[ "$?" != "0" ]]; then
-    echo "failed to add profile ${IMAGE_NAME}-${IMAGE_ARCH}"
+    echo "cobbler reposync failed"
     exit 1
 else
-    echo "profile ${IMAGE_NAME}-${IMAGE_ARCH} is added"
+    echo "cobbler repos are synced"
 fi
-else
-echo "profile $IMAGE_NAME has already existed."
-sudo cobbler profile edit --name="${IMAGE_NAME}-${IMAGE_ARCH}" --repo=ppa_repo --distro="${IMAGE_NAME}-${IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${IMAGE_NAME}-${IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+
+echo "Checking cobbler is OK"
+sudo cobbler check
 if [[ "$?" != "0" ]]; then
-    echo "failed to edit profile ${IMAGE_NAME}-${IMAGE_ARCH}"
+    echo "cobbler check failed"
     exit 1
 else
-    echo "profile ${IMAGE_NAME}-${IMAGE_ARCH} is updated"
-fi
+    echo "cobbler check passed"
 fi
 
 echo "Cobbler configuration complete!"

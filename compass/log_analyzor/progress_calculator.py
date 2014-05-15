@@ -29,6 +29,143 @@ from compass.log_analyzor.line_matcher import LineMatcher
 
 # TODO(weidong): reconsider intialization method for the following.
 OS_INSTALLER_CONFIGURATIONS = {
+    'Ubuntu': AdapterItemMatcher(
+        file_matchers=[
+            FileMatcher(
+                filename='syslog',
+                min_progress=0.0,
+                max_progress=1.0,
+                line_matchers={
+                    'start': LineMatcher(
+                        pattern=r'.*',
+                        progress=.05,
+                        message_template='start installing',
+                        unmatch_nextline_next_matcher_name='start',
+                        match_nextline_next_matcher_name='ethdetect'
+                    ),
+                    'ethdetect': LineMatcher(
+                        pattern=r'Menu.*item.*\'ethdetect\'.*selected',
+                        progress=.1,
+                        message_template='ethdetect selected',
+                        unmatch_nextline_next_matcher_name='ethdetect',
+                        match_nextline_next_matcher_name='netcfg'
+                    ),
+                    'netcfg': LineMatcher(
+                        pattern=r'Menu.*item.*\'netcfg\'.*selected',
+                        progress=.12,
+                        message_template='netcfg selected',
+                        unmatch_nextline_next_matcher_name='netcfg',
+                        match_nextline_next_matcher_name='network-preseed'
+                    ),
+                    'network-preseed': LineMatcher(
+                        pattern=r'Menu.*item.*\'network-preseed\'.*selected',
+                        progress=.15,
+                        message_template='network-preseed selected',
+                        unmatch_nextline_next_matcher_name='network-preseed',
+                        match_nextline_next_matcher_name='localechooser'
+                    ),
+                    'localechoose': LineMatcher(
+                        pattern=r'Menu.*item.*\'localechooser\'.*selected',
+                        progress=.18,
+                        message_template='localechooser selected',
+                        unmatch_nextline_next_matcher_name='localechooser',
+                        match_nextline_next_matcher_name='download-installer'
+                    ),
+                    'download-installer': LineMatcher(
+                        pattern=r'Menu.*item.*\'download-installer\'.*selected',
+                        progress=.2,
+                        message_template='download installer selected',
+                        unmatch_nextline_next_matcher_name='download-installer',
+                        match_nextline_next_matcher_name='clock-setup'
+                    ),
+                    'clock-setup': LineMatcher(
+                        pattern=r'Menu.*item.*\'clock-setup\'.*selected',
+                        progress=.3,
+                        message_template='clock-setup selected',
+                        unmatch_nextline_next_matcher_name='clock-setup',
+                        match_nextline_next_matcher_name='disk-detect'
+                    ),
+                    'disk-detect': LineMatcher(
+                        pattern=r'Menu.*item.*\'disk-detect\'.*selected',
+                        progress=.32,
+                        message_template='disk-detect selected',
+                        unmatch_nextline_next_matcher_name='disk-detect',
+                        match_nextline_next_matcher_name='partman-base'
+                    ),
+                    'partman-base': LineMatcher(
+                        pattern=r'Menu.*item.*\'partman-base\'.*selected',
+                        progress=.35,
+                        message_template='partman-base selected',
+                        unmatch_nextline_next_matcher_name='partman-base',
+                        match_nextline_next_matcher_name='live-installer'
+                    ),
+                    'live-installer': LineMatcher(
+                        pattern=r'Menu.*item.*\'live-installer\'.*selected',
+                        progress=.45,
+                        message_template='live-installer selected',
+                        unmatch_nextline_next_matcher_name='live-installer',
+                        match_nextline_next_matcher_name='pkgsel'
+                    ),
+                    'pkgsel': LineMatcher(
+                        pattern=r'Menu.*item.*\'pkgsel\'.*selected',
+                        progress=.5,
+                        message_template='pkgsel selected',
+                        unmatch_nextline_next_matcher_name='pkgsel',
+                        match_nextline_next_matcher_name='grub-installer'
+                    ),
+                    'grub-installer': LineMatcher(
+                        pattern=r'Menu.*item.*\'grub-installer\'.*selected',
+                        progress=.9,
+                        message_template='grub-installer selected',
+                        unmatch_nextline_next_matcher_name='grub-installer',
+                        match_nextline_next_matcher_name='finish-install'
+                    ),
+                    'finish-install': LineMatcher(
+                        pattern=r'Menu.*item.*\'finish-install\'.*selected',
+                        progress=.95,
+                        message_template='finish-install selected',
+                        unmatch_nextline_next_matcher_name='finish-install',
+                        match_nextline_next_matcher_name='finish-install-done'
+                    ),
+                    'finish-install-done': LineMatcher(
+                        pattern=r'Running.*finish-install.d/.*save-logs',
+                        progress=1.0,
+                        message_template='finish-install is done',
+                        unmatch_nextline_next_matcher_name='finish-install-done',
+                        match_nextline_next_matcher_name='exit'
+                    ),
+                } 
+            ),
+            FileMatcher(
+                filename='status',
+                min_progress=.2,
+                max_progress=.3,
+                line_matchers={
+                    'start': LineMatcher(
+                        pattern=r'Package: (?P<package>.*)',
+                        progress=IncrementalProgress(0.0, 0.99, 0.05),
+                        message_template='Installing udeb %(package)s',
+                        unmatch_nextline_next_matcher_name='start',
+                        match_nextline_next_matcher_name='start'
+                    )
+                }
+            ),
+            FileMatcher(
+                filename='initial-status',
+                min_progress=.5,
+                max_progress=.9,
+                line_matchers={
+                    'start': LineMatcher(
+                        pattern=r'Package: (?P<package>.*)',
+                        progress=IncrementalProgress(0.0, 0.99, 0.01),
+                        message_template='Installing deb %(package)s',
+                        unmatch_nextline_next_matcher_name='start',
+                        match_nextline_next_matcher_name='start'
+                    )
+                }
+            ),
+        ]
+    ),
     'CentOS': AdapterItemMatcher(
         file_matchers=[
             FileMatcher(
@@ -257,7 +394,21 @@ ADAPTER_CONFIGURATIONS = [
             item_matcher=PACKAGE_INSTALLER_CONFIGURATIONS['openstack'],
             min_progress=0.6,
             max_progress=1.0)
-    )
+    ),
+    AdapterMatcher(
+        os_matcher=OSMatcher(
+            os_installer_name='cobbler',
+            os_pattern='Ubuntu.*',
+            item_matcher=OS_INSTALLER_CONFIGURATIONS['Ubuntu'],
+            min_progress=0.0,
+            max_progress=0.6),
+        package_matcher=PackageMatcher(
+            package_installer_name='chef',
+            target_system='openstack',
+            item_matcher=PACKAGE_INSTALLER_CONFIGURATIONS['openstack'],
+            min_progress=0.6,
+            max_progress=1.0)
+    ),
 ]
 
 
@@ -270,6 +421,9 @@ def _get_adapter_matcher(
         if configuration.match(os_installer, os_name,
                                package_installer, target_system):
             return configuration
+        else:
+            logging.debug('configuration %s does not match %s and %s',
+                          configuration, os_name, target_system)
 
     logging.error('No configuration found with os installer %s os %s '
                   'package_installer %s, target_system %s',

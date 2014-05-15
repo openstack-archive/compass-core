@@ -16,6 +16,8 @@
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
+import logging
+
 from celery.signals import setup_logging
 
 from compass.actions import clean_deployment
@@ -51,7 +53,10 @@ def pollswitch(ip_addr, req_obj='mac', oper='SCAN'):
     :param oper: the operation to query the switch (SCAN, GET, SET).
     :type oper: str
     """
-    poll_switch.poll_switch(ip_addr, req_obj=req_obj, oper=oper)
+    try:
+        poll_switch.poll_switch(ip_addr, req_obj=req_obj, oper=oper)
+    except Exception as error:
+        logging.exception(error)        
 
 
 @celery.task(name='compass.tasks.deploy')
@@ -61,7 +66,10 @@ def deploy_clusters(cluster_hosts):
     :param cluster_hosts: the cluster and hosts of each cluster to deploy.
     :type cluster_hosts: dict of int to list of int
     """
-    deploy.deploy(cluster_hosts)
+    try:
+        deploy.deploy(cluster_hosts)
+    except Exception as error:
+        logging.exception(error)
 
 
 @celery.task(name='compass.tasks.reinstall')
@@ -71,7 +79,10 @@ def reinstall_clusters(cluster_hosts):
     :param cluster_hosts: the cluster and hosts of each cluster to reinstall.
     :type cluster_hosts: dict of int to list of int
     """
-    reinstall.reinstall(cluster_hosts)
+    try:
+        reinstall.reinstall(cluster_hosts)
+    except Exception as error:
+        logging.exception(error)
 
 
 @celery.task(name='compass.tasks.clean_deployment')
@@ -81,7 +92,10 @@ def clean_clusters_deployment(cluster_hosts):
     :param cluster_hosts: the cluster and hosts of each cluster to clean.
     :type cluster_hosts: dict of int to list of int
     """
-    clean_deployment.clean_deployment(cluster_hosts)
+    try:
+        clean_deployment.clean_deployment(cluster_hosts)
+    except Exception as error:
+        logging.exception(error)
 
 
 @celery.task(name='compass.tasks.clean_installing_progress')
@@ -91,7 +105,10 @@ def clean_clusters_installing_progress(cluster_hosts):
     :param cluster_hosts: the cluster and hosts of each cluster to clean.
     :type cluster_hosts: dict of int to list of int
     """
-    clean_installing_progress.clean_installing_progress(cluster_hosts)
+    try:
+        clean_installing_progress.clean_installing_progress(cluster_hosts)
+    except Exception as error:
+        logging.exception(error)
 
 
 @celery.task(name='compass.tasks.update_progress')
@@ -101,4 +118,7 @@ def update_clusters_progress(cluster_hosts):
     :param cluster_hosts: the cluster and hosts of each cluster to update.
     :type cluster_hosts: dict of int to list of int
     """
-    update_progress.update_progress(cluster_hosts)
+    try:
+        update_progress.update_progress(cluster_hosts)
+    except Exception as error:
+        logging.exception(error)

@@ -6,7 +6,7 @@ sudo mkdir -p /root/backup/chef
 
 sudo rpm -q chef-server
 if [[ "$?" != "0" ]]; then
-    download $CHEF_SRV chef-server install
+    download $CHEF_SRV chef-server install || exit $?
 else
     echo "chef-server has already installed"
 fi
@@ -47,7 +47,7 @@ fi
 # configure chef client and knife
 rpm -q chef
 if [[ "$?" != "0" ]]; then
-    download $CHEF_CLIENT chef-client install
+    download $CHEF_CLIENT `basename $CHEF_CLIENT` install || exit $?
 else
     echo "chef has already installed"
 fi

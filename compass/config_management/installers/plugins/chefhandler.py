@@ -19,7 +19,6 @@
 import fnmatch
 import functools
 import logging
-import traceback
 
 from compass.config_management.installers import package_installer
 from compass.config_management.utils.config_translator import ConfigTranslator
@@ -220,11 +219,10 @@ class Installer(package_installer.Installer):
                 client.delete()
                 logging.debug(
                     'delete %s for host %s ', target_system, node_name)
-            except Exception:
+            except Exception as error:
                 logging.debug(
                     'failed to delete %s for host %s: %s',
-                    target_system, node_name,
-                    ''.join(traceback.format_stack()))
+                    target_system, node_name, error)
 
         else:
             node.run_list = []
@@ -355,11 +353,10 @@ class Installer(package_installer.Installer):
             logging.debug(
                 'databag item %s is removed from target_system %s',
                 bag_item_name, target_system)
-        except Exception:
+        except Exception as error:
             logging.debug(
                 'no databag item %s to delete from target_system %s: %s',
-                bag_item_name, target_system,
-                ''.join(traceback.format_stack()))
+                bag_item_name, target_system, error)
 
         del databag_items[bag_item_name]
 

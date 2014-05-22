@@ -12,27 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
-from flask.ext.login import LoginManager
-from flask import Flask
-
-
-from compass.api.v1.api import v1_app
-from compass.db.models import SECRET_KEY
-
-
-app = Flask(__name__)
-app.debug = True
-app.register_blueprint(v1_app, url_prefix='/v1.0')
-
-
-app.secret_key = SECRET_KEY
-app.config['AUTH_HEADER_NAME'] = 'X-Auth-Token'
-app.config['REMEMBER_COOKIE_DURATION'] = datetime.timedelta(minutes=30)
-
-
-login_manager = LoginManager()
-login_manager.login_view = 'login'
-login_manager.init_app(app)
-
-from compass.api import api as compass_api
+def validate_cluster_config():
+    # TODO(xiaodong): Add openstack specific validation here.
+    pass

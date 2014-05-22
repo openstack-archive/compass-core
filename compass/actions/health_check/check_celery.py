@@ -94,11 +94,7 @@ class CeleryCheck(base.BaseCheck):
         try:
             insp = inspect()
             celery_stats = inspect.stats(insp)
-            if not celery_stats:
-                self._set_status(
-                    0,
-                    "[%s]Error: No running Celery workers were found."
-                    % self.NAME)
+            print celery_stats,
         except IOError as error:
             self._set_status(
                 0,

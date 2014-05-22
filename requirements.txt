@@ -12,3 +12,4 @@ PyChef
 redis
 flask-wtf
 itsdangerous
+importlib

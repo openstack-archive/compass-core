@@ -112,11 +112,14 @@ def poll_switch(ip_addr, req_obj='mac', oper="SCAN"):
                 continue
 
             machine = session.query(Machine).filter_by(
-                mac=mac, port=port, switch_id=switch_id).first()
+                mac=mac, switch_id=switch_id).first()
             if not machine:
                 machine = Machine(mac=mac, port=port, vlan=vlan)
+                machine.switch_id = switch_id
                 session.add(machine)
-                machine.switch = switch
+            else:
+                machine.port = port
+                machine.vlan = vlan
 
         logging.debug('update switch %s state to under monitoring', switch)
         if prev_state != under_monitoring:

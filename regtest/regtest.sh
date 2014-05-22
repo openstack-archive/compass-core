@@ -164,7 +164,7 @@ else
     POLL_SWITCHES_FLAG="poll_switches"
 fi
 
-${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG}
+${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --adapter_os_name="${ADAPTER_OS_NAME_PATTERN}" --adapter_target_system="${ADAPTER_TARGET_SYSTEM_NAME}" --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG}
 rc=$?
 # Tear down machines after the test
 if [[ $rc != 0 ]]; then

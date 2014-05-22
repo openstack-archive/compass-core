@@ -73,6 +73,22 @@ else
     echo "roles are added to chef server"
 fi
 
+sudo mkdir -p /var/log/redis
+sudo chown -R redis:root /var/log/redis
+sudo mkdir -p /var/lib/redis/
+sudo chown -R redis:root /var/lib/redis
+sudo mkdir -p /var/run/redis
+sudo chown -R redis:root /var/run/redis
+sudo service redis restart
+echo "Checking if redis is running"
+sudo service redis status
+if [[ "$?" == "0" ]]; then
+    echo "redis is running"
+else
+    echo "redis is not running"
+    exit 1
+fi
+
 sudo /opt/compass/bin/refresh.sh
 if [[ "$?" != "0" ]]; then
     echo "failed to refresh compassd service"
@@ -88,13 +104,6 @@ if [[ "$?" != "0" ]]; then
 else
     echo "httpd has already started"
 fi
-
-mkdir -p /var/log/redis
-chown -R redis:root /var/log/redis
-mkdir -p /var/lib/redis/
-chown -R redis:root /var/lib/redis
-mkdir -p /var/run/redis
-chown -R redis:root /var/run/redis
 
 sudo service redis status
 if [[ "$?" != "0" ]]; then

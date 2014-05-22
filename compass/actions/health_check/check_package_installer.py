@@ -16,6 +16,7 @@
 
 import os
 import requests
+import subprocess
 
 from compass.actions.health_check import base
 from compass.actions.health_check import setting as health_check_setting
@@ -34,36 +35,12 @@ class PackageInstallerCheck(base.BaseCheck):
 
     def chef_check(self):
         """Checks chef setting, cookbooks, databags and roles."""
-        chef_data_map = {
-            'CookBook': health_check_setting.COOKBOOKS,
-            'DataBag': health_check_setting.DATABAGS,
-            'Role': health_check_setting.ROLES,
-        }
+        for data_type in ['Cookbook', 'Role', 'Databag']:
+            self.check_chef_data(data_type)
+            if self.code != 1:
+                return (self.code, self.messages)
 
-        total_missing = []
-        for data_type in chef_data_map.keys():
-            total_missing.append(self.check_chef_data(data_type,
-                                 chef_data_map[data_type]))
             print "[Done]"
-
-        missing = False
-        for item in total_missing:
-            if item[1] != []:
-                missing = True
-                break
-
-        if missing is True:
-            messages = []
-            for item in total_missing:
-                messages.append("[%s]:%s"
-                                % (item[0],
-                                   ', '.join(missed for missed in item[1])))
-            self._set_status(
-                0,
-                "[%s]Error: Missing modules on chef server: "
-                "%s." % (
-                    self.NAME,
-                    ' ;'.join(message for message in messages)))
 
         self.check_chef_config_dir()
         print "[Done]"
@@ -75,7 +52,7 @@ class PackageInstallerCheck(base.BaseCheck):
 
         return (self.code, self.messages)
 
-    def check_chef_data(self, data_type, github_url):
+    def check_chef_data(self, data_type):
         """Checks if chef cookbooks/roles/databags are correct.
 
         :param data_type  : chef data type
@@ -92,37 +69,52 @@ class PackageInstallerCheck(base.BaseCheck):
             self._set_status(
                 0,
                 "[%s]Error: pychef is not installed." % self.NAME)
-
-            return self.get_status()
+            return
 
         api = chef.autoconfigure()
-
-        github = set([
-            item['name']
-            for item in requests.get(github_url).json()
-        ])
         if data_type == 'CookBook':
-            local = set(os.listdir('/var/chef/cookbooks'))
+            local = set([
+                name for name in os.listdir('/var/chef/cookbooks')
+                if name
+            ])
+            try:
+                server = set(api['/cookbooks'].keys())
+            except Exception:
+                self._set_status(
+                    0,
+                    "[%s]Error: pychef fails to get cookbooks" % self.NAME)
+                return
         elif data_type == 'Role':
             local = set([
-                name for name, item in chef.Role.list(api=api).iteritems()
+                name[:-3] for name in os.listdir('/var/chef/roles')
+                if name.endswith('.rb')
             ])
-            github = set([
-                item['name'].replace(".rb", "")
-                for item in requests.get(github_url).json()
-            ])
+            try:
+                server = set(api['/roles'].keys())
+            except Exception:
+                self._set_status(
+                    0,
+                    "[%s]Error: pychef fails to get roles" % self.NAME)
+                return
         else:
             local = set([
-                item for item in eval(
-                    'chef.' + data_type + '.list(api=api)'
-                )
+                name for name in os.listdir('/var/chef/databags')
+                if name
             ])
-        diff = github - local
+            try:
+                server = set(api['/data'].keys())
+            except Exception:
+                self._set_status(
+                    0,
+                    "[%s]Error: pychef fails to get databags" % self.NAME)
+                return
 
-        if len(diff) <= 0:
-            return (data_type, [])
-        else:
-            return (data_type, list(diff))
+        diff = server - local
+
+        if len(diff) > 0:
+            self._set_status(
+                0,
+                "[%s]Error: %s diff: %s" % (self.NAME, diff))
 
     def check_chef_config_dir(self):
         """Validates chef configuration directories."""
@@ -131,9 +123,9 @@ class PackageInstallerCheck(base.BaseCheck):
         message = health_check_utils.check_path(self.NAME, '/etc/chef-server/')
         if not message == "":
             self._set_status(0, message)
+            return
 
         message = health_check_utils.check_path(self.NAME, '/opt/chef-server/')
         if not message == "":
             self._set_status(0, message)
-
-        return None
+            return

@@ -12,6 +12,7 @@ else
 fi
 
 # configure chef-server
+sudo rm -rf ~/chef-server-cleanse-*
 sudo chef-server-ctl cleanse
 mkdir -p /etc/chef-server
 sudo cp -rn /etc/chef-server/chef-server.rb /root/backup/chef/

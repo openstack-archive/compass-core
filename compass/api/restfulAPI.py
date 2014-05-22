@@ -12,27 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
-from flask.ext.login import LoginManager
-from flask import Flask
+"""Custom flask restful."""
+from flask.ext.restful import Api
 
 
-from compass.api.v1.api import v1_app
-from compass.db.models import SECRET_KEY
+class CompassApi(Api):
+    """Override the Flask_Restful error routing for 500."""
 
+    def error_router(self, original_handler, e):
+        code = getattr(e, 'code', 500)
+        # for HTTP 500 errors return custom response
+        if code >= 500:
+            return original_handler(e)
 
-app = Flask(__name__)
-app.debug = True
-app.register_blueprint(v1_app, url_prefix='/v1.0')
-
-
-app.secret_key = SECRET_KEY
-app.config['AUTH_HEADER_NAME'] = 'X-Auth-Token'
-app.config['REMEMBER_COOKIE_DURATION'] = datetime.timedelta(minutes=30)
-
-
-login_manager = LoginManager()
-login_manager.login_view = 'login'
-login_manager.init_app(app)
-
-from compass.api import api as compass_api
+        return super(CompassApi, self).error_router(original_handler, e)

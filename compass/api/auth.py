@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +15,10 @@
 from itsdangerous import BadData
 import logging
 
-from compass.db.model import login_serializer
-from compass.db.model import User
+from compass.db.models import login_serializer
 
 
-def get_user_info_from_token(token, max_age):
+def get_user_id_from_token(token, max_age):
     """Return user's ID and hased password from token."""
 
     user_id = None
@@ -34,14 +33,14 @@ def get_user_info_from_token(token, max_age):
 
 
 def authenticate_user(email, pwd):
-    """Authenticate a use by email and password."""
+    """Authenticate a user by email and password."""
 
+    from compass.db.models import User
     try:
         user = User.query.filter_by(email=email).first()
         if user and user.valid_password(pwd):
             return user
     except Exception as err:
-        print '[auth][authenticate_user]Exception: %s' % err
         logging.info('[auth][authenticate_user]Exception: %s', err)
 
     return None

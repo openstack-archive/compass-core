@@ -1,5 +1,0 @@
-id,ip,credential_data.version,credential_data.community
-1,192.168.2.1,2c,public
-2,192.168.2.2,2c,public
-3,192.168.2.3,2c,public
-4,192.168.2.4,2c,public

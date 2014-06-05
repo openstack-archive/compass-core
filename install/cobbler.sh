@@ -179,6 +179,43 @@ else
     exit 1
 fi
 
+
+systems=$(sudo cobbler system list)
+for system in $systems; do
+    echo "remove system $system"
+    sudo cobbler system remove --name=$system
+    if [[ "$?" != "0" ]]; then
+        echo "failed to remove system $system"
+    fi
+done
+
+profiles=$(sudo cobbler profile list)
+for profile in $profiles; do
+    echo "remove profile $profile"
+    sudo cobbler profile remove --name=$profile
+    if [[ "$?" != "0" ]]; then
+        echo "failed to remove profile $profile"
+    fi
+done
+
+distros=$(sudo cobbler distro list)
+for distro in $distros; do
+    echo "remove distro $distro"
+    sudo cobbler distro remove --name=$distro
+    if [[ "$?" != "0" ]]; then
+        echo "failed to remove distro $distro"
+    fi
+done
+
+repos=$(sudo cobbler repo list)
+for repo in $repos; do
+    echo "remove repo $repo"
+    sudo cobbler repo remove --name=$repo
+    if [[ "$?" != "0" ]]; then
+        echo "failed to remove repo $repo"
+    fi
+done
+
 # create centos repo
 sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_ppa_repo
 found_centos_ppa_repo=0

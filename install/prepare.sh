@@ -24,6 +24,12 @@ copy2dir()
             cd $destdir
             git remote set-url origin $repo
             git remote update
+            if [ $? -ne 0 ]; then
+                echo "failed to git remote update $repo in $destdir"
+                exit 1
+            else
+                echo "git remote update $repo in $destdir succeeded"
+            fi
             git reset --hard
             git clean -x -f
             git checkout $git_branch
@@ -146,13 +152,13 @@ if [ -z $WEB_SOURCE ]; then
     echo "web source $WEB_SOURCE is not set"
     exit 1
 fi
-copy2dir "$WEB_SOURCE" "$WEB_HOME" "stackforge/compass-web"
+copy2dir "$WEB_SOURCE" "$WEB_HOME" "stackforge/compass-web" || exit $?
 
 if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters"
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" || exit $?
 
 if [ "$tempest" == "true" ]; then
     if [[ ! -e /tmp/tempest ]]; then
@@ -160,6 +166,8 @@ if [ "$tempest" == "true" ]; then
         if [[ "$?" != "0" ]]; then
             echo "failed to git clone tempest project"
             exit 1
+        else
+            echo "git clone tempest project succeeded"
         fi
         cd /tmp/tempest
         git checkout grizzly-eol
@@ -167,12 +175,24 @@ if [ "$tempest" == "true" ]; then
         cd /tmp/tempest
         git remote set-url origin http://git.openstack.org/openstack/tempest
         git remote update
+        if [[ "$?" != "0" ]]; then
+            echo "failed to git remote update tempest project"
+            exit 1
+        else
+            echo "git remote update tempest project succeeded"
+        fi
         git reset --hard
         git clean -x -f -d -q
         git checkout grizzly-eol
     fi
     cd /tmp/tempest
     pip install -e .
+    if [[ "$?" != "0" ]]; then
+        echo "failed to install tempest project"
+        exit 1
+    else
+        echo "install tempest project succeeded"
+    fi
 fi
 
 download()

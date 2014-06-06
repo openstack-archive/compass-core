@@ -98,6 +98,10 @@ class HDManager(object):
         :return a tuple (vendor, switch_state, error)
         """
 
+        # Returen appliance plugin once we see 127.0.0.1 ass switch ip
+        if host == '127.0.0.1':
+            return ("appliance", "Found", "")
+
         # TODO(grace): Why do we need to have valid IP?
         # a hostname should also work.
         if not utils.valid_ip_format(host):

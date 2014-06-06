@@ -139,7 +139,8 @@ class HDManagerTest(unittest2.TestCase):
         super(HDManagerTest, self).setUp()
         logsetting.init()
         self.manager = HDManager()
-        self.correct_host = '127.0.0.1'
+        self.correct_host = '33.33.33.1'
+        self.correct_host_2 = '127.0.0.1'
         self.correct_credential = {'version': '2c', 'community': 'public'}
 
     def tearDown(self):
@@ -184,7 +185,7 @@ class HDManagerTest(unittest2.TestCase):
         sys_info = ['Huawei Versatile Routing Platform Software',
                     'ProCurve J9089A Switch 2610-48-PWR, revision R.11.25',
                     'Pica8 XorPlus Platform Software']
-        expected_vendor_names = ['huawei', 'hp', 'pica8']
+        expected_vendor_names = ['huawei', 'hp', 'pica8', 'appliance']
         for info, expected_vendor in zip(sys_info, expected_vendor_names):
             sys_info_mock.return_value = (info, '')
             # the result is a tuple ($vendor, $state, $error_message)

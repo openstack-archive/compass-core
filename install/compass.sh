@@ -12,6 +12,7 @@ sudo cp -rf $COMPASSDIR/misc/apache/compass.wsgi /var/www/compass/compass.wsgi
 sudo cp -rf $COMPASSDIR/conf/celeryconfig /etc/compass/
 sudo cp -rf $COMPASSDIR/conf/global_config /etc/compass/
 sudo cp -rf $COMPASSDIR/conf/setting /etc/compass/
+
 sudo cp -rf $COMPASSDIR/conf/compassd /etc/init.d/
 sudo cp -rf $COMPASSDIR/bin/*.py /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/*.sh /opt/compass/bin/
@@ -40,8 +41,14 @@ else
     echo "compass package is installed"
 fi
 
-sudo sed -i "/COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/cobbler_api'" /etc/compass/setting
-sudo sed -i "/CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
+sudo sed -i "/^COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/cobbler_api'" /etc/compass/setting
+sudo sed -i "/^CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
+sudo sed -i "/^DATABASE_TYPE/c\DATABASE_TYPE = 'mysql'" /etc/compass/setting
+sudo sed -i "/^DATABASE_USER/c\DATABASE_USER = '${MYSQL_USER}'" /etc/compass/setting
+sudo sed -i "/^DATABASE_PASSWORD/c\DATABASE_PASSWORD = '${MYSQL_PASSWORD}'" /etc/compass/setting
+sudo sed -i "/^DATABASE_SERVER/c\DATABASE_SERVER = '${MYSQL_SERVER}:${MYSQL_PORT}'" /etc/compass/setting
+sudo sed -i "/^DATABASE_NAME/c\DATABASE_NAME = '${MYSQL_DATABASE}'" /etc/compass/setting
+sudo sed -i "/^COBBLER_INSTALLER_TOKEN/c\COBBLER_INSTALLER_TOKEN = ['$CBLR_USER', '$CBLR_PASSWD']" /etc/compass/setting
 sudo sed -i "s/\$compass_ip/$ipaddr/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_testmode/$TESTMODE/g" /etc/compass/global_config
@@ -111,6 +118,12 @@ if [[ "$?" != "0" ]]; then
     exit 1
 else
     echo "redis has already started"
+fi
+
+sudo service mysqld status
+if [[ "$?" != "0" ]]; then
+    echo "mysqld is not started"
+    exit 1
 fi
 
 sudo service compassd status

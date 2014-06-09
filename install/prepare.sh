@@ -147,6 +147,41 @@ else
     echo "squid conf is updated"
 fi
 
+#update mysqld
+sudo service mysqld restart
+MYSQL_USER=${MYSQL_USER:-root}
+MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-}
+MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
+MYSQL_SERVER=${MYSQL_SERVER:-127.0.0.1}
+MYSQL_PORT=${MYSQL_PORT:-3306}
+MYSQL_DATABASE=${MYSQL_DATABASE:-db}
+# first time set mysql password
+sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} password ${MYSQL_PASSWORD}
+sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} -p"${MYSQL_OLD_PASSWORD}" password ${MYSQL_PASSWORD}
+mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "show databases;"
+if [[ "$?" != "0" ]]; then
+    echo "mysql password set failed"
+    exit 1
+else
+    echo "mysql password set successful"
+fi
+sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "drop database ${MYSQL_DATABASE}"
+sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "create database ${MYSQL_DATABASE}"
+if [[ "$?" != "0" ]]; then
+    echo "mysql database set fails"
+    exit 1
+else
+    echo "mysql database set succeeds"
+fi
+sudo service mysqld restart
+sudo service mysqld status
+if [[ "$?" != "0" ]]; then
+    echo "mysqld is not started"
+    exit 1
+else
+    echo "mysqld conf is updated" 
+fi
+
 cd $SCRIPT_DIR
 if [ -z $WEB_SOURCE ]; then
     echo "web source $WEB_SOURCE is not set"

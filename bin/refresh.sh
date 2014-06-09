@@ -10,5 +10,6 @@ service httpd restart
 service rsyslog restart
 service redis restart
 redis-cli flushall
+service mysqld restart
 service compassd restart
 

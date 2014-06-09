@@ -120,12 +120,12 @@ def checkdb():
 @app_manager.command
 def createdb():
     """Creates database from sqlalchemy models."""
-    if setting.DATABASE_TYPE == 'file':
-        if os.path.exists(setting.DATABASE_FILE):
-            os.remove(setting.DATABASE_FILE)
+    try:
+        database.drop_db()
+    except Exception:
+        print 'failed to drop database'
+
     database.create_db()
-    if setting.DATABASE_TYPE == 'file':
-        os.chmod(setting.DATABASE_FILE, 0o777)
 
 
 @app_manager.command

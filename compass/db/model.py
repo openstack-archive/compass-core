@@ -46,7 +46,7 @@ class User(BASE, UserMixin):
     __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
     email = Column(String(80), unique=True)
-    password = Column(String(225))
+    password = Column(String(225), default='')
     active = Column(Boolean, default=True)
 
     def __init__(self, email, password, **kwargs):
@@ -215,7 +215,7 @@ class Machine(BASE):
     switch_id = Column(Integer, ForeignKey('switch.id',
                                            onupdate='CASCADE',
                                            ondelete='SET NULL'))
-    __table_args__ = (UniqueConstraint('mac', 'vlan', 'switch_id',
+    __table_args__ = (UniqueConstraint('mac', 'switch_id',
                                        name='unique_machine'),)
     switch = relationship('Switch', backref=backref('machines',
                                                     lazy='dynamic'))
@@ -252,7 +252,7 @@ class HostState(BASE):
     state = Column(Enum('UNINITIALIZED', 'INSTALLING', 'READY', 'ERROR'),
                    ColumnDefault('UNINITIALIZED'))
     progress = Column(Float, ColumnDefault(0.0))
-    message = Column(String)
+    message = Column(Text)
     severity = Column(Enum('INFO', 'WARNING', 'ERROR'), ColumnDefault('INFO'))
     update_timestamp = Column(DateTime, default=datetime.now,
                               onupdate=datetime.now)
@@ -305,7 +305,7 @@ class ClusterState(BASE):
     state = Column(Enum('UNINITIALIZED', 'INSTALLING', 'READY', 'ERROR'),
                    ColumnDefault('UNINITIALIZED'))
     progress = Column(Float, ColumnDefault(0.0))
-    message = Column(String)
+    message = Column(Text)
     severity = Column(Enum('INFO', 'WARNING', 'ERROR'), ColumnDefault('INFO'))
     update_timestamp = Column(DateTime, default=datetime.now,
                               onupdate=datetime.now)
@@ -347,7 +347,7 @@ class Cluster(BASE):
     __tablename__ = 'cluster'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True)
+    name = Column(String(80), unique=True)
     mutable = Column(Boolean, default=True)
     security_config = Column(Text)
     networking_config = Column(Text)
@@ -527,7 +527,7 @@ class ClusterHost(BASE):
                                             ondelete='SET NULL'),
                         nullable=True)
 
-    hostname = Column(String)
+    hostname = Column(String(80))
     config_data = Column(Text)
     mutable = Column(Boolean, default=True)
     __table_args__ = (UniqueConstraint('cluster_id', 'hostname',
@@ -633,13 +633,13 @@ class LogProgressingHistory(BASE):
     """
     __tablename__ = 'log_progressing_history'
     id = Column(Integer, primary_key=True)
-    pathname = Column(String, unique=True)
+    pathname = Column(String(80), unique=True)
     position = Column(Integer, ColumnDefault(0))
     partial_line = Column(Text)
     progress = Column(Float, ColumnDefault(0.0))
     message = Column(Text)
     severity = Column(Enum('ERROR', 'WARNING', 'INFO'), ColumnDefault('INFO'))
-    line_matcher_name = Column(String, ColumnDefault('start'))
+    line_matcher_name = Column(String(80), ColumnDefault('start'))
     update_timestamp = Column(DateTime, default=datetime.now,
                               onupdate=datetime.now)
 
@@ -671,9 +671,9 @@ class Adapter(BASE):
     """
     __tablename__ = 'adapter'
     id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True)
-    os = Column(String)
-    target_system = Column(String)
+    name = Column(String(80), unique=True)
+    os = Column(String(80))
+    target_system = Column(String(80))
     __table_args__ = (
         UniqueConstraint('os', 'target_system', name='unique_adapter'),)
 
@@ -699,8 +699,8 @@ class Role(BASE):
     """
     __tablename__ = 'role'
     id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True)
-    target_system = Column(String)
+    name = Column(String(80), unique=True)
+    target_system = Column(String(80))
     description = Column(Text)
 
     def __init__(self, **kwargs):

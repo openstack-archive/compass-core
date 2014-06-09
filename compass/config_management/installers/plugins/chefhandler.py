@@ -226,7 +226,7 @@ class Installer(package_installer.Installer):
 
         else:
             node.run_list = []
-            for _, roles in node['roles'].items():
+            for _, roles in roles_per_target_system.items():
                 for role in roles:
                     node.run_list.append('role[%s]' % role)
 

@@ -215,7 +215,7 @@ class Machine(BASE):
     switch_id = Column(Integer, ForeignKey('switch.id',
                                            onupdate='CASCADE',
                                            ondelete='SET NULL'))
-    __table_args__ = (UniqueConstraint('mac', 'vlan', 'switch_id',
+    __table_args__ = (UniqueConstraint('mac', 'switch_id',
                                        name='unique_machine'),)
     switch = relationship('Switch', backref=backref('machines',
                                                     lazy='dynamic'))

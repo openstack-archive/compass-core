@@ -114,8 +114,8 @@ def poll_switch(ip_addr, req_obj='mac', oper="SCAN"):
             machine = session.query(Machine).filter_by(
                 mac=mac, switch_id=switch_id).first()
             if not machine:
-                machine = Machine(mac=mac, port=port, vlan=vlan)
-                machine.switch_id = switch_id
+                machine = Machine(
+                    mac=mac, port=port, vlan=vlan, switch_id=switch_id)
                 session.add(machine)
             else:
                 machine.port = port

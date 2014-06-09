@@ -201,6 +201,8 @@ fi
 loadvars NAMESERVER_DOMAINS "ods.com"
 loadvars WEB_SOURCE 'http://git.openstack.org/stackforge/compass-web'
 loadvars ADAPTERS_SOURCE 'http://git.openstack.org/stackforge/compass-adapters'
+loadvars MYSQL_OLD_PASSWORD ''
+loadvars MYSQL_PASSWORD 'root'
 
 echo "script dir: $SCRIPT_DIR"
 echo "compass dir is $COMPASSDIR"

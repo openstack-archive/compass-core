@@ -50,19 +50,19 @@ tear_down_machines
 
 echo "setup $VIRT_NUM virt machines"
 for i in `seq $VIRT_NUM`; do
-    if [[ ! -e /tmp/pxe${i}.raw ]]; then
+    if [[ ! -e /home/pxe${i}.raw ]]; then
         echo "create image for instance pxe$i"
-        qemu-img create -f raw /tmp/pxe${i}.raw ${VIRT_DISK}
+        qemu-img create -f raw /home/pxe${i}.raw ${VIRT_DISK}
         if [[ "$?" != "0" ]]; then
-            echo "create image /tmp/pxe${i}.raw failed"
+            echo "create image /home/pxe${i}.raw failed"
             exit 1
         fi 
     else
         echo "recreate image for instance pxe$i"
-        rm -rf /tmp/pxe${i}.raw
-        qemu-img create -f raw /tmp/pxe${i}.raw ${VIRT_DISK}
+        rm -rf /home/pxe${i}.raw
+        qemu-img create -f raw /home/pxe${i}.raw ${VIRT_DISK}
         if [[ "$?" != "0" ]]; then
-            echo "create image /tmp/pxe${i}.raw failed"
+            echo "create image /home/pxe${i}.raw failed"
             exit 1
         fi 
     fi
@@ -74,7 +74,7 @@ for i in `seq $VIRT_NUM`; do
         --network=bridge:installation \
         --network=bridge:installation \
         --name pxe${i} --ram=${VIRT_MEM} \
-        --disk /tmp/pxe${i}.raw,format=raw \
+        --disk /home/pxe${i}.raw,format=raw \
         --vcpus=${VIRT_CPUS} \
         --graphics vnc,listen=0.0.0.0 \
         --noautoconsole \

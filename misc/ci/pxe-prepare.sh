@@ -1,9 +1,9 @@
 #!/bin/bash -x
 if [[ ! -e /tmp/pxe01.raw ]]; then
-    qemu-img create -f raw /tmp/pxe01.raw 20G
+    qemu-img create -f raw /home/pxe01.raw 20G
 else
     rm -rf /tmp/pxe01.raw
-    qemu-img create -f raw /tmp/pxe01.raw 20G
+    qemu-img create -f raw /home/pxe01.raw 20G
 fi
 virsh list |grep pxe01
 vmrc=$?

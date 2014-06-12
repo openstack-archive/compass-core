@@ -26,6 +26,9 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
+if [[ -e /var/chef ]]; then
+    rm -rf /var/chef
+fi
 sudo mkdir -p /var/chef/cookbooks/
 sudo cp -r $ADAPTERS_HOME/chef/cookbooks/* /var/chef/cookbooks/
 if [ $? -ne 0 ]; then

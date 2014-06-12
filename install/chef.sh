@@ -14,7 +14,7 @@ fi
 # configure chef-server
 sudo rm -rf ~/chef-server-cleanse-*
 sudo chef-server-ctl cleanse
-mkdir -p /etc/chef-server
+sudo mkdir -p /etc/chef-server
 sudo cp -rn /etc/chef-server/chef-server.rb /root/backup/chef/
 sudo rm -f /etc/chef-server/chef-server.rb
 sudo cp -rf $COMPASSDIR/misc/chef-server/chef-server.rb /etc/chef-server/chef-server.rb
@@ -26,6 +26,9 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
+if [[ -e /var/chef ]]; then
+    sudo rm -rf /var/chef
+fi
 sudo mkdir -p /var/chef/cookbooks/
 sudo cp -r $ADAPTERS_HOME/chef/cookbooks/* /var/chef/cookbooks/
 if [ $? -ne 0 ]; then

@@ -211,7 +211,7 @@ download()
                 exit 1
             else
                 echo "successfully download $package"
-                cp -rf /tmp/${package}.tmp /tmp/${package}
+                mv -rf /tmp/${package}.tmp /tmp/${package}
             fi
         else
             cp -rf $url /tmp/${package}

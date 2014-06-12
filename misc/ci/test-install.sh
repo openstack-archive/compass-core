@@ -13,6 +13,7 @@ else
     dhclient installation
 fi
 source compass-core/install/install.conf.template
+set -e
 /bin/bash -x compass-core/install/install.sh
 echo "cache_peer 10.145.81.137       parent    3128  3130  default" >> /etc/squid/squid.conf
 service squid restart

@@ -136,6 +136,9 @@ fi
 if [[ ! -L compass_logs ]]; then
     ln -s /var/log/compass compass_logs
 fi
+if [[ ! -e compass_logs/squid_access.log ]]; then
+    ln -s /var/log/squid/access.log compass_logs/squid_access.log
+fi
 CLIENT_SCRIPT=/opt/compass/bin/client.py
 /opt/compass/bin/refresh.sh
 if [[ "$?" != "0" ]]; then

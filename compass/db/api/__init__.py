@@ -13,29 +13,21 @@
 # limitations under the License.
 
 """Common database query."""
-
+from compass.db import exception
 from compass.db.models import BASE
 
 
 def model_query(session, model, *args, **kwargs):
-
+    """model query."""
     if not issubclass(model, BASE):
-        raise Exception("model should be sublass of BASE!")
+        raise DatabaseException("model should be sublass of BASE!")
 
-    with session.begin(subtransactions=True):
-        query = session.query(model)
-
-    return query
+    return session.query(model)
 
 
-def model_filter(query, model, filters, legal_keys):
-    for key in filters:
-        if key not in legal_keys:
-            continue
-
-        value = filters[key]
+def model_filter(query, model, filters):
+    for key, value in filters.items():
         col_attr = getattr(model, key)
-
         if isinstance(value, list):
             query = query.filter(col_attr.in_(value))
         else:

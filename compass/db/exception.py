@@ -13,34 +13,42 @@
 # limitations under the License.
 
 """Custom exception"""
+import traceback
 
 
-class RecordNotExists(Exception):
+class DatabaseException(Exception):
+    def __init__(self, message):
+        super(DatabaseException, self).__init__(message)
+        self.traceback = traceback.format_exc()
+        self.status_code = 400
+
+
+class RecordNotExists(DatabaseException):
     """Define the exception for referring non-existing object in DB."""
     def __init__(self, message):
         super(RecordNotExists, self).__init__(message)
-        self.message = message
+        self.status_code = 404
 
 
-class DuplicatedRecord(Exception):
+class DuplicatedRecord(DatabaseException):
     """Define the exception for trying to insert an existing object in DB."""
     def __init__(self, message):
         super(DuplicatedRecord, self).__init__(message)
-        self.message = message
+        self.status_code = 409
 
 
-class Forbidden(Exception):
+class Forbidden(DatabaseException):
     """Define the exception that a user is trying to make some action
        without the right permission.
     """
     def __init__(self, message):
         super(Forbidden, self).__init__(message)
-        self.message = message
+        self.status_code = 403
 
 
-class InvalidParameter(Exception):
+class InvalidParameter(DatabaseException):
     """Define the exception that the request has invalid or missing parameters.
     """
     def __init__(self, message):
         super(InvalidParameter, self).__init__(message)
-        self.message = message
+        self.status_code = 400

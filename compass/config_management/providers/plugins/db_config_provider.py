@@ -22,17 +22,7 @@ import os.path
 from compass.config_management.providers import config_provider
 from compass.config_management.utils import config_filter
 from compass.config_management.utils import config_filter_callbacks
-from compass.db import database
-from compass.db.model import Adapter
-from compass.db.model import Cluster
-from compass.db.model import ClusterHost
-from compass.db.model import ClusterState
-from compass.db.model import HostState
-from compass.db.model import LogProgressingHistory
-from compass.db.model import Machine
-from compass.db.model import Role
-from compass.db.model import Switch
-from compass.db.model import SwitchConfig
+from compass.db.api import database
 from compass.utils import setting_wrapper as setting
 
 

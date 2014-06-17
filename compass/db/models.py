@@ -15,9 +15,7 @@
 
 """Database model"""
 from datetime import datetime
-from hashlib import md5
 import simplejson as json
-
 
 from sqlalchemy import Table
 from sqlalchemy import Column, Integer, String
@@ -26,20 +24,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.types import TypeDecorator
-
-
-from flask.ext.login import UserMixin
-from itsdangerous import URLSafeTimedSerializer
-
-
-BASE = declarative_base()
-# TODO(grace) SECRET_KEY should be generated when installing compass
-# and save to a config file or DB
-SECRET_KEY = "abcd"
-
-# This is used for generating a token by user's ID and
-# decode the ID from this token
-login_serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 
 class JSONEncodedDict(TypeDecorator):
@@ -106,18 +90,14 @@ class MetadataFieldMixin(object):
 
 class HelperMixin(object):
     def to_dict(self):
-        dict_info = self.__dict__.copy()
-        return self._to_dict(dict_info)
+        keys = self.__mapper__.columns.keys()
+        dict_info = {}
+        for key in keys:
+            value = getattr(self, key)
+            if isinstance(value, datetime):
+                value = str(value)
 
-    def _to_dict(self, dict_info, extra_dict=None):
-        columns = ['created_at', 'updated_at', 'last_login_at']
-        for key in columns:
-            if key in dict_info:
-                dict_info[key] = dict_info[key].ctime()
-
-        dict_info.pop('_sa_instance_state')
-        if extra_dict:
-            dict_info.update(extra_dict)
+            dict_info[key] = value
 
         return dict_info
 
@@ -129,7 +109,7 @@ user_permission = Table('user_permission', BASE.metadata,
                                ForeignKey('permission.id')))
 
 
-class User(BASE, UserMixin, HelperMixin):
+class User(BASE, HelperMixin, TimestampMixin):
     """User table."""
     __tablename__ = 'user'
 
@@ -140,47 +120,64 @@ class User(BASE, UserMixin, HelperMixin):
     lastname = Column(String(80))
     is_admin = Column(Boolean, default=False)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=lambda: datetime.now())
-    last_login_at = Column(DateTime, default=lambda: datetime.now())
     permissions = relationship("Permission", secondary=user_permission)
 
     def __init__(self, email, password, **kwargs):
         self.email = email
-        self.password = self._set_password(password)
+        self.set_password(password)
+        super(User, self).__init__(**kwargs)
 
-    def __repr__(self):
-        return '<User name: %s>' % self.email
+    def set_password(self, password):
+        self.password = util.encrypt(password)
 
-    def _set_password(self, password):
-        return self._hash_password(password)
+    def get_masked_password(self):
+        return '**********'
 
-    def get_password(self):
-        return self.password
+    def get_permissions(self):
+        permissions = []
+        for permission in self.permissions:
+            permissions.append(permission)
 
-    def valid_password(self, password):
-        return self.password == self._hash_password(password)
+        return permissions
 
-    def get_auth_token(self):
-        return login_serializer.dumps(self.id)
+    def set_permissions(self, permissions):
+        self.permissions = permissions
 
-    def is_active(self):
-        return self.active
+    def check_permission(self, permission_name):
+        for permission in self.permissions:
+            if permission.name == permission_name:
+                return True
 
-    def _hash_password(self, password):
-        return md5(password).hexdigest()
+        return False
+
+    def to_dict(self):
+        dict_info = super(User, self).to_dict()
+        dict_info['permissions'] = [
+            permission.to_dict() for permission in self.get_permissions()
+        ]
+        return dict_info
+
+    def __str__(self):
+        return '%s[email:%s,is_admin:%s,active:%s]' % (
+            self.__class__.__name__,
+            self.email, self.is_admin, self.active
+        )
 
 
-class Permission(BASE):
+class Permission(Base, HelperMixin, TimestampMixin):
     """Permission table."""
     __tablename__ = 'permission'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True)
     alias = Column(String(100))
+    description = Column(Text)
 
-    def __init__(self, name, alias):
+    def __init__(self, name, alias, description):
         self.name = name
         self.alias = alias
+        self.description
+        super(Permission, self___init__()
 
 
 adapter_os = Table('adapter_os', BASE.metadata,

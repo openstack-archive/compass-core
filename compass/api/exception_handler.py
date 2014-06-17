@@ -13,79 +13,77 @@
 # limitations under the License.
 
 """Exceptions for RESTful API."""
+import logging
+import simplejson as json
+import traceback
+
+from compass.api import app
+from compass.api import utils
 
 
-class ItemNotFound(Exception):
+class HTTPException(Exception):
+    def __init__(self, message, status_code):
+        super(HTTPException, self).__init__(message)
+        self.traceback = traceback.format_exc()
+        self.status_code = status_code
+
+
+class ItemNotFound(HTTPException):
     """Define the exception for referring non-existing object."""
     def __init__(self, message):
-        super(ItemNotFound, self).__init__(message)
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
+        super(ItemNotFound, self).__init__(message, 410)
 
 
-class BadRequest(Exception):
+class BadRequest(HTTPException):
     """Define the exception for invalid/missing parameters or a user makes
        a request in invalid state and cannot be processed at this moment.
     """
     def __init__(self, message):
-        super(BadRequest, self).__init__(message)
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
+        super(BadRequest, self).__init__(message, 400)
 
 
-class Unauthorized(Exception):
+class Unauthorized(HTTPException):
     """Define the exception for invalid user login."""
     def __init__(self, message):
-        super(Unauthorized, self).__init__(message)
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
+        super(Unauthorized, self).__init__(message, 401)
 
 
-class UserDisabled(Exception):
+class UserDisabled(HTTPException):
     """Define the exception that a disabled user tries to do some operations.
     """
     def __init__(self, message):
-        super(UserDisabled, self).__init__(message)
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
+        super(UserDisabled, self).__init__(message, 403)
 
 
-class Forbidden(Exception):
+class Forbidden(HTTPException):
     """Define the exception that a user tries to do some operations without
        valid permissions.
     """
     def __init__(self, message):
-        super(Forbidden, self).__init__(message)
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
+        super(Forbidden, self).__init__(message, 403)
 
 
-class BadMethod(Exception):
+class BadMethod(HTTPException):
     """Define the exception for invoking unsupprted or unimplemented methods.
     """
     def __init__(self, message):
-        super(BadMethod, self).__init__(message)
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
+        super(BadMethod, self).__init__(message, 405)
 
 
-class ConflictObject(Exception):
+class ConflictObject(HTTPException):
     """Define the exception for creating an existing object."""
     def __init__(self, message):
-        super(ConflictObject, self).__init__(message)
-        self.message = message
+        super(ConflictObject, self).__init__(message, 409)
 
-    def __str__(self):
-        return repr(self.message)
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    response = {'message': str(error)}
+    if hasattr(error, 'traceback'):
+        response['traceback'] = error.traceback
+
+    status_code = 400
+    if hasattr(error, 'status_code'):
+        status_code = error.status_code
+
+        return utils.make_json_response(status_code, response)

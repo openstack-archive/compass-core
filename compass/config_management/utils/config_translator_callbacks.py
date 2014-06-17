@@ -138,25 +138,7 @@ def get_value_from_role_mapping(
 def get_encrypted_value(ref, _path, _translated_ref, _translated_path,
                         crypt_method=None, **_kwargs):
     """Get encrypted value."""
-    if not crypt_method:
-        if hasattr(crypt, 'METHOD_MD5'):
-            crypt_method = crypt.METHOD_MD5
-        else:
-            # for python2.7, copy python2.6 METHOD_MD5 logic here.
-            from random import choice
-            import string
-
-            _saltchars = string.ascii_letters + string.digits + './'
-
-            def _mksalt():
-                """generate salt."""
-                salt = '$1$'
-                salt += ''.join(choice(_saltchars) for _ in range(8))
-                return salt
-
-            crypt_method = _mksalt()
-
-    return crypt.crypt(ref.config, crypt_method)
+    return util.crypt(ref.config, crypt_method)
 
 
 def set_value(ref, _path, _translated_ref,

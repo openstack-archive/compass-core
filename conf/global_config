@@ -1,6 +1,6 @@
 networking = {
     'global': {
-        'default_no_proxy': ['127.0.0.1', 'localhost', '$compass_ip', '$compass_hostname'],
+        'default_no_proxy': ['127.0.0.1', 'localhost', '10.145.88.211', 'compass'],
         'search_path_pattern': '%(clusterid)s.%(search_path)s %(search_path)s',
         'noproxy_pattern': '%(hostname)s,%(ip)s'
     },
@@ -61,4 +61,4 @@ role_assign_policy = {
     },
 }
 
-testmode = $compass_testmode
+testmode = False

@@ -12,147 +12,227 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Adapter database operations."""
+"""Adapter related database operations."""
+import logging
+import re
 
-from compass.db import api
 from compass.db.api import database
-from compass.db.api.utils import wrap_to_dict
-from compass.db.exception import RecordNotExists
-from compass.db.models import Adapter
-from compass.db.models import OSConfigMetadata
-# from compass.db.models import PackageConfigMetadata
+from compass.db.api import utils
+from compass.db import exception
+from compass.db import models
+
+from compass.utils import setting_wrapper as setting
+from compass.utils import util
 
 
-SUPPORTED_FILTERS = ['name']
-
-ERROR_MSG = {
-    'findNoAdapter': 'Cannot find the Adapter, ID is %d',
-    'findNoOs': 'Cannot find OS, ID is %d'
-}
-
-
-@wrap_to_dict()
-def get_adapter(adapter_id, return_roles=False):
-
-    with database.session() as session:
-        adapter = _get_adapter(session, adapter_id)
-        info = adapter.to_dict()
-
-        if return_roles:
-            roles = adapter.roles
-            info = [role.name for role in roles]
-
-    return info
+def _copy_adapters_from_parent(session, model, parent, system_name):
+    for child in parent.children:
+        if not child.adapters:
+            for adapter in parent.adapters:
+                if adapter.children:
+                    continue
+                utils.add_db_object(
+                    session, model,
+                    True,
+                    '%s(%s)' % (child.name, adapter.installer_name),
+                    system_name=child, parent=adapter
+                )
+        _copy_adapters_from_parent(session, model, child, system_name)
 
 
-@wrap_to_dict()
-def get_adapter_config_schema(adapter_id, os_id):
+def _complement_os_adapters(session):
+    with session.begin(subtransactions=True):
+        root_oses = utils.list_db_objects(
+            session, models.OperatingSystem,
+            parent_id=None
+        )
+        for root_os in root_oses:
+            _copy_adapters_from_parent(
+                session, models.OSAdapter, root_os, 'os'
+            )
 
-    with database.session() as session:
-        adapter = _get_adapter(session, adapter_id)
 
-        os_list = []
-        if not os_id:
-            os_list = [os.id for os in adapter.support_os]
+def _complement_distributed_system_adapters(session):
+    with session.begin(subtransactions=True):
+        root_dses = utils.list_db_objects(
+            session, models.DistributedSystem,
+            parent_id=None
+        )
+        for root_ds in root_dses:
+            _copy_adapters_from_parent(
+                session, models.PackageAdapter, root_ds, 'distributed_system'
+            )
+
+
+def _add_system(session, model, configs):
+    parents = {}
+    for config in configs:
+        object = utils.add_db_object(
+            session, model,
+            True, config['NAME'],
+            deployable=config.get('DEPLOYABLE', False)
+        )
+        parents[config['NAME']] = (
+            object, config.get('PARENT', None)
+        )
+    for name, (object, parent_name) in parents.items():
+        if parent_name:
+            parent, _ = parents[parent_name]
         else:
-            os_list = [os_id]
-
-        schema = _get_adapter_config_schema(session, adapter_id, os_list)
-
-    return schema
+            parent = None
+        utils.update_db_object(session, object, parent=parent)
 
 
-@wrap_to_dict()
-def list_adapters(filters=None):
-    """List all users, optionally filtered by some fields."""
-    with database.session() as session:
-        adapters = _list_adapters(session, filters)
-        adapters_list = [adapter.to_dict() for adapter in adapters]
-
-    return adapters_list
-
-
-def _get_adapter(session, adapter_id):
-    """Get the adapter by ID."""
+def add_oses_internal(session):
+    configs = util.load_configs(setting.OS_DIR)
     with session.begin(subtransactions=True):
-        adapter = api.model_query(session, Adapter).first()
-        if not adapter:
-            err_msg = ERROR_MSG['findNoAdapter'] % adapter_id
-            raise RecordNotExists(err_msg)
-
-    return adapter
+        _add_system(session, models.OperatingSystem, configs)
 
 
-def _list_adapters(session, filters=None):
-    """Get all adapters, optionally filtered by some fields."""
-
-    filters = filters or {}
-
+def add_distributed_systems_internal(session):
+    configs = util.load_configs(setting.DISTRIBUTED_SYSTEM_DIR)
     with session.begin(subtransactions=True):
-        query = api.model_query(session, Adapter)
-        adapters = api.model_filter(query, Adapter,
-                                    filters, SUPPORTED_FILTERS).all()
-
-    return adapters
+        _add_system(session, models.DistributedSystem, configs)
 
 
-#TODO(Grace): TMP method
-def _get_adapter_config_schema(session, adapter_id, os_list):
-    output_dict = {}
-
+def add_os_adapters_internal(session):
+    parents = {}
+    configs = util.load_configs(setting.OS_ADAPTER_DIR)
     with session.begin(subtransactions=True):
-        os_root = session.query(OSConfigMetadata).filter_by(name="os_config")\
-                                                 .first()
-        # pk_root = session.query(PackageConfigMetadata\
-        #                  .filter_by(name="os_config").first()
+        for config in configs:
+            if 'OS' in config:
+                os = utils.get_db_object(
+                    session, models.OperatingSystem,
+                    name=config['OS']
+                )
+            else:
+                os = None
+            if 'INSTALLER' in config:
+                installer = utils.get_db_object(
+                    session, models.OSInstaller,
+                    name=config['INSTALLER']
+                )
+            else:
+                installer = None
+            object = utils.add_db_object(
+                session, models.OSAdapter,
+                True, config['NAME'], os=os, installer=installer
+            )
+            parents[config['NAME']] = (object, config.get('PARENT', None))
+        for name, (object, parent_name) in parents.items():
+            if parent_name:
+                parent, _ = parents[parent_name]
+            else:
+                parent = None
+            utils.update_db_object(
+                session, object, parent=parent
+            )
 
-        os_config_list = []
-        for os_id in os_list:
-            os_config_dict = {"_name": "os_config"}
-            output_dict = {}
-            output_dict["os_config"] = os_config_dict
-            _get_adapter_config_helper(os_root, os_config_dict,
-                                       output_dict, "os_id", os_id)
-            result = {"os_id": os_id}
-            result.update(output_dict)
-            os_config_list.append(result)
-        """
-        package_config_dict = {"_name": "package_config"}
-        output_dict = {}
-        output_dict["package_config"] = package_config_dict
-        _get_adapter_config_internal(pk_root, package_config_dict,
-                                     output_dict, "adapter_id", adapter_id)
-        """
-        output_dict = {}
-        output_dict["os_config"] = os_config_list
-
-    return output_dict
+    _complement_os_adapters(session)
 
 
-# A recursive function
-# This assumes that only leaf nodes have field entry and that
-# an intermediate node in config_metadata table does not have field entries
-def _get_adapter_config_helper(node, current_dict, parent_dict,
-                               id_name, id_value):
-    children = node.children
+def add_package_adapters_internal(session):
+    parents = {}
+    configs = util.load_configs(setting.PACKAGE_ADAPTER_DIR)
+    with session.begin(subtransactions=True):
+        for config in configs:
+            if 'DISTRIBUTED_SYSTEM' in config:
+                distributed_system = utils.get_db_object(
+                    session, models.DistributedSystem,
+                    name=config['DISTRIBUTED_SYSTEM']
+                )
+            else:
+                distributed_system = None
+            if 'INSTALLER' in config:
+                installer = utils.get_db_object(
+                    session, models.PackageInstaller,
+                    name=config['INSTALLER']
+                )
+            else:
+                installer = None
+            object = utils.add_db_object(
+                session, models.PackageAdapter,
+                True,
+                config['NAME'],
+                distributed_system=distributed_system,
+                installer=installer,
+                supported_os_patterns=config.get('SUPPORTED_OS_PATTERNS', [])
+            )
+            parents[config['NAME']] = (object, config.get('PARENT', None))
+        for name, (object, parent_name) in parents.items():
+            if parent_name:
+                parent, _ = parents[parent_name]
+            else:
+                parent = None
+            utils.update_db_object(session, object, parent=parent)
 
-    if children:
-        for c in children:
-            col_value = getattr(c, id_name)
-            if col_value is None or col_value == id_value:
-                child_dict = {"_name": c.name}
-                current_dict[c.name] = child_dict
-                _get_adapter_config_helper(c, child_dict, current_dict,
-                                           id_name, id_value)
-        del current_dict["_name"]
-    else:
-        fields = node.fields
-        fields_dict = {}
+    _complement_distributed_system_adapters(session)
 
-        for field in fields:
-            info = field.to_dict()
-            name = info['field']
-            del info['field']
-            fields_dict[name] = info
 
-        parent_dict[current_dict["_name"]] = fields_dict
+def add_roles_internal(session):
+    configs = util.load_configs(setting.PACKAGE_ROLE_DIR)
+    with session.begin(subtransactions=True):
+        for config in configs:
+            package_adapter = utils.get_db_object(
+                session, models.PackageAdapter,
+                name=config['ADAPTER_NAME']
+            )
+            for role_dict in config['ROLES']:
+                utils.add_db_object(
+                    session, models.PackageAdapterRole,
+                    True, role_dict['role'], package_adapter.id,
+                    description=role_dict['description'],
+                    optional=role_dict.get('optional', False)
+                )
+
+
+def add_adapters_internal(session):
+    with session.begin(subtransactions=True):
+        package_adapters = [
+            package_adapter
+            for package_adapter in utils.list_db_objects(
+                session, models.PackageAdapter
+            )
+            if package_adapter.deployable
+        ]
+        os_adapters = [
+            os_adapter
+            for os_adapter in utils.list_db_objects(
+                session, models.OSAdapter
+            )
+            if os_adapter.deployable
+        ]
+        adapters = []
+        for os_adapter in os_adapters:
+            adapters.append(utils.add_db_object(
+                session, models.Adapter, True,
+                os_adapter.id, None
+            ))
+        for package_adapter in package_adapters:
+            adapters.append(utils.add_db_object(
+                session, models.Adapter, True,
+                None, package_adapter.id
+            ))
+            for os_adapter in os_adapters:
+                for os_pattern in (
+                    package_adapter.adapter_supported_os_patterns
+                ):
+                    if re.match(os_pattern, os_adapter.name):
+                        adapters.append(utils.add_db_object(
+                            session, models.Adapter, True,
+                            os_adapter.id, package_adapter.id
+                        ))
+                        break
+        return adapters
+
+
+def get_adapters_internal(session):
+    adapter_mapping = {}
+    with session.begin(subtransactions=True):
+        adapters = utils.list_db_objects(
+            session, models.Adapter
+        )
+        for adapter in adapters:
+            adapter_dict = adapter.to_dict()
+            adapter_mapping[adapter.id] = adapter_dict
+    return adapter_mapping

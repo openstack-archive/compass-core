@@ -19,7 +19,7 @@
 import logging
 
 from compass.actions import util
-from compass.db import database
+from compass.db.api import database
 from compass.log_analyzor import progress_calculator
 from compass.utils import setting_wrapper as setting
 

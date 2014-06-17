@@ -19,8 +19,8 @@
 import logging
 import os.path
 
-from compass.db import database
-from compass.db.model import LogProgressingHistory
+from compass.db.api import database
+from compass.db import models
 from compass.log_analyzor.line_matcher import Progress
 from compass.utils import setting_wrapper as setting
 
@@ -111,7 +111,7 @@ class FileReader(object):
         """
         with database.session() as session:
             history = session.query(
-                LogProgressingHistory
+                models.LogProgressingHistory
             ).filter_by(
                 pathname=self.pathname_
             ).first()
@@ -139,7 +139,7 @@ class FileReader(object):
            It updates the log_processing_history table.
         """
         with database.session() as session:
-            history = session.query(LogProgressingHistory).filter_by(
+            history = session.query(models.LogProgressingHistory).filter_by(
                 pathname=self.pathname_).first()
 
             if history:
@@ -159,7 +159,7 @@ class FileReader(object):
                 history.message = progress.message
                 history.severity = progress.severity
             else:
-                history = LogProgressingHistory(
+                history = models.LogProgressingHistory(
                     pathname=self.pathname_, position=self.position_,
                     partial_line=self.partial_line_,
                     line_matcher_name=line_matcher_name,

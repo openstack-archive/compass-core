@@ -14,32 +14,24 @@
 
 
 """Database model"""
-from datetime import datetime
-from hashlib import md5
+import datetime
+import netaddr
 import simplejson as json
 
-
 from sqlalchemy import Table
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, BigInteger, String
 from sqlalchemy import Enum, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import Mutable
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.types import TypeDecorator
 
-
-from flask.ext.login import UserMixin
-from itsdangerous import URLSafeTimedSerializer
+from compass.utils import util
 
 
 BASE = declarative_base()
-# TODO(grace) SECRET_KEY should be generated when installing compass
-# and save to a config file or DB
-SECRET_KEY = "abcd"
-
-# This is used for generating a token by user's ID and
-# decode the ID from this token
-login_serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 
 class JSONEncodedDict(TypeDecorator):
@@ -86,9 +78,9 @@ class MutationDict(Mutable, dict):
 
 
 class TimestampMixin(object):
-    created_at = Column(DateTime, default=lambda: datetime.now())
-    updated_at = Column(DateTime, default=lambda: datetime.now(),
-                        onupdate=lambda: datetime.now())
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now())
+    updated_at = Column(DateTime, default=lambda: datetime.datetime.now(),
+                        onupdate=lambda: datetime.datetime.now())
 
 
 class MetadataMixin(object):
@@ -106,81 +98,410 @@ class MetadataFieldMixin(object):
 
 class HelperMixin(object):
     def to_dict(self):
-        dict_info = self.__dict__.copy()
-        return self._to_dict(dict_info)
+        keys = self.__mapper__.columns.keys()
+        dict_info = {}
+        for key in keys:
+            value = getattr(self, key)
+            if isinstance(value, datetime.datetime):
+                value = util.format_datetime(value)
 
-    def _to_dict(self, dict_info, extra_dict=None):
-        columns = ['created_at', 'updated_at', 'last_login_at']
-        for key in columns:
-            if key in dict_info:
-                dict_info[key] = dict_info[key].ctime()
-
-        dict_info.pop('_sa_instance_state')
-        if extra_dict:
-            dict_info.update(extra_dict)
+            dict_info[key] = value
 
         return dict_info
 
 
 # User, Permission relation table
-user_permission = Table('user_permission', BASE.metadata,
-                        Column('user_id', Integer, ForeignKey('user.id')),
-                        Column('permission_id', Integer,
-                               ForeignKey('permission.id')))
-
-
-class User(BASE, UserMixin, HelperMixin):
-    """User table."""
-    __tablename__ = 'user'
-
+class UserPermission(BASE, HelperMixin, TimestampMixin):
+    """User permission  table."""
+    __tablename__ = 'user_permission'
     id = Column(Integer, primary_key=True)
-    email = Column(String(80), unique=True)
-    password = Column(String(225))
-    firstname = Column(String(80))
-    lastname = Column(String(80))
-    is_admin = Column(Boolean, default=False)
-    active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=lambda: datetime.now())
-    last_login_at = Column(DateTime, default=lambda: datetime.now())
-    permissions = relationship("Permission", secondary=user_permission)
+    user_id = Column(
+        Integer,
+        ForeignKey('user.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    permission_id = Column(
+        Integer,
+        ForeignKey('permission.id', onupdate='CASCADE', ondelete='CASCADE'),
+    )
+    __table_args__ = (
+        UniqueConstraint('user_id', 'permission_id', name='constraint'),
+    )
 
-    def __init__(self, email, password, **kwargs):
-        self.email = email
-        self.password = self._set_password(password)
+    def __init__(self, user_id, permission_id, **kwargs):
+        self.user_id = user_id
+        self.permission_id = permission_id
 
-    def __repr__(self):
-        return '<User name: %s>' % self.email
+    @hybrid_property
+    def name(self):
+        return self.permission.name
 
-    def _set_password(self, password):
-        return self._hash_password(password)
-
-    def get_password(self):
-        return self.password
-
-    def valid_password(self, password):
-        return self.password == self._hash_password(password)
-
-    def get_auth_token(self):
-        return login_serializer.dumps(self.id)
-
-    def is_active(self):
-        return self.active
-
-    def _hash_password(self, password):
-        return md5(password).hexdigest()
+    def to_dict(self):
+        dict_info = self.permission.to_dict()
+        dict_info.update(super(UserPermission, self).to_dict())
+        return dict_info
 
 
-class Permission(BASE):
+class Permission(BASE, HelperMixin, TimestampMixin):
     """Permission table."""
     __tablename__ = 'permission'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True)
     alias = Column(String(100))
+    description = Column(Text)
+    user_permissions = relationship(
+        UserPermission,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('permission')
+    )
 
-    def __init__(self, name, alias):
+    def __init__(self, name, **kwargs):
         self.name = name
-        self.alias = alias
+        super(Permission, self).__init__(**kwargs)
+
+
+
+class UserToken(BASE, HelperMixin):
+    """user token table."""
+    __tablename__ = 'user_token'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(
+        Integer,
+        ForeignKey('user.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    token = Column(String(256), unique=True)
+    expire_timestamp = Column(
+        DateTime, default=lambda: datetime.datetime.now()
+    )
+
+    def __init__(self, token, **kwargs):
+        self.token = token
+        super(UserToken, self).__init__(**kwargs)
+
+
+class UserLog(BASE, HelperMixin):
+    """User log table."""
+    __tablename__ = 'user_log'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(
+        Integer,
+        ForeignKey('user.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    action = Column(Text)
+    timestamp = Column(DateTime, default=lambda: datetime.datetime.now())
+
+    @hybrid_property
+    def user_email(self):
+        return self.user.email
+
+
+class User(BASE, HelperMixin, TimestampMixin):
+    """User table."""
+    __tablename__ = 'user'
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(80), unique=True)
+    crypted_password = Column('password', String(225))
+    firstname = Column(String(80))
+    lastname = Column(String(80))
+    is_admin = Column(Boolean, default=False)
+    active = Column(Boolean, default=True)
+    user_permissions = relationship(
+        UserPermission,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('user')
+    )
+    user_logs = relationship(
+        UserLog,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('user')
+    )
+    user_tokens = relationship(
+        UserToken,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('user')
+    )
+
+    def __init__(self, email, **kwargs):
+        self.email = email
+        super(User, self).__init__(**kwargs)
+
+    @property
+    def password(self):
+        return '***********'
+
+    @password.setter
+    def password(self, password):
+        self.crypted_password = util.encrypt(password)
+
+    @hybrid_property
+    def permissions(self):
+        permissions = []
+        for user_permission in self.user_permissions:
+            permissions.append(user_permission.permission)
+
+        return permissions
+
+    def to_dict(self):
+        dict_info = super(User, self).to_dict()
+        dict_info['permissions'] = [
+            permission.to_dict()
+            for permission in self.permissions
+        ]
+        return dict_info
+
+    def __str__(self):
+        return '%s[email:%s,is_admin:%s,active:%s]' % (
+            self.__class__.__name__,
+            self.email, self.is_admin, self.active
+        )
+
+
+class SwitchMachine(BASE, HelperMixin, TimestampMixin):
+    """Switch Machine table."""
+    __tablename__ = 'switch_machine'
+    switch_id = Column(
+        Integer,
+        ForeignKey('switch.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True)
+    machine_id = Column(
+        Integer,
+        ForeignKey('machine.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True
+    )
+    port = Column(String(80))
+    vlans_data = Column('vlans', Text)
+
+    def __init__(self, switch_id, machine_id, **kwargs):
+        self.switch_id = switch_id
+        self.machine_id = machine_id
+        super(SwitchMachine, self).__init__(**kwargs)
+
+    @hybrid_property
+    def mac(self):
+        return self.machine.mac
+
+    @hybrid_property
+    def tag(self):
+        return self.machine.tag
+
+    @property
+    def switch_ip(self):
+        return self.switch.ip
+
+    @hybrid_property
+    def switch_ip_int(self):
+        return self.switch.ip_int
+
+    @hybrid_property
+    def switch_vendor(self):
+        return self.switch.vendor
+
+    def _get_vlans(self):
+        if self.vlans_data:
+            return json.loads(self.vlans_data)
+        else:
+            return []
+
+    def _set_vlans(self, value):
+        if value is not None:
+            self.vlans_data = json.dumps(value)
+        else:
+            self.vlans_data = None
+
+    @property
+    def vlans(self):
+        return self._get_vlans()
+
+    @vlans.setter
+    def vlans(self, value):
+        return self._set_vlans(value)
+
+    @property
+    def patched_vlan(self):
+        return None
+
+    @patched_vlan.setter
+    def patched_vlan(self, value):
+        vlans = self._get_vlans()
+        if value not in vlans:
+            vlans.append(value)
+        self._set_vlans(vlans)         
+
+    def to_dict(self):
+        dict_info = self.machine.to_dict()
+        dict_info.update(super(SwitchMachine, self).to_dict())
+        dict_info['vlans'] = self.vlans
+        return dict_info
+
+
+class Machine(BASE, HelperMixin, TimestampMixin):
+    """Machine table."""
+    __tablename__ = 'machine'
+    id = Column(Integer, primary_key=True)
+    mac = Column(String(24), unique=True)
+    ipmi_credentials_data = Column('ipmi_credentials', Text)
+    tag = Column(Text)
+    switch_machines = relationship(
+        SwitchMachine,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('machine')
+    )
+
+    def __init__(self, mac, **kwargs):
+        self.mac = mac
+        super(Machine, self).__init__(**kwargs)
+
+    def _get_ipmi_credentials(self):
+        if self.ipmi_credentials_data:
+            return json.loads(self.ipmi_credentials_data)
+        else:
+            return {}
+
+    def _set_ipmi_credentials(self, value):
+        if value is not None:
+            self.ipmi_credentials_data = json.dumps(value)
+        else:
+            self.ipmi_credentials_data = None
+
+    @property
+    def ipmi_credentials(self):
+        return self._get_ipmi_credentials()
+
+    @ipmi_credentials.setter
+    def ipmi_credentials(self, value):
+        self._set_ipmi_credentials(value)
+
+    @property
+    def patched_ipmi_credentials(self):
+        return self._get_ipmi_credentials()
+
+    @patched_ipmi_credentials.setter
+    def patched_ipmi_credentials(self, value):
+        ipmi_credentials = self._get_ipmi_credentials()
+        util.merge_dict(ipmi_credentials, value)
+        self._set_ipmi_credentials(ipmi_credentials)
+
+
+    def to_dict(self):
+        dict_info = super(Machine, self).to_dict()
+        dict_info['ipmi_credentials'] = self.ipmi_credentials
+        return dict_info
+
+
+class Switch(BASE, HelperMixin, TimestampMixin):
+    """Switch table."""
+    __tablename__ = 'switch'
+    id = Column(Integer, primary_key=True)
+    ip_int = Column('ip', BigInteger, unique=True)
+    credentials_data = Column('credentials', Text)
+    vendor = Column(String(256), nullable=True)
+    state = Column(Enum('initialized', 'unreachable', 'notsupported',
+                        'repolling', 'error', 'under_monitoring',
+                        name='switch_state'),
+                   default='initialized')
+    filters_data = Column('filters', Text)
+    switch_machines = relationship(
+        SwitchMachine,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('switch')
+    )
+
+    def __init__(self, ip_int, **kwargs):
+        self.ip_int = ip_int
+        super(Switch, self).__init__(**kwargs)
+
+    @property
+    def ip(self):
+        return str(netaddr.IPAddress(self.ip_int))
+
+    @ip.setter
+    def ip(self, ipaddr):
+        self.ip_int = int(netaddr.IPAddress(ipaddr))
+
+    def _get_credentials(self):
+        if self.credentials_data:
+            return json.loads(self.credentials_data)
+        else:
+            return {}
+
+    def _set_credentials(self, value):
+        if value is not None:
+            self.credentials_data = json.dumps(value)
+        else:
+            self.credentials_data = None
+
+    @property
+    def credentials(self):
+        return self._get_credentials()
+
+    @credentials.setter
+    def credentials(self, value):
+        self._set_credentials(value)
+
+    @property
+    def patched_credentials(self):
+        return None
+
+    @patched_credentials.setter
+    def patched_credentials(self, value):
+        credentials = self._get_credentials()
+        util.merge_dict(credentials, value)
+        self._set_credentials(credentials)
+
+    def _get_filters(self):
+        if self.filters_data:
+            return json.loads(self.filters_data)
+        else:
+            return []
+
+    def _set_filters(self, value):
+        if value is not None:
+            self.filters_data = json.dumps(value)
+        else:
+            self.filters_data = None
+
+    @property
+    def filters(self):
+        return self._get_filters()
+
+    @filters.setter
+    def filters(self, value):
+        self._set_filters(value)
+
+    @property
+    def patched_filter(self):
+        return None
+
+    @patched_filter.setter
+    def patched_filter(self, value):
+        filters = self._get_filters()
+        found_filter = False
+        for switch_filter in filters:
+            if switch_filter['filter_name'] == value['filter_name']:
+                switch_filter.update(value)
+        if not found_filter:
+            filters.append(value)
+        self._set_filters(filters)
+
+    def to_dict(self):
+        dict_info = super(Switch, self).to_dict()
+        dict_info['ip'] = self.ip
+        dict_info['credentials'] = self.credentials
+        dict_info['filters'] = self.filters
+        dict_info['machines'] = [
+            switch_machine.machine.to_dict()
+            for switch_machine in self.switch_machines
+        ]
+        return dict_info
 
 
 adapter_os = Table('adapter_os', BASE.metadata,

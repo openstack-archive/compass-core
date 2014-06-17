@@ -28,18 +28,7 @@ from compass.actions import reinstall
 from compass.actions import search
 from compass.api import app
 from compass.config_management.utils import config_manager
-from compass.db import database
-from compass.db.model import Adapter
-from compass.db.model import Cluster
-from compass.db.model import ClusterHost
-from compass.db.model import ClusterState
-from compass.db.model import HostState
-from compass.db.model import LogProgressingHistory
-from compass.db.model import Machine
-from compass.db.model import Role
-from compass.db.model import Switch
-from compass.db.model import SwitchConfig
-from compass.db.model import User
+from compass.db.api import database
 from compass.tasks.client import celery
 from compass.utils import flags
 from compass.utils import logsetting
@@ -84,17 +73,6 @@ app_manager = Manager(app, usage="Perform database operations")
 
 
 TABLE_MAPPING = {
-    'role': Role,
-    'adapter': Adapter,
-    'switch': Switch,
-    'switch_config': SwitchConfig,
-    'machine': Machine,
-    'hoststate': HostState,
-    'clusterstate': ClusterState,
-    'cluster': Cluster,
-    'clusterhost': ClusterHost,
-    'logprogressinghistory': LogProgressingHistory,
-    'user': User
 }
 
 
@@ -120,6 +98,11 @@ def checkdb():
 @app_manager.command
 def createdb():
     """Creates database from sqlalchemy models."""
+    try:
+        dropdb()
+    except Exception:
+        pass
+
     if setting.DATABASE_TYPE == 'file':
         if os.path.exists(setting.DATABASE_FILE):
             os.remove(setting.DATABASE_FILE)

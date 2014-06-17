@@ -14,16 +14,87 @@
 
 """Module to provider function to poll switch."""
 import logging
+import netaddr
 
-from compass.db import database
-from compass.db.model import Machine
-from compass.db.model import Switch
-from compass.db.model import SwitchConfig
+from compass.actions import util
+from compass.db.api import database
+from compass.db.api import switch as switch_api
 from compass.hdsdiscovery.hdmanager import HDManager
 
 
-def poll_switch(ip_addr, req_obj='mac', oper="SCAN"):
-    """Query switch and return expected result
+def _poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
+    under_monitoring = 'under_monitoring'
+    unreachable = 'unreachable'
+    polling_error = 'error'
+    hdmanager = HDManager()
+    vendor, state, err_msg = hdmanager.get_vendor(ip_addr, credentials)
+    if not vendor:
+        logging.info("*****error_msg: %s****", err_msg)
+        logging.error('no vendor found or match switch %s', ip_addr)
+        return (
+            {
+                'vendor': vendor, 'state': state, 'err_msg': err_msg
+            }, {
+            }
+        ) 
+
+    logging.debug(
+        'hdmanager learn switch from %s', ip_addr
+    )
+    results = []
+    try:
+        results = hdmanager.learn(
+            ip_addr, credentials, vendor, req_obj, oper
+        )
+    except Exception as error:
+        logging.exception(error)
+        state = unreachable
+        err_msg = (
+            'SNMP walk for querying MAC addresses timedout'
+        )
+        return (
+            {
+                'vendor': vendor, 'state': state, 'err_msg': err_msg
+            }, {
+            }
+        )
+
+    logging.info("pollswitch %s result: %s", ip_addr, results)
+    if not results:
+        logging.error(
+            'no result learned from %s', ip_addr
+        )
+        state = polling_error
+        err_msg = 'No result learned from SNMP walk'
+        return (
+            {'vendor': vendor, 'state': state, 'err_msg': err_msg},
+            {}
+        )
+
+    machine_dict = {}
+    for machine in results:
+        mac = machine['mac']
+        port = machine['port']
+        vlan = machine['vlan']
+        if vlan:
+            vlans = [vlan]
+        else:
+            vlans = []
+        if mac not in machine_dict:
+            machine_dict[mac] = {'port': port, 'vlans': vlans}
+        else:
+            machine_dict[mac]['port'] = port
+            machine_dict[mac]['vlans'].extend(vlans)
+
+    logging.debug('update switch %s state to under monitoring', ip_addr)
+    return (
+        {'vendor': vendor, 'state': state, 'err_msg': err_msg},
+        machine_dict
+    )
+
+
+def poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
+    """Query switch and update switch machines.
 
     .. note::
        When polling switch succeeds, for each mac it got from polling switch,
@@ -31,6 +102,8 @@ def poll_switch(ip_addr, req_obj='mac', oper="SCAN"):
 
     :param ip_addr: switch ip address.
     :type ip_addr: str
+    :param credentials: switch crednetials.
+    :type credentials: dict
     :param req_obj: the object requested to query from switch.
     :type req_obj: str
     :param oper: the operation to query the switch.
@@ -38,89 +111,29 @@ def poll_switch(ip_addr, req_obj='mac', oper="SCAN"):
 
     .. note::
        The function should be called out of database session scope.
-
     """
-    under_monitoring = 'under_monitoring'
-    unreachable = 'unreachable'
+    with util.lock('poll switch %s' % ip_addr) as lock:
+        if not lock:
+            raise Exception(
+                'failed to acquire lock to poll switch %s' % ip_addr
+            )
 
-    if not ip_addr:
-        logging.error('No switch IP address is provided!')
-        return
+        logging.debug('poll switch: %s', ip_addr)
+        ip_int = long(netaddr.IPAddress(ip_addr))
+        switch_dict, machine_dict = _poll_switch(
+            ip_addr, credentials, req_obj=req_obj, oper=oper
+        )
+        with database.session() as session:
+            switch = switch_api.get_switch_internal(
+                session, False, ip_int=ip_int
+            )
+            if not switch:
+                logging.error('no switch found for %s', ip_addr)
+                return
 
-    with database.session() as session:
-        #Retrieve vendor info from switch table
-        switch = session.query(Switch).filter_by(ip=ip_addr).first()
-        logging.info("pollswitch: %s", switch)
-        if not switch:
-            logging.error('no switch found for %s', ip_addr)
-            return
-
-        credential = switch.credential
-        logging.info("pollswitch: credential %r", credential)
-        vendor = switch.vendor
-        prev_state = switch.state
-        hdmanager = HDManager()
-
-        vendor, vstate, err_msg = hdmanager.get_vendor(ip_addr, credential)
-        if not vendor:
-            switch.state = vstate
-            switch.err_msg = err_msg
-            logging.info("*****error_msg: %s****", switch.err_msg)
-            logging.error('no vendor found or match switch %s', switch)
-            return
-
-        switch.vendor = vendor
-
-        # Start to poll switch's mac address.....
-        logging.debug('hdmanager learn switch from %s %s %s %s %s',
-                      ip_addr, credential, vendor, req_obj, oper)
-        results = []
-
-        try:
-            results = hdmanager.learn(
-                ip_addr, credential, vendor, req_obj, oper)
-        except Exception as error:
-            logging.exception(error)
-            switch.state = unreachable
-            switch.err_msg = "SNMP walk for querying MAC addresses timedout"
-            return
-
-        logging.info("pollswitch %s result: %s", switch, results)
-        if not results:
-            logging.error('no result learned from %s %s %s %s %s',
-                          ip_addr, credential, vendor, req_obj, oper)
-            return
-
-        switch_id = switch.id
-        filter_ports = session.query(
-            SwitchConfig.filter_port
-        ).filter(
-            SwitchConfig.ip == Switch.ip
-        ).filter(
-            Switch.id == switch_id
-        ).all()
-        logging.info("***********filter posts are %s********", filter_ports)
-        if filter_ports:
-            #Get all ports from tuples into list
-            filter_ports = [i[0] for i in filter_ports]
-
-        for entry in results:
-            mac = entry['mac']
-            port = entry['port']
-            vlan = entry['vlan']
-            if port in filter_ports:
-                continue
-
-            machine = session.query(Machine).filter_by(
-                mac=mac, port=port, switch_id=switch_id).first()
-            if not machine:
-                machine = Machine(mac=mac, port=port, vlan=vlan)
-                session.add(machine)
-                machine.switch = switch
-
-        logging.debug('update switch %s state to under monitoring', switch)
-        if prev_state != under_monitoring:
-            #Update error message in db
-            switch.err_msg = ""
-
-        switch.state = under_monitoring
+            switch_api.update_switch_internal(
+                session, switch, **switch_dict
+            )
+            switch_api.add_switch_machines_internal(
+                session, switch, machine_dict, False
+            )

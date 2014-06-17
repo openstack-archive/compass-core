@@ -16,6 +16,7 @@
 
    .. moduleauthor:: Xiaodong Wang ,xiaodongwang@huawei.com>
 """
+import datetime
 import logging
 import os
 
@@ -53,6 +54,17 @@ POLLSWITCH_INTERVAL = 60
 SWITCHES = [
 ]
 
+USER_SECRET_KEY = datetime.datetime.now().isoformat()
+USER_AUTH_HEADER_NAME = 'X-Auth-Token'
+USER_TOKEN_DURATION = '30m'
+COMPASS_ADMIN_EMAIL = 'admin@abc.com'
+COMPASS_ADMIN_PASSWORD = 'admin'
+COMPASS_DEFAULT_PERMISSIONS = [
+    'list_permissions',
+]
+SWITCHES_DEFAULT_FILTERS = []
+DEFAULT_SWITCH_IP = '0.0.0.0'
+DEFAULT_SWITCH_PORT = 0
 
 if (
     'COMPASS_IGNORE_SETTING' in os.environ and

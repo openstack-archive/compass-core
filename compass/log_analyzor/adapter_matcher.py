@@ -19,9 +19,8 @@
 import logging
 import re
 
-from compass.db import database
-from compass.db.model import Cluster
-from compass.db.model import ClusterHost
+from compass.db.api import database
+from compass.db import models
 from compass.log_analyzor.line_matcher import Progress
 
 
@@ -168,7 +167,7 @@ class AdapterMatcher(object):
         """
         session = database.current_session()
         host = session.query(
-            ClusterHost
+            models.ClusterHost
         ).filter_by(id=hostid).first()
         if not host:
             logging.error(
@@ -196,7 +195,7 @@ class AdapterMatcher(object):
         """
         session = database.current_session()
         host = session.query(
-            ClusterHost).filter_by(id=hostid).first()
+            models.ClusterHost).filter_by(id=hostid).first()
         if not host:
             logging.error(
                 'there is no host for %s in ClusterHost', hostid)
@@ -256,7 +255,7 @@ class AdapterMatcher(object):
         """
         session = database.current_session()
         cluster = session.query(
-            Cluster).filter_by(id=clusterid).first()
+            models.Cluster).filter_by(id=clusterid).first()
         if not cluster:
             logging.error(
                 'there is no cluster for %s in Cluster',

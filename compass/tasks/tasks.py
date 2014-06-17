@@ -43,18 +43,20 @@ setup_logging.connect(tasks_setup_logging)
 
 
 @celery.task(name='compass.tasks.pollswitch')
-def pollswitch(ip_addr, req_obj='mac', oper='SCAN'):
+def pollswitch(ip_addr, credentials, req_obj='mac', oper='SCAN'):
     """Query switch and return expected result.
 
     :param ip_addr: switch ip address.
     :type ip_addr: str
+    :param credentials: switch credentials
+    :type credentials: dict
     :param reqObj: the object requested to query from switch.
     :type reqObj: str
     :param oper: the operation to query the switch (SCAN, GET, SET).
     :type oper: str
     """
     try:
-        poll_switch.poll_switch(ip_addr, req_obj=req_obj, oper=oper)
+        poll_switch.poll_switch(ip_addr, credentials, req_obj=req_obj, oper=oper)
     except Exception as error:
         logging.exception(error)
 

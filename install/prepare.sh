@@ -211,7 +211,7 @@ download()
                 exit 1
             else
                 echo "successfully download $package"
-                mv -rf /tmp/${package}.tmp /tmp/${package}
+                mv -f /tmp/${package}.tmp /tmp/${package}
             fi
         else
             cp -rf $url /tmp/${package}
@@ -285,16 +285,24 @@ download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso ||
 download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
 
 # Install net-snmp
-sudo cp -rn /etc/snmp/snmp.conf /root/backup/
+if [[ ! -e /etc/snmp ]]; then
+    sudo mkdir -p /etc/snmp
+fi
+if [[ -e /etc/snmp/snmp.conf ]]; then
+    sudo cp -rn /etc/snmp/snmp.conf /root/backup/
+    sudo rm -f /etc/snmp/snmp.conf
+fi
 sudo mkdir -p /usr/local/share/snmp/
 sudo cp -rf $COMPASSDIR/mibs /usr/local/share/snmp/
-sudo rm -f /etc/snmp/snmp.conf
 sudo cp -rf $COMPASSDIR/misc/snmp/snmp.conf /etc/snmp/snmp.conf
 sudo chmod 644 /etc/snmp/snmp.conf
 sudo mkdir -p /var/lib/net-snmp/mib_indexes
 sudo chmod 755 /var/lib/net-snmp/mib_indexes
 
 # generate ssh key
+if [[ ! -e $HOME/.ssh ]]; then
+    sudo mkdir -p $HOME/.ssh
+fi
 if [ ! -e $HOME/.ssh/id_rsa.pub ]; then
     rm -rf $HOME/.ssh/id_rsa
     ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -q -N ''

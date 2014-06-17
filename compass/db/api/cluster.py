@@ -13,136 +13,388 @@
 # limitations under the License.
 
 """Cluster database operations."""
-
-import simplejson as json
-
-from compass.db import api
+from compass.db import exception
+from compass.db import models
 from compass.db.api import database
-from compass.db.api.utils import merge_dict
-from compass.db.api.utils import wrap_to_dict
-from compass.db.exception import InvalidParameter
-from compass.db.exception import RecordNotExists
-
-from compass.db.config_validation import default_validator
-# from compass.db.config_validation import extension
-
-from compass.db.models import Cluster
+from compass.db.api import utils
+from compass.db.api import metadata_holder as metadata_api
+from compass.db.api import user as user_api
 
 
-SUPPORTED_FILTERS = ['name', 'adapter', 'owner']
+SUPPORTED_FILTERS = ['name', 'os_name', 'distributed_system_name, 'owner', 'adapter_id']
+RESP_FIELDS = [
+    'id', 'name', 'os_name', 'os_installed'
+    'distributed_system_name', 'distributed_system_installed',
+    'owner', 'adapter_id',
+    'created_at', 'updated_at'
+]
+RESP_CONFIG_FIELDS = [
+    'os_config',
+    'package_config',
+    'config_step'
+]
+RESP_REVIEW_FIELDS = [
+    'cluster, 'hosts'
+]
+RESP_ACTION_FIELDS = [
+    'status', 'details'
+]
+ADDED_FIELDS = ['name', 'adapter_id']
+UPDATED_FIELDS = ['name']
+UPDATED_CONFIG_FIELDS = [
+    'put_os_config', 'put_package_config', 'config_step'
+]
+UPDATED_CLUSTERHOST_FIELDS = [
+    'add_hosts', 'replace_hosts', 'set_hosts'
+]
+PATCHED_CONFIG_FIELDS = [
+    'patched_os_config', 'patched_package_config', 'config_step'
+]
+RESP_CLUSTERHOST_FIELDS = [
+    'id', 'host_id', 'machine_id', 'name', 'cluster_id',
+    'mac', 'os_installed', 'distributed_system_installed',
+    'os_name', 'distributed_system_name',
+    'owner', 'networks', 'cluster_id'
+]
+RESP_PROGRESS_FIELDS = [
+    'id', 'state', 'progress', 'message'
+]
 
-ERROR_MSG = {
-    'findNoCluster': 'Cannot find the Cluster, ID is %d',
-}
 
-
-@wrap_to_dict()
-def get_cluster(cluster_id):
-
+@utils.wrap_to_dict(RESP_FIELDS)
+@utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
+def list_clusters(lister, **filters):
+    """List clusters."""
     with database.session() as session:
-        cluster = _get_cluster(session, cluster_id)
-        info = cluster.to_dict()
+        user_api.check_user_permission_internal(
+            session, lister, permission.PERMISSION_LIST_CLUSTERS)
+        return [
+            cluster.to_dict()
+            for cluster in utils.list_db_object(
+                session, models.Cluster, **filters
+            )
+        ]
 
-    return info
 
-
-@wrap_to_dict()
-def list_clusters(filters=None):
-    """List all users, optionally filtered by some fields."""
-
-    filters = filters or {}
+@utils.wrap_to_dict(RESP_FIELDS)
+@utils.supported_filters([])
+def get_cluster(getter, cluster_id, **kwargs):
+    """Get cluster info."""
     with database.session() as session:
-        clusters = _list_clusters(session, filters)
-        clusters_info = [cluster.to_dict() for cluster in clusters]
-
-    return clusters_info
-
-
-@wrap_to_dict()
-def get_cluster_config(cluster_id):
-    """Get configuration info for a specified cluster."""
-
-    with database.session() as session:
-        config = _get_cluster_config(session, cluster_id)
-
-    return config
+        user_api.check_user_permission_internal(
+            session, getter, permission.PERMISSION_LIST_CLUSTERS)
+        return utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        ).to_dict()
 
 
-def _get_cluster_config(session, cluster_id):
+def _conditional_exception(cluster, exception_when_not_editable):
+    if exception_when_not_editable:
+        raise exception.Forbidden(
+            'cluster %s is not editable' % cluster.name
+        )
+    else:
+        return False
 
+
+def is_cluster_editable(
+    session, cluster, user,
+    reinstall_distributed_system_set=False,
+    exception_when_not_editable=True
+):
     with session.begin(subtransactions=True):
-        cluster = _get_cluster(cluster_id)
-        config = cluster.config
-
-    return config
-
-
-def _get_cluster(session, cluster_id):
-    """Get the adapter by ID."""
-    with session.begin(subtransactions=True):
-        cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-        if not cluster:
-            err_msg = ERROR_MSG['findNoCluster'] % cluster_id
-            raise RecordNotExists(err_msg)
-    return cluster
+        if reinstall_distributed_system_set:
+            if cluster.state.state == 'INSTALLING':
+                return _conditional_exception(cluster, exception_when_not_editable)
+        elif not cluster.reinstall_distributed_system:
+            return _conditional_exception(cluster, exception_when_not_editable)
+        if not user.is_admin and cluster.creator_id != user.id:
+            return _conditional_exception(cluster, exception_when_not_editable)
+    return True
 
 
-def _list_clusters(session, filters=None):
-    """Get all clusters, optionally filtered by some fields."""
-
-    filters = filters or {}
-
-    with session.begin(subtransactions=True):
-        query = api.model_query(session, Cluster)
-        clusters = api.model_filter(query, Cluster,
-                                    filters, SUPPORTED_FILTERS).all()
-
-    return clusters
-
-
-def update_cluster_config(cluster_id, root_elem, config, patch=True):
-    result = None
-    if root_elem not in ["os_config", "package_config"]:
-        raise InvalidParameter("Invalid parameter %s" % root_elem)
-
+@utils.wrap_to_dict(RESP_FIELDS)
+@utils.supported_filters(ADDED_FIELDS)
+def add_cluster(creator, name, adapter_id, **kwargs):
+    """Create a cluster."""
     with database.session() as session:
-        cluster = _get_cluster(session, cluster_id)
+        user_api.check_user_permission_internal(
+            session, creator, permission.PERMISSION_ADD_CLUSTER)
+        cluster = utils.add_db_object(
+            session, models.Cluster, True,
+            name, adapter_id=adapter_id, creator_id=creator.id, **kwargs
+        )
+        return cluster.to_dict()
 
-        id_name = None
-        id_value = None
-        if root_elem == "os_config":
-            id_name = "os_id"
-            id_value = getattr(cluster, "os_id")
+
+@utils.wrap_to_dict(RESP_FIELDS)
+@utils.supported_filters(UPDATED_FIELDS)
+def update_cluster(updater, cluster_id, **kwargs):
+     """Update a cluster."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, updater, permission.PERMISSION_ADD_CLUSTER)
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        )
+        is_cluster_editable(
+            session, cluster, updater,
+            reinstall_distributed_system_set=kwargs.get('reinstall_distributed_system', False)
+        )
+        utils.update_db_object(session, cluster, **kwargs)
+        return cluster.to_dict()
+
+
+@utils.wrap_to_dict(RESP_FIELDS)
+@utils.supported_filters([])
+def del_cluster(deleter, cluster_id, **kwargs):
+    """Delete a cluster."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, deleter, permission.PERMISSION_DEL_CLUSTER)
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        )
+        is_cluster_editable(session, cluster, updater)
+        utils.del_db_object(session, cluster)
+        return cluster.to_dict()
+
+
+@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
+@utils.supported_filters([])
+def get_cluster_config(getter, cluster_id, **kwargs):
+    """Get cluster config."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, getter, permission.PERMISSION_LIST_CLUSTER_CONFIG)
+        return utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        ).to_dict()
+
+
+def _update_cluster_config(updater, cluster_id, **kwargs):
+    """Update a cluster config."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, updater, permission.PERMISSION_ADD_CLUSTER_CONFIG)
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        )
+        is_cluster_editable(session, cluster, updater)
+        utils.update_db_object(session, cluster, config_validated=False, **kwargs)
+        os_config = cluster.os_config
+        if os_config:
+            metadata_api.validate_os_config(
+                os_config, cluster.adapter_id
+            )
+        package_config = cluster.package_config
+        if package_config:
+            metadata_api.validate_package_config(
+                package_config, cluster.adapter_id
+            )
+        return cluster.to_dict()
+
+
+@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
+@utils.supported_filters(UPDATED_CONFIG_FIELDS)
+def update_cluster_config(updater, cluster_id, **kwargs):
+    return _update_cluster_config(updater, cluster_id, **kwargs)
+
+
+@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
+@utils.supported_filters(PATCHED_CONFIG_FIELDS)
+def patch_cluster_config(updater, cluster_id, **kwargs):
+    return _update_cluster_config(updater, cluster_id, **kwargs)
+
+
+@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
+@utils.supported_filters([])
+def del_cluster_config(deleter, cluster_id):
+    """Delete a cluster config."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, deleter, permission.PERMISSION_DEL_CLUSTER_CONFIG)
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        )
+        is_cluster_editable(session, cluster, updater)
+        utils.update_db_object(
+            session, cluster, os_config={}, package_config={}, config_validated=False
+        )
+        return cluster.to_dict()
+
+
+def _add_host(session, cluster, machine_id, machine_attrs):
+    with session.begin(subtransactions=True):
+        host = utils.get_db_object(
+            session, models.Host, False, id=machine_id
+        )
+        if host:
+            if host_api.is_host_editable(
+                session, host, cluster.creator,
+                reinstall_os_set=machine_attrs.get('reinstall_os', False),
+                exception_when_not_editable=False
+            ):
+                utils.update_db_object(
+                    session, host, adapter_id=cluster.adapter_id,
+                    **machine_attrs
+                )
+            else:
+                logging.info('host %s is not editable', host.name)
         else:
-            id_name = "adapter_id"
-            id_value = getattr(cluster, "adapter_id")
+            utils.add_db_object(
+                session, models.Host, machine_id,
+                os_id=cluster.os_id,
+                creator_id=cluster.creator_id,
+                adapter_id=cluster.adapter_id,  **machine_attrs
+            )
 
-        # Validate config format and values
-        is_valid, message = default_validator.validate_config(session,
-                                                              config, id_name,
-                                                              id_value, patch)
-        if not is_valid:
-            raise InvalidParameter(message)
+def _add_clusterhosts(session, cluster, machines):
+    from compass.db.api import host as host_api
+    with session.begin(subtransactions=True):
+        for machine_id, machine_attrs in machines.items():
+            _add_host(session, cluster, machine_id, machine_attrs)
+            utils.add_db_object(
+                session, models.ClusterHost, False, cluster.id, machine_id
+            )
 
-        # For addtional validation, you can define functions in extension,
-        # for example:
-        # os_name = get_os(cluster.os_id)['name']
-        # if getattr(extension, os_name):
-        #    func = getattr(getattr(extension, os_name), 'validate_config')
-        #    if not func(session, os_id, config, patch):
-        #        return False
+def _remove_clusterhosts(session, cluster, hosts):
+    with session.begin(subtransactions=True):
+        for host_id in hosts:
+            utils.del_db_objects(
+                session, models.ClusterHost,
+                cluster_id=cluster.id, host_id=machine_id
+            )
 
-        if root_elem == 'os_config':
-            os_config = cluster.os_global_config
-            os_config = json.loads(json.dumps(os_config))
-            merge_dict(os_config, config)
-            cluster.os_global_config = os_config
-            result = cluster.os_global_config
-        else:
-            package_config = cluster.package_global_config
-            package_config = json.loads(json.dumps(os_config))
-            merge_dict(package_config, config)
-            cluster.package_global_config = package_config
-            result = cluster.package_global_config
 
-    return result
+def _set_clusterhosts(session, cluster, machines):
+    with session.begin(subtransactions=True):
+        utils.del_db_objects(
+            session, models.ClusterHost,
+            cluster_id=cluster.id
+        )
+        for machine_id, machine_attrs in machines.items():
+            _add_host(session, cluster, machine_id, machine_attrs)
+            utils.add_db_object(
+                session, models.ClusterHost,
+                True, cluster.id, machine_id
+            )
+
+
+@utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
+@utils.supported_filters([])
+def get_clusterhosts(getter, cluster_id, **kwargs):
+    """Get cluster host info."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, getter, permission.PERMISSION_LIST_CLUSTERHOSTS)
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        )
+        return [clusterhost.to_dict() for clusterhost in cluster.clusterhosts]
+
+
+@utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
+@utils.supported_filters(UPDATED_CLUSTERHOST_FIELDS)
+def update_clusterhosts(
+    updater, cluster_id, add_hosts={}, set_hosts=None,
+    remove_hosts=[]
+):
+    """Get subnet info."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, updater, permission.PERMISSION_UPDATE_CLUSTER_HOSTS)
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        )
+        is_cluster_editable(session, cluster, updater)
+        if remove_hosts:
+            _remove_clusterhosts(session, cluster, remove_hosts)
+        if add_hosts:
+            _add_clusterhosts(session, cluster, add_hosts)
+        if set_hosts is not None:
+            _set_clusterhosts(session, cluster, set_hosts)
+        return [host.to_dict() for host in cluster.clusterhosts]
+
+
+@utils.wrap_to_dict(RESP_REVIEW_FIELDS)
+@utils.supported_filters([])
+def review_cluster(reviewer, cluster_id):
+    """review cluster."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, getter, permission.PERMISSION_REVIEW_CLUSTER)
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        )
+        check_cluster_editable(session, cluster, reviewer)
+        os_config = cluster.os_config
+        if os_config:
+            metadata_api.validate_os_config(
+                os_config, cluster.apdater_id, True
+            )
+            for clusterhost in cluster.clusterhosts:
+                host = clusterhost.host
+                host_os_config = host.os_config
+                deployed_os_config = util.merge_dict(
+                    os_config, host_os_config
+                )
+                metadata_api.validate_os_config(
+                    deployed_os_config, host.apdater_id, True
+                )
+                host.deployed_os_config = deployed_os_config
+                host.config_validated = True
+        package_config = cluster.package_config
+        if package_config:
+            metadata_api.validate_package_config(
+                package_config, cluster.adapter_id, True
+            )
+            for clusterhost in cluster.clusterhosts:
+                clusterhost_package_config = clusterhost.package_config
+                deployed_package_config = util.mrege_dict(
+                    package_config, clusterhost_package_config
+                )
+                metadata_api.validate_os_config(
+                    deployed_package_config,
+                    cluster.apdater_id, True
+                )
+                clusterhost.deployed_package_config = deployed_package_config
+                clusterhost.config_validated = True
+        cluster.config_validated = True
+        return {
+            'cluster': cluster.to_dict(),
+            'clusterhosts': [
+                clusterhost.to_dict()
+                for clusterhost in cluster.clusterhosts
+            ]
+        }
+
+
+@utils.wrap_to_dict(RESP_DEPLOY_FIELDS)
+@utils.supported_filters([])
+def deploy_cluster(deployer, cluster_id, **kwargs):
+    """review cluster."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, getter, permission.PERMISSION_DEPLOY_CLUSTER)
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        )
+        check_cluster_editable(session, cluster, deployer)
+        return {
+            'status': 'deploy action sent',
+            'details': {
+            }
+        }
+
+
+@utils.wrap_to_dict(RESP_STATE_FIELDS)
+@utils.supported_filters([])
+def get_cluster_state(getter, cluster_id, **kwargs):
+    """Get cluster state info."""
+    with database.session() as session:
+        user_api.check_user_permission_internal(
+            session, getter, permission.PERMISSION_GET_CLUSTER_STATE)
+        return utils.get_db_object(
+            session, models.Cluster, id=cluster_id
+        ).state_dict()

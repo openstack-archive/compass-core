@@ -21,9 +21,9 @@ import redis
 
 from contextlib import contextmanager
 
-from compass.db import database
-from compass.db.model import Cluster
-from compass.db.model import Switch
+from compass.db.api import database
+# from compass.db.models import Cluster
+# from compass.db.models import Switch
 
 
 @contextmanager

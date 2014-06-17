@@ -16,6 +16,7 @@
 
    .. moduleauthor:: Xiaodong Wang ,xiaodongwang@huawei.com>
 """
+import datetime
 import logging
 import os
 
@@ -31,12 +32,6 @@ CONFIG_FILE_FORMAT = 'python'
 DATABASE_TYPE = 'file'
 DATABASE_FILE = ''
 SQLALCHEMY_DATABASE_URI = 'sqlite://'
-OS_INSTALLER = 'cobbler'
-COBBLER_INSTALLER_URL = ''
-COBBLER_INSTALLER_TOKEN = ['cobbler', 'cobbler']
-PACKAGE_INSTALLER = 'chef'
-CHEF_INSTALLER_URL = ''
-CHEF_GLOBAL_DATABAG_NAME = 'env_default'
 INSTALLATION_LOGDIR = ''
 DEFAULT_LOGLEVEL = 'info'
 DEFAULT_LOGDIR = '/tmp'
@@ -53,7 +48,29 @@ POLLSWITCH_INTERVAL = 60
 SWITCHES = [
 ]
 
-
+USER_SECRET_KEY = datetime.datetime.now().isoformat()
+USER_AUTH_HEADER_NAME = 'X-Auth-Token'
+USER_TOKEN_DURATION = '30m'
+COMPASS_ADMIN_EMAIL = 'admin@abc.com'
+COMPASS_ADMIN_PASSWORD = 'admin'
+COMPASS_DEFAULT_PERMISSIONS = [
+    'list_permissions',
+]
+SWITCHES_DEFAULT_FILTERS = []
+DEFAULT_SWITCH_IP = '0.0.0.0'
+DEFAULT_SWITCH_PORT = 0
+OS_INSTALLER_DIR  = '/etc/compass/os_installer'
+PACKAGE_INSTALLER_DIR = '/etc/compass/package_installer'
+OS_DIR = '/etc/compass/os'
+DISTRIBUTED_SYSTEM_DIR = '/etc/compass/distributed_system'
+OS_ADAPTER_DIR = '/etc/compass/os_adapter'
+PACKAGE_ADAPTER_DIR = '/etc/compass/package_adapter'
+OS_METADATA_DIR = '/etc/compass/os_metadata'
+PACKAGE_METADATA_DIR = '/etc/compass/package_metadata'
+OS_FIELD_DIR = '/etc/compass/os_field'
+PACKAGE_FIELD_DIR = '/etc/compass/package_field'
+PACKAGE_ROLE_DIR = '/etc/compass/role'
+VALIDATOR_DIR = '/etc/compass/validator'
 if (
     'COMPASS_IGNORE_SETTING' in os.environ and
     os.environ['COMPASS_IGNORE_SETTING']

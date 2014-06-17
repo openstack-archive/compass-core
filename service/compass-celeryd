@@ -1,0 +1,94 @@
+#!/bin/sh
+#
+# compassd          Compass daemon
+##################################
+
+# LSB header
+
+### BEGIN INIT INFO
+# Provides: compassd
+# Required-Start: $network $httpd 
+# Default-Start: 3 4 5
+# Default-Stop: 0 1 2 6
+# Short-Description: compassd
+# Description: Compass daemon service
+#              
+### END INIT INFO
+
+# chkconfig header
+
+# chkconfig: 345 98 98
+# description:  This is a daemon that provides Compass daemon service
+#
+# Checking Sanity
+DEBIAN=/etc/debian_version
+SUSE=/etc/SuSE-release
+
+if [ -f $DEBIAN ]; then
+    . /lib/lsb/init_functions
+elif [ -f $SUSE -a -r /etc/rc.status ]; then
+    . /etc/rc.status
+else
+    . /etc/rc.d/init.d/functions
+fi
+
+RETVAL=0
+start() {
+    echo -n "Starting Compass Celeryd: "
+    if [ -f $SUSE ]; then
+        startproc -f -p /var/run/celeryd.pid -l /tmp/celeryd.log "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celery worker"
+        rc_status -v
+        RETVAL=$?
+    elif [ -f $DEBIAN ]; then
+        start_daemon -p /var/run/celeryd.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celery worker &>/tmp/celeryd.log & echo \$! > /var/run/celeryd.pid"
+        RETVAL=$?
+    else
+        daemon --pidfile /var/run/celeryd.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celery worker &>/tmp/celeryd.log & echo \$! > /var/run/celeryd.pid"
+        RETVAL=$?
+    fi
+    echo
+    return $RETVAL
+}
+
+stop() {
+    echo -n "Stopping Compass Celeryd: "
+    if [ -f $SUSE ]; then
+        killproc -t 10 -p /var/run/celeryd.pid celeryd
+        rc_status -v
+        RETVAL=$?
+    elif [ -f $DEBIAN ]; then
+        killproc -p /var/run/celeryd.pid celeryd -TERM
+        RETVAL=$?
+    else
+        killproc -p /var/run/celeryd.pid -d 30 celeryd
+        RETVAL=$?
+    fi
+    echo
+}
+
+restart() {
+   stop
+   start
+}
+case "$1" in
+    start|stop|restart)
+        $1
+        ;;
+    status)
+        echo -n "Checking compass celeryd: "
+        if [ -f $SUSE ]; then
+            checkproc -v -p /var/run/celeryd.pid celeryd
+            rc_status -v
+        elif [ -f $DEBIAN ]; then
+            status_of_proc -p /var/run/celeryd.pid celeryd celeryd
+        else
+            status -p /var/run/celeryd.pid celeryd
+            echo
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
+exit $RETVAL

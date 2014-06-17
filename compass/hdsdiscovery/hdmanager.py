@@ -24,6 +24,7 @@ from compass.hdsdiscovery import utils
 UNREACHABLE = 'unreachable'
 NOTSUPPORTED = 'notsupported'
 ERROR = 'error'
+REPOLLING = 'repolling'
 
 
 class HDManager(object):
@@ -143,7 +144,7 @@ class HDManager(object):
             logging.debug("[get_vendor] No vendor found! <==================")
             return (None, NOTSUPPORTED, "Not supported switch vendor!")
 
-        return (vendor, "Found", "")
+        return (vendor, REPOLLING, "")
 
     def get_sys_info(self, host, credential):
         """get sys info."""

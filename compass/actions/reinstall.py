@@ -20,7 +20,7 @@ import logging
 
 from compass.actions import util
 from compass.config_management.utils.config_manager import ConfigManager
-from compass.db import database
+from compass.db.api import database
 
 
 def reinstall(cluster_hosts):

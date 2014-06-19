@@ -1,6 +1,6 @@
-#####################################
-# Config File for Compass Installer #
-#####################################
+#####################################################
+# Config File for Compass Installer Used by Testing #
+#####################################################
 # REPO_URL indicates the source where to download compass-web and compass-adapters from
 #export REPO_URL=https://review.openstack.org
 
@@ -33,6 +33,12 @@ export ADAPTERS_SOURCE='http://git.openstack.org/stackforge/compass-adapters'
 # set the default cobbler user "cobbler" password, if not set, the default will be cobbler/cobbler
 export CBLR_USER=cobbler
 export CBLR_PASSWD=cobbler
+export MYSQL_USER=root
+export MYSQL_OLD_PASSWORD=root
+export MYSQL_PASSWORD=root
+export MYSQL_SERVER='127.0.0.1'
+export MYSQL_PORT=3306
+export MYSQL_DATABASE=db
 
 # IMAGE_SOURCE is where you host your CentOS image
 export IMAGE_TYPE=${IMAGE_TYPE:-"CentOS"}

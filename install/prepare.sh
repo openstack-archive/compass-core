@@ -220,13 +220,17 @@ if [ "$tempest" == "true" ]; then
         git clean -x -f -d -q
         git checkout grizzly-eol
     fi
-    cd /tmp/tempest
-    pip install -e .
-    if [[ "$?" != "0" ]]; then
-        echo "failed to install tempest project"
-        exit 1
+    if pip freeze|grep tempest>/dev/null; then
+        echo "Tempest already installed"
     else
-        echo "install tempest project succeeded"
+        cd /tmp/tempest
+        pip install -e .
+        if [[ "$?" != "0" ]]; then
+            echo "failed to install tempest project"
+            exit 1
+        else
+            echo "install tempest project succeeded"
+        fi
     fi
 fi
 

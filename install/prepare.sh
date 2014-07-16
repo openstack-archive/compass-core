@@ -240,7 +240,7 @@ download()
     else
         if [[ "$url" =~ (http|https|ftp):// ]]; then
             echo "downloading $url to /tmp/${package}"
-            wget -c --progress=bar:force -O /tmp/${package}.tmp $url
+            curl -L -o /tmp/${package}.tmp $url
             if [[ "$?" != "0" ]]; then
                 echo "failed to download $package"
                 exit 1

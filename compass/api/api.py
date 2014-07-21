@@ -57,7 +57,7 @@ from flask.ext.wtf import Form
 from wtforms.fields import BooleanField
 from wtforms.fields import PasswordField
 from wtforms.fields import TextField
-from wtforms.validators import Required
+from wtforms.validators import DataRequired
 
 
 @login_manager.header_loader
@@ -136,8 +136,8 @@ def get_token():
 
 class LoginForm(Form):
     """Define login form."""
-    email = TextField('Email', validators=[Required()])
-    password = PasswordField('Password', validators=[Required()])
+    email = TextField('Email', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
     remember = BooleanField('Remember me', default=False)
 
 

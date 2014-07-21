@@ -45,6 +45,7 @@ pip install tox==1.6.1
 #Install setuptools twice so that it is really upgraded
 pip install -U setuptools
 pip install -U setuptools
+pip install -U virtualenvwrapper
 yum install -y libxml2-devel libxslt-devel python-devel sshpass
 if [[ ! -e /tmp/tempest ]]; then
     git clone http://git.openstack.org/openstack/tempest /tmp/tempest
@@ -58,6 +59,15 @@ else
     git clean -x -f -d -q
     git checkout grizzly-eol
 fi
+source `which virtualenvwrapper.sh`
+set +e
+if ! lsvirtualenv |grep tempest>/dev/null; then
+    mkvirtualenv tempest
+    workon tempest
+else
+    workon tempest
+fi
+set -e
 cd /tmp/tempest
 #Install Tempest including dependencies
 pip install -e .

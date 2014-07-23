@@ -170,156 +170,149 @@ def get_switch_internal(
         )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters([])
-def get_switch(getter, switch_id, **kwargs):
-    """get field dict of a switch."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_SWITCHES)
-        return utils.get_db_object(
-            session, models.Switch, id=switch_id
-        ).to_dict()
-
-
-@utils.wrap_to_dict(RESP_FIELDS)
-@utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
-def list_switches(lister, **filters):
-    """List switches."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_SWITCHES)
-        return [
-            switch.to_dict()
-            for switch in utils.list_db_objects(
-                session, models.Switch, **filters
-            )
-        ]
-
-
-@utils.wrap_to_dict(RESP_FIELDS)
-@utils.supported_filters([])
-def del_switch(deleter, switch_id, **kwargs):
-    """Delete a switch."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_SWITCH)
-        switch = utils.get_db_object(session, models.Switch, id=switch_id)
-        utils.del_db_object(session, switch)
-        return switch.to_dict()
-
-
-@utils.wrap_to_dict(RESP_FIELDS)
-@utils.input_validates(
-    ip=utils.check_ip,
-    credentials=_check_credentials
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_SWITCHES
 )
+@utils.wrap_to_dict(RESP_FIELDS)
+def get_switch(session, getter, switch_id, **kwargs):
+    """get field dict of a switch."""
+    return utils.get_db_object(
+        session, models.Switch, id=switch_id
+    )
+
+
+@utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_SWITCHES
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def list_switches(session, lister, **filters):
+    """List switches."""
+    return utils.list_db_objects(
+        session, models.Switch, **filters
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_SWITCH
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def del_switch(session, deleter, switch_id, **kwargs):
+    """Delete a switch."""
+    switch = utils.get_db_object(session, models.Switch, id=switch_id)
+    return utils.del_db_object(session, switch)
+
+
 @utils.supported_filters(
     ADDED_FIELDS,
     optional_support_keys=OPTIONAL_ADDED_FIELDS
 )
-def add_switch(creator, ip, **kwargs):
+@utils.input_validates(
+    ip=utils.check_ip,
+    credentials=_check_credentials
+)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def add_switch(session, creator, ip, **kwargs):
     """Create a switch."""
     ip_int = long(netaddr.IPAddress(ip))
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, creator, permission.PERMISSION_ADD_SWITCH)
-        return add_switch_internal(
-            session, ip_int, **kwargs
-        ).to_dict()
+    return add_switch_internal(
+        session, ip_int, **kwargs
+    )
 
 
 def update_switch_internal(session, switch, **kwargs):
     """update switch."""
-    with session.begin(subtransactions=True):
-        return utils.update_db_object(
-            session, switch,
-            **kwargs
-        )
+    return utils.update_db_object(
+        session, switch,
+        **kwargs
+    )
 
 
-def _update_switch(updater, switch_id, **kwargs):
-    """Update a switch."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_SWITCH)
-        switch = utils.get_db_object(
-            session, models.Switch, id=switch_id
-        )
-        utils.update_db_object(session, switch, **kwargs)
-        switch_dict = switch.to_dict()
-        utils.validate_outputs(
-            {'credentials': _check_credentials},
-            switch_dict
-        )
-        return switch_dict
-
-
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH
+)
 @utils.wrap_to_dict(RESP_FIELDS)
-@utils.input_validates(credentials=_check_credentials)
+def _update_switch(session, updater, switch_id, **kwargs):
+    """Update a switch."""
+    switch = utils.get_db_object(
+        session, models.Switch, id=switch_id
+    )
+    return utils.update_db_object(session, switch, **kwargs)
+
+
 @utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
-def update_switch(updater, switch_id, **kwargs):
-    _update_switch(updater, switch_id, **kwargs)
+@utils.input_validates(credentials=_check_credentials)
+@database.run_in_session()
+def update_switch(session, updater, switch_id, **kwargs):
+    return _update_switch(session, updater, switch_id, **kwargs)
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters(optional_support_keys=PATCHED_FIELDS)
-def patch_switch(updater, switch_id, **kwargs):
-    _update_switch(updater, switch_id, **kwargs)
+@database.run_in_session()
+@utils.output_validates(credentials=_check_credentials)
+def patch_switch(session, updater, switch_id, **kwargs):
+    return _update_switch(session, updater, switch_id, **kwargs)
 
 
-@utils.wrap_to_dict(RESP_FILTERS_FIELDS)
 @utils.supported_filters(optional_support_keys=SUPPORTED_FILTER_FIELDS)
-def list_switch_filters(lister, **filters):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_SWITCH_FILTERS
+)
+@utils.wrap_to_dict(RESP_FILTERS_FIELDS)
+def list_switch_filters(session, lister, **filters):
     """list switch filters."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_SWITCHES
-        )
-        return [
-            switch.to_dict()
-            for switch in utils.list_db_objects(
-                session, models.Switch, **filters
-            )
-        ]
+    return utils.list_db_objects(
+        session, models.Switch, **filters
+    )
 
 
-@utils.wrap_to_dict(RESP_FILTERS_FIELDS)
 @utils.supported_filters()
-def get_switch_filters(getter, switch_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_SWITCH_FILTERS
+)
+@utils.wrap_to_dict(RESP_FILTERS_FIELDS)
+def get_switch_filters(session, getter, switch_id, **kwargs):
     """get switch filter."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_SWITCHES)
-        return utils.get_db_object(
-            session, models.Switch, id=switch_id
-        ).to_dict()
+    return utils.get_db_object(
+        session, models.Switch, id=switch_id
+    )
 
 
-@utils.wrap_to_dict(RESP_FILTERS_FIELDS)
-@utils.input_validates(filters=_check_filter)
 @utils.supported_filters(optional_support_keys=UPDATED_FILTERS_FIELDS)
-def update_switch_filters(updater, switch_id, **kwargs):
-    """Update a switch filter."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_SWITCH)
-        switch = utils.get_db_object(session, models.Switch, id=switch_id)
-        utils.update_db_object(session, switch, **kwargs)
-        return switch.to_dict()
-
-
+@utils.input_validates(filters=_check_filter)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_SWITCH_FILTERS
+)
 @utils.wrap_to_dict(RESP_FILTERS_FIELDS)
-@utils.input_validates(patched_filters=_check_filter)
+def update_switch_filters(session, updater, switch_id, **kwargs):
+    """Update a switch filter."""
+    switch = utils.get_db_object(session, models.Switch, id=switch_id)
+    return utils.update_db_object(session, switch, **kwargs)
+
+
 @utils.supported_filters(optional_support_keys=PATCHED_FILTERS_FIELDS)
-def patch_switch_filter(updater, switch_id, **kwargs):
-    """Update a switch."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_SWITCH)
-        switch = utils.get_db_object(session, models.Switch, id=switch_id)
-        utils.update_db_object(session, switch, **kwargs)
-        return switch.to_dict()
+@utils.input_validates(patched_filters=_check_filter)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_SWITCH_FILTERS
+)
+@utils.wrap_to_dict(RESP_FILTERS_FIELDS)
+def patch_switch_filter(session, updater, switch_id, **kwargs):
+    """Patch a switch filter."""
+    switch = utils.get_db_object(session, models.Switch, id=switch_id)
+    return utils.update_db_object(session, switch, **kwargs)
 
 
 def filter_machine_internal(filters, port):
@@ -415,155 +408,149 @@ def _filter_vlans(vlan_filter, obj):
     return True
 
 
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_SWITCH_MACHINES
+)
 @utils.output_filters(port=_filter_port, vlans=_filter_vlans)
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-@utils.supported_filters(optional_support_keys=SUPPORTED_MACHINES_FIELDS)
-def list_switch_machines(getter, switch_id, **filters):
-    """Get switch machines."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_SWITCH_MACHINES)
-        switch_machines = get_switch_machines_internal(
-            session, switch_id=switch_id, **filters
+def _list_switch_machines(session, user, switch_machines):
+    return [
+        switch_machine for switch_machine in switch_machines
+        if filter_machine_internal(
+            switch_machine.switch.filters,
+            switch_machine.port
         )
-        return [
-            switch_machine.to_dict() for switch_machine in switch_machines
-            if filter_machine_internal(
-                switch_machine.switch.filters,
-                switch_machine.port
-            )
-        ]
+    ]
 
 
-@utils.output_filters(port=_filter_port, vlans=_filter_vlans)
-@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
+@utils.supported_filters(optional_support_keys=SUPPORTED_MACHINES_FIELDS)
+@database.run_in_session()
+def list_switch_machines(session, getter, switch_id, **filters):
+    """Get switch machines."""
+    switch_machines = get_switch_machines_internal(
+        session, switch_id=switch_id, **filters
+    )
+    return _list_switch_machines(session, getter, switch_machines)
+
+
 @utils.supported_filters(
     optional_support_keys=SUPPORTED_SWITCH_MACHINES_FIELDS
 )
-def list_switchmachines(lister, **filters):
+@database.run_in_session()
+def list_switchmachines(session, lister, **filters):
     """List switch machines."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_SWITCH_MACHINES)
-        switch_machines = [
-            switch_machine
-            for switch_machine in get_switch_machines_internal(
-                session, **filters
-            )
-            if filter_machine_internal(
-                switch_machine.switch.filters, switch_machine.port
-            )
-        ]
-        return [
-            switch_machine.to_dict()
-            for switch_machine in switch_machines
-        ]
+    switch_machines = get_switch_machines_internal(
+        session, **filters
+    )
+    return _list_switch_machines(session, lister, switch_machines)
 
 
 def add_switch_machines_internal(
     session, switch, machine_dicts,
     exception_when_switch_machine_existing=True
 ):
-    with session.begin(subtransactions=True):
-        machine_id_switch_machine_dict = {}
-        for mac, all_dict in machine_dicts.items():
-            switch_machine_dict = {}
-            machine_dict = {}
-            for key, value in all_dict.items():
-                if key in ALL_ADDED_MACHINES_FIELDS:
-                    switch_machine_dict[key] = value
-                else:
-                    machine_dict[key] = value
-            #TODO(xiaodong): add ipmi field checks'
-            machine = utils.add_db_object(
-                session, models.Machine, False,
-                mac, **machine_dict)
-            machine_id_switch_machine_dict[machine.id] = switch_machine_dict
+    machine_id_switch_machine_dict = {}
+    for mac, all_dict in machine_dicts.items():
+        switch_machine_dict = {}
+        machine_dict = {}
+        for key, value in all_dict.items():
+            if key in ALL_ADDED_MACHINES_FIELDS:
+                switch_machine_dict[key] = value
+            else:
+                machine_dict[key] = value
+        #TODO(xiaodong): add ipmi field checks'
+        machine = utils.add_db_object(
+            session, models.Machine, False,
+            mac, **machine_dict)
+        machine_id_switch_machine_dict[machine.id] = switch_machine_dict
 
-        switches = [switch]
-        if switch.ip != setting.DEFAULT_SWITCH_IP:
-            switches.append(utils.get_db_object(
-                session, models.Switch,
-                ip_int=long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP))
-            ))
+    switches = [switch]
+    if switch.ip != setting.DEFAULT_SWITCH_IP:
+        switches.append(utils.get_db_object(
+            session, models.Switch,
+            ip_int=long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP))
+        ))
 
-        switch_machines = []
-        for machine_switch in switches:
-            for machine_id, switch_machine_dict in (
-                machine_id_switch_machine_dict.items()
-            ):
-                utils.add_db_object(
-                    session, models.SwitchMachine,
-                    exception_when_switch_machine_existing,
-                    machine_switch.id, machine_id, **switch_machine_dict
-                )
-            switch_machines.extend(machine_switch.switch_machines)
+    switch_machines = []
+    for machine_switch in switches:
+        for machine_id, switch_machine_dict in (
+            machine_id_switch_machine_dict.items()
+        ):
+            utils.add_db_object(
+                session, models.SwitchMachine,
+                exception_when_switch_machine_existing,
+                machine_switch.id, machine_id, **switch_machine_dict
+            )
+        switch_machines.extend(machine_switch.switch_machines)
 
-        return switch_machines
+    return switch_machines
 
 
-@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-@utils.input_validates(mac=utils.check_mac, vlans=_check_vlan)
 @utils.supported_filters(
     ADDED_MACHINES_FIELDS,
     optional_support_keys=OPTIONAL_ADDED_MACHINES_FIELDS
 )
-def add_switch_machine(creator, switch_id, mac, port, **kwargs):
+@utils.input_validates(mac=utils.check_mac, vlans=_check_vlan)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH_MACHINE
+)
+@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
+def add_switch_machine(session, creator, switch_id, mac, **kwargs):
     """Add switch machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, creator, permission.PERMISSION_ADD_SWITCH_MACHINE)
-        switch = utils.get_db_object(
-            session, models.Switch, id=switch_id)
-        kwargs['port'] = port
-        switch_machines = add_switch_machines_internal(
-            session, switch, {mac: kwargs})
-        return switch_machines[0].to_dict()
+    switch = utils.get_db_object(
+        session, models.Switch, id=switch_id)
+    switch_machines = add_switch_machines_internal(
+        session, switch, {mac: kwargs})
+    return switch_machines[0]
 
 
-@utils.wrap_to_dict(RESP_ACTION_FIELDS)
 @utils.supported_filters()
-def poll_switch_machines(poller, switch_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_SWITCH_MACHINES
+)
+@utils.wrap_to_dict(RESP_ACTION_FIELDS)
+def poll_switch_machines(session, poller, switch_id, **kwargs):
     """poll switch machines."""
     from compass.tasks import client as celery_client
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, poller, permission.PERMISSION_UPDATE_SWITCH_MACHINES)
-        switch = utils.get_db_object(session, models.Switch, id=switch_id)
-        celery_client.celery.send_task(
-            'compass.tasks.pollswitch',
-            (switch.ip, switch.credentials)
-        )
-        return {
-            'status': 'find_machines action sent',
-            'details': {
-            }
+    switch = utils.get_db_object(session, models.Switch, id=switch_id)
+    celery_client.celery.send_task(
+        'compass.tasks.pollswitch',
+        (switch.ip, switch.credentials)
+    )
+    return {
+        'status': 'find_machines action sent',
+        'details': {
         }
+    }
 
 
-@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 @utils.supported_filters([])
-def get_switch_machine(getter, switch_id, machine_id, **kwargs):
-    """get field dict of a switch machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_SWITCH_MACHINES)
-        return utils.get_db_object(
-            session, models.SwitchMachine,
-            switch_id=switch_id, machine_id=machine_id
-        ).to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_SWITCH_MACHINES
+)
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-@utils.supported_filters([])
-def get_switchmachine(getter, switch_machine_id, **kwargs):
+def get_switch_machine(session, getter, switch_id, machine_id, **kwargs):
     """get field dict of a switch machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_SWITCH_MACHINES)
-        return utils.get_db_object(
-            session, models.SwitchMachine, id=switch_machine_id
-        ).to_dict()
+    return utils.get_db_object(
+        session, models.SwitchMachine,
+        switch_id=switch_id, machine_id=machine_id
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_SWITCH_MACHINES
+)
+@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
+def get_switchmachine(session, getter, switch_machine_id, **kwargs):
+    """get field dict of a switch machine."""
+    return utils.get_db_object(
+        session, models.SwitchMachine, id=switch_machine_id
+    )
 
 
 def update_switch_machine_internal(
@@ -577,131 +564,127 @@ def update_switch_machine_internal(
             switch_machine_dict[key] = value
         else:
             machine_dict[key] = value
-    with session.begin(subtransactions=True):
+    if machine_dict:
         utils.update_db_object(
-            session, switch_machine, **switch_machine_dict
+            session, switch_machine.machine, **machine_dict
         )
-        if machine_dict:
-            utils.update_db_object(
-                session, switch_machine.machine, **machine_dict
-            )
+    return utils.update_db_object(
+        session, switch_machine, **switch_machine_dict
+    )
 
 
-@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-@utils.input_validates(vlans=_check_vlan)
 @utils.supported_filters(optional_support_keys=UPDATED_MACHINES_FIELDS)
-def update_switch_machine(updater, switch_id, machine_id, **kwargs):
-    """Update switch machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_SWITCH_MACHINE)
-        switch_machine = utils.get_db_object(
-            session, models.SwitchMachine,
-            switch_id=switch_id, machine_id=machine_id
-        )
-        update_switch_machine_internal(
-            session, switch_machine,
-            UPDATED_SWITCH_MACHINES_FIELDS, **kwargs
-        )
-        return switch_machine.to_dict()
-
-
-@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 @utils.input_validates(vlans=_check_vlan)
-@utils.supported_filters(optional_support_keys=UPDATED_MACHINES_FIELDS)
-def update_switchmachine(updater, switch_machine_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH_MACHINE
+)
+@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
+def update_switch_machine(session, updater, switch_id, machine_id, **kwargs):
     """Update switch machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_SWITCH_MACHINE)
-        switch_machine = utils.get_db_object(
-            session, models.SwitchMachine,
-            id=switch_machine_id
-        )
-        update_switch_machine_internal(
-            session, switch_machine,
-            UPDATED_SWITCH_MACHINES_FIELDS, **kwargs
-        )
-        return switch_machine.to_dict()
+    switch_machine = utils.get_db_object(
+        session, models.SwitchMachine,
+        switch_id=switch_id, machine_id=machine_id
+    )
+    return update_switch_machine_internal(
+        session, switch_machine,
+        UPDATED_SWITCH_MACHINES_FIELDS, **kwargs
+    )
 
 
+@utils.supported_filters(optional_support_keys=UPDATED_MACHINES_FIELDS)
+@utils.input_validates(vlans=_check_vlan)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH_MACHINE
+)
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-@utils.input_validates(patched_vlans=_check_vlan)
+def update_switchmachine(session, updater, switch_machine_id, **kwargs):
+    """Update switch machine."""
+    switch_machine = utils.get_db_object(
+        session, models.SwitchMachine,
+        id=switch_machine_id
+    )
+    return update_switch_machine_internal(
+        session, switch_machine,
+        UPDATED_SWITCH_MACHINES_FIELDS, **kwargs
+    )
+
+
 @utils.supported_filters(optional_support_keys=PATCHED_MACHINES_FIELDS)
-def patch_switch_machine(updater, switch_id, machine_id, **kwargs):
-    """Patch switch machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_SWITCH_MACHINE)
-        switch_machine = utils.get_db_object(
-            session, models.SwitchMachine,
-            switch_id=switch_id, machine_id=machine_id
-        )
-        update_switch_machine_internal(
-            session, switch_machine,
-            PATCHED_SWITCH_MACHINES_FIELDS, **kwargs
-        )
-        return switch_machine.to_dict()
-
-
-@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 @utils.input_validates(patched_vlans=_check_vlan)
-@utils.supported_filters(optional_support_keys=PATCHED_MACHINES_FIELDS)
-def patch_switchmachine(updater, switch_machine_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH_MACHINE
+)
+@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
+def patch_switch_machine(session, updater, switch_id, machine_id, **kwargs):
     """Patch switch machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_SWITCH_MACHINE)
-        switch_machine = utils.get_db_object(
-            session, models.SwitchMachine,
-            id=switch_machine_id
-        )
-        update_switch_machine_internal(
-            session, switch_machine,
-            PATCHED_SWITCH_MACHINES_FIELDS, **kwargs
-        )
-        return switch_machine.to_dict()
+    switch_machine = utils.get_db_object(
+        session, models.SwitchMachine,
+        switch_id=switch_id, machine_id=machine_id
+    )
+    return update_switch_machine_internal(
+        session, switch_machine,
+        PATCHED_SWITCH_MACHINES_FIELDS, **kwargs
+    )
 
 
+@utils.supported_filters(optional_support_keys=PATCHED_MACHINES_FIELDS)
+@utils.input_validates(patched_vlans=_check_vlan)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH_MACHINE
+)
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
+def patch_switchmachine(session, updater, switch_machine_id, **kwargs):
+    """Patch switch machine."""
+    switch_machine = utils.get_db_object(
+        session, models.SwitchMachine,
+        id=switch_machine_id
+    )
+    return update_switch_machine_internal(
+        session, switch_machine,
+        PATCHED_SWITCH_MACHINES_FIELDS, **kwargs
+    )
+
+
 @utils.supported_filters()
-def del_switch_machine(deleter, switch_id, machine_id, **kwargs):
-    """Delete switch machines."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_SWITCH_MACHINE
-        )
-        switch_machine = utils.get_db_object(
-            session, models.SwitchMachine,
-            switch_id=switch_id, machine_id=machine_id
-        )
-        utils.del_db_object(session, switch_machine)
-        return switch_machine.to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_SWITCH_MACHINE
+)
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-@utils.supported_filters()
-def del_switchmachine(deleter, switch_machine_id, **kwargs):
+def del_switch_machine(session, deleter, switch_id, machine_id, **kwargs):
     """Delete switch machines."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_SWITCH_MACHINE
-        )
-        switch_machine = utils.get_db_object(
-            session, models.SwitchMachine,
-            id=switch_machine_id
-        )
-        utils.del_db_object(session, switch_machine)
-        return switch_machine.to_dict()
+    switch_machine = utils.get_db_object(
+        session, models.SwitchMachine,
+        switch_id=switch_id, machine_id=machine_id
+    )
+    return utils.del_db_object(session, switch_machine)
+
+
+@utils.supported_filters()
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_SWITCH_MACHINE
+)
+@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
+def del_switchmachine(session, deleter, switch_machine_id, **kwargs):
+    """Delete switch machines."""
+    switch_machine = utils.get_db_object(
+        session, models.SwitchMachine,
+        id=switch_machine_id
+    )
+    return utils.del_db_object(session, switch_machine)
 
 
 @utils.supported_filters(optional_support_keys=UPDATED_SWITCH_MACHINES_FIELDS)
 def _update_machine_internal(session, switch_id, machine_id, **kwargs):
-    with session.begin(subtransactions=True):
-        utils.add_db_object(
-            session, models.SwitchMachine, False, switch_id, machine_id,
-            **kwargs
-        )
+    utils.add_db_object(
+        session, models.SwitchMachine, False, switch_id, machine_id,
+        **kwargs
+    )
 
 
 def _add_machines(session, switch, machines):
@@ -712,60 +695,53 @@ def _add_machines(session, switch, machines):
 
 
 def _remove_machines(session, switch, machines):
-    with session.begin(subtransactions=True):
-        utils.del_db_objects(
-            session, models.SwitchMachine,
-            switch_id=switch.id, machine_id=machines
-        )
+    utils.del_db_objects(
+        session, models.SwitchMachine,
+        switch_id=switch.id, machine_id=machines
+    )
 
 
 def _set_machines(session, switch, machines):
-    with session.begin(subtransactions=True):
-        utils.del_db_objects(
-            session, models.SwitchMachine,
-            switch_id=switch.id
-        )
+    utils.del_db_objects(
+        session, models.SwitchMachine,
+        switch_id=switch.id
+    )
     for machine_id, switch_machine_attrs in machines.items():
         _update_machine_internal(
             session, switch.id, machine_id, **switch_machine_attrs
         )
 
 
-@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 @utils.supported_filters(
     optional_support_keys=[
         'add_machines', 'remove_machines', 'set_machines'
     ]
 )
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_SWITCH_MACHINES
+)
+@utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def update_switch_machines(
-    updater, switch_id,
+    session, updater, switch_id,
     add_machines=[], remove_machines=[],
     set_machines=None, **kwargs
 ):
     """update switch machines."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_UPDATE_SWITCH_MACHINES)
-        switch = utils.get_db_object(
-            session, models.Switch, id=switch_id
+    switch = utils.get_db_object(
+        session, models.Switch, id=switch_id
+    )
+    if remove_machines:
+        _remove_machines(
+            session, switch, remove_machines
         )
-        if remove_machines:
-            _remove_machines(
-                session, switch, remove_machines
-            )
-
-        if add_machines:
-            _add_machines(
-                session, switch, add_machines
-            )
-
-        if set_machines is not None:
-            _set_machines(
-                session, switch,
-                set_machines
-            )
-
-        return [
-            switch_machine.to_dict()
-            for switch_machine in switch.switch_machines
-        ]
+    if add_machines:
+        _add_machines(
+            session, switch, add_machines
+        )
+    if set_machines is not None:
+        _set_machines(
+            session, switch,
+            set_machines
+        )
+    return switch.switch_machines

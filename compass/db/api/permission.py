@@ -14,6 +14,7 @@
 
 """Permission database operations."""
 from compass.db.api import database
+from compass.db.api import user as user_api
 from compass.db.api import utils
 from compass.db import exception
 from compass.db import models
@@ -43,8 +44,18 @@ PERMISSION_LIST_PERMISSIONS = PermissionWrapper(
 PERMISSION_LIST_SWITCHES = PermissionWrapper(
     'list_switches', 'list switches', 'list all switches'
 )
+PERMISSION_LIST_SWITCH_FILTERS = PermissionWrapper(
+    'list_switch_filters',
+    'list switch filters',
+    'list switch filters'
+)
 PERMISSION_ADD_SWITCH = PermissionWrapper(
     'add_switch', 'add switch', 'add switch'
+)
+PERMISSION_UPDATE_SWITCH_FILTERS = PermissionWrapper(
+    'update_switch_filters',
+    'update switch filters',
+    'update switch filters'
 )
 PERMISSION_DEL_SWITCH = PermissionWrapper(
     'delete_switch', 'delete switch', 'delete switch'
@@ -195,6 +206,8 @@ PERMISSIONS = [
     PERMISSION_LIST_SWITCHES,
     PERMISSION_ADD_SWITCH,
     PERMISSION_DEL_SWITCH,
+    PERMISSION_LIST_SWITCH_FILTERS,
+    PERMISSION_UPDATE_SWITCH_FILTERS,
     PERMISSION_LIST_SWITCH_MACHINES,
     PERMISSION_ADD_SWITCH_MACHINE,
     PERMISSION_DEL_SWITCH_MACHINE,
@@ -244,51 +257,40 @@ def list_permissions_internal(session, **filters):
     return utils.list_db_objects(session, models.Permission, **filters)
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
-def list_permissions(lister, **filters):
-    """list permissions."""
-    from compass.db.api import user as user_api
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, PERMISSION_LIST_PERMISSIONS
-        )
-        return [
-            permission.to_dict()
-            for permission in utils.list_db_objects(
-                session, models.Permission, **filters
-            )
-        ]
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(PERMISSION_LIST_PERMISSIONS)
 @utils.wrap_to_dict(RESP_FIELDS)
+def list_permissions(session, lister, **filters):
+    """list permissions."""
+    return utils.list_db_objects(
+        session, models.Permission, **filters
+    )
+
+
 @utils.supported_filters()
-def get_permission(getter, permission_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(PERMISSION_LIST_PERMISSIONS)
+@utils.wrap_to_dict(RESP_FIELDS)
+def get_permission(session, getter, permission_id, **kwargs):
     """get permissions."""
-    from compass.db.api import user as user_api
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, PERMISSION_LIST_PERMISSIONS
-        )
-        permission = utils.get_db_object(
-            session, models.Permission, id=permission_id
-        )
-        return permission.to_dict()
+    return utils.get_db_object(
+        session, models.Permission, id=permission_id
+    )
 
 
 def add_permissions_internal(session):
     """internal functions used by other db.api modules only."""
     permissions = []
-    with session.begin(subtransactions=True):
-        for permission in PERMISSIONS:
-            permissions.append(
-                utils.add_db_object(
-                    session, models.Permission,
-                    True,
-                    permission.name,
-                    alias=permission.alias,
-                    description=permission.description
-                )
+    for permission in PERMISSIONS:
+        permissions.append(
+            utils.add_db_object(
+                session, models.Permission,
+                True,
+                permission.name,
+                alias=permission.alias,
+                description=permission.description
             )
+        )
 
     return permissions

@@ -1162,6 +1162,20 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
         self.machine_id = machine_id
         super(SwitchMachine, self).__init__(**kwargs)
 
+    def validate(self):
+        if not self.switch:
+            raise exception.InvalidParameter(
+                'switch is not set in %s' % self.id
+            )
+        if not self.machine:
+            raise exception.Invalidparameter(
+                'machine is not set in %s' % self.id
+            )
+        if not self.port:
+            raise exception.InvalidParameter(
+                'port is not set in %s' % self.id
+            )
+
     @hybrid_property
     def mac(self):
         return self.machine.mac

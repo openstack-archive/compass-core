@@ -23,12 +23,14 @@ from compass.db.api import utils
 from compass.db import exception
 
 
-def load_metadatas():
-    with database.session() as session:
-        return metadata_api.get_metadatas_internal(session)
+@database.run_in_session()
+def load_metadatas(session):
+    global METADATA_MAPPING
+    logging.info('load metadatas into memory')
+    METADATA_MAPPING = metadata_api.get_metadatas_internal(session)
 
 
-METADATA_MAPPING = load_metadatas()
+METADATA_MAPPING = {}
 
 
 def _validate_config(
@@ -84,13 +86,14 @@ def _filter_metadata(metadata):
 
 
 @utils.supported_filters([])
-def get_metadata(getter, adapter_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_METADATAS
+)
+def get_metadata(session, getter, adapter_id, **kwargs):
     """get adapter."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_METADATAS)
-        if adapter_id not in METADATA_MAPPING:
-            raise exception.RecordNotExists(
-                'adpater %s does not exist' % adapter_id
-            )
-        return _filter_metadata(METADATA_MAPPING[adapter_id])
+    if adapter_id not in METADATA_MAPPING:
+        raise exception.RecordNotExists(
+            'adpater %s does not exist' % adapter_id
+        )
+    return _filter_metadata(METADATA_MAPPING[adapter_id])

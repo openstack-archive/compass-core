@@ -19,7 +19,6 @@
 import logging
 
 from compass.actions import util
-from compass.config_management.utils.config_manager import ConfigManager
 from compass.db.api import database
 
 
@@ -36,12 +35,4 @@ def reinstall(cluster_hosts):
         if not lock:
             raise Exception(
                 'failed to acquire lock to reinstall')
-
         logging.debug('reinstall cluster_hosts: %s', cluster_hosts)
-        with database.session():
-            cluster_hosts, os_versions, target_systems = (
-                util.update_cluster_hosts(cluster_hosts))
-            manager = ConfigManager()
-            manager.reinstall_cluster_and_hosts(
-                cluster_hosts, os_versions, target_systems)
-            manager.sync()

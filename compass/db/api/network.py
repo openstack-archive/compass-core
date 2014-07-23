@@ -39,73 +39,70 @@ def _check_subnet(subnet):
             'subnet %s format unrecognized' % subnet)
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
-def list_subnets(lister, **filters):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_NETWORKS
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def list_subnets(session, lister, **filters):
     """List subnets."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_NETWORKS)
-        return [
-            network.to_dict()
-            for network in utils.list_db_objects(
-                session, models.Network, **filters
-            )
-        ]
+    return utils.list_db_objects(
+        session, models.Network, **filters
+    )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters([])
-def get_subnet(getter, subnet_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_NETWORKS
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def get_subnet(session, getter, subnet_id, **kwargs):
     """Get subnet info."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_NETWORKS)
-        return utils.get_db_object(
-            session, models.Network, id=subnet_id
-        ).to_dict()
+    return utils.get_db_object(
+        session, models.Network, id=subnet_id
+    )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
-@utils.input_validates(subnet=_check_subnet)
 @utils.supported_filters(ADDED_FIELDS)
-def add_subnet(creator, subnet, **kwargs):
-    """Create a subnet."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, creator, permission.PERMISSION_ADD_NETWORK)
-        network = utils.add_db_object(
-            session, models.Network, True, subnet
-        )
-        network_dict = network.to_dict()
-        print 'network: %s' % network_dict
-        return network_dict
-
-
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.input_validates(subnet=_check_subnet)
-@utils.supported_filters(UPDATED_FIELDS)
-def update_subnet(updater, subnet_id, **kwargs):
-    """Update a subnet."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_NETWORK)
-        network = utils.get_db_object(
-            session, models.Network, id=subnet_id
-        )
-        utils.update_db_object(session, network, **kwargs)
-        return network.to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_NETWORK
+)
 @utils.wrap_to_dict(RESP_FIELDS)
+def add_subnet(session, creator, subnet, **kwargs):
+    """Create a subnet."""
+    return utils.add_db_object(
+        session, models.Network, True, subnet
+    )
+
+
+@utils.supported_filters(UPDATED_FIELDS)
+@utils.input_validates(subnet=_check_subnet)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_NETWORK
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def update_subnet(session, updater, subnet_id, **kwargs):
+    """Update a subnet."""
+    network = utils.get_db_object(
+        session, models.Network, id=subnet_id
+    )
+    return utils.update_db_object(session, network, **kwargs)
+
+
 @utils.supported_filters([])
-def del_subnet(deleter, subnet_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_NETWORK
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def del_subnet(session, deleter, subnet_id, **kwargs):
     """Delete a subnet."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_NETWORK)
-        network = utils.get_db_object(
-            session, models.Network, id=subnet_id
-        )
-        utils.del_db_object(session, network)
-        return network.to_dict()
+    network = utils.get_db_object(
+        session, models.Network, id=subnet_id
+    )
+    return utils.del_db_object(session, network)

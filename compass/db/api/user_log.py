@@ -27,113 +27,86 @@ USER_SUPPORTED_FIELDS = ['timestamp']
 RESP_FIELDS = ['user_id', 'logs', 'timestamp']
 
 
-def log_user_action(user_id, action):
+@database.run_in_session()
+def log_user_action(session, user_id, action):
     """Log user action."""
-    with database.session() as session:
-        utils.add_db_object(
-            session, models.UserLog, True, user_id=user_id, action=action
-        )
+    utils.add_db_object(
+        session, models.UserLog, True, user_id=user_id, action=action
+    )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
+def _compress_response(actions, user_id):
+    user_actions = []
+    for action in actions:
+        action_dict = action.to_dict()
+        del action_dict['user_id']
+        user_actions.append(action_dict)
+    return {'user_id': user_id, 'logs': user_actions}
+
+
+def _compress_response_by_user(actions):
+    actions = {}
+    for action in actions:
+        action_dict = action.to_dict()
+        user_id = action_dict['user_id']
+        del action_dict['user_id']
+        actions.setdefault(user_id, []).append(action_dict)
+
+    return [
+        {'user_id': user_id, 'logs': user_actions}
+        for user_id, user_actions in actions.items()
+    ]
+
+
 @utils.supported_filters(optional_support_keys=USER_SUPPORTED_FIELDS)
-def list_user_actions(lister, user_id, **filters):
+@user_api.check_user_admin_or_owner()
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_FIELDS)
+def list_user_actions(session, lister, user_id, **filters):
     """list user actions."""
-    with database.session() as session:
-        if not lister.is_admin and lister.id != user_id:
-            # The user is not allowed to list users actions.
-            raise exception.Forbidden(
-                'User %s has no permission to list user %s actions.' % (
-                    lister.email, user_id
-                )
-            )
-
-        user_actions = []
-        for action in utils.list_db_objects(
-                session, models.UserLog, user_id=user_id, **filters
-        ):
-            action_dict = action.to_dict()
-            del action_dict['user_id']
-            user_actions.append(action_dict)
-
-        return {'user_id': user_id, 'logs': user_actions}
+    return _compress_response(
+        utils.list_db_objects(
+            session, models.UserLog, user_id=user_id, **filters
+        ),
+        user_id
+    )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
-def list_actions(lister, **filters):
+@user_api.check_user_admin()
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_FIELDS)
+def list_actions(session, lister, **filters):
     """list actions."""
-    with database.session() as session:
-        if not lister.is_admin:
-             # The user is not allowed to list users actions.
-            raise exception.Forbidden(
-                'User %s has no permission to list all users actions.' % (
-                    lister.email
-                )
-            )
-
-        actions = {}
-        for action in utils.list_db_objects(
+    return _compress_response_by_user(
+        utils.list_db_objects(
             session, models.UserLog, **filters
-        ):
-            action_dict = action.to_dict()
-            user_id = action_dict['user_id']
-            del action_dict['user_id']
-            actions.setdefault(user_id, []).append(action_dict)
-
-        return [
-            {'user_id': user_id, 'logs': user_actions}
-            for user_id, user_actions in actions.items()
-        ]
+        )
+    )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters(optional_support_keys=USER_SUPPORTED_FIELDS)
-def del_user_actions(deleter, user_id, **filters):
-    """delete user actions."""
-    with database.session() as session:
-        if not deleter.is_admin and deleter.id != user_id:
-            # The user is not allowed to delete users actions.
-            raise exception.Forbidden(
-                'User %s has no permission to delete user %s actions.' % (
-                    deleter.email, user_id
-                )
-            )
-
-        user_actions = []
-        for action in utils.del_db_objects(
-                session, models.UserLog, user_id=user_id, **filters
-        ):
-            action_dict = action.to_dict()
-            del action_dict['user_id']
-            user_actions.append(action_dict)
-
-        return {'user_id': user_id, 'logs': user_actions}
-
-
+@user_api.check_user_admin_or_owner()
+@database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
+def del_user_actions(session, deleter, user_id, **filters):
+    """delete user actions."""
+    return _compress_response(
+        utils.del_db_objects(
+            session, models.UserLog, user_id=user_id, **filters
+        ),
+        user_id
+    )
+
+
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
-def del_actions(deleter, **filters):
+@user_api.check_user_admin()
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_FIELDS)
+def del_actions(session, deleter, **filters):
     """delete actions."""
-    with database.session() as session:
-        if not deleter.is_admin:
-            # The user is not allowed to delete users actions.
-            raise exception.Forbidden(
-                'User %s has no permission to delete all users actions.' % (
-                    deleter.email
-                )
-            )
-
-        actions = {}
-        for action in utils.del_db_objects(
+    return _compress_response_by_user(
+        utils.del_db_objects(
             session, models.UserLog, **filters
-        ):
-            action_dict = action.to_dict()
-            user_id = action_dict['user_id']
-            del action_dict['user_id']
-            actions.setdefault(user_id, []).append(action_dict)
-
-        return [
-            {'user_id': user_id, 'logs': user_actions}
-            for user_id, user_actions in actions.items()
-        ]
+        )
+    )

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Provider interface to manipulate database."""
+import functools
 import logging
 import netaddr
 
@@ -33,20 +34,20 @@ SCOPED_SESSION = None
 SESSION_HOLDER = local()
 
 
-def init(database_url):
+def init(database_url=None):
     """Initialize database.
 
     :param database_url: string, database url.
     """
     global ENGINE
     global SCOPED_SESSION
+    if not database_url:
+        database_url = setting.SQLALCHEMY_DATABASE_URI
+    logging.info('init database %s', database_url)
     ENGINE = create_engine(database_url, convert_unicode=True)
     SESSION.configure(bind=ENGINE)
     SCOPED_SESSION = scoped_session(SESSION)
     models.BASE.query = SCOPED_SESSION.query_property()
-
-
-init(setting.SQLALCHEMY_DATABASE_URI)
 
 
 def in_session():
@@ -103,6 +104,16 @@ def current_session():
             raise error
         else:
             raise exception.DatabaseException(str(error))
+
+
+def run_in_session():
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            with session() as my_session:
+                return func(my_session, *args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def _setup_user_table(user_session):
@@ -229,25 +240,25 @@ def _setup_package_adapter_roles(role_session):
     adapter.add_roles_internal(role_session)
 
 
-def create_db():
+@run_in_session()
+def create_db(my_session):
     """Create database."""
     models.BASE.metadata.create_all(bind=ENGINE)
-    with session() as my_session:
-        _setup_permission_table(my_session)
-        _setup_user_table(my_session)
-        _setup_switch_table(my_session)
-        _setup_os_installers(my_session)
-        _setup_package_installers(my_session)
-        _setup_oses(my_session)
-        _setup_distributed_systems(my_session)
-        _setup_os_adapters(my_session)
-        _setup_package_adapters(my_session)
-        _setup_package_adapter_roles(my_session)
-        _setup_adapters(my_session)
-        _setup_os_fields(my_session)
-        _setup_package_fields(my_session)
-        _setup_os_metadatas(my_session)
-        _setup_package_metadatas(my_session)
+    _setup_permission_table(my_session)
+    _setup_user_table(my_session)
+    _setup_switch_table(my_session)
+    _setup_os_installers(my_session)
+    _setup_package_installers(my_session)
+    _setup_oses(my_session)
+    _setup_distributed_systems(my_session)
+    _setup_os_adapters(my_session)
+    _setup_package_adapters(my_session)
+    _setup_package_adapter_roles(my_session)
+    _setup_adapters(my_session)
+    _setup_os_fields(my_session)
+    _setup_package_fields(my_session)
+    _setup_os_metadatas(my_session)
+    _setup_package_metadatas(my_session)
 
 
 def drop_db():
@@ -255,50 +266,50 @@ def drop_db():
     models.BASE.metadata.drop_all(bind=ENGINE)
 
 
-def create_table(table):
+@run_in_session()
+def create_table(my_session, table):
     """Create table.
 
     :param table: Class of the Table defined in the model.
     """
     table.__table__.create(bind=ENGINE, checkfirst=True)
-    with session() as my_session:
-        if table == models.User:
-            _setup_user_table(my_session)
-        elif table == models.Permission:
-            _setup_permission_table(my_session)
-        elif table == models.Switch:
-            _setup_switch_table(my_session)
-        elif table in [
-            models.OSInstaller,
-            models.PackageInstaller,
-            models.OperatingSystem,
-            models.DistributedSystems,
-            models.OSAdapter,
-            models.PackageAdapter,
-            models.Adapter
-        ]:
-            _setup_os_installers(my_session)
-            _setup_package_installers(my_session)
-            _setup_os_adapters(my_session)
-            _setup_package_adapters(my_session)
-            _setup_package_adapter_roles(my_session)
-            _setup_adapters(my_session)
-            _setup_os_fields(my_session)
-            _setup_os_metadatas(my_session)
-            _setup_package_fields(my_session)
-            _setup_package_metadatas(my_session)
-        elif table == models.PackageAdapterRole:
-            _setup_package_adapter_roles(my_session)
-        elif table in [
-            models.OSConfigField,
-            models.PackageConfigField,
-            models.OSConfigMetadata,
-            models.PackageConfigMetadata
-        ]:
-            _setup_os_fields(my_session)
-            _setup_os_metadatas(my_session)
-            _setup_package_fields(my_session)
-            _setup_package_metadatas(my_session)
+    if table == models.User:
+        _setup_user_table(my_session)
+    elif table == models.Permission:
+        _setup_permission_table(my_session)
+    elif table == models.Switch:
+        _setup_switch_table(my_session)
+    elif table in [
+        models.OSInstaller,
+        models.PackageInstaller,
+        models.OperatingSystem,
+        models.DistributedSystems,
+        models.OSAdapter,
+        models.PackageAdapter,
+        models.Adapter
+    ]:
+        _setup_os_installers(my_session)
+        _setup_package_installers(my_session)
+        _setup_os_adapters(my_session)
+        _setup_package_adapters(my_session)
+        _setup_package_adapter_roles(my_session)
+        _setup_adapters(my_session)
+        _setup_os_fields(my_session)
+        _setup_os_metadatas(my_session)
+        _setup_package_fields(my_session)
+        _setup_package_metadatas(my_session)
+    elif table == models.PackageAdapterRole:
+        _setup_package_adapter_roles(my_session)
+    elif table in [
+        models.OSConfigField,
+        models.PackageConfigField,
+        models.OSConfigMetadata,
+        models.PackageConfigMetadata
+    ]:
+        _setup_os_fields(my_session)
+        _setup_os_metadatas(my_session)
+        _setup_package_fields(my_session)
+        _setup_package_metadatas(my_session)
 
 
 def drop_table(table):

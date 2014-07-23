@@ -66,8 +66,8 @@ def _check_ipmi_credentials(ipmi_credentials):
             )
         check_ipmi_credential_field = '_check_ipmi_credentials_%s' % key
         this_module = globals()
-        if hasattr(this_module, check_ipmi_credential_field):
-            getattr(this_module, check_ipmi_credential_field)(
+        if check_ipmi_credential_field in this_module:
+            this_module[check_ipmi_credential_field](
                 ipmi_credentials[key]
             )
         else:
@@ -76,80 +76,73 @@ def _check_ipmi_credentials(ipmi_credentials):
             )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters([])
-def get_machine(getter, machine_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_MACHINES
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def get_machine(session, getter, machine_id, **kwargs):
     """get field dict of a machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_MACHINES)
-        return utils.get_db_object(
-            session, models.Machine, True, id=machine_id
-        ).to_dict()
+    return utils.get_db_object(
+        session, models.Machine, True, id=machine_id
+    )
 
 
+@utils.supported_filters(
+    optional_support_keys=SUPPORTED_FIELDS
+)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_MACHINES
+)
 @utils.output_filters(
     tag=utils.general_filter_callback,
     location=utils.general_filter_callback
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-@utils.supported_filters(
-    optional_support_keys=SUPPORTED_FIELDS
-)
-def list_machines(lister, **filters):
+def list_machines(session, lister, **filters):
     """List machines."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_MACHINES)
-        return [
-            machine.to_dict()
-            for machine in utils.list_db_objects(
-                session, models.Machine, **filters
-            )
-        ]
+    return utils.list_db_objects(
+        session, models.Machine, **filters
+    )
 
 
-def _update_machine(updater, machine_id, **kwargs):
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_MACHINE
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def _update_machine(session, updater, machine_id, **kwargs):
     """Update a machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_MACHINE)
-        machine = utils.get_db_object(session, models.Machine, id=machine_id)
-        utils.update_db_object(session, machine, **kwargs)
-        machine_dict = machine.to_dict()
-        utils.validate_outputs(
-            {'ipmi_credentials': _check_ipmi_credentials},
-            machine_dict
-        )
-        return machine_dict
+    machine = utils.get_db_object(session, models.Machine, id=machine_id)
+    return utils.update_db_object(session, machine, **kwargs)
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
-@utils.input_validates(ipmi_credentials=_check_ipmi_credentials)
 @utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
-def update_machine(updater, machine_id, **kwargs):
+@utils.input_validates(ipmi_credentials=_check_ipmi_credentials)
+@database.run_in_session()
+def update_machine(session, updater, machine_id, **kwargs):
     return _update_machine(
-        updater, machine_id,
-        **kwargs
+        session, updater, machine_id, **kwargs
     )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters(optional_support_keys=PATCHED_FIELDS)
-def patch_machine(updater, machine_id, **kwargs):
+@database.run_in_session()
+@utils.output_validates(ipmi_credentials=_check_ipmi_credentials)
+def patch_machine(session, updater, machine_id, **kwargs):
     return _update_machine(
-        updater, machine_id,
-        **kwargs
+        session, updater, machine_id, **kwargs
     )
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters()
-def del_machine(deleter, machine_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_MACHINE
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def del_machine(session, deleter, machine_id, **kwargs):
     """Delete a machine."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_MACHINE)
-        machine = utils.get_db_object(session, models.Switch, id=machine_id)
-        utils.del_db_object(session, machine)
-        return machine.to_dict()
+    machine = utils.get_db_object(session, models.Switch, id=machine_id)
+    return utils.del_db_object(session, machine)

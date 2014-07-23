@@ -39,11 +39,9 @@ def _add_installers(session, model, configs):
 
 def add_os_installers_internal(session):
     configs = util.load_configs(setting.OS_INSTALLER_DIR)
-    with session.begin(subtransactions=True):
-        return _add_installers(session, models.OSInstaller, configs)
+    return _add_installers(session, models.OSInstaller, configs)
 
 
 def add_package_installers_internal(session):
     configs = util.load_configs(setting.PACKAGE_INSTALLER_DIR)
-    with session.begin(subtransactions=True):
-        return _add_installers(session, models.PackageInstaller, configs)
+    return _add_installers(session, models.PackageInstaller, configs)

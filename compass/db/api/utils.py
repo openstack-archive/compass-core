@@ -71,7 +71,7 @@ def _model_filter_by_condition(
 
 def _between_condition(col_attr, value):
     if value[0] is not None and value[1] is not None:
-        col_attr.between(value[0], value[1])
+        return col_attr.between(value[0], value[1])
     if value[0] is not None:
         return col_attr >= value[0]
     if value[1] is not None:
@@ -80,7 +80,6 @@ def _between_condition(col_attr, value):
 
 
 def model_filter(query, model, **filters):
-    print 'model query %s: filter %s' % (query, filters)
     for key, value in filters.items():
         col_attr = getattr(model, key)
         if isinstance(value, list):
@@ -118,19 +117,19 @@ def model_filter(query, model, **filters):
                 )
             if 'ne' in value:
                 query = _model_filter_by_condition(
-                    query, col_attr, value['eq'], None,
+                    query, col_attr, value['ne'], None,
                     lambda attr, data, condition_func: ~attr.in_(data)
                 )
             if 'in' in value:
                 query = query.filter(col_attr.in_(value['in']))
             if 'startswith' in value:
                 query = _model_filter_by_condition(
-                    query, col_attr, value['startswitch'],
+                    query, col_attr, value['startswith'],
                     lambda attr, data: attr.like('%s%%' % data)
                 )
             if 'endswith' in value:
                 query = _model_filter_by_condition(
-                    query, col_attr, value['endswitch'],
+                    query, col_attr, value['endswith'],
                     lambda attr, data: attr.like('%%%s' % data)
                 )
             if 'like' in value:
@@ -153,21 +152,22 @@ def wrap_to_dict(support_keys=[]):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            obj = func(*args, **kwargs)
-            if isinstance(obj, list):
-                obj = [_wrapper_dict(o, support_keys) for o in obj]
-            else:
-                obj = _wrapper_dict(obj, support_keys)
-            return obj
+            return _wrapper_dict(func(*args, **kwargs), support_keys)
         return wrapper
     return decorator
 
 
 def _wrapper_dict(data, support_keys):
     """Helper for warpping db object into dictionary."""
-    info = {}
-    if not isinstance(data, dict):
+    if isinstance(data, list):
+        return [_wrapper_dict(item, support_keys) for item in data]
+    if isinstance(data, models.HelperMixin):
         data = data.to_dict()
+    if not isinstance(data, dict):
+        raise exception.InvalidResponse(
+            'response %s type is not dict' % data
+        )
+    info = {}
     for key in support_keys:
         if key in data:
             info[key] = data[key]
@@ -178,26 +178,24 @@ def supported_filters(support_keys=[], optional_support_keys=[]):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **filters):
-            print 'filter %s %s' % (args, filters)
             must_support_keys = set(support_keys)
             all_support_keys = must_support_keys | set(optional_support_keys)
-            supports = {}
-            for filter_key, filter_value in filters.items():
-                if filter_key not in all_support_keys:
-                    raise exception.InvalidParameter(
-                        'filter key %s is not supported' % filter_key
-                    )
-
-                if filter_key in must_support_keys:
-                    must_support_keys.remove(filter_key)
-
-                supports[filter_key] = filter_value
-
-            if must_support_keys:
+            filter_keys = set(filters)
+            unsupported_keys = filter_keys - all_support_keys
+            if unsupported_keys:
                 raise exception.InvalidParameter(
-                    'filter keys %s not found' % list(must_support_keys)
+                    'filter keys %s are not supported' % str(
+                        list(unsupported_keys)
+                    )
                 )
-            return func(*args, **supports)
+            missing_keys = must_support_keys - filter_keys
+            if missing_keys:
+                raise exception.InvalidParameter(
+                    'filter keys %s not found' % str(
+                        list(missing_keys)
+                    )
+                )
+            return func(*args, **filters)
         return wrapper
     return decorator
 
@@ -314,10 +312,18 @@ def input_validates(*args_validators, **kwargs_validators):
 
 
 def _output_validates(kwargs_validators, obj):
-    if not isinstance(obj, dict):
+    if isinstance(obj, list):
+        for item in obj:
+            _output_validates(kwargs_validators, item)
+        return
+    if isinstance(obj, models.HelperMixin):
         obj = obj.to_dict()
+    if not isinstance(obj, dict):
+        raise exception.InvalidResponse(
+            'response %s type is not dict' % str(obj)
+        )
     for key, value in obj.items():
-        if kwargs_validators.get(key):
+        if key in kwargs_validators:
             kwargs_validators[key](value)
 
 
@@ -438,6 +444,7 @@ def update_db_object(session, db_object, **kwargs):
         db_object.initialize()
         session.flush()
         db_object.validate()
+        return db_object
 
 
 def del_db_object(session, db_object):
@@ -445,6 +452,7 @@ def del_db_object(session, db_object):
     with session.begin(subtransactions=True):
         logging.debug('delete db object %s', db_object)
         session.delete(db_object)
+        return db_object
 
 
 def check_ip(ip):

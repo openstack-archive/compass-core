@@ -68,45 +68,44 @@ UPDATED_STATE_FIELDS = [
 ]
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
-def list_hosts(lister, **filters):
-    """List hosts."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_HOSTS)
-        return [
-            host.to_dict()
-            for host in utils.list_db_objects(
-                session, models.Host, **filters
-            )
-        ]
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOSTS
+)
 @utils.wrap_to_dict(RESP_FIELDS)
+def list_hosts(session, lister, **filters):
+    """List hosts."""
+    return utils.list_db_objects(
+        session, models.Host, **filters
+    )
+
+
 @utils.supported_filters([])
-def get_host(getter, host_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOSTS
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def get_host(session, getter, host_id, **kwargs):
     """get host info."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_HOSTS)
-        return utils.get_db_object(
-            session, models.Host, id=host_id
-        ).to_dict()
+    return utils.get_db_object(
+        session, models.Host, id=host_id
+    )
 
 
-@utils.wrap_to_dict(RESP_CLUSTER_FIELDS)
 @utils.supported_filters([])
-def get_host_clusters(getter, host_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOST_CLUSTERS
+)
+@utils.wrap_to_dict(RESP_CLUSTER_FIELDS)
+def get_host_clusters(session, getter, host_id, **kwargs):
     """get host clusters."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_HOST_CLUSTERS)
-        host = utils.get_db_object(
-            session, models.Host, id=host_id
-        )
-        clusterhosts = host.clusterhosts
-        return [clusterhost.cluster.to_dict() for clusterhost in clusterhosts]
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
+    )
+    return [clusterhost.cluster for clusterhost in host.clusterhosts]
 
 
 def _conditional_exception(host, exception_when_not_editable):
@@ -139,262 +138,266 @@ def is_host_editable(
     return True
 
 
-@utils.wrap_to_dict(RESP_FIELDS)
 @utils.supported_filters(UPDATED_FIELDS)
-def update_host(updater, host_id, **kwargs):
-    """Update a host."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_UPDATE_HOST)
-        host = utils.get_db_object(
-            session, models.Host, id=host_id
-        )
-        is_host_editable(
-            session, host, updater,
-            reinstall_os_set=kwargs.get('reinstall_os', False)
-        )
-        utils.update_db_object(session, host, **kwargs)
-        return host.to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_HOST
+)
 @utils.wrap_to_dict(RESP_FIELDS)
+def update_host(session, updater, host_id, **kwargs):
+    """Update a host."""
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
+    )
+    is_host_editable(
+        session, host, updater,
+        reinstall_os_set=kwargs.get('reinstall_os', False)
+    )
+    return utils.update_db_object(session, host, **kwargs)
+
+
 @utils.supported_filters([])
-def del_host(deleter, host_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_HOST
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def del_host(session, deleter, host_id, **kwargs):
     """Delete a host."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_HOST)
-        host = utils.get_db_object(
-            session, models.Host, id=host_id
-        )
-        is_host_editable(session, host, deleter)
-        utils.del_db_object(session, host)
-        return host.to_dict()
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
+    )
+    is_host_editable(session, host, deleter)
+    return utils.del_db_object(session, host)
 
 
-@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
 @utils.supported_filters([])
-def get_host_config(getter, host_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOST_CONFIG
+)
+@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
+def get_host_config(session, getter, host_id, **kwargs):
     """Get host config."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_HOST_CONFIG)
-        return utils.get_db_object(
-            session, models.Host, id=host_id
-        ).to_dict()
+    return utils.get_db_object(
+        session, models.Host, id=host_id
+    )
 
 
-def _update_host_config(updater, host_id, **kwargs):
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_CONFIG
+)
+@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
+def _update_host_config(session, updater, host_id, **kwargs):
     """Update host config."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_HOST_CONFIG)
-        host = utils.get_db_object(
-            session, models.Host, id=host_id
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
+    )
+    is_host_editable(session, host, updater)
+    utils.update_db_object(session, host, config_validated=False, **kwargs)
+    os_config = host.os_config
+    if os_config:
+        metadata_api.validate_os_config(
+            os_config, host.adapter_id
         )
-        is_host_editable(session, host, updater)
-        utils.update_db_object(session, host, config_validated=False, **kwargs)
-        os_config = host.os_config
-        if os_config:
-            metadata_api.validate_os_config(
-                os_config, host.adapter_id
-            )
-        return host.to_dict()
+    return host
 
 
-@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
 @utils.supported_filters(UPDATED_CONFIG_FIELDS)
-def update_host_config(updater, host_id, **kwargs):
-    return _update_host_config(updater, host_id, **kwargs)
+@database.run_in_session()
+def update_host_config(session, updater, host_id, **kwargs):
+    return _update_host_config(session, updater, host_id, **kwargs)
 
 
-@utils.wrap_to_dict(RESP_CONFIG_FIELDS)
 @utils.supported_filters(PATCHED_CONFIG_FIELDS)
-def patch_host_config(updater, host_id, **kwargs):
-    return _update_host_config(updater, host_id, **kwargs)
+@database.run_in_session()
+def patch_host_config(session, updater, host_id, **kwargs):
+    return _update_host_config(session, updater, host_id, **kwargs)
 
 
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_HOST_CONFIG
+)
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-@utils.supported_filters([])
-def del_host_config(deleter, host_id):
+def del_host_config(session, deleter, host_id):
     """delete a host config."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_HOST_CONFIG)
-        host = utils.get_db_object(
-            session, models.Host, id=host_id
-        )
-        is_host_editable(session, host, deleter)
-        utils.update_db_object(
-            session, host, os_config={}, config_validated=False
-        )
-        return host.to_dict()
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
+    )
+    is_host_editable(session, host, deleter)
+    return utils.update_db_object(
+        session, host, os_config={}, config_validated=False
+    )
 
 
-@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 @utils.supported_filters(
     optional_support_keys=SUPPORTED_NETOWORK_FIELDS
 )
-def list_host_networks(lister, host_id, **filters):
-    """Get host networks."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_HOST_NETWORKS)
-        host_networks = utils.list_db_objects(
-            session, models.HostNetwork,
-            host_id=host_id, **filters
-        )
-        return [host_network.to_dict() for host_network in host_networks]
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOST_NETWORKS
+)
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def list_host_networks(session, lister, host_id, **filters):
+    """Get host networks."""
+    return utils.list_db_objects(
+        session, models.HostNetwork,
+        host_id=host_id, **filters
+    )
+
+
 @utils.supported_filters(
     optional_support_keys=SUPPORTED_NETOWORK_FIELDS
 )
-def list_hostnetworks(lister, **filters):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOST_NETWORKS
+)
+@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def list_hostnetworks(session, lister, **filters):
     """Get host networks."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_HOST_NETWORKS)
-        host_networks = utils.list_db_objects(
-            session, models.HostNetwork, **filters
-        )
-        return [host_network.to_dict() for host_network in host_networks]
+    return utils.list_db_objects(
+        session, models.HostNetwork, **filters
+    )
 
 
-@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 @utils.supported_filters([])
-def get_host_network(getter, host_id, subnet_id, **kwargs):
-    """Get host network."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_HOST_NETWORKS)
-        host_network = utils.get_db_object(
-            session, models.HostNetwork,
-            host_id=host_id, subnet_id=subnet_id
-        )
-        return host_network.to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOST_NETWORKS
+)
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def get_host_network(session, getter, host_id, subnet_id, **kwargs):
+    """Get host network."""
+    return utils.get_db_object(
+        session, models.HostNetwork,
+        host_id=host_id, subnet_id=subnet_id
+    )
+
+
 @utils.supported_filters([])
-def get_hostnetwork(getter, host_network_id, **kwargs):
-    """Get host network."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_HOST_NETWORKS)
-        host_network = utils.get_db_object(
-            session, models.HostNetwork,
-            id=host_network_id
-        )
-        return host_network.to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOST_NETWORKS
+)
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def get_hostnetwork(session, getter, host_network_id, **kwargs):
+    """Get host network."""
+    return utils.get_db_object(
+        session, models.HostNetwork,
+        id=host_network_id
+    )
+
+
 @utils.supported_filters(
     ADDED_NETWORK_FIELDS, optional_support_keys=OPTIONAL_ADDED_NETWORK_FIELDS
 )
-def add_host_network(creator, host_id, **kwargs):
-    """Create a host network."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, creator, permission.PERMISSION_ADD_HOST_NETWORK)
-        host = utils.get_db_object(
-            session, models.Host, id=host_id
-        )
-        is_host_editable(session, host, creator)
-        host_network = utils.add_db_object(
-            session, models.HostNetwork, True,
-            host_id, **kwargs
-        )
-        return host_network.to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_NETWORK
+)
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def add_host_network(session, creator, host_id, **kwargs):
+    """Create a host network."""
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
+    )
+    is_host_editable(session, host, creator)
+    return utils.add_db_object(
+        session, models.HostNetwork, True,
+        host_id, **kwargs
+    )
+
+
 @utils.supported_filters(
     optional_support_keys=UPDATED_NETWORK_FIELDS
 )
-def update_host_network(updater, host_id, subnet_id, **kwargs):
-    """Update a host network."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_HOST_NETWORK)
-        host_network = utils.get_db_object(
-            session, models.HostNetwork,
-            host_id=host_id, subnet_id=subnet_id
-        )
-        is_host_editable(session, host_network.host, updater)
-        utils.update_db_object(session, host_network, **kwargs)
-        return host_network.to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_NETWORK
+)
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def update_host_network(session, updater, host_id, subnet_id, **kwargs):
+    """Update a host network."""
+    host_network = utils.get_db_object(
+        session, models.HostNetwork,
+        host_id=host_id, subnet_id=subnet_id
+    )
+    is_host_editable(session, host_network.host, updater)
+    return utils.update_db_object(session, host_network, **kwargs)
+
+
 @utils.supported_filters(UPDATED_NETWORK_FIELDS)
-def update_hostnetwork(updater, host_network_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_NETWORK
+)
+@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def update_hostnetwork(session, updater, host_network_id, **kwargs):
     """Update a host network."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_ADD_HOST_NETWORK)
-        host_network = utils.get_db_object(
-            session, models.HostNetwork, id=host_network_id
-        )
-        is_host_editable(session, host_network.host, updater)
-        utils.update_db_object(session, host_network, **kwargs)
-        return host_network.to_dict()
+    host_network = utils.get_db_object(
+        session, models.HostNetwork, id=host_network_id
+    )
+    is_host_editable(session, host_network.host, updater)
+    return utils.update_db_object(session, host_network, **kwargs)
 
 
-@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 @utils.supported_filters([])
-def del_host_network(deleter, host_id, subnet_id, **kwargs):
-    """Delete a host network."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_HOST_NETWORK)
-        host_network = utils.get_db_object(
-            session, models.HostNetwork,
-            host_id=host_id, subnet_id=subnet_id
-        )
-        is_host_editable(session, host_network.host, deleter)
-        utils.del_db_object(session, host_network)
-        return host_network.to_dict()
-
-
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_HOST_NETWORK
+)
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-@utils.supported_filters([])
-def del_hostnetwork(deleter, host_network_id, **kwargs):
+def del_host_network(session, deleter, host_id, subnet_id, **kwargs):
     """Delete a host network."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, deleter, permission.PERMISSION_DEL_HOST_NETWORK)
-        host_network = utils.get_db_object(
-            session, models.HostNetwork, id=host_network_id
-        )
-        is_host_editable(session, host_network.host, deleter)
-        utils.del_db_object(session, host_network)
-        return host_network.to_dict()
+    host_network = utils.get_db_object(
+        session, models.HostNetwork,
+        host_id=host_id, subnet_id=subnet_id
+    )
+    is_host_editable(session, host_network.host, deleter)
+    return utils.del_db_object(session, host_network)
 
 
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_HOST_NETWORK
+)
+@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def del_hostnetwork(session, deleter, host_network_id, **kwargs):
+    """Delete a host network."""
+    host_network = utils.get_db_object(
+        session, models.HostNetwork, id=host_network_id
+    )
+    is_host_editable(session, host_network.host, deleter)
+    return utils.del_db_object(session, host_network)
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_GET_HOST_STATE
+)
 @utils.wrap_to_dict(RESP_STATE_FIELDS)
-@utils.supported_filters([])
-def get_host_state(getter, host_id, **kwargs):
+def get_host_state(session, getter, host_id, **kwargs):
     """Get host state info."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_GET_HOST_STATE)
-        return utils.get_db_object(
-            session, models.Host, id=host_id
-        ).state_dict()
+    return utils.get_db_object(
+        session, models.Host, id=host_id
+    ).state_dict()
 
 
-@utils.wrap_to_dict(RESP_STATE_FIELDS)
 @utils.supported_filters(UPDATED_STATE_FIELDS)
-def update_host_state(updater, host_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_HOST_STATE
+)
+@utils.wrap_to_dict(RESP_STATE_FIELDS)
+def update_host_state(session, updater, host_id, **kwargs):
     """Update a host state."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, updater, permission.PERMISSION_UPDATE_HOST_STATE)
-        host = utils.get_db_object(
-            session, models.Host, id=host_id
-        )
-        utils.update_db_object(session, host.state, **kwargs)
-        return host.state_dict()
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
+    )
+    utils.update_db_object(session, host.state, **kwargs)
+    return host.state_dict()

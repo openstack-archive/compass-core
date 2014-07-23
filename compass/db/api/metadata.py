@@ -67,7 +67,6 @@ def _add_metadata(
     parent=None, adapter=None
 ):
     metadata = config.get('_self', {})
-    print 'add metadata %s to adapter %s' % (metadata, adapter)
     if 'field' in metadata:
         field = utils.get_db_object(
             session, field_model, field=metadata['field']

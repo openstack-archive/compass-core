@@ -19,7 +19,6 @@
 import logging
 
 from compass.actions import util
-from compass.config_management.utils.config_manager import ConfigManager
 from compass.db.api import database
 
 
@@ -37,10 +36,3 @@ def deploy(cluster_hosts):
             raise Exception('failed to acquire lock to deploy')
 
         logging.debug('deploy cluster_hosts: %s', cluster_hosts)
-        with database.session():
-            cluster_hosts, os_versions, target_systems = (
-                util.update_cluster_hosts(cluster_hosts))
-            manager = ConfigManager()
-            manager.install_cluster_and_hosts(
-                cluster_hosts, os_versions, target_systems)
-            manager.sync()

@@ -16,6 +16,7 @@
 """Define all the RestfulAPI entry points."""
 import datetime
 import functools
+import logging
 import netaddr
 import simplejson as json
 
@@ -36,6 +37,7 @@ from compass.api import exception_handler
 from compass.api import utils
 from compass.db.api import adapter_holder as adapter_api
 from compass.db.api import cluster as cluster_api
+from compass.db.api import database
 from compass.db.api import host as host_api
 from compass.db.api import machine as machine_api
 from compass.db.api import metadata_holder as metadata_api
@@ -1885,7 +1887,15 @@ def update_host_state(host_id):
     )
 
 
+def init():
+    logging.info('init flask')
+    database.init()
+    adapter_api.load_adapters()
+    metadata_api.load_metadatas()
+
+
 if __name__ == '__main__':
     flags.init()
     logsetting.init()
+    init()
     app.run(host='0.0.0.0')

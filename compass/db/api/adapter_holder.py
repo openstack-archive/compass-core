@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """Adapter related object holder."""
+import logging
+
 from compass.db.api import adapter as adapter_api
 from compass.db.api import database
 from compass.db.api import permission
@@ -34,12 +36,14 @@ PACKAGE_FIELD_MAPPING = {
 }
 
 
-def load_adapters():
-    with database.session() as session:
-        return adapter_api.get_adapters_internal(session)
+@database.run_in_session()
+def load_adapters(session):
+    global ADAPTER_MAPPING
+    logging.info('load adapters into memory')
+    ADAPTER_MAPPING = adapter_api.get_adapters_internal(session)
 
 
-ADAPTER_MAPPING = load_adapters()
+ADAPTER_MAPPING = {}
 
 
 def _filter_adapters(adapter_config, filter_name, filter_value):
@@ -62,7 +66,11 @@ def _filter_adapters(adapter_config, filter_name, filter_value):
 
 
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
-def list_adapters(lister, **filters):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_ADAPTERS
+)
+def list_adapters(session, lister, **filters):
     """list adapters."""
     translated_filters = {}
     for filter_name, filter_value in filters:
@@ -71,51 +79,51 @@ def list_adapters(lister, **filters):
                 OS_FIELD_MAPPING[filter_name]
             ] = filter_value
         elif filter_name in PACKAGE_FIELD_MAPPING:
-            translated_filters.setdefault('package-adapter', {})[
+            translated_filters.setdefault('package_adapter', {})[
                 PACKAGE_FIELD_MAPPING[filter_name]
             ] = filter_value
         else:
             translated_filters[filter_name] = filter_value
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, lister, permission.PERMISSION_LIST_ADAPTERS)
-        filtered_adapter_dicts = []
-        adapter_dicts = ADAPTER_MAPPING.values()
-        for adapter_dict in adapter_dicts:
-            if all([
-                _filter_adapters(adapter_dict, filter_name, filter_value)
-                for filter_name, filter_value in translated_filters.items()
-            ]):
-                filtered_adapter_dicts.append(adapter_dict)
-        return filtered_adapter_dicts
+
+    filtered_adapter_dicts = []
+    adapter_dicts = ADAPTER_MAPPING.values()
+    for adapter_dict in adapter_dicts:
+        if all([
+            _filter_adapters(adapter_dict, filter_name, filter_value)
+            for filter_name, filter_value in translated_filters.items()
+        ]):
+            filtered_adapter_dicts.append(adapter_dict)
+    return filtered_adapter_dicts
 
 
 @utils.supported_filters([])
-def get_adapter(getter, adapter_id, **kwargs):
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_ADAPTERS
+)
+def get_adapter(session, getter, adapter_id, **kwargs):
     """get adapter."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_ADAPTERS)
-        if adapter_id not in ADAPTER_MAPPING:
-            raise exception.RecordNotExists(
-                'adpater %s does not exist' % adapter_id
-            )
-        return ADAPTER_MAPPING[adapter_id]
+    if adapter_id not in ADAPTER_MAPPING:
+        raise exception.RecordNotExists(
+            'adpater %s does not exist' % adapter_id
+        )
+    return ADAPTER_MAPPING[adapter_id]
 
 
 @utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_ADAPTERS
+)
 def get_adapter_roles(getter, adapter_id, **kwargs):
     """get adapter roles."""
-    with database.session() as session:
-        user_api.check_user_permission_internal(
-            session, getter, permission.PERMISSION_LIST_ADAPTERS)
-        if adapter_id not in ADAPTER_MAPPING:
-            raise exception.RecordNotExists(
-                'adpater %s does not exist' % adapter_id
-            )
-        adapter_dict = ADAPTER_MAPPING[adapter_id]
-        if 'package_adapter' not in adapter_dict:
-            raise exception.RecordNotExists(
-                'adapter %s does not contain package_adapter' % adapter_id
-            )
-        return ADAPTER_MAPPING[adapter_id]['package_adapter']['roles']
+    if adapter_id not in ADAPTER_MAPPING:
+        raise exception.RecordNotExists(
+            'adpater %s does not exist' % adapter_id
+        )
+    adapter_dict = ADAPTER_MAPPING[adapter_id]
+    if 'package_adapter' not in adapter_dict:
+        raise exception.RecordNotExists(
+            'adapter %s does not contain package_adapter' % adapter_id
+        )
+    return ADAPTER_MAPPING[adapter_id]['package_adapter']['roles']

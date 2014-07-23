@@ -40,5 +40,3 @@ app.config['REMEMBER_COOKIE_DURATION'] = (
 login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
-
-from compass.api import api as compass_api

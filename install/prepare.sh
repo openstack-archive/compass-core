@@ -220,13 +220,20 @@ if [ "$tempest" == "true" ]; then
         git clean -x -f -d -q
         git checkout grizzly-eol
     fi
+    source `which virtualenvwrapper.sh`
+    if ! lsvirtualenv |grep tempest>/dev/null; then
+        mkvirtualenv tempest
+    fi
+    workon tempest
     cd /tmp/tempest
     pip install -e .
     if [[ "$?" != "0" ]]; then
         echo "failed to install tempest project"
+        deactivate
         exit 1
     else
         echo "install tempest project succeeded"
+        deactivate
     fi
 fi
 

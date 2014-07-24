@@ -13,3 +13,6 @@ redis
 flask-wtf
 itsdangerous
 importlib
+MySQL-python
+lockfile
+daemon

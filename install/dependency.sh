@@ -10,7 +10,7 @@ if [ "$tempest" == "true" ]; then
         exit 1
     fi
 fi
-sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget python-setuptools syslinux python-netaddr python-flask python-flask-sqlalchemy python-amqplib python-argparse amqp python-paramiko python-mock mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp net-snmp-python python-daemon unzip openssl openssl098e ca-certificates redis python-redis python-importlib mysql mysql-server MySQL-python
+sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget syslinux amqp mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp python-daemon unzip openssl openssl098e ca-certificates redis mysql mysql-server mysql-devel python-virtualenv
 if [[ "$?" != "0" ]]; then
     echo "failed to install yum dependency"
     exit 1
@@ -32,41 +32,7 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-# pip install flask-sqlalchemy need to remove /usr/lib64/python2.6/site-packages/easy-install.pth 
-cp -n /usr/lib/python2.6/site-packages/easy-install* /usr/lib64/python2.6/site-packages/
-
-sudo pip install -U setuptools
-if [[ "$?" != "0" ]]; then
-    echo "failed to install setuptools"
-    exit 1 
-fi
-
-# TODO: (fixme). setuptools should be installed twice. One is to uninstall distribute, the other is to upgrade setuptools.
-sudo pip install -U setuptools
-if [[ "$?" != "0" ]]; then
-    echo "failed to install setuptools"
-    exit 1 
-fi
-
-sudo pip install flask-mysql
-if [[ "$?" != "0" ]]; then
-    echo "failed to install flask-mysql"
-    exit 1 
-fi
-
-
-
-sudo pip install -U -r $COMPASSDIR/requirements.txt
-if [[ "$?" != "0" ]]; then
-    echo "failed to install compass requirement packages"
-    exit 1
-fi
-
-sudo pip install -U -r $COMPASSDIR/test-requirements.txt
-if [[ "$?" != "0" ]]; then
-    echo "failed to install compass test require packages"
-    exit 1
-fi
+sudo pip install virtualenvwrapper
 
 sudo chkconfig httpd on
 sudo chkconfig squid on

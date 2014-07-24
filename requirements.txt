@@ -13,3 +13,4 @@ redis
 flask-wtf
 itsdangerous
 importlib
+MySQL-python

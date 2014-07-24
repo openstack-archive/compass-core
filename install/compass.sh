@@ -20,7 +20,8 @@ sudo cp -rf $COMPASSDIR/bin/compass /usr/bin/
 sudo cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/conf/compassd /usr/bin/
 sudo cp -rf $WEB_HOME/public/* /var/www/compass_web/
-
+# add apache user to the group of virtualenv user
+sudo usermod -a -G `groups $USER|awk '{print$3}'` apache
 sudo chkconfig compassd on
 
 # setup ods server
@@ -33,12 +34,14 @@ sudo chmod -R 777 /var/log/compass
 sudo echo "export C_FORCE_ROOT=1" > /etc/profile.d/celery_env.sh
 sudo chmod +x /etc/profile.d/celery_env.sh
 cd $COMPASSDIR
-sudo python setup.py install
+workon compass-core
+python setup.py install
 if [[ "$?" != "0" ]]; then
     echo "failed to install compass package"
+    deactivate
     exit 1
 else
-    echo "compass package is installed"
+    echo "compass package is installed in virtualenv under current dir"
 fi
 
 sudo sed -i "/^COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/cobbler_api'" /etc/compass/setting
@@ -52,27 +55,30 @@ sudo sed -i "/^COBBLER_INSTALLER_TOKEN/c\COBBLER_INSTALLER_TOKEN = ['$CBLR_USER'
 sudo sed -i "s/\$compass_ip/$ipaddr/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_testmode/$TESTMODE/g" /etc/compass/global_config
+sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /etc/httpd/conf.d/ods-server.conf
+sudo sed -e 's|$Python|'$VIRTUAL_ENV/bin/python'|' -i /etc/init.d/compassd
+sudo sed -e 's|$Python|'$VIRTUAL_ENV/bin/python'|' -i /usr/bin/compassd
 
 # add cookbooks, databags and roles
 sudo chmod +x /opt/compass/bin/addcookbooks.py	
 sudo chmod +x /opt/compass/bin/adddatabags.py
 sudo chmod +x /opt/compass/bin/addroles.py
 
-sudo /opt/compass/bin/addcookbooks.py
+/opt/compass/bin/addcookbooks.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add cookbooks"
     exit 1
 else
     echo "cookbooks are added to chef server"
 fi
-sudo /opt/compass/bin/adddatabags.py
+/opt/compass/bin/adddatabags.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add databags"
     exit 1
 else
     echo "databags are added to chef server"
 fi
-sudo /opt/compass/bin/addroles.py
+/opt/compass/bin/addroles.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add roles"
     exit 1
@@ -96,7 +102,7 @@ else
     exit 1
 fi
 
-sudo /opt/compass/bin/refresh.sh
+/opt/compass/bin/refresh.sh
 if [[ "$?" != "0" ]]; then
     echo "failed to refresh compassd service"
     exit 1
@@ -126,7 +132,7 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo service compassd status
+service compassd status
 if [[ "$?" != "0" ]]; then
     echo "compassd is not started"
     exit 1
@@ -134,8 +140,10 @@ else
     echo "compassd has already started"
 fi
 
-sudo compass check
+compass check
 if [[ "$?" != "0" ]]; then
     echo "compass check failed"
     exit 1
 fi
+
+deactivate

@@ -35,6 +35,8 @@ function tear_down_machines() {
 REGTEST_CONF=${REGTEST_CONF:-"regtest.conf"}
 REGTEST_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source ${REGTEST_DIR}/${REGTEST_CONF}
+source `which virtualenvwrapper.sh`
+workon compass-core
 
 declare -A roles_list
 machines=''
@@ -169,6 +171,7 @@ fi
 
 ${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --adapter_os_name="${ADAPTER_OS_NAME_PATTERN}" --adapter_target_system="${ADAPTER_TARGET_SYSTEM_NAME}" --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG}
 rc=$?
+deactivate
 # Tear down machines after the test
 if [[ $rc != 0 ]]; then
     tear_down_machines

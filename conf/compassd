@@ -25,6 +25,7 @@
 [ -x /opt/compass/bin/progress_update.py ] || exit 0
 UBUNTU=/etc/debian_version
 SUSE=/etc/SuSE-release
+PYTHON=$Python
 
 if [ -f $UBUNTU ]; then
     . /lib/lsb/init_functions
@@ -46,7 +47,7 @@ start() {
         rc_status -v
         echo
         echo -n "Start service progress_update: "
-        startproc -f -p /var/run/progress_update.pid -l /tmp/progress_update.log /opt/compass/bin/progress_update.py
+        startproc -f -p /var/run/progress_update.pid -l /tmp/progress_update.log $PYTHON /opt/compass/bin/progress_update.py
         rc_status -v
         echo
     elif [ -e $UBUNTU ]; then
@@ -60,7 +61,7 @@ start() {
         if [ -f /var/run/progress_update.pid ]; then
             echo "progress_update is already started"
             RETVAL=1
-        elif /usr/bin/python /opt/compass/bin/progress_update.py &> /tmp/progress_update.log; then
+        elif $PYTHON /opt/compass/bin/progress_update.py &> /tmp/progress_update.log; then
             echo "progress_update starts OK"
             RETVAL=0
         fi
@@ -70,7 +71,7 @@ start() {
         RETVAL=$?
         echo
         echo -n "Start service progress_update: "
-        daemon --pidfile /var/run/progress_update.pid "/opt/compass/bin/progress_update.py &>/tmp/progress_update.log & echo \$! > /var/run/progress_update.pid"
+        daemon --pidfile /var/run/progress_update.pid "$PYTHON /opt/compass/bin/progress_update.py &>/tmp/progress_update.log & echo \$! > /var/run/progress_update.pid"
         RETVAL=$?
         echo
     fi

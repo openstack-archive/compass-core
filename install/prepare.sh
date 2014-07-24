@@ -227,6 +227,7 @@ if [ "$tempest" == "true" ]; then
     workon tempest
     cd /tmp/tempest
     pip install -e .
+    pip install sqlalchemy
     if [[ "$?" != "0" ]]; then
         echo "failed to install tempest project"
         deactivate
@@ -235,6 +236,27 @@ if [ "$tempest" == "true" ]; then
         echo "install tempest project succeeded"
         deactivate
     fi
+fi
+
+if ! lsvirtualenv |grep compass-core>/dev/null; then
+    mkvirtualenv compass-core
+fi
+workon compass-core
+cd $COMPASSDIR
+pip install -U -r requirements.txt
+if [[ "$?" != "0" ]]; then
+    echo "failed to install compass requiremnts"
+    deactivate
+    exit 1
+fi
+pip install -U -r test-requirements.txt
+if [[ "$?" != "0" ]]; then
+    echo "failed to install compass test requiremnts"
+    deactivate
+    exit 1
+else
+    echo "intall compass requirements succeeded"
+    deactivate
 fi
 
 download()

@@ -23,6 +23,7 @@
 # Checking Sanity
 DEBIAN=/etc/debian_version
 SUSE=/etc/SuSE-release
+CELERY=$CeleryPath
 
 if [ -f $DEBIAN ]; then
     . /lib/lsb/init_functions
@@ -36,14 +37,14 @@ RETVAL=0
 start() {
     echo -n "Starting Compass Celeryd: "
     if [ -f $SUSE ]; then
-        startproc -f -p /var/run/celeryd.pid -l /tmp/celeryd.log "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celery worker"
+        startproc -f -p /var/run/celeryd.pid -l /tmp/celeryd.log "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY"
         rc_status -v
         RETVAL=$?
     elif [ -f $DEBIAN ]; then
-        start_daemon -p /var/run/celeryd.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celery worker &>/tmp/celeryd.log & echo \$! > /var/run/celeryd.pid"
+        start_daemon -p /var/run/celeryd.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY &>/tmp/celeryd.log & echo \$! > /var/run/celeryd.pid"
         RETVAL=$?
     else
-        daemon --pidfile /var/run/celeryd.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celery worker &>/tmp/celeryd.log & echo \$! > /var/run/celeryd.pid"
+        daemon --pidfile /var/run/celeryd.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY &>/tmp/celeryd.log & echo \$! > /var/run/celeryd.pid"
         RETVAL=$?
     fi
     echo
@@ -53,14 +54,14 @@ start() {
 stop() {
     echo -n "Stopping Compass Celeryd: "
     if [ -f $SUSE ]; then
-        killproc -t 10 -p /var/run/celeryd.pid celeryd
+        killproc -t 10 -p /var/run/celeryd.pid $CELERY
         rc_status -v
         RETVAL=$?
     elif [ -f $DEBIAN ]; then
-        killproc -p /var/run/celeryd.pid celeryd -TERM
+        killproc -p /var/run/celeryd.pid $CELERY -TERM
         RETVAL=$?
     else
-        killproc -p /var/run/celeryd.pid -d 30 celeryd
+        killproc -p /var/run/celeryd.pid -d 30 $CELERY
         RETVAL=$?
     fi
     echo
@@ -77,12 +78,12 @@ case "$1" in
     status)
         echo -n "Checking compass celeryd: "
         if [ -f $SUSE ]; then
-            checkproc -v -p /var/run/celeryd.pid celeryd
+            checkproc -v -p /var/run/celeryd.pid $CELERY
             rc_status -v
         elif [ -f $DEBIAN ]; then
-            status_of_proc -p /var/run/celeryd.pid celeryd celeryd
+            status_of_proc -p /var/run/celeryd.pid $CELERY
         else
-            status -p /var/run/celeryd.pid celeryd
+            status -p /var/run/celeryd.pid $CELERY
             echo
         fi
         ;;

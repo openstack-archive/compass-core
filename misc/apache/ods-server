@@ -1,7 +1,7 @@
 # Apache config for ods server
 #
 # Specify python path if you use virtualenv
-# WSGIPythonHome /home/vagrant/hwtest
+WSGIPythonHome $PythonHome
 
 <VirtualHost *:80>
   DocumentRoot /var/www/compass_web

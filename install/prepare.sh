@@ -45,11 +45,19 @@ copy2dir()
             if [[ ! -z $ZUUL_REF ]]; then
                 git_repo=$ZUUL_URL/$3
                 git_ref=$ZUUL_REF
-                git_branch=$ZUUL_BRANCH
+                if git branch -a|grep ${ZUUL_BRANCH}; then
+                    git_branch=$ZUUL_BRANCH
+                else
+                    git_branch=master
+                fi
             elif [[ ! -z $GERRIT_REFSPEC ]]; then
                 git_repo=https://$GERRIT_HOST/$3
                 git_ref=$GERRIT_REFSPEC
-                git_branch=$GERRIT_BRANCH
+                if git branch -a|grep ${GERRIT_BRANCH}; then
+                    git_branch=$GERRIT_BRANCH
+                else
+                    git_branch=master
+                fi
             fi
             git reset --hard remotes/origin/$git_branch
             git fetch $git_repo $git_ref && git checkout FETCH_HEAD
@@ -171,8 +179,44 @@ if [ "$tempest" == "true" ]; then
         git clean -x -f -d -q
         git checkout grizzly-eol
     fi
+    source `which virtualenvwrapper.sh`
+    if ! lsvirtualenv |grep tempest>/dev/null; then
+        mkvirtualenv tempest
+    fi
+    workon tempest
     cd /tmp/tempest
     pip install -e .
+    pip install sqlalchemy
+    if [[ "$?" != "0" ]]; then
+        echo "failed to install tempest project"
+        deactivate
+        exit 1
+    else
+        echo "install tempest project succeeded"
+        deactivate
+    fi
+fi
+
+source `which virtualenvwrapper.sh`
+if ! lsvirtualenv |grep compass-core>/dev/null; then
+    mkvirtualenv compass-core
+fi
+workon compass-core
+cd $COMPASSDIR
+pip install -U -r requirements.txt
+if [[ "$?" != "0" ]]; then
+    echo "failed to install compass requiremnts"
+    deactivate
+    exit 1
+fi
+pip install -U -r test-requirements.txt
+if [[ "$?" != "0" ]]; then
+    echo "failed to install compass test requiremnts"
+    deactivate
+    exit 1
+else
+    echo "intall compass requirements succeeded"
+    deactivate
 fi
 
 download()

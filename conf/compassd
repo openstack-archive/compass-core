@@ -60,7 +60,7 @@ start() {
         if [ -f /var/run/progress_update.pid ]; then
             echo "progress_update is already started"
             RETVAL=1
-        elif /usr/bin/python /opt/compass/bin/progress_update.py &> /tmp/progress_update.log; then
+        elif /opt/compass/bin/progress_update.py &> /tmp/progress_update.log; then
             echo "progress_update starts OK"
             RETVAL=0
         fi

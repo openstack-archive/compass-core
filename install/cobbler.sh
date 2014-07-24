@@ -18,6 +18,7 @@ sudo mkdir -p /root/backup/cobbler
 # update httpd conf
 sudo cp -rn /etc/httpd/conf.d /root/backup/cobbler/
 sudo rm -f /etc/httpd/conf.d/cobbler_web.conf
+sudo rm -f /etc/httpd/conf.d/ods-server.conf
 sudo cp -rf $COMPASSDIR/misc/apache/cobbler_web.conf /etc/httpd/conf.d/cobbler_web.conf
 chmod 644 /etc/httpd/conf.d/cobbler_web.conf
 sudo rm -rf /etc/httpd/conf.d/ssl.conf

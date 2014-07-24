@@ -23,6 +23,7 @@
 # Checking Sanity
 DEBIAN=/etc/debian_version
 SUSE=/etc/SuSE-release
+PYTHON=$Python
 
 if [ -f $DEBIAN ]; then
     . /lib/lsb/init_functions
@@ -36,14 +37,14 @@ RETVAL=0
 start() {
     echo -n "Starting Compass progress updated: "
     if [ -f $SUSE ]; then
-        startproc -f -p /var/run/progress_update.pid -l /tmp/progress_update.log /opt/compass/bin/progress_update.py
+        startproc -f -p /var/run/progress_update.pid -l /tmp/progress_update.log $PYTHON /opt/compass/bin/progress_update.py
         rc_status -v
         RETVAL=$?
     elif [ -f $DEBIAN ]; then
-        start_daemon -p /var/run/progress_update.pid "/opt/compass/bin/progress_update.py &>/tmp/progress_update.log & echo \$! > /var/run/progress_update.pid"
+        start_daemon -p /var/run/progress_update.pid "$PYTHON /opt/compass/bin/progress_update.py &>/tmp/progress_update.log & echo \$! > /var/run/progress_update.pid"
         RETVAL=$?
     else
-        daemon --pidfile /var/run/progress_update.pid "/opt/compass/bin/progress_update.py &>/tmp/progress_update.log & echo \$! > /var/run/progress_update.pid"
+        daemon --pidfile /var/run/progress_update.pid "$PYTHON /opt/compass/bin/progress_update.py &>/tmp/progress_update.log & echo \$! > /var/run/progress_update.pid"
         RETVAL=$?
     fi
     echo
@@ -80,7 +81,7 @@ case "$1" in
             checkproc -v -p /var/run/progress_update.pid progress_updated
             rc_status -v
         elif [ -f $DEBIAN ]; then
-            status_of_proc -p /var/run/progress_update.pid progress_updated progress_updated
+            status_of_proc -p /var/run/progress_update.pid progress_updated
         else
             status -p /var/run/progress_update.pid progress_updated
             echo

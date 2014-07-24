@@ -33,12 +33,14 @@ sudo chmod -R 777 /var/log/compass
 sudo echo "export C_FORCE_ROOT=1" > /etc/profile.d/celery_env.sh
 sudo chmod +x /etc/profile.d/celery_env.sh
 cd $COMPASSDIR
-sudo python setup.py install
+sudo python tools/install_venv.py
+source .venv/bin/activate
+python setup.py install
 if [[ "$?" != "0" ]]; then
     echo "failed to install compass package"
     exit 1
 else
-    echo "compass package is installed"
+    echo "compass package is installed in virtualenv under current dir"
 fi
 
 sudo sed -i "/^COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/cobbler_api'" /etc/compass/setting
@@ -52,7 +54,7 @@ sudo sed -i "/^COBBLER_INSTALLER_TOKEN/c\COBBLER_INSTALLER_TOKEN = ['$CBLR_USER'
 sudo sed -i "s/\$compass_ip/$ipaddr/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_testmode/$TESTMODE/g" /etc/compass/global_config
-
+sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /etc/httpd/conf.d/ods-server.conf
 # add cookbooks, databags and roles
 sudo chmod +x /opt/compass/bin/addcookbooks.py	
 sudo chmod +x /opt/compass/bin/adddatabags.py
@@ -139,3 +141,5 @@ if [[ "$?" != "0" ]]; then
     echo "compass check failed"
     exit 1
 fi
+
+deactivate

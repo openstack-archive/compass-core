@@ -812,6 +812,7 @@ def list_switchmachines():
     """List switch machines."""
     data = _get_request_args()
     _filter_ip(data)
+    _replace_data(data, {'ip_int': 'switch_ip_int'})
     _filter_port(data)
     _filter_vlans(data)
     _filter_tag(data)
@@ -975,7 +976,7 @@ def delete_machine(machine_id):
     )
 
 
-@app.route("/networks", methods=['GET'])
+@app.route("/subnets", methods=['GET'])
 @log_user_action
 @login_required
 def list_subnets():
@@ -989,7 +990,7 @@ def list_subnets():
     )
 
 
-@app.route("/networks/<int:subnet_id>", methods=['GET'])
+@app.route("/subnets/<int:subnet_id>", methods=['GET'])
 @log_user_action
 @login_required
 def show_subnet(subnet_id):
@@ -1003,7 +1004,7 @@ def show_subnet(subnet_id):
     )
 
 
-@app.route("/networks", methods=['POST'])
+@app.route("/subnets", methods=['POST'])
 @log_user_action
 @login_required
 def add_subnet():
@@ -1015,7 +1016,7 @@ def add_subnet():
     )
 
 
-@app.route("/networks/<int:subnet_id>", methods=['PUT'])
+@app.route("/subnets/<int:subnet_id>", methods=['PUT'])
 @log_user_action
 @login_required
 def update_subnet(subnet_id):
@@ -1029,7 +1030,7 @@ def update_subnet(subnet_id):
     )
 
 
-@app.route("/networks/<int:subnet_id>", methods=['DELETE'])
+@app.route("/subnets/<int:subnet_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 def delete_subnet(subnet_id):
@@ -1088,13 +1089,27 @@ def show_adapter_roles(adapter_id):
 @app.route("/adapters/<int:adapter_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
-def show_metadata(adapter_id):
+def show_adapter_metadata(adapter_id):
     """Get adapter metadata."""
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        metadata_api.get_metadata(
+        metadata_api.get_package_metadata(
             current_user, adapter_id, **data
+        )
+    )
+
+
+@app.route("/oses/<int:os_id>/metadata", methods=['GET'])
+@log_user_action
+@login_required
+def show_os_metadata(os_id):
+    """Get os metadata."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        metadata_api.get_os_metadata(
+            current_user, os_id, **data
         )
     )
 
@@ -1176,6 +1191,20 @@ def show_cluster_config(cluster_id):
     return utils.make_json_response(
         200,
         cluster_api.get_cluster_config(
+            current_user, cluster_id, **data
+        )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/metadata", methods=['GET'])
+@log_user_action
+@login_required
+def show_cluster_metadata(cluster_id):
+    """Get cluster config."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_cluster_metadata(
             current_user, cluster_id, **data
         )
     )
@@ -1628,6 +1657,34 @@ def show_host(host_id):
     return utils.make_json_response(
         200,
         host_api.get_host(
+            current_user, host_id, **data
+        )
+    )
+
+
+@app.route("/machines-hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_machines_or_hosts():
+    """Get host."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        host_api.list_machines_or_hosts(
+            current_user, **data
+        )
+    )
+
+
+@app.route("/machines-hosts/<int:host_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_machine_or_host(host_id):
+    """Get host."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        host_api.get_machine_or_host(
             current_user, host_id, **data
         )
     )

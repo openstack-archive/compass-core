@@ -51,6 +51,10 @@ RESP_CONFIG_FIELDS = [
     'created_at',
     'updated_at'
 ]
+RESP_METADATA_FIELDS = [
+    'os_config',
+    'package_config'
+]
 RESP_CLUSTERHOST_CONFIG_FIELDS = [
     'package_config',
     'config_step',
@@ -73,6 +77,7 @@ RESP_ACTION_FIELDS = [
     'status', 'details'
 ]
 ADDED_FIELDS = ['name', 'adapter_id']
+OPTIONAL_ADDED_FIELDS = ['os_id']
 UPDATED_FIELDS = ['name', 'reinstall_distributed_system']
 ADDED_CLUSTERHOST_FIELDS = ['machine_id']
 UPDATED_CLUSTERHOST_FIELDS = ['name', 'reinstall_os']
@@ -150,7 +155,9 @@ def is_cluster_editable(
     return True
 
 
-@utils.supported_filters(ADDED_FIELDS)
+@utils.supported_filters(
+    ADDED_FIELDS, optional_support_keys=OPTIONAL_ADDED_FIELDS
+)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_CLUSTER
@@ -160,7 +167,8 @@ def add_cluster(session, creator, name, adapter_id, **kwargs):
     """Create a cluster."""
     return utils.add_db_object(
         session, models.Cluster, True,
-        name, adapter_id=adapter_id, creator_id=creator.id, **kwargs
+        name, creator_id=creator.id, adapter_id=adapter_id,
+        **kwargs
     )
 
 
@@ -212,6 +220,31 @@ def get_cluster_config(session, getter, cluster_id, **kwargs):
     )
 
 
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_METADATAS
+)
+@utils.wrap_to_dict(RESP_METADATA_FIELDS)
+def get_cluster_metadata(session, getter, cluster_id, **kwargs):
+    """Get cluster metadata."""
+    cluster = utils.get_db_object(
+        session, models.Cluster, id=cluster_id
+    )
+    metadatas = {}
+    os = cluster.os
+    if os:
+        metadatas['os_config'] = metadata_api.get_os_metadata_internal(
+            os.id
+        )
+    adapter = cluster.adapter
+    if adapter:
+        metadatas['package_ocnfig'] = (
+            metadata_api.get_package_metadata_internal(adapter.id)
+        )
+    return metadatas
+
+
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_CLUSTER_CONFIG
 )
@@ -225,7 +258,7 @@ def update_cluster_config_internal(session, updater, cluster, **kwargs):
     os_config = cluster.os_config
     if os_config:
         metadata_api.validate_os_config(
-            os_config, cluster.adapter_id
+            os_config, cluster.os_id
         )
     package_config = cluster.package_config
     if package_config:
@@ -305,7 +338,7 @@ def add_clusterhost_internal(
                 exception_when_not_editable=False
             ):
                 utils.update_db_object(
-                    session, host, adapter=cluster.adapter.os_adapter,
+                    session, host,
                     **host_dict
                 )
             else:
@@ -314,7 +347,6 @@ def add_clusterhost_internal(
             utils.add_db_object(
                 session, models.Host, False, machine_id,
                 os=cluster.os,
-                adapter=cluster.adapter.os_adapter,
                 creator=cluster.creator,
                 **host_dict
             )
@@ -645,7 +677,7 @@ def review_cluster(session, reviewer, cluster_id):
     os_config = cluster.os_config
     if os_config:
         metadata_api.validate_os_config(
-            os_config, cluster.adapter_id, True
+            os_config, cluster.os_id, True
         )
         for clusterhost in cluster.clusterhosts:
             host = clusterhost.host
@@ -662,7 +694,7 @@ def review_cluster(session, reviewer, cluster_id):
                 os_config, host_os_config
             )
             metadata_api.validate_os_config(
-                deployed_os_config, host.adapter_id, True
+                deployed_os_config, host.os_id, True
             )
             host.deployed_os_config = deployed_os_config
             host.config_validated = True

@@ -25,12 +25,13 @@ from compass.db import models
 
 
 SUPPORTED_FIELDS = ['name', 'os_name', 'owner', 'mac']
+SUPPORTED_MACHINE_HOST_FIELDS = ['mac', 'tag', 'location', 'os_name', 'os_id']
 SUPPORTED_NETOWORK_FIELDS = [
     'interface', 'ip', 'subnet', 'is_mgmt', 'is_promiscuous'
 ]
 RESP_FIELDS = [
-    'id', 'name', 'os_name', 'owner', 'mac',
-    'reinstall_os', 'os_installed', 'tag', 'location',
+    'id', 'name', 'os_name', 'os_id', 'owner', 'mac',
+    'reinstall_os', 'os_installed', 'tag', 'location', 'networks',
     'created_at', 'updated_at'
 ]
 RESP_CLUSTER_FIELDS = [
@@ -40,10 +41,19 @@ RESP_CLUSTER_FIELDS = [
     'adapter_id', 'created_at', 'updated_at'
 ]
 RESP_NETWORK_FIELDS = [
-    'id', 'ip', 'interface', 'netmask', 'is_mgmt', 'is_promiscuous'
+    'id', 'ip', 'interface', 'netmask', 'is_mgmt', 'is_promiscuous',
+    'created_at', 'updated_at'
 ]
 RESP_CONFIG_FIELDS = [
     'os_config',
+    'config_setp',
+    'config_validated',
+    'networks',
+    'created_at',
+    'updated_at'
+]
+RESP_DEPLOY_FIELDS = [
+    'status', 'host'
 ]
 UPDATED_FIELDS = ['name', 'reinstall_os']
 UPDATED_CONFIG_FIELDS = [
@@ -81,6 +91,35 @@ def list_hosts(session, lister, **filters):
     )
 
 
+@utils.supported_filters(
+    optional_support_keys=SUPPORTED_MACHINE_HOST_FIELDS)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOSTS
+)
+@utils.output_filters(
+    missing_ok=True,
+    tag=utils.general_filter_callback,
+    location=utils.general_filter_callback,
+    os_name=utils.general_filter_callback,
+    os_id=utils.general_filter_callback
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def list_machines_or_hosts(session, lister, **filters):
+    """List hosts."""
+    machines = utils.list_db_objects(
+        session, models.Machine, **filters
+    )
+    machines_or_hosts = []
+    for machine in machines:
+        host = machine.host
+        if host:
+            machines_or_hosts.append(host)
+        else:
+            machines_or_hosts.append(machine)
+    return machines_or_hosts
+
+
 @utils.supported_filters([])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -92,6 +131,24 @@ def get_host(session, getter, host_id, **kwargs):
     return utils.get_db_object(
         session, models.Host, id=host_id
     )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOSTS
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def get_machine_or_host(session, getter, host_id, **kwargs):
+    """get host info."""
+    machine = utils.get_db_object(
+        session, models.Machine, id=host_id
+    )
+    host = machine.host
+    if host:
+        return host
+    else:
+        return machine
 
 
 @utils.supported_filters([])
@@ -117,25 +174,52 @@ def _conditional_exception(host, exception_when_not_editable):
         return False
 
 
+def is_host_validated(session, host):
+    if not host.config_validated:
+        raise exception.Forbidden(
+            'host %s is not validated' % host.name
+        )
+
+
 def is_host_editable(
     session, host, user,
     reinstall_os_set=False, exception_when_not_editable=True
 ):
-    with session.begin(subtransactions=True):
-        if reinstall_os_set:
-            if host.state.state == 'INSTALLING':
-                return _conditional_exception(
-                    host, exception_when_not_editable
-                )
-        elif not host.reinstall_os:
+    if reinstall_os_set:
+        if host.state.state == 'INSTALLING':
             return _conditional_exception(
                 host, exception_when_not_editable
             )
-        if not user.is_admin and host.creator_id != user.id:
-            return _conditional_exception(
-                host, exception_when_not_editable
-            )
+    elif not host.reinstall_os:
+        return _conditional_exception(
+            host, exception_when_not_editable
+        )
+    if not user.is_admin and host.creator_id != user.id:
+        return _conditional_exception(
+            host, exception_when_not_editable
+        )
     return True
+
+
+def validate_host(session, host):
+    mgmt_interface_set = False
+    for host_network in host.host_networks:
+        if host_network.is_mgmt:
+            if mgmt_interface_set:
+                raise exception.InvalidParameter(
+                    '%s multi interfaces set mgmt ' % host.name
+                )
+            if host_network.is_promiscuous:
+                raise exception.InvalidParameter(
+                    '%s interface %s is mgmt but promiscuous' % (
+                        host.name, host_network.interface
+                    )
+                )
+            mgmt_interface_set = True
+    if not mgmt_interface_set:
+        raise exception.InvalidParameter(
+            'host has no mgmt interface' % host.name
+        )
 
 
 @utils.supported_filters(UPDATED_FIELDS)
@@ -401,3 +485,87 @@ def update_host_state(session, updater, host_id, **kwargs):
     )
     utils.update_db_object(session, host.state, **kwargs)
     return host.state_dict()
+
+
+@utils.supported_filters(optional_support_keys=['poweron'])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEPLOY_HOST
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    host=RESP_CONFIG_FIELDS
+)
+def poweron_host(
+    session, deployer, host_id, poweron={}, **kwargs
+):
+    """power on host."""
+    from compass.tasks import client as celery_client
+    host = utils.get_db_object(
+        session, models.host, id=host_id
+    )
+    is_host_validated(session, host)
+    celery_client.celery.send_task(
+        'compass.tasks.poweron_host',
+        (host_id,)
+    )
+    return {
+        'status': 'poweron %s action sent' % host.name,
+        'host': host
+    }
+
+
+@utils.supported_filters(optional_support_keys=['poweroff'])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEPLOY_HOST
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    host=RESP_CONFIG_FIELDS
+)
+def poweroff_host(
+    session, deployer, host_id, poweroff={}, **kwargs
+):
+    """power off host."""
+    from compass.tasks import client as celery_client
+    host = utils.get_db_object(
+        session, models.host, id=host_id
+    )
+    is_host_validated(session, host)
+    celery_client.celery.send_task(
+        'compass.tasks.poweroff_host',
+        (host_id,)
+    )
+    return {
+        'status': 'poweroff %s action sent' % host.name,
+        'host': host
+    }
+
+
+@utils.supported_filters(optional_support_keys=['reset'])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEPLOY_HOST
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    host=RESP_CONFIG_FIELDS
+)
+def reset_host(
+    session, deployer, host_id, reset={}, **kwargs
+):
+    """reset host."""
+    from compass.tasks import client as celery_client
+    host = utils.get_db_object(
+        session, models.host, id=host_id
+    )
+    is_host_validated(session, host)
+    celery_client.celery.send_task(
+        'compass.tasks.reset_host',
+        (host_id,)
+    )
+    return {
+        'status': 'reset %s action sent' % host.name,
+        'host': host
+    }

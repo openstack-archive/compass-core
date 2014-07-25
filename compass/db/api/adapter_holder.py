@@ -24,16 +24,22 @@ from compass.db import exception
 
 
 SUPPORTED_FIELDS = [
-    'name', 'os', 'distributed_system', 'os_installer', 'package_installer'
+    'name',
+    'distributed_system_name',
+    'os_installer_name',
+    'package_installer_name',
 ]
-OS_FIELD_MAPPING = {
-    'os': 'os_name',
-    'os_installer': 'installer_type'
-}
-PACKAGE_FIELD_MAPPING = {
-    'distributed_system': 'distributed_system_name',
-    'package_installer': 'installer_type'
-}
+RESP_FIELDS = [
+    'id', 'name', 'roles', 'os_installer_name',
+    'package_installer_name', 'distributed_system_name',
+    'supported_oses', 'display_name'
+]
+RESP_OS_FIELDS = [
+    'id', 'os_id', 'name'
+]
+RESP_ROLES_FIELDS = [
+    'id', 'name', 'description', 'optional'
+]
 
 
 @database.run_in_session()
@@ -70,36 +76,29 @@ def _filter_adapters(adapter_config, filter_name, filter_value):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_ADAPTERS
 )
+@utils.output_filters(
+    name=utils.general_filter_callback,
+    distributed_system_name=utils.general_filter_callback,
+    os_installer_name=utils.general_filter_callback,
+    package_installer_name=utils.general_filter_callback
+)
+@utils.wrap_to_dict(
+    RESP_FIELDS,
+    supported_oses=RESP_OS_FIELDS
+)
 def list_adapters(session, lister, **filters):
     """list adapters."""
-    translated_filters = {}
-    for filter_name, filter_value in filters:
-        if filter_name in OS_FIELD_MAPPING:
-            translated_filters.setdefault('os_adapter', {})[
-                OS_FIELD_MAPPING[filter_name]
-            ] = filter_value
-        elif filter_name in PACKAGE_FIELD_MAPPING:
-            translated_filters.setdefault('package_adapter', {})[
-                PACKAGE_FIELD_MAPPING[filter_name]
-            ] = filter_value
-        else:
-            translated_filters[filter_name] = filter_value
-
-    filtered_adapter_dicts = []
-    adapter_dicts = ADAPTER_MAPPING.values()
-    for adapter_dict in adapter_dicts:
-        if all([
-            _filter_adapters(adapter_dict, filter_name, filter_value)
-            for filter_name, filter_value in translated_filters.items()
-        ]):
-            filtered_adapter_dicts.append(adapter_dict)
-    return filtered_adapter_dicts
+    return ADAPTER_MAPPING.values()
 
 
 @utils.supported_filters([])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_ADAPTERS
+)
+@utils.wrap_to_dict(
+    RESP_FIELDS,
+    supported_oses=RESP_OS_FIELDS
 )
 def get_adapter(session, getter, adapter_id, **kwargs):
     """get adapter."""
@@ -115,15 +114,11 @@ def get_adapter(session, getter, adapter_id, **kwargs):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_ADAPTERS
 )
-def get_adapter_roles(getter, adapter_id, **kwargs):
+@utils.wrap_to_dict(RESP_ROLES_FIELDS)
+def get_adapter_roles(session, getter, adapter_id, **kwargs):
     """get adapter roles."""
     if adapter_id not in ADAPTER_MAPPING:
         raise exception.RecordNotExists(
             'adpater %s does not exist' % adapter_id
         )
-    adapter_dict = ADAPTER_MAPPING[adapter_id]
-    if 'package_adapter' not in adapter_dict:
-        raise exception.RecordNotExists(
-            'adapter %s does not contain package_adapter' % adapter_id
-        )
-    return ADAPTER_MAPPING[adapter_id]['package_adapter']['roles']
+    return ADAPTER_MAPPING[adapter_id].get('roles', [])

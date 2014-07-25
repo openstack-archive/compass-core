@@ -182,27 +182,12 @@ def _setup_distributed_systems(distributed_system_session):
     )
 
 
-def _setup_os_adapters(adapter_session):
-    """Initialize os adapter table."""
-    logging.info('setup os adapter table')
-    from compass.db.api import adapter
-    adapter.add_os_adapters_internal(
-        adapter_session)
-
-
-def _setup_package_adapters(adapter_session):
-    """Initialize package adapter table."""
-    logging.info('setup package adapter table')
-    from compass.db.api import adapter
-    adapter.add_package_adapters_internal(
-        adapter_session)
-
-
 def _setup_adapters(adapter_session):
-    """Initialize adapter table."""
+    """Initialize package adapter table."""
     logging.info('setup adapter table')
     from compass.db.api import adapter
-    adapter.add_adapters_internal(adapter_session)
+    adapter.add_adapters_internal(
+        adapter_session)
 
 
 def _setup_os_fields(field_session):
@@ -233,9 +218,9 @@ def _setup_package_metadatas(metadata_session):
     metadata.add_package_metadata_internal(metadata_session)
 
 
-def _setup_package_adapter_roles(role_session):
+def _setup_adapter_roles(role_session):
     """Initialize package adapter role table."""
-    logging.info('setup package adapter role table')
+    logging.info('setup adapter role table')
     from compass.db.api import adapter
     adapter.add_roles_internal(role_session)
 
@@ -251,10 +236,8 @@ def create_db(my_session):
     _setup_package_installers(my_session)
     _setup_oses(my_session)
     _setup_distributed_systems(my_session)
-    _setup_os_adapters(my_session)
-    _setup_package_adapters(my_session)
-    _setup_package_adapter_roles(my_session)
     _setup_adapters(my_session)
+    _setup_adapter_roles(my_session)
     _setup_os_fields(my_session)
     _setup_package_fields(my_session)
     _setup_os_metadatas(my_session)
@@ -284,22 +267,18 @@ def create_table(my_session, table):
         models.PackageInstaller,
         models.OperatingSystem,
         models.DistributedSystems,
-        models.OSAdapter,
-        models.PackageAdapter,
         models.Adapter
     ]:
         _setup_os_installers(my_session)
         _setup_package_installers(my_session)
-        _setup_os_adapters(my_session)
-        _setup_package_adapters(my_session)
-        _setup_package_adapter_roles(my_session)
+        _setup_adapter_roles(my_session)
         _setup_adapters(my_session)
         _setup_os_fields(my_session)
         _setup_os_metadatas(my_session)
         _setup_package_fields(my_session)
         _setup_package_metadatas(my_session)
-    elif table == models.PackageAdapterRole:
-        _setup_package_adapter_roles(my_session)
+    elif table == models.AdapterRole:
+        _setup_adapter_roles(my_session)
     elif table in [
         models.OSConfigField,
         models.PackageConfigField,

@@ -118,6 +118,40 @@ def _get_request_args():
     return dict(request.args)
 
 
+def _group_data_action(data, **data_callbacks):
+    if not data:
+        raise exception_handler.BadRequest(
+            'no action to take'
+        )
+    unsupported_keys = list(set(data) - set(data_callbacks))
+    if unsupported_keys:
+        raise exception_handler.BadMethod(
+            'unsupported actions: %s' % unsupported_keys
+        )
+    callback_datas = {}
+    for data_key, data_value in data.items():
+        callback = data_callbacks[data_key]
+        callback_datas.setdefault(id(callback), {})[data_key] = data_value
+    if len(callback_datas) > 1:
+        raise exception_handler.BadRequest(
+            'multi actions are not supported'
+        )
+    callback_ids = {}
+    for data_key, data_callback in data_callbacks.items():
+        callback_ids[id(data_callback)] = data_callback
+    for callback_id, callback_data in callback_datas.items():
+        return callback_ids[callback_id](**callback_data)
+
+
+def _wrap_response(func, response_code):
+    def wrapped_func(*args, **kwargs):
+        return utils.make_json_response(
+            response_code,
+            func(*args, **kwargs)
+        )
+    return wrapped_func
+
+
 def _login(use_cookie):
     """User login helper function."""
     data = _get_request_data()
@@ -245,18 +279,23 @@ def list_user_permissions(user_id):
     )
 
 
-@app.route("/users/<int:user_id>/permissions/actions", methods=['POST'])
+@app.route("/users/<int:user_id>/action", methods=['POST'])
 @log_user_action
 @login_required
-def update_user_permissions(user_id):
+def take_user_action(user_id):
     """Update user permissions."""
     data = _get_request_data()
-    return utils.make_json_response(
-        200,
-        user_api.update_permissions(
-            current_user, user_id,
-            **data
-        )
+    update_permissions_func = _wrap_response(
+        functools.partial(
+            user_api.update_permissions, current_user, user_id
+        ),
+        200
+    )
+    return _group_data_action(
+        data,
+        add_permission=update_permissions_func,
+        remove_permissions=update_permissions_func,
+        set_permissions=update_permissions_func
     )
 
 
@@ -626,12 +665,12 @@ def _filter_port(data):
     )
 
 
-def _filter_vlans(data):
-    vlan_filter = {}
-    vlans = _get_data_list(data, 'vlans')
-    if vlans:
-        vlan_filter['resp_in'] = vlans
-        data['vlans'] = vlan_filter
+def _filter_general(data, key):
+    general_filter = {}
+    general = _get_data_list(data, key)
+    if general:
+        general_filter['resp_in'] = general
+        data[key] = general_filter
 
 
 def _filter_tag(data):
@@ -665,12 +704,32 @@ def list_switch_machines(switch_id):
     """Get switch machines."""
     data = _get_request_args()
     _filter_port(data)
-    _filter_vlans(data)
+    _filter_general(data, 'vlans')
     _filter_tag(data)
     _filter_location(data)
     return utils.make_json_response(
         200,
         switch_api.list_switch_machines(
+            current_user, switch_id, **data
+        )
+    )
+
+
+@app.route("/switches/<int:switch_id>/machines-hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_switch_machines_hosts(switch_id):
+    """Get switch machines or hosts."""
+    data = _get_request_args()
+    _filter_port(data)
+    _filter_general(data, 'vlans')
+    _filter_tag(data)
+    _filter_location(data)
+    _filter_general(data, 'os_name')
+    _filter_general(data, 'os_id')
+    return utils.make_json_response(
+        200,
+        switch_api.list_switch_machines_hosts(
             current_user, switch_id, **data
         )
     )
@@ -701,23 +760,6 @@ def show_switch_machine(switch_id, machine_id):
         200,
         switch_api.get_switch_machine(
             current_user, switch_id, machine_id, **data
-        )
-    )
-
-
-@app.route(
-    '/switches/<int:switch_id>/machines/actions',
-    methods=['POST']
-)
-@log_user_action
-@login_required
-def update_switch_machines(switch_id):
-    """update switch machine."""
-    data = _get_request_data()
-    return utils.make_json_response(
-        200,
-        switch_api.update_switch_machines(
-            current_user, switch_id, **data
         )
     )
 
@@ -782,27 +824,31 @@ def delete_switch_machine(switch_id, machine_id):
     )
 
 
-@app.route("/switches/<int:switch_id>/actions", methods=['POST'])
+@app.route("/switches/<int:switch_id>/action", methods=['POST'])
 @log_user_action
 @login_required
 def take_switch_action(switch_id):
     """update switch."""
     data = _get_request_data()
-    if 'find_machines' in data:
-        return utils.make_json_response(
-            202,
-            switch_api.poll_switch_machines(
-                current_user, switch_id, **data['find_machines']
-            )
-        )
-    else:
-        return utils.make_json_response(
-            200,
-            {
-                'status': 'unknown action',
-                'details': 'supported actions: %s' % str(['find_machines'])
-            }
-        )
+    poll_switch_machines_func = _wrap_response(
+        functools.partial(
+            switch_api.poll_switch_machines, current_user, switch_id
+        ),
+        202
+    )
+    update_switch_machines_func = _wrap_response(
+        functools.partial(
+            switch_api.update_switch_machines, current_user, switch_id
+        ),
+        200
+    )
+    return _group_data_action(
+        data,
+        find_machines=poll_switch_machines_func,
+        add_machines=update_switch_machines_func,
+        remove_machines=update_switch_machines_func,
+        set_machines=update_switch_machines_func
+    )
 
 
 @app.route("/switch-machines", methods=['GET'])
@@ -812,13 +858,36 @@ def list_switchmachines():
     """List switch machines."""
     data = _get_request_args()
     _filter_ip(data)
+    _replace_data(data, {'ip_int': 'switch_ip_int'})
     _filter_port(data)
-    _filter_vlans(data)
+    _filter_general(data, 'vlans')
     _filter_tag(data)
     _filter_location(data)
     return utils.make_json_response(
         200,
         switch_api.list_switchmachines(
+            current_user, **data
+        )
+    )
+
+
+@app.route("/switches-machines-hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_switchmachines_hosts():
+    """List switch machines or hosts."""
+    data = _get_request_args()
+    _filter_ip(data)
+    _replace_data(data, {'ip_int': 'switch_ip_int'})
+    _filter_port(data)
+    _filter_general(data, 'vlans')
+    _filter_tag(data)
+    _filter_location(data)
+    _filter_general(data, 'os_name')
+    _filter_general(data, 'os_id')
+    return utils.make_json_response(
+        200,
+        switch_api.list_switchmachines_hosts(
             current_user, **data
         )
     )
@@ -975,7 +1044,7 @@ def delete_machine(machine_id):
     )
 
 
-@app.route("/networks", methods=['GET'])
+@app.route("/subnets", methods=['GET'])
 @log_user_action
 @login_required
 def list_subnets():
@@ -989,7 +1058,7 @@ def list_subnets():
     )
 
 
-@app.route("/networks/<int:subnet_id>", methods=['GET'])
+@app.route("/subnets/<int:subnet_id>", methods=['GET'])
 @log_user_action
 @login_required
 def show_subnet(subnet_id):
@@ -1003,7 +1072,7 @@ def show_subnet(subnet_id):
     )
 
 
-@app.route("/networks", methods=['POST'])
+@app.route("/subnets", methods=['POST'])
 @log_user_action
 @login_required
 def add_subnet():
@@ -1015,7 +1084,7 @@ def add_subnet():
     )
 
 
-@app.route("/networks/<int:subnet_id>", methods=['PUT'])
+@app.route("/subnets/<int:subnet_id>", methods=['PUT'])
 @log_user_action
 @login_required
 def update_subnet(subnet_id):
@@ -1029,7 +1098,7 @@ def update_subnet(subnet_id):
     )
 
 
-@app.route("/networks/<int:subnet_id>", methods=['DELETE'])
+@app.route("/subnets/<int:subnet_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 def delete_subnet(subnet_id):
@@ -1049,6 +1118,10 @@ def delete_subnet(subnet_id):
 def list_adapters():
     """List adapters."""
     data = _get_request_args()
+    _filter_general(data, 'name')
+    _filter_general(data, 'distributed_system_name')
+    _filter_general(data, 'os_installer_name')
+    _filter_general(data, 'package_installer_name')
     return utils.make_json_response(
         200,
         adapter_api.list_adapters(
@@ -1088,13 +1161,27 @@ def show_adapter_roles(adapter_id):
 @app.route("/adapters/<int:adapter_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
-def show_metadata(adapter_id):
+def show_adapter_metadata(adapter_id):
     """Get adapter metadata."""
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        metadata_api.get_metadata(
+        metadata_api.get_package_metadata(
             current_user, adapter_id, **data
+        )
+    )
+
+
+@app.route("/oses/<int:os_id>/metadata", methods=['GET'])
+@log_user_action
+@login_required
+def show_os_metadata(os_id):
+    """Get os metadata."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        metadata_api.get_os_metadata(
+            current_user, os_id, **data
         )
     )
 
@@ -1181,6 +1268,20 @@ def show_cluster_config(cluster_id):
     )
 
 
+@app.route("/clusters/<int:cluster_id>/metadata", methods=['GET'])
+@log_user_action
+@login_required
+def show_cluster_metadata(cluster_id):
+    """Get cluster config."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_cluster_metadata(
+            current_user, cluster_id, **data
+        )
+    )
+
+
 @app.route("/clusters/<int:cluster_id>/config", methods=['PUT'])
 @log_user_action
 @login_required
@@ -1233,37 +1334,37 @@ def delete_cluster_config(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/review", methods=['POST'])
-@log_user_action
-@login_required
-def review_cluster(cluster_id):
-    """review cluster"""
-    data = _get_request_data()
-    return utils.make_json_response(
-        200,
-        cluster_api.review_cluster(current_user, cluster_id, **data)
-    )
-
-
-@app.route("/clusters/<int:cluster_id>/actions", methods=['POST'])
+@app.route("/clusters/<int:cluster_id>/action", methods=['POST'])
 @log_user_action
 @login_required
 def take_cluster_action(cluster_id):
     """take cluster action."""
     data = _get_request_data()
-    if 'deploy' in data:
-        return utils.make_json_response(
-            202,
-            cluster_api.deploy_cluster(
-                current_user, cluster_id, **data['deploy']
-            )
-        )
-    return utils.make_json_response(
-        200,
-        {
-            'status': 'unknown action',
-            'details': 'supported actions: %s' % str(['deploy'])
-        }
+    update_cluster_hosts_func = _wrap_response(
+        functools.partial(
+            cluster_api.update_cluster_hosts, current_user, cluster_id
+        ),
+        200
+    )
+    review_cluster_func = _wrap_response(
+        functools.partial(
+            cluster_api.review_cluster, current_user, cluster_id
+        ),
+        200
+    )
+    deploy_cluster_func = _wrap_response(
+        functools.partial(
+            cluster_api.deploy_cluster, current_user, cluster_id
+        ),
+        202
+    )
+    return _group_data_action(
+        data,
+        add_hosts=update_cluster_hosts_func,
+        set_hosts=update_cluster_hosts_func,
+        remove_hosts=update_cluster_hosts_func,
+        review=review_cluster_func,
+        deploy=deploy_cluster_func
     )
 
 
@@ -1380,18 +1481,6 @@ def delete_clusterhost(clusterhost_id):
         cluster_api.del_clusterhost(
             current_user, clusterhost_id, **data
         )
-    )
-
-
-@app.route("/clusters/<int:cluster_id>/hosts/actions", methods=['POST'])
-@log_user_action
-@login_required
-def update_cluster_hosts(cluster_id):
-    """update cluster hosts."""
-    data = _get_request_data()
-    return utils.make_json_response(
-        200,
-        cluster_api.update_cluster_hosts(current_user, cluster_id, **data)
     )
 
 
@@ -1628,6 +1717,38 @@ def show_host(host_id):
     return utils.make_json_response(
         200,
         host_api.get_host(
+            current_user, host_id, **data
+        )
+    )
+
+
+@app.route("/machines-hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_machines_or_hosts():
+    """Get host."""
+    data = _get_request_args()
+    _filter_tag(data)
+    _filter_location(data)
+    _filter_general(data, 'os_name')
+    _filter_general(data, 'os_name')
+    return utils.make_json_response(
+        200,
+        host_api.list_machines_or_hosts(
+            current_user, **data
+        )
+    )
+
+
+@app.route("/machines-hosts/<int:host_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_machine_or_host(host_id):
+    """Get host."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        host_api.get_machine_or_host(
             current_user, host_id, **data
         )
     )
@@ -1884,6 +2005,64 @@ def update_host_state(host_id):
         host_api.update_host_state(
             current_user, host_id, **data
         )
+    )
+
+
+def _poweron_host(*args, **kwargs):
+    return utils.make_json_response(
+        202,
+        host_api.poweron_host(
+            *args, **kwargs
+        )
+    )
+
+
+def _poweroff_host(*args, **kwargs):
+    return utils.make_json_response(
+        202,
+        host_api.poweroff_host(
+            *args, **kwargs
+        )
+    )
+
+
+def _reset_host(*args, **kwargs):
+    return utils.make_json_response(
+        202,
+        host_api.reset_host(
+            *args, **kwargs
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/action", methods=['POST'])
+@log_user_action
+@login_required
+def take_host_action(host_id):
+    """take host action."""
+    data = _get_request_data()
+    poweron_func = _wrap_response(
+        functools.partial(
+            host_api.poweron_host, current_user, host_id
+        ),
+        202
+    )
+    poweroff_func = _wrap_response(
+        functools.partial(
+            host_api.poweroff_host, current_user, host_id
+        ),
+        202
+    )
+    reset_func = _wrap_response(
+        functools.partial(
+            host_api.reset_host, current_user, host_id
+        )
+    )
+    return _group_data_action(
+        data,
+        poweron=poweron_func,
+        poweroff=poweroff_func,
+        reset=reset_func,
     )
 
 

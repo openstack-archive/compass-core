@@ -25,6 +25,7 @@ from compass.db import models
 
 
 SUPPORTED_FIELDS = ['name', 'os_name', 'owner', 'mac']
+SUPPORTED_MACHINE_FIELDS = ['mac']
 SUPPORTED_NETOWORK_FIELDS = [
     'interface', 'ip', 'subnet', 'is_mgmt', 'is_promiscuous'
 ]
@@ -81,6 +82,28 @@ def list_hosts(session, lister, **filters):
     )
 
 
+@utils.supported_filters(
+    optional_support_keys=SUPPORTED_MACHINE_FIELDS)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOSTS
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def list_machines_or_hosts(session, lister, **filters):
+    """List hosts."""
+    machines = utils.list_db_objects(
+        session, models.Machine, **filters
+    )
+    machines_or_hosts = []
+    for machine in machines:
+        host = machine.host
+        if host:
+            machines_or_hosts.append(host)
+        else:
+            machines_or_hosts.append(machine)
+    return machines_or_hosts
+
+
 @utils.supported_filters([])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -92,6 +115,24 @@ def get_host(session, getter, host_id, **kwargs):
     return utils.get_db_object(
         session, models.Host, id=host_id
     )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_HOSTS
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def get_machine_or_host(session, getter, host_id, **kwargs):
+    """get host info."""
+    machine = utils.get_db_object(
+        session, models.Machine, id=host_id
+    )
+    host = machine.host
+    if host:
+        return host
+    else:
+        return machine
 
 
 @utils.supported_filters([])

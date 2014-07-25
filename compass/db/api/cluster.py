@@ -225,7 +225,7 @@ def update_cluster_config_internal(session, updater, cluster, **kwargs):
     os_config = cluster.os_config
     if os_config:
         metadata_api.validate_os_config(
-            os_config, cluster.adapter_id
+            os_config, cluster.os_id
         )
     package_config = cluster.package_config
     if package_config:
@@ -305,7 +305,7 @@ def add_clusterhost_internal(
                 exception_when_not_editable=False
             ):
                 utils.update_db_object(
-                    session, host, adapter=cluster.adapter.os_adapter,
+                    session, host,
                     **host_dict
                 )
             else:
@@ -314,7 +314,6 @@ def add_clusterhost_internal(
             utils.add_db_object(
                 session, models.Host, False, machine_id,
                 os=cluster.os,
-                adapter=cluster.adapter.os_adapter,
                 creator=cluster.creator,
                 **host_dict
             )
@@ -645,7 +644,7 @@ def review_cluster(session, reviewer, cluster_id):
     os_config = cluster.os_config
     if os_config:
         metadata_api.validate_os_config(
-            os_config, cluster.adapter_id, True
+            os_config, cluster.os_id, True
         )
         for clusterhost in cluster.clusterhosts:
             host = clusterhost.host
@@ -662,7 +661,7 @@ def review_cluster(session, reviewer, cluster_id):
                 os_config, host_os_config
             )
             metadata_api.validate_os_config(
-                deployed_os_config, host.adapter_id, True
+                deployed_os_config, host.os_id, True
             )
             host.deployed_os_config = deployed_os_config
             host.config_validated = True

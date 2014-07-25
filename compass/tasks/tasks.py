@@ -18,25 +18,39 @@
 """
 import logging
 
+from celery.signals import celeryd_init
 from celery.signals import setup_logging
 
 from compass.actions import deploy
 from compass.actions import poll_switch
 from compass.actions import reinstall
+from compass.db.api import adapter_holder as adapter_api
+from compass.db.api import database
+from compass.db.api import metadata_holder as metadata_api
+
 from compass.tasks.client import celery
 from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
 
 
-def tasks_setup_logging(**_):
-    """Setup logging options from compass setting."""
+@celeryd_init.connect()
+def global_celery_init(**_):
+    """Initialization code."""
     flags.init()
     flags.OPTIONS.logfile = setting.CELERY_LOGFILE
     logsetting.init()
+    database.init()
+    adapter_api.load_adapters()
+    metadata_api.load_metadatas()
 
 
-setup_logging.connect(tasks_setup_logging)
+# @setup_logging.connect()
+# def tasks_setup_logging(**_):
+#     """Setup logging options from compass setting."""
+#     flags.init()
+#     flags.OPTIONS.logfile = setting.CELERY_LOGFILE
+#     logsetting.init()
 
 
 @celery.task(name='compass.tasks.pollswitch')

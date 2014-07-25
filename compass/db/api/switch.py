@@ -28,8 +28,12 @@ from compass.utils import setting_wrapper as setting
 
 SUPPORTED_FIELDS = ['ip_int', 'vendor', 'state']
 SUPPORTED_FILTER_FIELDS = ['ip_int', 'vendor', 'state']
-SUPPORTED_SWITCH_MACHINES_FIELDS = ['ip_int', 'port', 'vlans', 'mac', 'tag']
-SUPPORTED_MACHINES_FIELDS = ['port', 'vlans', 'mac', 'tag']
+SUPPORTED_SWITCH_MACHINES_FIELDS = [
+    'switch_ip_int', 'port', 'vlans', 'mac', 'tag'
+]
+SUPPORTED_MACHINES_FIELDS = [
+    'port', 'vlans', 'mac', 'tag'
+]
 ADDED_FIELDS = ['ip']
 OPTIONAL_ADDED_FIELDS = ['credentials', 'vendor', 'state', 'err_msg']
 UPDATED_FIELDS = ['credentials', 'vendor', 'state', 'err_msg']
@@ -67,7 +71,7 @@ RESP_ACTION_FIELDS = [
     'status', 'details'
 ]
 RESP_MACHINES_FIELDS = [
-    'id', 'switch_id', 'machine_id', 'port', 'vlans', 'mac',
+    'id', 'switch_id', 'switch_ip', 'machine_id', 'port', 'vlans', 'mac',
     'ipmi_credentials', 'tag', 'location',
     'created_at', 'updated_at'
 ]

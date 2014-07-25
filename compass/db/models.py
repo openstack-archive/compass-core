@@ -108,10 +108,6 @@ class MetadataMixin(HelperMixin):
         super(MetadataMixin, self).initialize()
 
     def validate(self):
-        if not self.adapter:
-            raise exception.InvalidParameter(
-                'adapter is not set in os metadata %s' % self.id
-            )
         super(MetadataMixin, self).validate()
 
     @property
@@ -249,67 +245,6 @@ class FieldMixin(HelperMixin):
         js_validator = self.js_validator
         if js_validator:
             dict_info['js_validator'] = self.js_validator
-        return dict_info
-
-
-class AdapterMixin(HelperMixin):
-    name = Column(String(80), unique=True)
-
-    @property
-    def root_metadatas(self):
-        return [
-            metadata for metadata in self.metadatas
-            if metadata.parent_id is None
-        ]
-
-    @property
-    def adapter_installer(self):
-        if self.installer:
-            return self.installer
-        elif self.parent:
-            return self.parent.adapter_installer
-        else:
-            return None
-
-    @property
-    def installer_name(self):
-        installer = self.adapter_installer
-        if installer:
-            return installer.name
-        else:
-            return ''
-
-    @property
-    def installer_type(self):
-        installer = self.adapter_installer
-        if installer:
-            return installer.installer_type
-        else:
-            return None
-
-    @property
-    def installer_config(self):
-        installer = self.adapter_installer
-        if installer:
-            return installer.config
-        else:
-            return None
-
-    def metadata_dict(self):
-        dict_info = {}
-        if self.parent:
-            dict_info.update(self.parent.metadata_dict())
-        for metadata in self.root_metadatas:
-            dict_info.update(metadata.to_dict())
-        return dict_info
-
-    def to_dict(self):
-        dict_info = super(AdapterMixin, self).to_dict()
-        dict_info.update({
-            'installer_name': self.installer_name,
-            'installer_type': self.installer_type,
-            'installer_config': self.installer_config
-        })
         return dict_info
 
 
@@ -611,15 +546,12 @@ class Host(BASE, TimestampMixin, HelperMixin):
     __tablename__ = 'host'
 
     name = Column(String(80), unique=True)
-    adapter_id = Column(Integer, ForeignKey('os_adapter.id'))
+    os_id = Column(Integer, ForeignKey('os.id'))
     config_step = Column(String(80), default='')
     os_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
     deployed_os_config = Column(JSONEncoded, default={})
-    os_id = Column(
-        Integer,
-        ForeignKey('os.id')
-    )
+    os_name = Column(String(80))
     creator_id = Column(Integer, ForeignKey('user.id'))
     id = Column(
         Integer,
@@ -686,31 +618,18 @@ class Host(BASE, TimestampMixin, HelperMixin):
         super(Host, self).initialize()
 
     def validate(self):
-        adapter = self.adapter
-        if not adapter:
+        os = self.os
+        if not os:
             raise exception.InvalidParameter(
-                'adapter is not set in host %s' % self.id
+                'os is not set in host %s' % self.id
             )
-        if not self.os:
-            if adapter:
-                self.os = adapter.adapter_os
-            else:
-                raise exception.InvalidParameter(
-                    'os is not set in host %s' % self.id
-                )
-        if not self.creator:
+            self.os_name = os.name
+        creator = self.creator
+        if not creator:
             raise exception.InvalidParameter(
                 'creator is not set in host %s' % self.id
             )
         super(Host, self).validate()
-
-    @hybrid_property
-    def os_name(self):
-        os = self.os
-        if os:
-            return os.name
-        else:
-            return None
 
     @hybrid_property
     def owner(self):
@@ -739,7 +658,6 @@ class Host(BASE, TimestampMixin, HelperMixin):
         dict_info = self.machine.to_dict()
         dict_info.update(super(Host, self).to_dict())
         dict_info.update({
-            'os_name': self.os_name,
             'owner': self.owner,
             'os_installed': self.os_installed,
         })
@@ -810,14 +728,19 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     reinstall_distributed_system = Column(Boolean, default=True)
     config_step = Column(String(80), default='')
     os_id = Column(Integer, ForeignKey('os.id'), nullable=True)
+    os_name = Column(String(80), nullable=True)
     distributed_system_id = Column(
         Integer, ForeignKey('distributed_system.id'),
         nullable=True
+    )
+    distributed_system_name = Column(
+        String(80), nullable=True
     )
     os_config = Column(JSONEncoded, default={})
     package_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
     adapter_id = Column(Integer, ForeignKey('adapter.id'))
+    adapter_name = Column(String(80), nullable=True)
     creator_id = Column(Integer, ForeignKey('user.id'))
     clusterhosts = relationship(
         ClusterHost,
@@ -843,31 +766,29 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         super(Cluster, self).initialize()
 
     def validate(self):
-        adapter = self.adapter
-        if not adapter:
-            raise exception.InvalidParameter(
-                'adapter is not set in cluster %s' % self.id
-            )
         creator = self.creator
         if not creator:
             raise exception.InvalidParameter(
                 'creator is not set in cluster %s' % self.id
             )
         os = self.os
-        if not os:
-            os_adapter = adapter.os_adapter
-            if os_adapter:
-                self.os = os_adapter.adapter_os
-            else:
-                self.os = None
-        if not self.distributed_system:
-            package_adapter = adapter.package_adapter
-            if package_adapter:
-                self.distributed_system = (
-                    package_adapter.adapter_distributed_system
-                )
-            else:
-                self.distributed_system = None
+        if os:
+            self.os_name = os.name
+        else:
+            self.os_name = None
+        adapter = self.adapter
+        if adapter:
+            self.adapter_name = adapter.name
+            self.distributed_system = (
+                adapter.adapter_distributed_system
+            )
+            self.distributed_system_name = (
+                self.distributed_system.name
+            )
+        else:
+            self.adapter_name = None
+            self.distributed_system = None
+            self.distributed_system_name = None
         super(Cluster, self).validate()
 
     @property
@@ -948,8 +869,6 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     def to_dict(self):
         dict_info = super(Cluster, self).to_dict()
         dict_info.update({
-            'os_name': self.os_name,
-            'distributed_system_name': self.distributed_system_name,
             'distributed_system_installed': self.distributed_system_installed,
             'owner': self.owner,
         })
@@ -1192,9 +1111,17 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
     def switch_ip_int(self):
         return self.switch.ip_int
 
+    @switch_ip_int.expression
+    def switch_ip_int(cls):
+        return Switch.ip_int
+
     @hybrid_property
     def switch_vendor(self):
         return self.switch.vendor
+
+    @switch_vendor.expression
+    def switch_vendor(cls):
+        return Switch.vendor
 
     @property
     def patched_vlans(self):
@@ -1213,6 +1140,7 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
     def to_dict(self):
         dict_info = self.machine.to_dict()
         dict_info.update(super(SwitchMachine, self).to_dict())
+        dict_info['switch_ip'] = self.switch.ip
         return dict_info
 
 
@@ -1348,70 +1276,15 @@ class Switch(BASE, HelperMixin, TimestampMixin):
         return dict_info
 
 
-class Adapter(BASE, HelperMixin):
-    """Adpater table."""
-    __tablename__ = 'adapter'
-
-    id = Column(Integer, primary_key=True)
-    package_adapter_id = Column(
-        Integer,
-        ForeignKey(
-            'package_adapter.id', onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        nullable=True
-    )
-    os_adapter_id = Column(
-        Integer,
-        ForeignKey(
-            'os_adapter.id', onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        nullable=True
-    )
-
-    __table_args__ = (
-        UniqueConstraint(
-            'package_adapter_id', 'os_adapter_id', name='constraint'
-        ),
-    )
-
-    clusters = relationship(
-        Cluster,
-        backref=backref('adapter')
-    )
-
-    def __init__(self, os_adapter_id, package_adapter_id, **kwargs):
-        self.os_adapter_id = os_adapter_id
-        self.package_adapter_id = package_adapter_id
-        super(Adapter, self).__init__(**kwargs)
-
-    def metadata_dict(self):
-        dict_info = {}
-        if self.os_adapter:
-            dict_info['os_config'] = self.os_adapter.metadata_dict()
-        if self.package_adapter:
-            dict_info['package_config'] = self.package_adapter.metadata_dict()
-        return dict_info
-
-    def to_dict(self):
-        dict_info = super(Adapter, self).to_dict()
-        os_adapter = self.os_adapter
-        if os_adapter:
-            dict_info['os_adapter'] = os_adapter.to_dict()
-        package_adapter = self.package_adapter
-        if package_adapter:
-            dict_info['package_adapter'] = package_adapter.to_dict()
-        return dict_info
-
-
 class OSConfigMetadata(BASE, MetadataMixin):
     """OS config metadata."""
     __tablename__ = "os_config_metadata"
 
     id = Column(Integer, primary_key=True)
-    adapter_id = Column(
+    os_id = Column(
         Integer,
         ForeignKey(
-            'os_adapter.id', onupdate='CASCADE', ondelete='CASCADE'
+            'os.id', onupdate='CASCADE', ondelete='CASCADE'
         )
     )
     parent_id = Column(
@@ -1432,12 +1305,19 @@ class OSConfigMetadata(BASE, MetadataMixin):
         backref=backref('parent', remote_side=id)
     )
     __table_args__ = (
-        UniqueConstraint('path', 'adapter_id', name='constraint'),
+        UniqueConstraint('path', 'os_id', name='constraint'),
     )
 
     def __init__(self, name, **kwargs):
         self.name = name
         super(OSConfigMetadata, self).__init__(**kwargs)
+
+    def validate(self):
+        if not self.os:
+            raise exception.InvalidParameter(
+                'os is not set in os metadata %s' % self.id
+            )
+        super(OSConfigMetadata, self).validate()
 
 
 class OSConfigField(BASE, FieldMixin):
@@ -1455,106 +1335,30 @@ class OSConfigField(BASE, FieldMixin):
         super(OSConfigField, self).__init__(**kwargs)
 
 
-class OSAdapter(BASE, AdapterMixin):
-    """OS adpater table."""
-    __tablename__ = 'os_adapter'
+class AdapterOS(BASE, HelperMixin):
+    """Adapter OS table."""
+    __tablename__ = 'adapter_os'
 
     id = Column(Integer, primary_key=True)
-    parent_id = Column(
-        Integer,
-        ForeignKey('os_adapter.id', onupdate='CASCADE', ondelete='CASCADE'),
-        nullable=True
-    )
     os_id = Column(
         Integer,
-        ForeignKey('os.id', onupdate='CASCADE', ondelete='CASCADE'),
-        nullable=True
+        ForeignKey(
+            'os.id',
+            onupdate='CASCADE', ondelete='CASCADE'
+        )
     )
-    installer_id = Column(
+    adapter_id = Column(
         Integer,
-        ForeignKey('os_installer.id', onupdate='CASCADE', ondelete='CASCADE'),
-        nullable=True
-    )
-    children = relationship(
-        'OSAdapter',
-        passive_deletes=True, passive_updates=True,
-        backref=backref('parent', remote_side=id)
-    )
-    adapters = relationship(
-        Adapter,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('os_adapter')
-    )
-    metadatas = relationship(
-        OSConfigMetadata,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('adapter')
-    )
-    hosts = relationship(
-        Host,
-        backref=backref('adapter')
+        ForeignKey(
+            'adapter.id',
+            onupdate='CASCADE', ondelete='CASCADE'
+        )
     )
 
-    __table_args__ = (
-        UniqueConstraint('os_id', 'installer_id', name='constraint'),
-    )
-
-    def __init__(self, name, **kwargs):
-        self.name = name
-        super(OSAdapter, self).__init__(**kwargs)
-
-    @property
-    def deployable(self):
-        os = self.adapter_os
-        installer = self.adapter_installer
-        if (
-            os and os.deployable and installer
-        ):
-            return True
-        else:
-            return False
-
-    @property
-    def adapter_os(self):
-        os = self.os
-        if os:
-            return os
-        parent = self.parent
-        if parent:
-            return parent.adapter_os
-        else:
-            return None
-
-    @property
-    def os_name(self):
-        os = self.adapter_os
-        if os:
-            return os.name
-        else:
-            return ''
-
-    def to_dict(self):
-        dict_info = super(OSAdapter, self).to_dict()
-        dict_info['os_name'] = self.os_name
-        return dict_info
-
-
-class OSInstaller(BASE, InstallerMixin):
-    """OS installer table."""
-    __tablename__ = 'os_installer'
-    id = Column(Integer, primary_key=True)
-    adpaters = relationship(
-        OSAdapter,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('installer')
-    )
-
-    def __init__(self, name, **kwargs):
-        self.name = name
-        super(OSInstaller, self).__init__(**kwargs)
+    def __init__(self, os_id, adapter_id, **kwargs):
+        self.os_id = os_id
+        self.adapter_id = adapter_id
+        super(AdapterOS, self).__init__(**kwargs)
 
 
 class OperatingSystem(BASE, HelperMixin):
@@ -1569,14 +1373,11 @@ class OperatingSystem(BASE, HelperMixin):
     )
     name = Column(String(80), unique=True)
     deployable = Column(Boolean, default=False)
-    adapters = relationship(
-        OSAdapter,
+
+    metadatas = relationship(
+        OSConfigMetadata,
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',
-        backref=backref('os')
-    )
-    clusters = relationship(
-        Cluster,
         backref=backref('os')
     )
     hosts = relationship(
@@ -1588,16 +1389,36 @@ class OperatingSystem(BASE, HelperMixin):
         passive_deletes=True, passive_updates=True,
         backref=backref('parent', remote_side=id)
     )
+    supported_adapters = relationship(
+        AdapterOS,
+        passive_deletes=True, passive_updates=True,
+        backref=backref('os')
+    )
 
     def __init__(self, name):
         self.name = name
         super(OperatingSystem, self).__init__()
 
+    @property
+    def root_metadatas(self):
+        return [
+            metadata for metadata in self.metadatas
+            if metadata.parent_id is None
+        ]
 
-class PackageAdapterRole(BASE, HelperMixin):
+    def metadata_dict(self):
+        dict_info = {}
+        if self.parent:
+            dict_info.update(self.parent.metadata_dict())
+        for metadata in self.root_metadatas:
+            dict_info.update(metadata.to_dict())
+        return dict_info
+
+
+class AdapterRole(BASE, HelperMixin):
     """Adapter's roles."""
 
-    __tablename__ = "package_adapter_role"
+    __tablename__ = "adapter_role"
     id = Column(Integer, primary_key=True)
     name = Column(String(80))
     description = Column(Text)
@@ -1605,7 +1426,7 @@ class PackageAdapterRole(BASE, HelperMixin):
     adapter_id = Column(
         Integer,
         ForeignKey(
-            'package_adapter.id',
+            'adapter.id',
             onupdate='CASCADE',
             ondelete='CASCADE'
         )
@@ -1618,7 +1439,7 @@ class PackageAdapterRole(BASE, HelperMixin):
     def __init__(self, name, adapter_id, **kwargs):
         self.name = name
         self.adapter_id = adapter_id
-        super(PackageAdapterRole, self).__init__(**kwargs)
+        super(AdapterRole, self).__init__(**kwargs)
 
 
 class PackageConfigMetadata(BASE, MetadataMixin):
@@ -1629,7 +1450,7 @@ class PackageConfigMetadata(BASE, MetadataMixin):
     adapter_id = Column(
         Integer,
         ForeignKey(
-            'package_adapter.id',
+            'adapter.id',
             onupdate='CASCADE', ondelete='CASCADE'
         )
     )
@@ -1663,6 +1484,13 @@ class PackageConfigMetadata(BASE, MetadataMixin):
         self.name = name
         super(PackageConfigMetadata, self).__init__(**kwargs)
 
+    def validate(self):
+        if not self.adapter:
+            raise exception.InvalidParameter(
+                'adapter is not set in package metadata %s' % self.id
+            )
+        super(PackageConfigMetadata, self).validate()
+
 
 class PackageConfigField(BASE, FieldMixin):
     """Adapter cofig metadata fields."""
@@ -1679,16 +1507,16 @@ class PackageConfigField(BASE, FieldMixin):
         super(PackageConfigField, self).__init__(**kwargs)
 
 
-class PackageAdapter(BASE, AdapterMixin):
+class Adapter(BASE, HelperMixin):
     """Adapter table."""
-    __tablename__ = 'package_adapter'
+    __tablename__ = 'adapter'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True)
     parent_id = Column(
         Integer,
         ForeignKey(
-            'package_adapter.id',
+            'adapter.id',
             onupdate='CASCADE', ondelete='CASCADE'
         ),
         nullable=True
@@ -1701,7 +1529,15 @@ class PackageAdapter(BASE, AdapterMixin):
         ),
         nullable=True
     )
-    installer_id = Column(
+    os_installer_id = Column(
+        Integer,
+        ForeignKey(
+            'os_installer.id',
+            onupdate='CASCADE', ondelete='CASCADE'
+        ),
+        nullable=True
+    )
+    package_installer_id = Column(
         Integer,
         ForeignKey(
             'package_installer.id',
@@ -1709,24 +1545,27 @@ class PackageAdapter(BASE, AdapterMixin):
         ),
         nullable=True
     )
-    supported_os_patterns = Column(JSONEncoded, nullable=True)
+    deployable = Column(
+        Boolean, default=False
+    )
+
+    supported_oses = relationship(
+        AdapterOS,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('adapter')
+    )
 
     roles = relationship(
-        PackageAdapterRole,
+        AdapterRole,
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',
         backref=backref('adapter')
     )
     children = relationship(
-        'PackageAdapter',
+        'Adapter',
         passive_deletes=True, passive_updates=True,
         backref=backref('parent', remote_side=id)
-    )
-    adapters = relationship(
-        Adapter,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('package_adapter')
     )
     metadatas = relationship(
         PackageConfigMetadata,
@@ -1734,10 +1573,15 @@ class PackageAdapter(BASE, AdapterMixin):
         cascade='all, delete-orphan',
         backref=backref('adapter')
     )
+    clusters = relationship(
+        Cluster,
+        backref=backref('adapter')
+    )
+
     __table_args__ = (
         UniqueConstraint(
             'distributed_system_id',
-            'installer_id', name='constraint'
+            'os_installer_id', 'package_installer_id', name='constraint'
         ),
     )
 
@@ -1745,19 +1589,88 @@ class PackageAdapter(BASE, AdapterMixin):
         self, name, **kwargs
     ):
         self.name = name
-        super(PackageAdapter, self).__init__(**kwargs)
+        super(Adapter, self).__init__(**kwargs)
 
     @property
-    def deployable(self):
-        distributed_system = self.adapter_distributed_system
-        installer = self.adapter_installer
-        if (
-            distributed_system and distributed_system.deployable and
-            installer
-        ):
-            return True
+    def root_metadatas(self):
+        return [
+            metadata for metadata in self.metadatas
+            if metadata.parent_id is None
+        ]
+
+    def metadata_dict(self):
+        dict_info = {}
+        if self.parent:
+            dict_info.update(self.parent.metadata_dict())
+        for metadata in self.root_metadatas:
+            dict_info.update(metadata.to_dict())
+        return dict_info
+
+    @property
+    def adapter_package_installer(self):
+        if self.package_installer:
+            return self.package_installer
+        elif self.parent:
+            return self.parent.adapter_package_installer
         else:
-            return False
+            return None
+
+    @property
+    def adapter_os_installer(self):
+        if self.os_installer:
+            return self.os_installer
+        elif self.parent:
+            return self.parent.adapter_os_installer
+        else:
+            return None
+
+    @property
+    def package_installer_name(self):
+        installer = self.adapter_package_installer
+        if installer:
+            return installer.name
+        else:
+            return None
+
+    @property
+    def os_installer_name(self):
+        installer = self.adapter_os_installer
+        if installer:
+            return installer.name
+        else:
+            return None
+
+    @property
+    def package_installer_type(self):
+        installer = self.adapter_package_installer
+        if installer:
+            return installer.installer_type
+        else:
+            return None
+
+    @property
+    def os_installer_type(self):
+        installer = self.adapter_os_installer
+        if installer:
+            return installer.installer_type
+        else:
+            return None
+
+    @property
+    def package_installer_config(self):
+        installer = self.adapter_package_installer
+        if installer:
+            return installer.config
+        else:
+            return None
+
+    @property
+    def os_installer_config(self):
+        installer = self.adapter_os_installer
+        if installer:
+            return installer.config
+        else:
+            return None
 
     @property
     def adapter_distributed_system(self):
@@ -1776,16 +1689,16 @@ class PackageAdapter(BASE, AdapterMixin):
         if distributed_system:
             return distributed_system.name
         else:
-            return ''
+            return None
 
     @property
-    def adapter_supported_os_patterns(self):
-        supported_os_patterns = self.supported_os_patterns
-        if supported_os_patterns:
-            return supported_os_patterns
+    def adapter_supported_oses(self):
+        supported_oses = self.supported_oses
+        if supported_oses:
+            return supported_oses
         parent = self.parent
         if parent:
-            return parent.adapter_supported_os_patterns
+            return parent.adapter_supported_oses
         else:
             return []
 
@@ -1801,13 +1714,22 @@ class PackageAdapter(BASE, AdapterMixin):
             return []
 
     def to_dict(self):
-        dict_info = super(PackageAdapter, self).to_dict()
-        roles = []
-        for role in self.adapter_roles:
-            roles.append(role.to_dict())
-        dict_info['roles'] = roles
-        dict_info['supported_os_patterns'] = self.adapter_supported_os_patterns
-        dict_info['distributed_system'] = self.distributed_system_name
+        dict_info = super(Adapter, self).to_dict()
+        adapter_roles = self.adapter_roles
+        supported_oses = self.adapter_supported_oses
+        dict_info.update({
+            'roles': [role.to_dict() for role in adapter_roles],
+            'supported_oses': [
+                adapter_os.os.to_dict() for adapter_os in supported_oses
+            ],
+            'distributed_system_name': self.distributed_system_name,
+            'os_installer_name': self.os_installer_name,
+            'os_installer_type': self.os_installer_type,
+            'os_installer_config': self.os_installer_config,
+            'package_installer_name': self.package_installer_name,
+            'package_installer_type': self.package_installer_type,
+            'package_installer_config': self.package_installer_config
+        })
         return dict_info
 
 
@@ -1825,9 +1747,10 @@ class DistributedSystem(BASE, HelperMixin):
         nullable=True
     )
     name = Column(String(80), unique=True)
-    deployable = Column(Boolean, default=False)
+    deployable = Column(String(80), default=False)
+
     adapters = relationship(
-        PackageAdapter,
+        Adapter,
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',
         backref=backref('distributed_system')
@@ -1847,15 +1770,31 @@ class DistributedSystem(BASE, HelperMixin):
         super(DistributedSystem, self).__init__()
 
 
+class OSInstaller(BASE, InstallerMixin):
+    """OS installer table."""
+    __tablename__ = 'os_installer'
+    id = Column(Integer, primary_key=True)
+    adpaters = relationship(
+        Adapter,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('os_installer')
+    )
+
+    def __init__(self, name, **kwargs):
+        self.name = name
+        super(OSInstaller, self).__init__(**kwargs)
+
+
 class PackageInstaller(BASE, InstallerMixin):
     """package installer table."""
     __tablename__ = 'package_installer'
     id = Column(Integer, primary_key=True)
     adapters = relationship(
-        PackageAdapter,
+        Adapter,
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',
-        backref=backref('installer')
+        backref=backref('package_installer')
     )
 
     def __init__(self, name, **kwargs):

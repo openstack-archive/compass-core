@@ -25,48 +25,13 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-def _copy_adapters_from_parent(session, model, parent, system_name):
-    for child in parent.children:
-        if not child.adapters:
-            for adapter in parent.adapters:
-                if adapter.children:
-                    continue
-                utils.add_db_object(
-                    session, model,
-                    True,
-                    '%s(%s)' % (child.name, adapter.installer_name),
-                    system_name=child, parent=adapter
-                )
-        _copy_adapters_from_parent(session, model, child, system_name)
-
-
-def _complement_os_adapters(session):
-    with session.begin(subtransactions=True):
-        root_oses = utils.list_db_objects(
-            session, models.OperatingSystem,
-            parent_id=None
-        )
-        for root_os in root_oses:
-            _copy_adapters_from_parent(
-                session, models.OSAdapter, root_os, 'os'
-            )
-
-
-def _complement_distributed_system_adapters(session):
-    with session.begin(subtransactions=True):
-        root_dses = utils.list_db_objects(
-            session, models.DistributedSystem,
-            parent_id=None
-        )
-        for root_ds in root_dses:
-            _copy_adapters_from_parent(
-                session, models.PackageAdapter, root_ds, 'distributed_system'
-            )
-
-
 def _add_system(session, model, configs):
     parents = {}
     for config in configs:
+        logging.info(
+            'add config %s to %s',
+            config, model
+        )
         object = utils.add_db_object(
             session, model,
             True, config['NAME'],
@@ -85,154 +50,109 @@ def _add_system(session, model, configs):
 
 def add_oses_internal(session):
     configs = util.load_configs(setting.OS_DIR)
-    with session.begin(subtransactions=True):
-        _add_system(session, models.OperatingSystem, configs)
+    _add_system(session, models.OperatingSystem, configs)
 
 
 def add_distributed_systems_internal(session):
     configs = util.load_configs(setting.DISTRIBUTED_SYSTEM_DIR)
-    with session.begin(subtransactions=True):
-        _add_system(session, models.DistributedSystem, configs)
-
-
-def add_os_adapters_internal(session):
-    parents = {}
-    configs = util.load_configs(setting.OS_ADAPTER_DIR)
-    with session.begin(subtransactions=True):
-        for config in configs:
-            if 'OS' in config:
-                os = utils.get_db_object(
-                    session, models.OperatingSystem,
-                    name=config['OS']
-                )
-            else:
-                os = None
-            if 'INSTALLER' in config:
-                installer = utils.get_db_object(
-                    session, models.OSInstaller,
-                    name=config['INSTALLER']
-                )
-            else:
-                installer = None
-            object = utils.add_db_object(
-                session, models.OSAdapter,
-                True, config['NAME'], os=os, installer=installer
-            )
-            parents[config['NAME']] = (object, config.get('PARENT', None))
-        for name, (object, parent_name) in parents.items():
-            if parent_name:
-                parent, _ = parents[parent_name]
-            else:
-                parent = None
-            utils.update_db_object(
-                session, object, parent=parent
-            )
-
-    _complement_os_adapters(session)
-
-
-def add_package_adapters_internal(session):
-    parents = {}
-    configs = util.load_configs(setting.PACKAGE_ADAPTER_DIR)
-    with session.begin(subtransactions=True):
-        for config in configs:
-            if 'DISTRIBUTED_SYSTEM' in config:
-                distributed_system = utils.get_db_object(
-                    session, models.DistributedSystem,
-                    name=config['DISTRIBUTED_SYSTEM']
-                )
-            else:
-                distributed_system = None
-            if 'INSTALLER' in config:
-                installer = utils.get_db_object(
-                    session, models.PackageInstaller,
-                    name=config['INSTALLER']
-                )
-            else:
-                installer = None
-            object = utils.add_db_object(
-                session, models.PackageAdapter,
-                True,
-                config['NAME'],
-                distributed_system=distributed_system,
-                installer=installer,
-                supported_os_patterns=config.get('SUPPORTED_OS_PATTERNS', [])
-            )
-            parents[config['NAME']] = (object, config.get('PARENT', None))
-        for name, (object, parent_name) in parents.items():
-            if parent_name:
-                parent, _ = parents[parent_name]
-            else:
-                parent = None
-            utils.update_db_object(session, object, parent=parent)
-
-    _complement_distributed_system_adapters(session)
-
-
-def add_roles_internal(session):
-    configs = util.load_configs(setting.PACKAGE_ROLE_DIR)
-    with session.begin(subtransactions=True):
-        for config in configs:
-            package_adapter = utils.get_db_object(
-                session, models.PackageAdapter,
-                name=config['ADAPTER_NAME']
-            )
-            for role_dict in config['ROLES']:
-                utils.add_db_object(
-                    session, models.PackageAdapterRole,
-                    True, role_dict['role'], package_adapter.id,
-                    description=role_dict['description'],
-                    optional=role_dict.get('optional', False)
-                )
+    _add_system(session, models.DistributedSystem, configs)
 
 
 def add_adapters_internal(session):
-    with session.begin(subtransactions=True):
-        package_adapters = [
-            package_adapter
-            for package_adapter in utils.list_db_objects(
-                session, models.PackageAdapter
+    parents = {}
+    configs = util.load_configs(setting.ADAPTER_DIR)
+    for config in configs:
+        logging.info('add config %s to adapter', config)
+        if 'DISTRIBUTED_SYSTEM' in config:
+            distributed_system = utils.get_db_object(
+                session, models.DistributedSystem,
+                name=config['DISTRIBUTED_SYSTEM']
             )
-            if package_adapter.deployable
-        ]
-        os_adapters = [
-            os_adapter
-            for os_adapter in utils.list_db_objects(
-                session, models.OSAdapter
+        else:
+            distributed_system = None
+        if 'OS_INSTALLER' in config:
+            os_installer = utils.get_db_object(
+                session, models.OSInstaller,
+                name=config['OS_INSTALLER']
             )
-            if os_adapter.deployable
+        else:
+            os_installer = None
+        if 'PACKAGE_INSTALLER' in config:
+            package_installer = utils.get_db_object(
+                session, models.PackageInstaller,
+                name=config['PACKAGE_INSTALLER']
+            )
+        else:
+            package_installer = None
+        adapter = utils.add_db_object(
+            session, models.Adapter,
+            True,
+            config['NAME'],
+            distributed_system=distributed_system,
+            os_installer=os_installer,
+            package_installer=package_installer,
+            deployable=config.get('DEPLOYABLE', False)
+        )
+        supported_os_patterns = [
+            re.compile(supported_os_pattern)
+            for supported_os_pattern in config.get('SUPPORTED_OS_PATTERNS', [])
         ]
-        adapters = []
-        for os_adapter in os_adapters:
-            adapters.append(utils.add_db_object(
-                session, models.Adapter, True,
-                os_adapter.id, None
-            ))
-        for package_adapter in package_adapters:
-            adapters.append(utils.add_db_object(
-                session, models.Adapter, True,
-                None, package_adapter.id
-            ))
-            for os_adapter in os_adapters:
-                for os_pattern in (
-                    package_adapter.adapter_supported_os_patterns
-                ):
-                    if re.match(os_pattern, os_adapter.name):
-                        adapters.append(utils.add_db_object(
-                            session, models.Adapter, True,
-                            os_adapter.id, package_adapter.id
-                        ))
-                        break
-        return adapters
+        oses = utils.list_db_objects(
+            session, models.OperatingSystem
+        )
+        for os in oses:
+            if not os.deployable:
+                continue
+            os_name = os.name
+            for supported_os_pattern in supported_os_patterns:
+                if supported_os_pattern.match(os_name):
+                    utils.add_db_object(
+                        session, models.AdapterOS,
+                        True,
+                        os.id, adapter.id
+                    )
+                    break
+            parents[config['NAME']] = (adapter, config.get('PARENT', None))
+
+    for name, (adapter, parent_name) in parents.items():
+            if parent_name:
+                parent, _ = parents[parent_name]
+            else:
+                parent = None
+            utils.update_db_object(session, adapter, parent=parent)
+
+
+def add_roles_internal(session):
+    configs = util.load_configs(setting.ADAPTER_ROLE_DIR)
+    for config in configs:
+        logging.info(
+            'add config to role', config
+        )
+        adapter = utils.get_db_object(
+            session, models.Adapter,
+            name=config['ADAPTER_NAME']
+        )
+        for role_dict in config['ROLES']:
+            utils.add_db_object(
+                session, models.AdapterRole,
+                True, role_dict['role'], adapter.id,
+                description=role_dict['description'],
+                optional=role_dict.get('optional', False)
+            )
 
 
 def get_adapters_internal(session):
     adapter_mapping = {}
-    with session.begin(subtransactions=True):
-        adapters = utils.list_db_objects(
-            session, models.Adapter
-        )
-        for adapter in adapters:
+    adapters = utils.list_db_objects(
+        session, models.Adapter
+    )
+    for adapter in adapters:
+        if adapter.deployable:
             adapter_dict = adapter.to_dict()
             adapter_mapping[adapter.id] = adapter_dict
+        else:
+            logging.info(
+                'ignore adapter %s since it is not deployable',
+                adapter_dict
+            )
     return adapter_mapping

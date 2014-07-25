@@ -26,7 +26,7 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-SUPPORTED_FIELDS = ['mac', 'tag']
+SUPPORTED_FIELDS = ['mac']
 UPDATED_FIELDS = ['ipmi_credentials', 'tag', 'location']
 PATCHED_FIELDS = [
     'patched_ipmi_credentials', 'patched_tag',

@@ -45,10 +45,9 @@ def add_os_field_internal(session):
         setting.OS_FIELD_DIR,
         env_locals=validator.VALIDATOR_LOCALS
     )
-    with session.begin(subtransactions=True):
-        return _add_field_internal(
-            session, models.OSConfigField, configs
-        )
+    return _add_field_internal(
+        session, models.OSConfigField, configs
+    )
 
 
 def add_package_field_internal(session):
@@ -56,46 +55,46 @@ def add_package_field_internal(session):
         setting.PACKAGE_FIELD_DIR,
         env_locals=validator.VALIDATOR_LOCALS
     )
-    with session.begin(subtransactions=True):
-        return _add_field_internal(
-            session, models.PackageConfigField, configs
-        )
+    return _add_field_internal(
+        session, models.PackageConfigField, configs
+    )
 
 
 def _add_metadata(
     session, field_model, metadata_model, name, config,
-    parent=None, adapter=None
+    parent=None, **kwargs
 ):
-    metadata = config.get('_self', {})
-    if 'field' in metadata:
+    metadata_self = config.get('_self', {})
+    if 'field' in metadata_self:
         field = utils.get_db_object(
-            session, field_model, field=metadata['field']
+            session, field_model, field=metadata_self['field']
         )
     else:
         field = None
-    object = utils.add_db_object(
+    metadata = utils.add_db_object(
         session, metadata_model, True,
-        name, adapter=adapter, parent=parent, field=field,
-        display_name=metadata.get('display_name', name),
-        description=metadata.get('description', None),
-        is_required=metadata.get('is_required', False),
-        required_in_whole_config=metadata.get(
+        name, parent=parent, field=field,
+        display_name=metadata_self.get('display_name', name),
+        description=metadata_self.get('description', None),
+        is_required=metadata_self.get('is_required', False),
+        required_in_whole_config=metadata_self.get(
             'required_in_whole_config', False
         ),
-        mapping_to=metadata.get('mapping_to', None),
-        validator=metadata.get('validator', None),
-        js_validator=metadata.get('js_validator', None),
-        default_value=metadata.get('default_value', None),
-        options=metadata.get('options', []),
-        required_in_options=metadata.get('required_in_options', False)
+        mapping_to=metadata_self.get('mapping_to', None),
+        validator=metadata_self.get('validator', None),
+        js_validator=metadata_self.get('js_validator', None),
+        default_value=metadata_self.get('default_value', None),
+        options=metadata_self.get('options', []),
+        required_in_options=metadata_self.get('required_in_options', False),
+        **kwargs
     )
     for key, value in config.items():
         if key not in '_self':
             _add_metadata(
                 session, field_model, metadata_model, key, value,
-                parent=object, adapter=adapter,
+                parent=metadata, **kwargs
             )
-    return object
+    return metadata
 
 
 def add_os_metadata_internal(session):
@@ -104,19 +103,18 @@ def add_os_metadata_internal(session):
         setting.OS_METADATA_DIR,
         env_locals=validator.VALIDATOR_LOCALS
     )
-    with session.begin(subtransactions=True):
-        for config in configs:
-            adapter = utils.get_db_object(
-                session, models.OSAdapter, name=config['ADAPTER']
-            )
-            for key, value in config['METADATA'].items():
-                os_metadatas.append(_add_metadata(
-                    session, models.OSConfigField,
-                    models.OSConfigMetadata,
-                    key, value, parent=None,
-                    adapter=adapter
-                ))
-        return os_metadatas
+    for config in configs:
+        os = utils.get_db_object(
+            session, models.OperatingSystem, name=config['OS']
+        )
+        for key, value in config['METADATA'].items():
+            os_metadatas.append(_add_metadata(
+                session, models.OSConfigField,
+                models.OSConfigMetadata,
+                key, value, parent=None,
+                os=os
+            ))
+    return os_metadatas
 
 
 def add_package_metadata_internal(session):
@@ -125,31 +123,52 @@ def add_package_metadata_internal(session):
         setting.PACKAGE_METADATA_DIR,
         env_locals=validator.VALIDATOR_LOCALS
     )
-    with session.begin(subtransactions=True):
-        for config in configs:
-            adapter = utils.get_db_object(
-                session, models.PackageAdapter, name=config['ADAPTER']
-            )
-            for key, value in config['METADATA'].items():
-                package_metadatas.append(_add_metadata(
-                    session, models.PackageConfigField,
-                    models.PackageConfigMetadata,
-                    key, value, parent=None,
-                    adapter=adapter
-                ))
-        return package_metadatas
-
-
-def get_metadatas_internal(session):
-    metadata_mapping = {}
-    with session.begin(subtransactions=True):
-        adapters = utils.list_db_objects(
-            session, models.Adapter
+    for config in configs:
+        adapter = utils.get_db_object(
+            session, models.Adapter, name=config['ADAPTER']
         )
-        for adapter in adapters:
+        for key, value in config['METADATA'].items():
+            package_metadatas.append(_add_metadata(
+                session, models.PackageConfigField,
+                models.PackageConfigMetadata,
+                key, value, parent=None,
+                adapter=adapter
+            ))
+    return package_metadatas
+
+
+def get_package_metadatas_internal(session):
+    metadata_mapping = {}
+    adapters = utils.list_db_objects(
+        session, models.Adapter
+    )
+    for adapter in adapters:
+        if adapter.deployable:
             metadata_dict = adapter.metadata_dict()
             metadata_mapping[adapter.id] = metadata_dict
-        return metadata_mapping
+        else:
+            logging.info(
+                'ignore metadata since its adapter %s is not deployable',
+                adapter.id
+            )
+    return metadata_mapping
+
+
+def get_os_metadatas_internal(session):
+    metadata_mapping = {}
+    oses = utils.list_db_objects(
+        session, models.OperatingSystem
+    )
+    for os in oses:
+        if os.deployable:
+            metadata_dict = os.metadata_dict()
+            metadata_mapping[os.id] = metadata_dict
+        else:
+            logging.info(
+                'ignore metadata since its os %s is not deployable',
+                os.id
+            )
+    return metadata_mapping
 
 
 def _validate_self(

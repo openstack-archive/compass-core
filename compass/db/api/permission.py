@@ -130,6 +130,9 @@ PERMISSION_REVIEW_CLUSTER = PermissionWrapper(
 PERMISSION_DEPLOY_CLUSTER = PermissionWrapper(
     'deploy_cluster', 'deploy cluster', 'deploy cluster'
 )
+PERMISSION_DEPLOY_HOST = PermissionWrapper(
+    'deploy_host', 'deploy host', 'deploy host'
+)
 PERMISSION_GET_CLUSTER_STATE = PermissionWrapper(
     'get_cluster_state', 'get cluster state', 'get cluster state'
 )
@@ -243,6 +246,7 @@ PERMISSIONS = [
     PERMISSION_DEL_HOST_NETWORK,
     PERMISSION_GET_HOST_STATE,
     PERMISSION_UPDATE_HOST_STATE,
+    PERMISSION_DEPLOY_HOST,
     PERMISSION_LIST_CLUSTERHOSTS,
     PERMISSION_LIST_CLUSTERHOST_CONFIG,
     PERMISSION_ADD_CLUSTERHOST_CONFIG,

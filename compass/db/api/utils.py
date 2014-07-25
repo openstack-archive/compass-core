@@ -81,7 +81,10 @@ def _between_condition(col_attr, value):
 
 def model_filter(query, model, **filters):
     for key, value in filters.items():
-        col_attr = getattr(model, key)
+        if hasattr(model, key):
+            col_attr = getattr(model, key)
+        else:
+            continue
         if isinstance(value, list):
             query = query.filter(col_attr.in_(value))
         elif isinstance(value, dict):
@@ -148,19 +151,24 @@ def model_filter(query, model, **filters):
     return query
 
 
-def wrap_to_dict(support_keys=[]):
+def wrap_to_dict(support_keys=[], **filters):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            return _wrapper_dict(func(*args, **kwargs), support_keys)
+            return _wrapper_dict(
+                func(*args, **kwargs), support_keys, **filters
+            )
         return wrapper
     return decorator
 
 
-def _wrapper_dict(data, support_keys):
+def _wrapper_dict(data, support_keys, **filters):
     """Helper for warpping db object into dictionary."""
     if isinstance(data, list):
-        return [_wrapper_dict(item, support_keys) for item in data]
+        return [
+            _wrapper_dict(item, support_keys, **filters)
+            for item in data
+        ]
     if isinstance(data, models.HelperMixin):
         data = data.to_dict()
     if not isinstance(data, dict):
@@ -170,18 +178,27 @@ def _wrapper_dict(data, support_keys):
     info = {}
     for key in support_keys:
         if key in data:
-            info[key] = data[key]
+            if key in filters:
+                info[key] = _wrapper_dict(data[key], filters[key])
+            else:
+                info[key] = data[key]
     return info
 
 
-def supported_filters(support_keys=[], optional_support_keys=[]):
+def supported_filters(
+    support_keys=[],
+    optional_support_keys=[],
+    ignore_support_keys=[]
+):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **filters):
             must_support_keys = set(support_keys)
             all_support_keys = must_support_keys | set(optional_support_keys)
             filter_keys = set(filters)
-            unsupported_keys = filter_keys - all_support_keys
+            unsupported_keys = (
+                filter_keys - all_support_keys - set(ignore_support_keys)
+            )
             if unsupported_keys:
                 raise exception.InvalidParameter(
                     'filter keys %s are not supported' % str(
@@ -195,7 +212,12 @@ def supported_filters(support_keys=[], optional_support_keys=[]):
                         list(missing_keys)
                     )
                 )
-            return func(*args, **filters)
+            filtered_filters = dict([
+                (key, value)
+                for key, value in filters.items()
+                if key not in ignore_support_keys
+            ])
+            return func(*args, **filtered_filters)
         return wrapper
     return decorator
 
@@ -252,14 +274,17 @@ def general_filter_callback(general_filter, obj):
         return True
 
 
-def filter_output(filter_callbacks, filters, obj):
+def filter_output(filter_callbacks, filters, obj, missing_ok=False):
     for callback_key, callback_value in filter_callbacks.items():
         if callback_key not in filters:
             continue
         if callback_key not in obj:
-            raise exception.InvalidResponse(
-                '%s is not in %s' % (callback_key, obj)
-            )
+            if missing_ok:
+                continue
+            else:
+                raise exception.InvalidResponse(
+                    '%s is not in %s' % (callback_key, obj)
+                )
         if not callback_value(
             filters[callback_key], obj[callback_key]
         ):
@@ -267,14 +292,16 @@ def filter_output(filter_callbacks, filters, obj):
     return True
 
 
-def output_filters(**filter_callbacks):
+def output_filters(missing_ok=False, **filter_callbacks):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **filters):
             filtered_obj_list = []
             obj_list = func(*args, **filters)
             for obj in obj_list:
-                if filter_output(filter_callbacks, filters, obj):
+                if filter_output(
+                    filter_callbacks, filters, obj, missing_ok
+                ):
                     filtered_obj_list.append(obj)
             return filtered_obj_list
         return wrapper

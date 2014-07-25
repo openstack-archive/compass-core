@@ -30,7 +30,8 @@ SUPPORTED_FIELDS = [
 ]
 SUPPORTED_CLUSTERHOST_FIELDS = []
 RESP_FIELDS = [
-    'id', 'name', 'os_name', 'reinstall_distributed_system',
+    'id', 'name', 'os_name', 'os_id', 'distributed_system_id',
+    'reinstall_distributed_system',
     'distributed_system_name', 'distributed_system_installed',
     'owner', 'adapter_id',
     'created_at', 'updated_at'
@@ -51,10 +52,16 @@ RESP_CONFIG_FIELDS = [
     'created_at',
     'updated_at'
 ]
+RESP_METADATA_FIELDS = [
+    'os_config',
+    'package_config'
+]
 RESP_CLUSTERHOST_CONFIG_FIELDS = [
     'package_config',
+    'os_config',
     'config_step',
     'config_validated',
+    'networks',
     'created_at',
     'updated_at'
 ]
@@ -67,15 +74,15 @@ RESP_CLUSTERHOST_STATE_FIELDS = [
     'created_at', 'updated_at'
 ]
 RESP_REVIEW_FIELDS = [
-    'cluster', 'hosts'
+    'cluster', 'clusterhosts'
 ]
-RESP_ACTION_FIELDS = [
-    'status', 'details'
+RESP_DEPLOY_FIELDS = [
+    'status', 'cluster', 'clusterhosts'
 ]
 ADDED_FIELDS = ['name', 'adapter_id']
+OPTIONAL_ADDED_FIELDS = ['os_id']
 UPDATED_FIELDS = ['name', 'reinstall_distributed_system']
-ADDED_CLUSTERHOST_FIELDS = ['machine_id']
-UPDATED_CLUSTERHOST_FIELDS = ['name', 'reinstall_os']
+ADDED_HOST_FIELDS = ['machine_id']
 UPDATED_HOST_FIELDS = ['name', 'reinstall_os']
 UPDATED_CONFIG_FIELDS = [
     'put_os_config', 'put_package_config', 'config_step'
@@ -129,6 +136,25 @@ def _conditional_exception(cluster, exception_when_not_editable):
         return False
 
 
+def is_cluster_validated(
+    session, cluster
+):
+    if not cluster.config_validated:
+        raise exception.Forbidden(
+            'cluster %s is not validated' % cluster.name
+        )
+    for clusterhost in cluster.clusterhsots:
+        if not clusterhost.config_validated:
+            raise exception.Forbidden(
+                'clusterhost %s is not validated' % clusterhost.name
+            )
+        host = clusterhost.host
+        if not host.config_validated:
+            raise exception.Forbidden(
+                'host %s is not validated' % host.name
+            )
+
+
 def is_cluster_editable(
     session, cluster, user,
     reinstall_distributed_system_set=False,
@@ -150,7 +176,9 @@ def is_cluster_editable(
     return True
 
 
-@utils.supported_filters(ADDED_FIELDS)
+@utils.supported_filters(
+    ADDED_FIELDS, optional_support_keys=OPTIONAL_ADDED_FIELDS
+)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_CLUSTER
@@ -160,7 +188,8 @@ def add_cluster(session, creator, name, adapter_id, **kwargs):
     """Create a cluster."""
     return utils.add_db_object(
         session, models.Cluster, True,
-        name, adapter_id=adapter_id, creator_id=creator.id, **kwargs
+        name, creator_id=creator.id, adapter_id=adapter_id,
+        **kwargs
     )
 
 
@@ -212,6 +241,31 @@ def get_cluster_config(session, getter, cluster_id, **kwargs):
     )
 
 
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_METADATAS
+)
+@utils.wrap_to_dict(RESP_METADATA_FIELDS)
+def get_cluster_metadata(session, getter, cluster_id, **kwargs):
+    """Get cluster metadata."""
+    cluster = utils.get_db_object(
+        session, models.Cluster, id=cluster_id
+    )
+    metadatas = {}
+    os = cluster.os
+    if os:
+        metadatas['os_config'] = metadata_api.get_os_metadata_internal(
+            os.id
+        )
+    adapter = cluster.adapter
+    if adapter:
+        metadatas['package_ocnfig'] = (
+            metadata_api.get_package_metadata_internal(adapter.id)
+        )
+    return metadatas
+
+
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_CLUSTER_CONFIG
 )
@@ -225,7 +279,7 @@ def update_cluster_config_internal(session, updater, cluster, **kwargs):
     os_config = cluster.os_config
     if os_config:
         metadata_api.validate_os_config(
-            os_config, cluster.adapter_id
+            os_config, cluster.os_id
         )
     package_config = cluster.package_config
     if package_config:
@@ -278,8 +332,8 @@ def del_cluster_config(session, deleter, cluster_id):
 
 
 @utils.supported_filters(
-    ADDED_CLUSTERHOST_FIELDS,
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+    ADDED_HOST_FIELDS,
+    optional_support_keys=UPDATED_HOST_FIELDS
 )
 def add_clusterhost_internal(
         session, cluster,
@@ -287,41 +341,32 @@ def add_clusterhost_internal(
         machine_id=None, **kwargs
 ):
     from compass.db.api import host as host_api
-    host_dict = {}
-    clusterhost_dict = {}
-    for key, value in kwargs.items():
-        if key in UPDATED_HOST_FIELDS:
-            host_dict[key] = value
-        else:
-            clusterhost_dict[key] = value
-    with session.begin(subtransactions=True):
-        host = utils.get_db_object(
-            session, models.Host, False, id=machine_id
-        )
-        if host:
-            if host_api.is_host_editable(
-                session, host, cluster.creator,
-                reinstall_os_set=host_dict.get('reinstall_os', False),
-                exception_when_not_editable=False
-            ):
-                utils.update_db_object(
-                    session, host, adapter=cluster.adapter.os_adapter,
-                    **host_dict
-                )
-            else:
-                logging.info('host %s is not editable', host.name)
-        else:
-            utils.add_db_object(
-                session, models.Host, False, machine_id,
-                os=cluster.os,
-                adapter=cluster.adapter.os_adapter,
-                creator=cluster.creator,
-                **host_dict
+    host = utils.get_db_object(
+        session, models.Host, False, id=machine_id
+    )
+    if host:
+        if host_api.is_host_editable(
+            session, host, cluster.creator,
+            reinstall_os_set=kwargs.get('reinstall_os', False),
+            exception_when_not_editable=False
+        ):
+            utils.update_db_object(
+                session, host,
+                **kwargs
             )
-        return utils.add_db_object(
-            session, models.ClusterHost, exception_when_existing,
-            cluster.id, machine_id, **clusterhost_dict
+        else:
+            logging.info('host %s is not editable', host.name)
+    else:
+        utils.add_db_object(
+            session, models.Host, False, machine_id,
+            os=cluster.os,
+            creator=cluster.creator,
+            **kwargs
         )
+    return utils.add_db_object(
+        session, models.ClusterHost, exception_when_existing,
+        cluster.id, machine_id
+    )
 
 
 def _add_clusterhosts(session, cluster, machine_dicts):
@@ -404,8 +449,8 @@ def get_clusterhost(session, getter, clusterhost_id, **kwargs):
 
 
 @utils.supported_filters(
-    ADDED_CLUSTERHOST_FIELDS,
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+    ADDED_HOST_FIELDS,
+    optional_support_keys=UPDATED_HOST_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -629,13 +674,17 @@ def update_cluster_hosts(
     return cluster.clusterhosts
 
 
-@utils.supported_filters([])
+@utils.supported_filters(optional_support_keys=['review'])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_REVIEW_CLUSTER
 )
-@utils.wrap_to_dict(RESP_REVIEW_FIELDS)
-def review_cluster(session, reviewer, cluster_id):
+@utils.wrap_to_dict(
+    RESP_REVIEW_FIELDS,
+    cluster=RESP_CONFIG_FIELDS,
+    clusterhosts=RESP_CLUSTERHOST_CONFIG_FIELDS
+)
+def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
     """review cluster."""
     from compass.db.api import host as host_api
     cluster = utils.get_db_object(
@@ -645,7 +694,7 @@ def review_cluster(session, reviewer, cluster_id):
     os_config = cluster.os_config
     if os_config:
         metadata_api.validate_os_config(
-            os_config, cluster.adapter_id, True
+            os_config, cluster.os_id, True
         )
         for clusterhost in cluster.clusterhosts:
             host = clusterhost.host
@@ -662,8 +711,9 @@ def review_cluster(session, reviewer, cluster_id):
                 os_config, host_os_config
             )
             metadata_api.validate_os_config(
-                deployed_os_config, host.adapter_id, True
+                deployed_os_config, host.os_id, True
             )
+            host_api.validate_host(session, host)
             host.deployed_os_config = deployed_os_config
             host.config_validated = True
     package_config = cluster.package_config
@@ -684,37 +734,38 @@ def review_cluster(session, reviewer, cluster_id):
             clusterhost.config_validated = True
     cluster.config_validated = True
     return {
-        'cluster': cluster.to_dict(),
-        'clusterhosts': [
-            clusterhost.to_dict()
-            for clusterhost in cluster.clusterhosts
-        ]
+        'cluster': cluster,
+        'clusterhosts': cluster.clusterhosts
     }
 
 
-@utils.supported_filters(optional_support_keys=['clusterhosts'])
+@utils.supported_filters(optional_support_keys=['deploy'])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_DEPLOY_CLUSTER
 )
-@utils.wrap_to_dict(RESP_ACTION_FIELDS)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    cluster=RESP_CONFIG_FIELDS,
+    clusterhosts=RESP_CLUSTERHOST_FIELDS
+)
 def deploy_cluster(
-    session, deployer, cluster_id, clusterhosts=[], **kwargs
+    session, deployer, cluster_id, deploy={}, **kwargs
 ):
     """deploy cluster."""
     from compass.tasks import client as celery_client
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    is_cluster_editable(session, cluster, deployer)
+    is_cluster_validated(session, cluster)
     celery_client.celery.send_task(
         'compass.tasks.deploy',
-        (cluster_id, clusterhosts)
+        (cluster_id, deploy.get('clusterhosts', []))
     )
     return {
         'status': 'deploy action sent',
-        'details': {
-        }
+        'cluster': cluster,
+        'clusterhosts': cluster.clusterhosts
     }
 
 

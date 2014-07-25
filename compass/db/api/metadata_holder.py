@@ -25,41 +25,43 @@ from compass.db import exception
 
 @database.run_in_session()
 def load_metadatas(session):
-    global METADATA_MAPPING
+    global OS_METADATA_MAPPING
+    global PACKAGE_METADATA_MAPPING
     logging.info('load metadatas into memory')
-    METADATA_MAPPING = metadata_api.get_metadatas_internal(session)
-
-
-METADATA_MAPPING = {}
-
-
-def _validate_config(
-    config, adapter_id,
-    metadata_mapping, metadata_field, whole_check
-):
-    if adapter_id not in metadata_mapping:
-        raise exception.InvalidParameter(
-            'adapter id %s is not found in metadata mapping' % adapter_id
-        )
-    metadatas = metadata_mapping[adapter_id]
-    if metadata_field not in metadatas:
-        return
-    metadata_api.validate_config_internal(
-        config, metadatas[metadata_field], whole_check
+    OS_METADATA_MAPPING = metadata_api.get_os_metadatas_internal(session)
+    PACKAGE_METADATA_MAPPING = (
+        metadata_api.get_package_metadatas_internal(session)
     )
 
 
-def validate_os_config(config, adapter_id, whole_check=False):
+OS_METADATA_MAPPING = {}
+PACKAGE_METADATA_MAPPING = {}
+
+
+def _validate_config(
+    config, id, metadata_mapping, whole_check
+):
+    if id not in metadata_mapping:
+        raise exception.InvalidParameter(
+            'adapter id %s is not found in metadata mapping' % id
+        )
+    metadatas = metadata_mapping[id]
+    metadata_api.validate_config_internal(
+        config, metadatas, whole_check
+    )
+
+
+def validate_os_config(config, os_id, whole_check=False):
     _validate_config(
-        config, adapter_id, METADATA_MAPPING, 'os_config',
+        config, os_id, OS_METADATA_MAPPING,
         whole_check
     )
 
 
 def validate_package_config(config, adapter_id, whole_check=False):
     _validate_config(
-        config, adapter_id, METADATA_MAPPING,
-        'package_config', whole_check
+        config, adapter_id, PACKAGE_METADATA_MAPPING,
+        whole_check
     )
 
 
@@ -85,15 +87,38 @@ def _filter_metadata(metadata):
     return filtered_metadata
 
 
+def get_package_metadata_internal(adapter_id):
+    """get package metadata internal."""
+    if adapter_id not in PACKAGE_METADATA_MAPPING:
+        raise exception.RecordNotExists(
+            'adpater %s does not exist' % adapter_id
+        )
+    return _filter_metadata(PACKAGE_METADATA_MAPPING[adapter_id])
+
+
 @utils.supported_filters([])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_METADATAS
 )
-def get_metadata(session, getter, adapter_id, **kwargs):
-    """get adapter."""
-    if adapter_id not in METADATA_MAPPING:
+def get_package_metadata(session, getter, adapter_id, **kwargs):
+    return get_package_metadata_internal(adapter_id)
+
+
+def get_os_metadata_internal(os_id):
+    """get os metadata internal."""
+    if os_id not in OS_METADATA_MAPPING:
         raise exception.RecordNotExists(
-            'adpater %s does not exist' % adapter_id
+            'os %s does not exist' % os_id
         )
-    return _filter_metadata(METADATA_MAPPING[adapter_id])
+    return _filter_metadata(OS_METADATA_MAPPING[os_id])
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_METADATAS
+)
+def get_os_metadata(session, getter, os_id, **kwargs):
+    """get os metadatas."""
+    return get_os_metadata_internal(os_id)

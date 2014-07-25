@@ -24,10 +24,19 @@ from compass.db import exception
 from compass.db import models
 
 
-SUPPORTED_FIELDS = ['subnet']
-RESP_FIELDS = ['id', 'subnet', 'created_at', 'updated_at']
+SUPPORTED_FIELDS = ['subnet', 'name']
+RESP_FIELDS = [
+    'id', 'name', 'subnet', 'created_at', 'updated_at'
+]
 ADDED_FIELDS = ['subnet']
-UPDATED_FIELDS = ['subnet']
+OPTIONAL_ADDED_FIELDS = ['name']
+IGNORE_ADDED_FIELDS = [
+    'id', 'created_at', 'updated_at'
+]
+UPDATED_FIELDS = ['subnet', 'name']
+IGNORE_UPDATED_FIELDS = [
+    'id', 'created_at', 'updated_at'
+]
 
 
 def _check_subnet(subnet):
@@ -65,7 +74,10 @@ def get_subnet(session, getter, subnet_id, **kwargs):
     )
 
 
-@utils.supported_filters(ADDED_FIELDS)
+@utils.supported_filters(
+    ADDED_FIELDS, optional_support_keys=OPTIONAL_ADDED_FIELDS,
+    ignore_support_keys=IGNORE_ADDED_FIELDS
+)
 @utils.input_validates(subnet=_check_subnet)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -75,11 +87,14 @@ def get_subnet(session, getter, subnet_id, **kwargs):
 def add_subnet(session, creator, subnet, **kwargs):
     """Create a subnet."""
     return utils.add_db_object(
-        session, models.Network, True, subnet
+        session, models.Network, True, subnet, **kwargs
     )
 
 
-@utils.supported_filters(UPDATED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_FIELDS,
+    ignore_support_keys=IGNORE_UPDATED_FIELDS
+)
 @utils.input_validates(subnet=_check_subnet)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(

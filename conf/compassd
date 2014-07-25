@@ -25,6 +25,8 @@
 [ -x /opt/compass/bin/progress_update.py ] || exit 0
 UBUNTU=/etc/debian_version
 SUSE=/etc/SuSE-release
+PYTHON=$Python
+CELERY=$CeleryPath
 
 if [ -f $UBUNTU ]; then
     . /lib/lsb/init_functions
@@ -42,35 +44,35 @@ start() {
     echo "Starting Compass: "
     if [ -f $SUSE ]; then
         echo -n "Start celeryd: "
-        startproc -f -p /var/run/celeryd.pid -l /tmp/celeryd.log "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celeryd"
+        startproc -f -p /var/run/celeryd.pid -l /tmp/celeryd.log "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY"
         rc_status -v
         echo
         echo -n "Start service progress_update: "
-        startproc -f -p /var/run/progress_update.pid -l /tmp/progress_update.log /opt/compass/bin/progress_update.py
+        startproc -f -p /var/run/progress_update.pid -l /tmp/progress_update.log $PYTHON /opt/compass/bin/progress_update.py
         rc_status -v
         echo
     elif [ -e $UBUNTU ]; then
         if [ -f /var/run/celeryd.pid ]; then
             echo "celeryd is already started"
             RETVAL=1
-        elif C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celeryd &> /tmp/celeryd.log; then
+        elif C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY &> /tmp/celeryd.log; then
             echo "celeryd starts OK"
             RETVAL=0
         fi
         if [ -f /var/run/progress_update.pid ]; then
             echo "progress_update is already started"
             RETVAL=1
-        elif /usr/bin/python /opt/compass/bin/progress_update.py &> /tmp/progress_update.log; then
+        elif $PYTHON /opt/compass/bin/progress_update.py &> /tmp/progress_update.log; then
             echo "progress_update starts OK"
             RETVAL=0
         fi
     else
         echo -n "Start celeryd: "
-        daemon --pidfile /var/run/celeryd.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celeryd &>/tmp/celeryd.log & echo \$! > /var/run/celeryd.pid"
+        daemon --pidfile /var/run/celeryd.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY &>/tmp/celeryd.log & echo \$! > /var/run/celeryd.pid"
         RETVAL=$?
         echo
         echo -n "Start service progress_update: "
-        daemon --pidfile /var/run/progress_update.pid "/opt/compass/bin/progress_update.py &>/tmp/progress_update.log & echo \$! > /var/run/progress_update.pid"
+        daemon --pidfile /var/run/progress_update.pid "$PYTHON /opt/compass/bin/progress_update.py &>/tmp/progress_update.log & echo \$! > /var/run/progress_update.pid"
         RETVAL=$?
         echo
     fi
@@ -82,7 +84,7 @@ stop() {
     echo "Stopping Compass: "
     if [ -f $SUSE ]; then
         echo -n "Stop service celeryd: "
-        killproc -t 10 -p /var/run/celeryd.pid celeryd
+        killproc -t 10 -p /var/run/celeryd.pid $CELERY
         rc_status -v
         echo
         echo -n "Stop service progress_update: "
@@ -94,7 +96,7 @@ stop() {
         RETVAL=1
     else
         echo -n "Stop service celeryd: "
-        killproc -p /var/run/celeryd.pid -d 30 celeryd
+        killproc -p /var/run/celeryd.pid -d 30 $CELERY
         RETVAL=$?
         echo
         echo -n "Stop service progress_update: "
@@ -116,7 +118,7 @@ case "$1" in
         echo "Checking compass: "
         if [ -f $SUSE ]; then
             echo -n "Checking for service celeryd: "
-            checkproc -v -p /var/run/celeryd.pid celeryd
+            checkproc -v -p /var/run/celeryd.pid $CELERY
             rc_status -v
             echo
             echo -n "Checking for service progress_update: "
@@ -142,7 +144,7 @@ case "$1" in
             fi
         else
             echo -n "checking for service celeryd: "
-            status -p /var/run/celeryd.pid celeryd
+            status -p /var/run/celeryd.pid $CELERY
             retval=$?
             echo
             echo -n "checking for service progress_update: "

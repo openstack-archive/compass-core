@@ -218,9 +218,14 @@ class UserWrapper(UserMixin):
 
 @database.run_in_session()
 def get_user_object(session, email, **kwargs):
-    user_dict = utils.get_db_object(
-        session, models.User, email=email
-    ).to_dict()
+    user = utils.get_db_object(
+        session, models.User, False, email=email
+    )
+    if not user:
+        raise exception.Unauthorized(
+            '%s unauthorized' % email
+        )
+    user_dict = user.to_dict()
     user_dict.update(kwargs)
     return UserWrapper(**user_dict)
 
@@ -231,9 +236,13 @@ def get_user_object_from_token(session, token):
         'ge': datetime.datetime.now()
     }
     user_token = utils.get_db_object(
-        session, models.UserToken,
+        session, models.UserToken, False,
         token=token, expire_timestamp=expire_timestamp
     )
+    if not user_token:
+        raise exception.Forbidden(
+            'invalid user token: %s' % token
+        )
     user_dict = utils.get_db_object(
         session, models.User, id=user_token.user_id
     ).to_dict()

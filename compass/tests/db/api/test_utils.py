@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 import unittest2
 
@@ -144,9 +145,11 @@ class TestModelFilter(unittest2.TestCase):
         expected, ret = self._filter_test_dict_util(
             'gt',
             'update_clusterhost_state',
-            47,
-            id=46
+            48,
+            id=47
         )
+        print 'expected: %s' % expected
+        print 'ret: %s' % ret
         self.assertTrue(
             all(item in ret[0].items() for item in expected.items())
         )
@@ -166,9 +169,11 @@ class TestModelFilter(unittest2.TestCase):
         expected, ret = self._filter_test_dict_util(
             'ge',
             'update_clusterhost_state',
-            47,
-            id=47
+            48,
+            id=48
         )
+        print 'expected: %s' % expected
+        print 'ret: %s' % ret
         self.assertTrue(
             all(item in ret[0].items() for item in expected.items())
         )
@@ -387,7 +392,7 @@ class TestAddDbObject(unittest2.TestCase):
         with database.session() as session:
             db_objs = utils.add_db_object(
                 session,
-                models.PackageAdapterRole,
+                models.AdapterRole,
                 True,
                 'test1',
                 1,

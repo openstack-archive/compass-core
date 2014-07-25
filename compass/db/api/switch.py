@@ -28,8 +28,20 @@ from compass.utils import setting_wrapper as setting
 
 SUPPORTED_FIELDS = ['ip_int', 'vendor', 'state']
 SUPPORTED_FILTER_FIELDS = ['ip_int', 'vendor', 'state']
-SUPPORTED_SWITCH_MACHINES_FIELDS = ['ip_int', 'port', 'vlans', 'mac', 'tag']
-SUPPORTED_MACHINES_FIELDS = ['port', 'vlans', 'mac', 'tag']
+SUPPORTED_SWITCH_MACHINES_FIELDS = [
+    'switch_ip_int', 'port', 'vlans', 'mac', 'tag', 'location'
+]
+SUPPORTED_MACHINES_FIELDS = [
+    'port', 'vlans', 'mac', 'tag', 'location'
+]
+SUPPORTED_SWITCH_MACHINES_HOSTS_FIELDS = [
+    'switch_ip_int', 'port', 'vlans', 'mac',
+    'tag', 'location', 'os_name', 'os_id'
+]
+SUPPORTED_MACHINES_HOSTS_FIELDS = [
+    'port', 'vlans', 'mac', 'tag', 'location',
+    'os_name', 'os_id'
+]
 ADDED_FIELDS = ['ip']
 OPTIONAL_ADDED_FIELDS = ['credentials', 'vendor', 'state', 'err_msg']
 UPDATED_FIELDS = ['credentials', 'vendor', 'state', 'err_msg']
@@ -67,9 +79,14 @@ RESP_ACTION_FIELDS = [
     'status', 'details'
 ]
 RESP_MACHINES_FIELDS = [
-    'id', 'switch_id', 'machine_id', 'port', 'vlans', 'mac',
+    'id', 'switch_id', 'switch_ip', 'machine_id', 'port', 'vlans', 'mac',
     'ipmi_credentials', 'tag', 'location',
     'created_at', 'updated_at'
+]
+RESP_MACHINES_HOSTS_FIELDS = [
+    'id', 'switch_id', 'switch_ip', 'machine_id', 'port', 'vlans', 'mac',
+    'ipmi_credentials', 'tag', 'location',
+    'name', 'os_name', 'clusters'
 ]
 
 
@@ -354,10 +371,9 @@ def filter_machine_internal(filters, port):
 
 
 def get_switch_machines_internal(session, **filters):
-    with session.begin(subtransactions=True):
-        return utils.list_db_objects(
-            session, models.SwitchMachine, **filters
-        )
+    return utils.list_db_objects(
+        session, models.SwitchMachine, **filters
+    )
 
 
 def _filter_port(port_filter, obj):
@@ -411,9 +427,13 @@ def _filter_vlans(vlan_filter, obj):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_SWITCH_MACHINES
 )
-@utils.output_filters(port=_filter_port, vlans=_filter_vlans)
+@utils.output_filters(
+    port=_filter_port, vlans=_filter_vlans,
+    tag=utils.general_filter_callback,
+    location=utils.general_filter_callback
+)
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-def _list_switch_machines(session, user, switch_machines):
+def _list_switch_machines(session, user, switch_machines, **filters):
     return [
         switch_machine for switch_machine in switch_machines
         if filter_machine_internal(
@@ -423,14 +443,59 @@ def _list_switch_machines(session, user, switch_machines):
     ]
 
 
-@utils.supported_filters(optional_support_keys=SUPPORTED_MACHINES_FIELDS)
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_SWITCH_MACHINES
+)
+@utils.output_filters(
+    missing_ok=True,
+    port=_filter_port, vlans=_filter_vlans,
+    tag=utils.general_filter_callback,
+    location=utils.general_filter_callback,
+    os_name=utils.general_filter_callback,
+    os_id=utils.general_filter_callback
+)
+@utils.wrap_to_dict(RESP_MACHINES_HOSTS_FIELDS)
+def _list_switch_machines_hosts(session, user, switch_machines, **filters):
+    filtered_switch_machines = [
+        switch_machine for switch_machine in switch_machines
+        if filter_machine_internal(
+            switch_machine.switch.filters,
+            switch_machine.port
+        )
+    ]
+    switch_machines_hosts = []
+    for switch_machine in filtered_switch_machines:
+        switch_machine_host_dict = {}
+        machine = switch_machine.machine
+        host = machine.host
+        if host:
+            clusters = [
+                clusterhost.cluster
+                for clusterhost in host.clusterhosts
+            ]
+            switch_machine_host_dict.update(
+                host.to_dict()
+            )
+            switch_machine_host_dict['clusters'] = [
+                cluster.to_dict() for cluster in clusters
+            ]
+        switch_machine_host_dict.update(
+            switch_machine.to_dict()
+        )
+        switch_machines_hosts.append(switch_machine_host_dict)
+    return switch_machines_hosts
+
+
+@utils.supported_filters(
+    optional_support_keys=SUPPORTED_MACHINES_FIELDS
+)
 @database.run_in_session()
 def list_switch_machines(session, getter, switch_id, **filters):
     """Get switch machines."""
-    switch_machines = get_switch_machines_internal(
+    switch_machines, host_filters = get_switch_machines_internal(
         session, switch_id=switch_id, **filters
     )
-    return _list_switch_machines(session, getter, switch_machines)
+    return _list_switch_machines(session, getter, switch_machines, **filters)
 
 
 @utils.supported_filters(
@@ -442,7 +507,35 @@ def list_switchmachines(session, lister, **filters):
     switch_machines = get_switch_machines_internal(
         session, **filters
     )
-    return _list_switch_machines(session, lister, switch_machines)
+    return _list_switch_machines(session, lister, switch_machines, **filters)
+
+
+@utils.supported_filters(
+    optional_support_keys=SUPPORTED_MACHINES_HOSTS_FIELDS
+)
+@database.run_in_session()
+def list_switch_machines_hosts(session, getter, switch_id, **filters):
+    """Get switch machines hosts."""
+    switch_machines = get_switch_machines_internal(
+        session, switch_id=switch_id, **filters
+    )
+    return _list_switch_machines_hosts(
+        session, getter, switch_machines, **filters
+    )
+
+
+@utils.supported_filters(
+    optional_support_keys=SUPPORTED_SWITCH_MACHINES_HOSTS_FIELDS
+)
+@database.run_in_session()
+def list_switchmachines_hosts(session, lister, **filters):
+    """List switch machines hosts."""
+    switch_machines = get_switch_machines_internal(
+        session, **filters
+    )
+    return _list_switch_machines_hosts(
+        session, lister, switch_machines, **filters
+    )
 
 
 def add_switch_machines_internal(
@@ -505,7 +598,7 @@ def add_switch_machine(session, creator, switch_id, mac, **kwargs):
     return switch_machines[0]
 
 
-@utils.supported_filters()
+@utils.supported_filters(optional_support_keys=['find_machines'])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_SWITCH_MACHINES
@@ -520,7 +613,7 @@ def poll_switch_machines(session, poller, switch_id, **kwargs):
         (switch.ip, switch.credentials)
     )
     return {
-        'status': 'find_machines action sent',
+        'status': 'action %s sent' % kwargs,
         'details': {
         }
     }

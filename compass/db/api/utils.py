@@ -155,6 +155,8 @@ def wrap_to_dict(support_keys=[], **filters):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            logging.info('wrap to dict: args: %s', str(args))
+            logging.info('wrap to dict: kwargs: %s', kwargs)
             return _wrapper_dict(
                 func(*args, **kwargs), support_keys, **filters
             )
@@ -183,6 +185,21 @@ def _wrapper_dict(data, support_keys, **filters):
             else:
                 info[key] = data[key]
     return info
+
+
+def replace_filters(**filter_mapping):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **filters):
+            replaced_filters = {}
+            for key, value in filters.items():
+                if key in filter_mapping:
+                    replaced_filters[filter_mapping[key]] = value
+                else:
+                    replaced_filters[key] = value
+            return func(*args, **replaced_filters)
+        return wrapper
+    return decorator
 
 
 def supported_filters(
@@ -311,18 +328,10 @@ def output_filters(missing_ok=False, **filter_callbacks):
 def _input_validates(args_validators, kwargs_validators, *args, **kwargs):
     for i, value in enumerate(args):
         if i < len(args_validators) and args_validators[i]:
-            if isinstance(value, list):
-                for sub_value in value:
-                    args_validators[i](sub_value)
-            else:
-                args_validators[i](value)
+            args_validators[i](value)
     for key, value in kwargs.items():
         if kwargs_validators.get(key):
-            if isinstance(value, list):
-                for sub_value in value:
-                    kwargs_validators[key](sub_value)
-            else:
-                kwargs_validators[key](value)
+            kwargs_validators[key](value)
 
 
 def input_validates(*args_validators, **kwargs_validators):
@@ -432,8 +441,8 @@ def add_db_object(session, table, exception_when_existing=True,
 
         if new_object:
             session.add(db_object)
-        db_object.initialize()
         session.flush()
+        db_object.initialize()
         db_object.validate()
         return db_object
 
@@ -468,8 +477,8 @@ def update_db_object(session, db_object, **kwargs):
                       db_object, kwargs)
         for key, value in kwargs.items():
             setattr(db_object, key, value)
-        db_object.initialize()
         session.flush()
+        db_object.update()
         db_object.validate()
         return db_object
 
@@ -500,3 +509,79 @@ def check_mac(mac):
         raise exception.InvalidParameter(
             'invalid mac address %s' % mac
         )
+
+
+def _check_ipmi_credentials_ip(ip):
+    check_ip(ip)
+
+
+def check_ipmi_credentials(ipmi_credentials):
+    if not ipmi_credentials:
+        return
+    if not isinstance(ipmi_credentials, dict):
+        raise exception.InvalidParameter(
+            'invalid ipmi credentials %s' % ipmi_credentials
+
+        )
+    for key in ipmi_credentials:
+        if key not in ['ip', 'username', 'password']:
+            raise exception.InvalidParameter(
+                'unrecognized field %s in ipmi credentials %s' % (
+                    key, ipmi_credentials
+                )
+            )
+    for key in ['ip', 'username', 'password']:
+        if key not in ipmi_credentials:
+            raise exception.InvalidParameter(
+                'no field %s in ipmi credentials %s' % (
+                    key, ipmi_credentials
+                )
+            )
+        check_ipmi_credential_field = '_check_ipmi_credentials_%s' % key
+        this_module = globals()
+        if check_ipmi_credential_field in this_module:
+            this_module[check_ipmi_credential_field](
+                ipmi_credentials[key]
+            )
+        else:
+            logging.debug(
+                'function %s is not defined', check_ipmi_credential_field
+            )
+
+
+def _check_switch_credentials_version(version):
+    if version not in ['1', '2c', '3']:
+        raise exception.InvalidParameter(
+            'unknown snmp version %s' % version
+        )
+
+
+def check_switch_credentials(credentials):
+    if not credentials:
+        return
+    if not isinstance(credentials, dict):
+        raise exception.InvalidParameter(
+            'credentials %s is not dict' % credentials
+        )
+    for key in credentials:
+        if key not in ['version', 'community']:
+            raise exception.InvalidParameter(
+                'unrecognized key %s in credentials %s' % (key, credentials)
+            )
+    for key in ['version', 'community']:
+        if key not in credentials:
+            raise exception.InvalidParameter(
+                'there is no %s field in credentials %s' % (key, credentials)
+            )
+
+        key_check_func_name = '_check_switch_credentials_%s' % key
+        this_module = globals()
+        if key_check_func_name in this_module:
+            this_module[key_check_func_name](
+                credentials[key]
+            )
+        else:
+            logging.debug(
+                'function %s is not defined in %s',
+                key_check_func_name, this_module
+            )

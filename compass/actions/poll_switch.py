@@ -19,6 +19,7 @@ import netaddr
 from compass.actions import util
 from compass.db.api import database
 from compass.db.api import switch as switch_api
+from compass.db.api import user as user_api
 from compass.hdsdiscovery.hdmanager import HDManager
 
 
@@ -71,18 +72,19 @@ def _poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
             {}
         )
 
+    logging.info('poll switch result: %s' % str(results))
     state = under_monitoring
     machine_dicts = {}
     for machine in results:
         mac = machine['mac']
         port = machine['port']
-        vlan = machine['vlan']
+        vlan = int(machine['vlan'])
         if vlan:
             vlans = [vlan]
         else:
             vlans = []
         if mac not in machine_dicts:
-            machine_dicts[mac] = {'port': port, 'vlans': vlans}
+            machine_dicts[mac] = {'mac': mac, 'port': port, 'vlans': vlans}
         else:
             machine_dicts[mac]['port'] = port
             machine_dicts[mac]['vlans'].extend(vlans)
@@ -90,11 +92,14 @@ def _poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
     logging.debug('update switch %s state to under monitoring', ip_addr)
     return (
         {'vendor': vendor, 'state': state, 'err_msg': err_msg},
-        machine_dicts
+        machine_dicts.values()
     )
 
 
-def poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
+def poll_switch(
+    poller_email, ip_addr, credentials,
+    req_obj='mac', oper="SCAN"
+):
     """Query switch and update switch machines.
 
     .. note::
@@ -113,6 +118,8 @@ def poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
     .. note::
        The function should be called out of database session scope.
     """
+    poller = user_api.get_user_object(poller_email)
+    ip_int = long(netaddr.IPAddress(ip_addr))
     with util.lock('poll switch %s' % ip_addr) as lock:
         if not lock:
             raise Exception(
@@ -120,21 +127,22 @@ def poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
             )
 
         logging.debug('poll switch: %s', ip_addr)
-        ip_int = long(netaddr.IPAddress(ip_addr))
         switch_dict, machine_dicts = _poll_switch(
             ip_addr, credentials, req_obj=req_obj, oper=oper
         )
-        with database.session() as session:
-            switch = switch_api.get_switch_internal(
-                session, False, ip_int=ip_int
-            )
-            if not switch:
-                logging.error('no switch found for %s', ip_addr)
-                return
+        switches = switch_api.list_switches(
+            poller, ip_int=ip_int
+        )
+        if not switches:
+            logging.error('no switch found for %s', ip_addr)
+            return
 
-            switch_api.update_switch_internal(
-                session, switch, **switch_dict
+        for switch in switches:
+            switch_api.update_switch(
+                poller, switch['id'], **switch_dict
             )
-            switch_api.add_switch_machines_internal(
-                session, switch, machine_dicts, False
-            )
+            for machine_dict in machine_dicts:
+                print 'add machine: %s' % machine_dict
+                switch_api.add_switch_machine(
+                    poller, switch['id'], False, **machine_dict
+                )

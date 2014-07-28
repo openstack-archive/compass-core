@@ -145,11 +145,9 @@ class TestModelFilter(unittest2.TestCase):
         expected, ret = self._filter_test_dict_util(
             'gt',
             'update_clusterhost_state',
-            48,
-            id=47
+            49,
+            id=48
         )
-        print 'expected: %s' % expected
-        print 'ret: %s' % ret
         self.assertTrue(
             all(item in ret[0].items() for item in expected.items())
         )
@@ -169,8 +167,8 @@ class TestModelFilter(unittest2.TestCase):
         expected, ret = self._filter_test_dict_util(
             'ge',
             'update_clusterhost_state',
-            48,
-            id=48
+            49,
+            id=49
         )
         print 'expected: %s' % expected
         print 'ret: %s' % ret

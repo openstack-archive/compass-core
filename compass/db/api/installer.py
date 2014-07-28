@@ -30,9 +30,9 @@ def _add_installers(session, model, configs):
     for config in configs:
         installers.append(utils.add_db_object(
             session, model,
-            True, config['NAME'],
-            installer_type=config['TYPE'],
-            config=config['CONFIG']
+            True, config['INSTANCE_NAME'],
+            name=config['NAME'],
+            settings=config.get('SETTINGS', {})
         ))
     return installers
 

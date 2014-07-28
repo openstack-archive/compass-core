@@ -26,19 +26,17 @@ from compass.db import exception
 SUPPORTED_FIELDS = [
     'name',
     'distributed_system_name',
-    'os_installer_name',
-    'package_installer_name',
 ]
 RESP_FIELDS = [
-    'id', 'name', 'roles', 'os_installer_name',
-    'package_installer_name', 'distributed_system_name',
+    'id', 'name', 'roles',
+    'distributed_system_name',
     'supported_oses', 'display_name'
 ]
 RESP_OS_FIELDS = [
     'id', 'os_id', 'name'
 ]
 RESP_ROLES_FIELDS = [
-    'id', 'name', 'description', 'optional'
+    'id', 'name', 'display_name', 'description', 'optional'
 ]
 
 

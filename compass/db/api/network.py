@@ -67,10 +67,13 @@ def list_subnets(session, lister, **filters):
     permission.PERMISSION_LIST_NETWORKS
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def get_subnet(session, getter, subnet_id, **kwargs):
+def get_subnet(
+    session, getter, subnet_id,
+    exception_when_missing=True, **kwargs
+):
     """Get subnet info."""
     return utils.get_db_object(
-        session, models.Network, id=subnet_id
+        session, models.Network, exception_when_missing, id=subnet_id
     )
 
 
@@ -84,10 +87,14 @@ def get_subnet(session, getter, subnet_id, **kwargs):
     permission.PERMISSION_ADD_NETWORK
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def add_subnet(session, creator, subnet, **kwargs):
+def add_subnet(
+    session, creator, subnet,
+    exception_when_existing=True, **kwargs
+):
     """Create a subnet."""
     return utils.add_db_object(
-        session, models.Network, True, subnet, **kwargs
+        session, models.Network,
+        exception_when_existing, subnet, **kwargs
     )
 
 

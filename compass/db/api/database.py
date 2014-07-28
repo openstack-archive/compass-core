@@ -19,6 +19,7 @@ import netaddr
 
 from contextlib import contextmanager
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from threading import local
@@ -80,7 +81,11 @@ def session():
         new_session.rollback()
         logging.error('failed to commit session')
         logging.exception(error)
-        if isinstance(error, exception.DatabaseException):
+        if isinstance(error, IntegrityError):
+            raise exception.NotAcceptable(
+                'operation error in database'
+            )
+        elif isinstance(error, exception.DatabaseException):
             raise error
         else:
             raise exception.DatabaseException(str(error))
@@ -122,8 +127,8 @@ def _setup_user_table(user_session):
     from compass.db.api import user
     user.add_user_internal(
         user_session,
-        setting.COMPASS_ADMIN_EMAIL,
-        setting.COMPASS_ADMIN_PASSWORD,
+        email=setting.COMPASS_ADMIN_EMAIL,
+        password=setting.COMPASS_ADMIN_PASSWORD,
         is_admin=True
     )
 

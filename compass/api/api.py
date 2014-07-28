@@ -159,13 +159,13 @@ def _login(use_cookie):
         raise exception_handler.BadRequest(
             'missing email or password in data'
         )
-    if 'expires' not in data:
+    if 'expire_timestamp' not in data:
         expire_timestamp = (
             datetime.datetime.now() + app.config['REMEMBER_COOKIE_DURATION']
         )
     else:
         expire_timestamp = util.parse_datetime(
-            data['expires'], exception_handler.BadRequest
+            data['expire_timestamp'], exception_handler.BadRequest
         )
 
     data['expire_timestamp'] = expire_timestamp
@@ -559,7 +559,6 @@ def update_switch(switch_id):
 def patch_switch(switch_id):
     """patch switch."""
     data = _get_request_data()
-    _replace_data(data, {'credentials': 'patched_credentials'})
     return utils.make_json_response(
         200,
         switch_api.patch_switch(current_user, switch_id, **data)
@@ -622,7 +621,6 @@ def update_switch_filters(switch_id):
 def patch_switch_filters(switch_id):
     """patch switch filters."""
     data = _get_request_data()
-    _replace_data(data, {'filters': 'patched_filters'})
     return utils.make_json_response(
         200,
         switch_api.patch_switch_filter(current_user, switch_id, **data)
@@ -790,15 +788,6 @@ def update_switch_machine(switch_id, machine_id):
 def patch_switch_machine(switch_id, machine_id):
     """patch switch machine."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'vlans': 'patched_vlans',
-            'ipmi_credentials': 'patched_ipmi_credentials',
-            'tag': 'patched_tag',
-            'location': 'patched_location'
-        }
-    )
     return utils.make_json_response(
         200,
         switch_api.patch_switch_machine(
@@ -858,7 +847,6 @@ def list_switchmachines():
     """List switch machines."""
     data = _get_request_args()
     _filter_ip(data)
-    _replace_data(data, {'ip_int': 'switch_ip_int'})
     _filter_port(data)
     _filter_general(data, 'vlans')
     _filter_tag(data)
@@ -878,7 +866,6 @@ def list_switchmachines_hosts():
     """List switch machines or hosts."""
     data = _get_request_args()
     _filter_ip(data)
-    _replace_data(data, {'ip_int': 'switch_ip_int'})
     _filter_port(data)
     _filter_general(data, 'vlans')
     _filter_tag(data)
@@ -933,15 +920,6 @@ def update_switchmachine(switch_machine_id):
 def patch_switchmachine(switch_machine_id):
     """patch switch machine."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'vlans': 'patched_vlans',
-            'ipmi_credentials': 'patched_ipmi_credentials',
-            'tag': 'patched_tag',
-            'location': 'patched_location'
-        }
-    )
     return utils.make_json_response(
         200,
         switch_api.patch_switchmachine(
@@ -1014,14 +992,6 @@ def update_machine(machine_id):
 def patch_machine(machine_id):
     """patch machine."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'ipmi_credentials': 'patched_ipmi_credentials',
-            'tag': 'patched_tag',
-            'location': 'patched_location'
-        }
-    )
     return utils.make_json_response(
         200,
         machine_api.patch_machine(
@@ -1288,13 +1258,6 @@ def show_cluster_metadata(cluster_id):
 def update_cluster_config(cluster_id):
     """update cluster config."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'os_config': 'put_os_config',
-            'package_config': 'put_os_config'
-        }
-    )
     return utils.make_json_response(
         200,
         cluster_api.update_cluster_config(current_user, cluster_id, **data)
@@ -1307,13 +1270,6 @@ def update_cluster_config(cluster_id):
 def patch_cluster_config(cluster_id):
     """patch cluster config."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'os_config': 'patched_os_config',
-            'package_config': 'patched_package_config'
-        }
-    )
     return utils.make_json_response(
         200,
         cluster_api.patch_cluster_config(current_user, cluster_id, **data)
@@ -1524,12 +1480,6 @@ def show_clusterhost_config(clusterhost_id):
 def update_cluster_host_config(cluster_id, host_id):
     """update clusterhost config."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'package_config': 'put_os_config'
-        }
-    )
     return utils.make_json_response(
         200,
         cluster_api.update_cluster_host_config(
@@ -1544,12 +1494,6 @@ def update_cluster_host_config(cluster_id, host_id):
 def update_clusterhost_config(clusterhost_id):
     """update clusterhost config."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'package_config': 'put_os_config'
-        }
-    )
     return utils.make_json_response(
         200,
         cluster_api.update_clusterhost_config(
@@ -1567,12 +1511,6 @@ def update_clusterhost_config(clusterhost_id):
 def patch_cluster_host_config(cluster_id, host_id):
     """patch clusterhost config."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'package_config': 'patched_package_config'
-        }
-    )
     return utils.make_json_response(
         200,
         cluster_api.patch_cluster_host_config(
@@ -1587,12 +1525,6 @@ def patch_cluster_host_config(cluster_id, host_id):
 def patch_clusterhost_config(clusterhost_id):
     """patch clusterhost config."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'package_config': 'patched_package_config'
-        }
-    )
     return utils.make_json_response(
         200,
         cluster_api.patch_clusterhost_config(
@@ -1816,12 +1748,6 @@ def show_host_config(host_id):
 def update_host_config(host_id):
     """update host config."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'os_config': 'put_os_config',
-        }
-    )
     return utils.make_json_response(
         200,
         host_api.update_host_config(current_user, host_id, **data)
@@ -1834,12 +1760,6 @@ def update_host_config(host_id):
 def patch_host_config(host_id):
     """patch host config."""
     data = _get_request_data()
-    _replace_data(
-        data,
-        {
-            'os_config': 'patched_os_config',
-        }
-    )
     return utils.make_json_response(
         200,
         host_api.patch_host_config(current_user, host_id, **data)
@@ -1882,16 +1802,19 @@ def list_hostnetworks():
     )
 
 
-@app.route("/hosts/<int:host_id>/networks/<int:subnet_id>", methods=['GET'])
+@app.route(
+    "/hosts/<int:host_id>/networks/<int:host_network_id>",
+    methods=['GET']
+)
 @log_user_action
 @login_required
-def show_host_network(host_id, subnet_id):
+def show_host_network(host_id, host_network_id):
     """Get host network."""
     data = _get_request_args()
     return utils.make_json_response(
         200,
         host_api.get_host_network(
-            current_user, host_id, subnet_id, **data
+            current_user, host_id, host_network_id, **data
         )
     )
 
@@ -1921,16 +1844,19 @@ def add_host_network(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/networks/<int:subnet_id>", methods=['PUT'])
+@app.route(
+    "/hosts/<int:host_id>/networks/<int:host_network_id>",
+    methods=['PUT']
+)
 @log_user_action
 @login_required
-def update_host_network(host_id, subnet_id):
+def update_host_network(host_id, host_network_id):
     """update host network."""
     data = _get_request_data()
     return utils.make_json_response(
         200,
         host_api.update_host_network(
-            current_user, host_id, subnet_id, **data
+            current_user, host_id, host_network_id, **data
         )
     )
 
@@ -1950,18 +1876,18 @@ def update_hostnetwork(host_network_id):
 
 
 @app.route(
-    "/hosts/<int:host_id>/networks/<int:subnet_id>",
+    "/hosts/<int:host_id>/networks/<int:host_network_id>",
     methods=['DELETE']
 )
 @log_user_action
 @login_required
-def delete_host_network(host_id, subnet_id):
+def delete_host_network(host_id, host_network_id):
     """Delete host network."""
     data = _get_request_data()
     return utils.make_json_response(
         200,
         host_api.del_host_network(
-            current_user, host_id, subnet_id, **data
+            current_user, host_id, host_network_id, **data
         )
     )
 

@@ -67,8 +67,11 @@ ADDED_NETWORK_FIELDS = [
 ]
 OPTIONAL_ADDED_NETWORK_FIELDS = ['is_mgmt', 'is_promiscuous']
 UPDATED_NETWORK_FIELDS = [
-    'interface', 'ip', 'subnet_id', 'subnet', 'is_mgmt',
+    'ip', 'subnet_id', 'subnet', 'is_mgmt',
     'is_promiscuous'
+]
+IGNORED_NETWORK_FIELDS = [
+    'interface'
 ]
 RESP_STATE_FIELDS = [
     'id', 'state', 'progress', 'message'
@@ -222,7 +225,7 @@ def validate_host(session, host):
         )
 
 
-@utils.supported_filters(UPDATED_FIELDS)
+@utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_HOST
@@ -353,12 +356,19 @@ def list_hostnetworks(session, lister, **filters):
     permission.PERMISSION_LIST_HOST_NETWORKS
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def get_host_network(session, getter, host_id, subnet_id, **kwargs):
+def get_host_network(session, getter, host_id, host_network_id, **kwargs):
     """Get host network."""
-    return utils.get_db_object(
+    host_network = utils.get_db_object(
         session, models.HostNetwork,
-        host_id=host_id, subnet_id=subnet_id
+        id=host_network_id
     )
+    if host_network.host_id != host_id:
+        raise exception.RecordNotExists(
+            'host %s does not own host network %s' % (
+                host_id, host_network_id
+            )
+        )
+    return host_network
 
 
 @utils.supported_filters([])
@@ -383,7 +393,7 @@ def get_hostnetwork(session, getter, host_network_id, **kwargs):
     permission.PERMISSION_ADD_HOST_NETWORK
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def add_host_network(session, creator, host_id, **kwargs):
+def add_host_network(session, creator, host_id, interface, **kwargs):
     """Create a host network."""
     host = utils.get_db_object(
         session, models.Host, id=host_id
@@ -391,29 +401,39 @@ def add_host_network(session, creator, host_id, **kwargs):
     is_host_editable(session, host, creator)
     return utils.add_db_object(
         session, models.HostNetwork, True,
-        host_id, **kwargs
+        host_id, interface, **kwargs
     )
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_NETWORK_FIELDS
+    optional_support_keys=UPDATED_NETWORK_FIELDS,
+    ignore_support_keys=IGNORED_NETWORK_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_HOST_NETWORK
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def update_host_network(session, updater, host_id, subnet_id, **kwargs):
+def update_host_network(session, updater, host_id, host_network_id, **kwargs):
     """Update a host network."""
     host_network = utils.get_db_object(
         session, models.HostNetwork,
-        host_id=host_id, subnet_id=subnet_id
+        id=host_network_id
     )
+    if host_network.host_id != host_id:
+        raise exception.RecordNotExists(
+            'host %s does not own host network %s' % (
+                host_id, host_network_id
+            )
+        )
     is_host_editable(session, host_network.host, updater)
     return utils.update_db_object(session, host_network, **kwargs)
 
 
-@utils.supported_filters(UPDATED_NETWORK_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_NETWORK_FIELDS,
+    ignore_support_keys=IGNORED_NETWORK_FIELDS
+)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_HOST_NETWORK
@@ -434,12 +454,18 @@ def update_hostnetwork(session, updater, host_network_id, **kwargs):
     permission.PERMISSION_DEL_HOST_NETWORK
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def del_host_network(session, deleter, host_id, subnet_id, **kwargs):
+def del_host_network(session, deleter, host_id, host_network_id, **kwargs):
     """Delete a host network."""
     host_network = utils.get_db_object(
         session, models.HostNetwork,
-        host_id=host_id, subnet_id=subnet_id
+        id=host_network_id
     )
+    if host_network.host_id != host_id:
+        raise exception.RecordNotExists(
+            'host %s does not own host network %s' % (
+                host_id, host_network_id
+            )
+        )
     is_host_editable(session, host_network.host, deleter)
     return utils.del_db_object(session, host_network)
 

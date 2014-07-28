@@ -307,8 +307,9 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         UniqueConstraint('host_id', 'interface', name='constraint'),
     )
 
-    def __init__(self, host_id, **kwargs):
+    def __init__(self, host_id, interface, **kwargs):
         self.host_id = host_id
+        self.interface = interface
         super(HostNetwork, self).__init__(**kwargs)
 
     @property
@@ -328,10 +329,6 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         return str(netaddr.IPNetwork(self.subnet).netmask)
 
     def validate(self):
-        if not self.interface:
-            raise exception.InvalidParameter(
-                'interface is not set in host %s network' % self.host_id
-            )
         if not self.network:
             raise exception.InvalidParameter(
                 'subnet is not set in %s interface %s' % (
@@ -662,6 +659,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
         dict_info = self.machine.to_dict()
         dict_info.update(super(Host, self).to_dict())
         dict_info.update({
+            'machine_id': self.machine.id,
             'owner': self.owner,
             'os_installed': self.os_installed,
             'networks': [

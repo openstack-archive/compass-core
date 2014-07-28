@@ -369,26 +369,26 @@ def add_clusterhost_internal(
     )
 
 
-def _add_clusterhosts(session, cluster, machine_dicts):
-    for machine_dict in machine_dicts:
+def _add_clusterhosts(session, cluster, machines):
+    for machine_dict in machines:
         add_clusterhost_internal(
             session, cluster, **machine_dict
         )
 
 
-def _remove_clusterhosts(session, cluster, host_ids):
+def _remove_clusterhosts(session, cluster, hosts):
     utils.del_db_objects(
         session, models.ClusterHost,
-        cluster_id=cluster.id, host_id=host_ids
+        cluster_id=cluster.id, host_id=hosts
     )
 
 
-def _set_clusterhosts(session, cluster, machine_dicts):
+def _set_clusterhosts(session, cluster, machines):
     utils.del_db_objects(
         session, models.ClusterHost,
         cluster_id=cluster.id
     )
-    for machine_dict in machine_dicts:
+    for machine_dict in machines:
         add_clusterhost_internal(
             session, cluster, True, **machine_dict
         )
@@ -655,10 +655,13 @@ def delete_clusterhost_config(session, deleter, clusterhost_id):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_CLUSTER_HOSTS
 )
-@utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
+@utils.wrap_to_dict(
+    ['hosts'],
+    hosts=RESP_CLUSTERHOST_FIELDS
+)
 def update_cluster_hosts(
-    session, updater, cluster_id, add_hosts=[], set_hosts=None,
-    remove_hosts=[]
+    session, updater, cluster_id, add_hosts={}, set_hosts=None,
+    remove_hosts={}
 ):
     """Update cluster hosts."""
     cluster = utils.get_db_object(
@@ -666,12 +669,16 @@ def update_cluster_hosts(
     )
     is_cluster_editable(session, cluster, updater)
     if remove_hosts:
-        _remove_clusterhosts(session, cluster, remove_hosts)
+        _remove_clusterhosts(session, cluster, **remove_hosts)
     if add_hosts:
-        _add_clusterhosts(session, cluster, add_hosts)
+        _add_clusterhosts(session, cluster, **add_hosts)
     if set_hosts is not None:
-        _set_clusterhosts(session, cluster, set_hosts)
-    return cluster.clusterhosts
+        _set_clusterhosts(session, cluster, **set_hosts)
+    return {
+        'hosts': [
+            clusterhost.host for clusterhost in cluster.clusterhosts
+        ]
+    }
 
 
 @utils.supported_filters(optional_support_keys=['review'])

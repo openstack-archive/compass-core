@@ -1882,16 +1882,16 @@ def list_hostnetworks():
     )
 
 
-@app.route("/hosts/<int:host_id>/networks/<int:subnet_id>", methods=['GET'])
+@app.route("/hosts/<int:host_id>/networks/<int:host_network_id>", methods=['GET'])
 @log_user_action
 @login_required
-def show_host_network(host_id, subnet_id):
+def show_host_network(host_id, host_network_id):
     """Get host network."""
     data = _get_request_args()
     return utils.make_json_response(
         200,
         host_api.get_host_network(
-            current_user, host_id, subnet_id, **data
+            current_user, host_id, host_network_id, **data
         )
     )
 
@@ -1921,16 +1921,16 @@ def add_host_network(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/networks/<int:subnet_id>", methods=['PUT'])
+@app.route("/hosts/<int:host_id>/networks/<int:host_network_id>", methods=['PUT'])
 @log_user_action
 @login_required
-def update_host_network(host_id, subnet_id):
+def update_host_network(host_id, host_network_id):
     """update host network."""
     data = _get_request_data()
     return utils.make_json_response(
         200,
         host_api.update_host_network(
-            current_user, host_id, subnet_id, **data
+            current_user, host_id, host_network_id, **data
         )
     )
 
@@ -1950,18 +1950,18 @@ def update_hostnetwork(host_network_id):
 
 
 @app.route(
-    "/hosts/<int:host_id>/networks/<int:subnet_id>",
+    "/hosts/<int:host_id>/networks/<int:host_network_id>",
     methods=['DELETE']
 )
 @log_user_action
 @login_required
-def delete_host_network(host_id, subnet_id):
+def delete_host_network(host_id, host_network_id):
     """Delete host network."""
     data = _get_request_data()
     return utils.make_json_response(
         200,
         host_api.del_host_network(
-            current_user, host_id, subnet_id, **data
+            current_user, host_id, host_network_id, **data
         )
     )
 

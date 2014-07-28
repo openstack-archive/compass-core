@@ -88,6 +88,9 @@ RESP_MACHINES_HOSTS_FIELDS = [
     'ipmi_credentials', 'tag', 'location',
     'name', 'os_name', 'clusters'
 ]
+RESP_CLUSTER_FIELDS = [
+    'name', 'id'
+]
 
 
 def _check_credentials_version(version):
@@ -454,7 +457,10 @@ def _list_switch_machines(session, user, switch_machines, **filters):
     os_name=utils.general_filter_callback,
     os_id=utils.general_filter_callback
 )
-@utils.wrap_to_dict(RESP_MACHINES_HOSTS_FIELDS)
+@utils.wrap_to_dict(
+    RESP_MACHINES_HOSTS_FIELDS,
+    clusters=RESP_CLUSTER_FIELDS
+)
 def _list_switch_machines_hosts(session, user, switch_machines, **filters):
     filtered_switch_machines = [
         switch_machine for switch_machine in switch_machines

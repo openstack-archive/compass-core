@@ -31,7 +31,7 @@ def _cluster_filter(cluster):
                       cluster.id)
         return False
 
-    if cluster.state.state != 'INSTALLING':
+    if cluster.state.state not in ['INSTALLING', 'READY']:
         logging.error('the cluster %s state %s is not installing',
                       cluster.id, cluster.state.state)
         return False
@@ -77,9 +77,9 @@ def update_progress(cluster_hosts):
             logging.error(
                 'failed to acquire lock to calculate installation progress')
             return
-
-        logging.info('update installing progress of cluster_hosts: %s',
-                     cluster_hosts)
+        if cluster_hosts is not None:
+            logging.info('update installing progress of cluster_hosts: %s',
+                         cluster_hosts)
         os_versions = {}
         target_systems = {}
         with database.session():

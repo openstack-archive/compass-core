@@ -73,14 +73,14 @@ def add_adapters_internal(session):
         if 'OS_INSTALLER' in config:
             os_installer = utils.get_db_object(
                 session, models.OSInstaller,
-                name=config['OS_INSTALLER']
+                instance_name=config['OS_INSTALLER']
             )
         else:
             os_installer = None
         if 'PACKAGE_INSTALLER' in config:
             package_installer = utils.get_db_object(
                 session, models.PackageInstaller,
-                name=config['PACKAGE_INSTALLER']
+                instance_name=config['PACKAGE_INSTALLER']
             )
         else:
             package_installer = None

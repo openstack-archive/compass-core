@@ -61,6 +61,13 @@ class Forbidden(DatabaseException):
         self.status_code = 403
 
 
+class NotAcceptable(DatabaseException):
+    """The data is not acceptable."""
+    def __init__(self, message):
+        super(NotAcceptable, self).__init__(message)
+        self.status_code = 406
+
+
 class InvalidParameter(DatabaseException):
     """Define the exception that the request has invalid or missing parameters.
     """

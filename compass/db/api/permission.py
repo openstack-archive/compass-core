@@ -136,6 +136,10 @@ PERMISSION_DEPLOY_HOST = PermissionWrapper(
 PERMISSION_GET_CLUSTER_STATE = PermissionWrapper(
     'get_cluster_state', 'get cluster state', 'get cluster state'
 )
+PERMISSION_UPDATE_CLUSTER_STATE = PermissionWrapper(
+    'update_cluster_state', 'update cluster state',
+    'update cluster state'
+)
 PERMISSION_LIST_HOSTS = PermissionWrapper(
     'list_hosts', 'list hosts', 'list hosts'
 )
@@ -234,6 +238,7 @@ PERMISSIONS = [
     PERMISSION_REVIEW_CLUSTER,
     PERMISSION_DEPLOY_CLUSTER,
     PERMISSION_GET_CLUSTER_STATE,
+    PERMISSION_UPDATE_CLUSTER_STATE,
     PERMISSION_LIST_HOSTS,
     PERMISSION_LIST_HOST_CLUSTERS,
     PERMISSION_UPDATE_HOST,
@@ -276,10 +281,14 @@ def list_permissions(session, lister, **filters):
 @database.run_in_session()
 @user_api.check_user_permission_in_session(PERMISSION_LIST_PERMISSIONS)
 @utils.wrap_to_dict(RESP_FIELDS)
-def get_permission(session, getter, permission_id, **kwargs):
+def get_permission(
+    session, getter, permission_id,
+    exception_when_missing=True, **kwargs
+):
     """get permissions."""
     return utils.get_db_object(
-        session, models.Permission, id=permission_id
+        session, models.Permission,
+        exception_when_missing, id=permission_id
     )
 
 

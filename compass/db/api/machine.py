@@ -38,54 +38,21 @@ RESP_FIELDS = [
 ]
 
 
-def _check_ipmi_credentials_ip(ip):
-    utils.check_ip(ip)
-
-
-def _check_ipmi_credentials(ipmi_credentials):
-    if not ipmi_credentials:
-        return
-    if not isinstance(ipmi_credentials, dict):
-        raise exception.InvalidParameter(
-            'invalid ipmi credentials %s' % ipmi_credentials
-
-        )
-    for key in ipmi_credentials:
-        if key not in ['ip', 'username', 'password']:
-            raise exception.InvalidParameter(
-                'unrecognized field %s in ipmi credentials %s' % (
-                    key, ipmi_credentials
-                )
-            )
-    for key in ['ip', 'username', 'password']:
-        if key not in ipmi_credentials:
-            raise exception.InvalidParameter(
-                'no field %s in ipmi credentials %s' % (
-                    key, ipmi_credentials
-                )
-            )
-        check_ipmi_credential_field = '_check_ipmi_credentials_%s' % key
-        this_module = globals()
-        if check_ipmi_credential_field in this_module:
-            this_module[check_ipmi_credential_field](
-                ipmi_credentials[key]
-            )
-        else:
-            logging.debug(
-                'function %s is not defined', check_ipmi_credential_field
-            )
-
-
 @utils.supported_filters([])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_MACHINES
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def get_machine(session, getter, machine_id, **kwargs):
+def get_machine(
+    session, getter, machine_id,
+    exception_when_missing=True,
+    **kwargs
+):
     """get field dict of a machine."""
     return utils.get_db_object(
-        session, models.Machine, True, id=machine_id
+        session, models.Machine,
+        exception_when_missing, id=machine_id
     )
 
 
@@ -119,7 +86,7 @@ def _update_machine(session, updater, machine_id, **kwargs):
 
 
 @utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
-@utils.input_validates(ipmi_credentials=_check_ipmi_credentials)
+@utils.input_validates(ipmi_credentials=utils.check_ipmi_credentials)
 @database.run_in_session()
 def update_machine(session, updater, machine_id, **kwargs):
     return _update_machine(
@@ -127,9 +94,14 @@ def update_machine(session, updater, machine_id, **kwargs):
     )
 
 
+@utils.replace_filters(
+    ipmi_credentials='patched_ipmi_credentials',
+    tag='patched_tag',
+    location='patched_location'
+)
 @utils.supported_filters(optional_support_keys=PATCHED_FIELDS)
 @database.run_in_session()
-@utils.output_validates(ipmi_credentials=_check_ipmi_credentials)
+@utils.output_validates(ipmi_credentials=utils.check_ipmi_credentials)
 def patch_machine(session, updater, machine_id, **kwargs):
     return _update_machine(
         session, updater, machine_id, **kwargs

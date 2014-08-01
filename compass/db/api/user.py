@@ -65,13 +65,14 @@ def get_user_internal(session, exception_when_missing=True, **kwargs):
 
 
 def add_user_internal(
-    session, email, password,
-    exception_when_existing=True, **kwargs
+    session, exception_when_existing=True,
+    email=None, **kwargs
 ):
     """internal function used only by other db.api modules."""
-    user = utils.add_db_object(session, models.User,
-                               exception_when_existing, email,
-                               password=password, **kwargs)
+    user = utils.add_db_object(
+        session, models.User,
+        exception_when_existing, email,
+        **kwargs)
     _add_user_permissions(
         session, user,
         name=setting.COMPASS_DEFAULT_PERMISSIONS
@@ -180,14 +181,18 @@ def _set_user_permissions(session, user, **permission_filters):
 class UserWrapper(UserMixin):
     def __init__(
         self, id, email, crypted_password,
-        active, is_admin, expire_timestamp, token='', **kwargs
+        active=True, is_admin=False,
+        expire_timestamp=None, token='', **kwargs
     ):
         self.id = id
         self.email = email
         self.password = crypted_password
         self.active = active
         self.is_admin = is_admin
-        self.expire_timestamp = expire_timestamp
+        if expire_timestamp:
+            self.expire_timestamp = expire_timestamp
+        else:
+            self.expire_timestamp = datetime.datetime.now()
         if not token:
             self.token = self.get_auth_token()
         else:
@@ -278,9 +283,14 @@ def clean_user_token(session, user, token):
 @check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def get_user(session, getter, user_id, **kwargs):
+def get_user(
+    session, getter, user_id,
+    exception_when_missing=True, **kwargs
+):
     """get field dict of a user."""
-    return utils.get_db_object(session, models.User, id=user_id)
+    return utils.get_db_object(
+        session, models.User, exception_when_missing, id=user_id
+    )
 
 
 @utils.supported_filters(
@@ -303,10 +313,14 @@ def list_users(session, lister, **filters):
 @check_user_admin()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def add_user(session, creator, email, password, **kwargs):
+def add_user(
+    session, creator,
+    exception_when_existing=True,
+    **kwargs
+):
     """Create a user and return created user object."""
     return add_user_internal(
-        session, email, password, **kwargs
+        session, exception_when_existing, **kwargs
     )
 
 
@@ -349,7 +363,7 @@ def update_user(session, updater, user_id, **kwargs):
 @check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
-def get_permissions(session, getter, user_id, **kwargs):
+def get_permissions(session, lister, user_id, **kwargs):
     """List permissions of a user."""
     return utils.list_db_objects(
         session, models.UserPermission, user_id=user_id, **kwargs
@@ -360,10 +374,14 @@ def get_permissions(session, getter, user_id, **kwargs):
 @check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
-def get_permission(session, getter, user_id, permission_id, **kwargs):
+def get_permission(
+    session, getter, user_id, permission_id,
+    exception_when_missing, **kwargs
+):
     """Get a specific user permission."""
     return utils.get_db_object(
         session, models.UserPermission,
+        exception_when_missing,
         user_id=user_id, permission_id=permission_id,
         **kwargs
     )
@@ -387,10 +405,13 @@ def del_permission(session, deleter, user_id, permission_id, **kwargs):
 @check_user_admin()
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
-def add_permission(session, creator, user_id, permission_id):
+def add_permission(
+    session, creator, user_id,
+    exception_when_missing=True, permission_id=None
+):
     """Add an user permission."""
     return utils.add_db_object(
-        session, models.UserPermission, True,
+        session, models.UserPermission, exception_when_missing,
         user_id, permission_id
     )
 

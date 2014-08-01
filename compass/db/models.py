@@ -14,6 +14,7 @@
 
 """Database model"""
 import datetime
+import logging
 import netaddr
 import simplejson as json
 
@@ -67,6 +68,9 @@ class TimestampMixin(object):
 
 class HelperMixin(object):
     def initialize(self):
+        self.update()
+
+    def update(self):
         pass
 
     def validate(self):
@@ -91,7 +95,7 @@ class MetadataMixin(HelperMixin):
     description = Column(Text)
     is_required = Column(Boolean, default=False)
     required_in_whole_config = Column(Boolean, default=False)
-    mapping_to = Column(JSONEncoded)
+    mapping_to = Column(String(80), default='')
     validator_data = Column('validator', Text)
     js_validator = Column(Text)
     default_value = Column(JSONEncoded)
@@ -106,9 +110,6 @@ class MetadataMixin(HelperMixin):
         else:
             self.path = self.name
         super(MetadataMixin, self).initialize()
-
-    def validate(self):
-        super(MetadataMixin, self).validate()
 
     @property
     def validator(self):
@@ -249,14 +250,14 @@ class FieldMixin(HelperMixin):
 
 
 class InstallerMixin(HelperMixin):
-    name = Column(String(80), unique=True)
-    installer_type = Column(String(80))
-    config = Column(MutableDict.as_mutable(JSONEncoded), default={})
+    name = Column(String(80))
+    instance_name = Column(String(80), unique=True)
+    settings = Column(MutableDict.as_mutable(JSONEncoded), default={})
 
     def validate(self):
-        if not self.installer_type:
+        if not self.name:
             raise exception.InvalidParameter(
-                'installer_type is not set in installer %s' % self.name
+                'name is not set in installer %s' % self.instance_name
             )
         super(InstallerMixin, self).validate()
 
@@ -264,24 +265,31 @@ class InstallerMixin(HelperMixin):
 class StateMixin(TimestampMixin, HelperMixin):
     state = Column(
         Enum(
-            'INITIALIZED', 'INSTALLING', 'SUCCESSFUL', 'ERROR'
+            'UNINITIALIZED', 'INITIALIZED',
+            'INSTALLING', 'SUCCESSFUL', 'ERROR'
         ),
-        default='INITIALIZED'
+        default='UNINITIIALIZED'
     )
-    progress = Column(Float, default=0.0)
+    percentage = Column(Float, default=0.0)
     message = Column(Text, default='')
     severity = Column(
         Enum('INFO', 'WARNING', 'ERROR'),
         default='INFO'
     )
 
-    def initialize(self):
+    def update(self):
+        if self.state in ['UNINITIALIZED', 'INITIALIZED']:
+            self.percentage = 0.0
+            self.severity = 'INFO'
+            self.message = ''
         if self.severity == 'ERROR':
             self.state = 'ERROR'
-        elif self.progress >= 1.0:
+        if self.state == 'SUCCESSFUL':
+            self.percentage = 1.0
+        if self.percentage >= 1.0:
             self.state = 'SUCCESSFUL'
-            self.progress = 1.0
-        super(StateMixin, self).initialize()
+            self.percentage = 1.0
+        super(StateMixin, self).update()
 
 
 class HostNetwork(BASE, TimestampMixin, HelperMixin):
@@ -307,8 +315,9 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         UniqueConstraint('host_id', 'interface', name='constraint'),
     )
 
-    def __init__(self, host_id, **kwargs):
+    def __init__(self, host_id, interface, **kwargs):
         self.host_id = host_id
+        self.interface = interface
         super(HostNetwork, self).__init__(**kwargs)
 
     @property
@@ -323,15 +332,15 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
     def subnet(self):
         return self.network.subnet
 
+    @subnet.expression
+    def subnet(cls):
+        return cls.network.subnet
+
     @property
     def netmask(self):
         return str(netaddr.IPNetwork(self.subnet).netmask)
 
     def validate(self):
-        if not self.interface:
-            raise exception.InvalidParameter(
-                'interface is not set in host %s network' % self.host_id
-            )
         if not self.network:
             raise exception.InvalidParameter(
                 'subnet is not set in %s interface %s' % (
@@ -367,6 +376,7 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         dict_info['ip'] = self.ip
         dict_info['interface'] = self.interface
         dict_info['netmask'] = self.netmask
+        dict_info['subnet'] = self.subnet
         return dict_info
 
 
@@ -428,6 +438,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     @patched_package_config.setter
     def patched_package_config(self, value):
         self.package_config = util.merge_dict(dict(self.package_config), value)
+        self.config_validated = False
 
     @property
     def put_package_config(self):
@@ -438,77 +449,93 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         package_config = dict(self.package_config)
         package_config.update(value)
         self.package_config = package_config
+        self.config_validated = False
+
+    @property
+    def patched_os_config(self):
+        return self.host.os_config
+
+    @patched_os_config.setter
+    def patched_os_config(self, value):
+        host = self.host
+        host.os_config = util.merge_dict(dict(host.os_config), value)
+
+    @property
+    def put_os_config(self):
+        return self.host.os_config
+
+    @put_os_config.setter
+    def put_os_config(self, value):
+        host = self.host
+        os_config = dict(host.os_config)
+        os_config.update(value)
+        host.os_config = os_config
 
     @hybrid_property
     def distributed_system_name(self):
-        cluster = self.cluster
-        if cluster:
-            return cluster.distributed_system_name
-        else:
-            return None
+        return self.cluster.distributed_system_name
+
+    @distributed_system_name.expression
+    def distributed_system_name(cls):
+        return cls.cluster.distributed_system_name
 
     @hybrid_property
     def os_name(self):
-        host = self.host
-        if host:
-            return host.os_name
-        else:
-            return None
+        return self.host.os_name
+
+    @os_name.expression
+    def os_name(cls):
+        return cls.host.os_name
 
     @hybrid_property
     def clustername(self):
-        cluster = self.cluster
-        if cluster:
-            return cluster.name
-        else:
-            return None
+        return self.cluster.name
+
+    @clustername.expression
+    def clustername(cls):
+        return cls.cluster.name
 
     @hybrid_property
     def hostname(self):
-        host = self.host
-        if host:
-            return host.name
-        else:
-            return None
+        return self.host.name
+
+    @hostname.expression
+    def hostname(cls):
+        return cls.host.name
 
     @property
     def distributed_system_installed(self):
-        state = self.state
-        if state:
-            return state.state == 'SUCCESSFUL'
-        else:
-            return False
+        return self.state.state == 'SUCCESSFUL'
+
+    @property
+    def resintall_os(self):
+        return self.host.reinstall_os
+
+    @property
+    def reinstall_distributed_system(self):
+        return self.cluster.reinstall_distributed_system
 
     @property
     def os_installed(self):
-        host = self.host
-        if host:
-            return host.os_installed
-        else:
-            return None
+        return self.host.os_installed
 
-    @property
+    @hybrid_property
     def owner(self):
-        cluster = self.cluster
-        if cluster:
-            return cluster.owner
-        else:
-            return None
+        return self.cluster.owner
+
+    @owner.expression
+    def owner(cls):
+        return cls.cluster.owner
 
     def state_dict(self):
-        state = self.state
-        if state.progress <= 0.0:
-            host = self.host
-            if host:
-                dict_info = host.state_dict()
-            else:
-                dict_info = {}
-            cluster = self.cluster
-            if cluster and cluster.distributed_system:
-                dict_info['state'] = state.state
-        else:
-            dict_info = state.to_dict()
-        return dict_info
+        cluster = self.cluster
+        host = self.host
+        if (
+            not cluster.distributed_system or
+            host.state.state != 'SUCCESSFUL'
+        ):
+            return host.state_dict()
+        return self.state.to_dict()
 
     def to_dict(self):
         dict_info = self.host.to_dict()
@@ -516,10 +543,10 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         dict_info.update({
             'distributed_system_name': self.distributed_system_name,
             'distributed_system_installed': self.distributed_system_installed,
-            'reinstall_distributed_system': (
-                self.cluster.reinstall_distributed_system
-            ),
+            'reinstall_distributed_system': self.reinstall_distributed_system,
             'owner': self.owner,
+            'clustername': self.clustername,
+            'hostname': self.hostname,
             'name': self.name
         })
         return dict_info
@@ -535,10 +562,11 @@ class HostState(BASE, StateMixin):
         primary_key=True
     )
 
-    def initialize(self):
+    def update(self):
+        host = self.host
         if self.state == 'INSTALLING':
-            self.host.reinstall_os = False
-        super(HostState, self).initialize()
+            host.reinstall_os = False
+        super(HostState, self).update()
 
 
 class Host(BASE, TimestampMixin, HelperMixin):
@@ -595,6 +623,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
     @patched_os_config.setter
     def patched_os_config(self, value):
         self.os_config = util.merge_dict(dict(self.os_config), value)
+        self.config_validated = False
 
     @property
     def put_os_config(self):
@@ -605,17 +634,28 @@ class Host(BASE, TimestampMixin, HelperMixin):
         os_config = dict(self.os_config)
         os_config.update(value)
         self.os_config = os_config
+        self.config_validated = False
 
     def __init__(self, id, **kwargs):
         self.id = id
+        self.name = str(self.id)
+        self.state = HostState()
         super(Host, self).__init__(**kwargs)
 
     def initialize(self):
         if not self.name:
             self.name = str(self.id)
-        if not self.state or self.reinstall_os:
-            self.state = HostState()
         super(Host, self).initialize()
+
+    def update(self):
+        if self.reinstall_os:
+            self.state = HostState()
+        os = self.os
+        if os:
+            self.os_name = os.name
+        else:
+            self.os_name = None
+        super(Host, self).update()
 
     def validate(self):
         os = self.os
@@ -627,7 +667,6 @@ class Host(BASE, TimestampMixin, HelperMixin):
             raise exception.InvalidParameter(
                 'os %s is not deployable' % os.name
             )
-        self.os_name = os.name
         creator = self.creator
         if not creator:
             raise exception.InvalidParameter(
@@ -637,31 +676,24 @@ class Host(BASE, TimestampMixin, HelperMixin):
 
     @hybrid_property
     def owner(self):
-        creator = self.creator
-        if creator:
-            return creator.email
-        else:
-            return None
+        return self.creator.email
+
+    @owner.expression
+    def owner(cls):
+        return cls.creator.email
 
     @property
     def os_installed(self):
-        state = self.state
-        if state:
-            return state.state == 'SUCCESSFUL'
-        else:
-            return False
+        return self.state.state == 'SUCCESSFUL'
 
     def state_dict(self):
-        state = self.state
-        if state:
-            return state.to_dict()
-        else:
-            return {}
+        return self.state.to_dict()
 
     def to_dict(self):
         dict_info = self.machine.to_dict()
         dict_info.update(super(Host, self).to_dict())
         dict_info.update({
+            'machine_id': self.machine.id,
             'owner': self.owner,
             'os_installed': self.os_installed,
             'networks': [
@@ -681,50 +713,77 @@ class ClusterState(BASE, StateMixin):
         ForeignKey('cluster.id', onupdate='CASCADE', ondelete='CASCADE'),
         primary_key=True
     )
+    total_hosts = Column(
+        Integer,
+        default=0
+    )
+    installing_hosts = Column(
+        Integer,
+        default=0
+    )
+    completed_hosts = Column(
+        Integer,
+        default=0
+    )
+    failed_hosts = Column(
+        Integer,
+        default=0
+    )
 
-    def initialize(self):
+    def to_dict(self):
+        dict_info = super(ClusterState, self).to_dict()
+        dict_info['status'] = {
+            'total_hosts': self.total_hosts,
+            'installing_hosts': self.installing_hosts,
+            'completed_hosts': self.completed_hosts,
+            'failed_hosts': self.failed_hosts
+        }
+        return dict_info
+
+    def update(self):
         cluster = self.cluster
+        clusterhosts = cluster.clusterhosts
+        self.total_hosts = len(clusterhosts)
+        if self.state in ['UNINITIALIZED', 'INITIALIZED']:
+            self.installing_hosts = 0
+            self.failed_hosts = 0
+            self.completed_hosts = 0
         if self.state == 'INSTALLING':
             cluster.reinstall_distributed_system = False
-        clusterhosts = cluster.clusterhosts
-        total_clusterhosts = 0
-        failed_clusterhosts = 0
-        installing_clusterhosts = 0
-        finished_clusterhosts = 0
-        progress = 0
-        if not cluster.distributed_system:
-            for clusterhost in clusterhosts:
-                host = clusterhost.host
-                host_state = host.state.state
-                total_clusterhosts += 1
-                progress += host.state.progress
-                if host_state == 'SUCCESSFUL':
-                    finished_clusterhosts += 1
-                elif host_state == 'INSTALLING':
-                    installing_clusterhosts += 1
-                elif host_state == 'ERROR':
-                    failed_clusterhosts += 1
-        else:
-            for clusterhost in clusterhosts:
-                clusterhost_state = clusterhost.state.state
-                total_clusterhosts += 1
-                progress += clusterhost.state.progress
-                if clusterhost_state == 'SUCCESSFUL':
-                    finished_clusterhosts += 1
-                elif clusterhost_state == 'INSTALLING':
-                    installing_clusterhosts += 1
-                elif clusterhost_state == 'ERROR':
-                    failed_clusterhosts += 1
-        self.progress = progress / total_clusterhosts
-        self.message = (
-            'toal %s, installing %s, finished %s, error $s'
-        ) % (
-            total_clusterhosts, installing_clusterhosts,
-            finished_clusterhosts, failed_clusterhosts
-        )
-        if failed_clusterhosts:
-            self.severity = 'ERROR'
-        super(ClusterState, self).initialize()
+            if not cluster.distributed_system:
+                for clusterhost in clusterhosts:
+                    host = clusterhost.host
+                    host_state = host.state.state
+                    if host_state == 'INSTALLING':
+                        self.intsalling_hosts += 1
+                    elif host_state == 'ERROR':
+                        self.failed_hosts += 1
+                    elif host_state == 'SUCCESSFUL':
+                        self.completed_hosts += 1
+            else:
+                for clusterhost in clusterhosts:
+                    clusterhost_state = clusterhost.state.state
+                    if clusterhost_state == 'INSTALLING':
+                        self.intsalling_hosts += 1
+                    elif clusterhost_state == 'ERROR':
+                        self.failed_hosts += 1
+                    elif clusterhost_state == 'SUCCESSFUL':
+                        self.completed_hosts += 1
+            if self.total_hosts:
+                self.percentage = (
+                    float(self.completed_hosts)
+                    /
+                    float(self.total_hosts)
+                )
+            self.message = (
+                'toal %s, installing %s, complted: %s, error $s'
+            ) % (
+                self.total_hosts, self.completed_hosts,
+                self.intsalling_hosts, self.failed_hosts
+            )
+            if self.failed_hosts:
+                self.severity = 'ERROR'
+        super(ClusterState, self).update()
 
 
 class Cluster(BASE, TimestampMixin, HelperMixin):
@@ -746,6 +805,8 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     )
     os_config = Column(JSONEncoded, default={})
     package_config = Column(JSONEncoded, default={})
+    deployed_os_config = Column(JSONEncoded, default={})
+    deployed_package_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
     adapter_id = Column(Integer, ForeignKey('adapter.id'))
     adapter_name = Column(String(80), nullable=True)
@@ -766,12 +827,39 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
 
     def __init__(self, name, **kwargs):
         self.name = name
+        self.state = ClusterState()
         super(Cluster, self).__init__(**kwargs)
 
     def initialize(self):
-        if not self.state or self.reinstall_distributed_system:
+        adapter = self.adapter
+        if adapter:
+            self.put_package_config = {
+                'roles': [role.name for role in adapter.roles]
+            }
+
+    def update(self):
+        if self.reinstall_distributed_system:
             self.state = ClusterState()
-        super(Cluster, self).initialize()
+        os = self.os
+        if os:
+            self.os_name = os.name
+        else:
+            self.os_name = None
+            self.os_config = {}
+        adapter = self.adapter
+        if adapter:
+            self.adapter_name = adapter.name
+            self.distributed_system = adapter.adapter_distributed_system
+            self.distributed_system_name = self.distributed_system.name
+            self.put_package_config = {
+                'roles': [role.name for role in adapter.roles]
+            }
+        else:
+            self.adapter_name = None
+            self.distributed_system = None
+            self.distributed_system_name = None
+            self.package_config = {}
+        super(Cluster, self).update()
 
     def validate(self):
         creator = self.creator
@@ -780,14 +868,10 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
                 'creator is not set in cluster %s' % self.id
             )
         os = self.os
-        if os:
-            if not os.deployable:
-                raise exception.InvalidParameter(
-                    'os %s is not deployable' % os.name
-                )
-            self.os_name = os.name
-        else:
-            self.os_name = None
+        if os and not os.deployable:
+            raise exception.InvalidParameter(
+                'os %s is not deployable' % os.name
+            )
         adapter = self.adapter
         if adapter:
             if not adapter.deployable:
@@ -801,25 +885,13 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
                 raise exception.InvalidParameter(
                     'os %s is not supported' % os.name
                 )
-            self.adapter_name = adapter.name
-            distributed_system = (
-                adapter.adapter_distributed_system
-            )
-            self.distributed_system = distributed_system
-            if distributed_system:
-                if not distributed_system.deployable:
-                    raise exception.InvalidParamerter(
-                        'distributed system %s is not deployable' % (
-                            distributed_system.name
-                        )
+            distributed_system = self.distributed_system
+            if distributed_system and not distributed_system.deployable:
+                raise exception.InvalidParamerter(
+                    'distributed system %s is not deployable' % (
+                        distributed_system.name
                     )
-                self.distributed_system_name = (
-                    distributed_system.name
                 )
-        else:
-            self.adapter_name = None
-            self.distributed_system = None
-            self.distributed_system_name = None
         super(Cluster, self).validate()
 
     @property
@@ -829,6 +901,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     @patched_os_config.setter
     def patched_os_config(self, value):
         self.os_config = util.merge_dict(dict(self.os_config), value)
+        self.config_validated = False
 
     @property
     def put_os_config(self):
@@ -839,6 +912,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         os_config = dict(self.os_config)
         os_config.update(value)
         self.os_config = os_config
+        self.config_validated = False
 
     @property
     def patched_package_config(self):
@@ -846,7 +920,9 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
 
     @patched_package_config.setter
     def patched_package_config(self, value):
-        self.package_config = util.merge_dict(dict(self.package_config), value)
+        package_config = dict(self.package_config)
+        self.package_config = util.merge_dict(package_config, value)
+        self.config_validated = False
 
     @property
     def put_package_config(self):
@@ -857,29 +933,22 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         package_config = dict(self.package_config)
         package_config.update(value)
         self.package_config = package_config
+        self.config_validated = False
 
     @hybrid_property
     def owner(self):
-        creator = self.creator
-        if creator:
-            return creator.email
-        else:
-            return None
+        return self.creator.email
+
+    @owner.expression
+    def owner(cls):
+        return cls.creator.email
 
     @property
     def distributed_system_installed(self):
-        state = self.state
-        if state:
-            return self.state.state == 'SUCCESSFUL'
-        else:
-            return False
+        return self.state.state == 'SUCCESSFUL'
 
     def state_dict(self):
-        state = self.state
-        if state:
-            return self.state.to_dict()
-        else:
-            return {}
+        return self.state.to_dict()
 
     def to_dict(self):
         dict_info = super(Cluster, self).to_dict()
@@ -1661,54 +1730,6 @@ class Adapter(BASE, HelperMixin):
             return None
 
     @property
-    def package_installer_name(self):
-        installer = self.adapter_package_installer
-        if installer:
-            return installer.name
-        else:
-            return None
-
-    @property
-    def os_installer_name(self):
-        installer = self.adapter_os_installer
-        if installer:
-            return installer.name
-        else:
-            return None
-
-    @property
-    def package_installer_type(self):
-        installer = self.adapter_package_installer
-        if installer:
-            return installer.installer_type
-        else:
-            return None
-
-    @property
-    def os_installer_type(self):
-        installer = self.adapter_os_installer
-        if installer:
-            return installer.installer_type
-        else:
-            return None
-
-    @property
-    def package_installer_config(self):
-        installer = self.adapter_package_installer
-        if installer:
-            return installer.config
-        else:
-            return None
-
-    @property
-    def os_installer_config(self):
-        installer = self.adapter_os_installer
-        if installer:
-            return installer.config
-        else:
-            return None
-
-    @property
     def adapter_distributed_system(self):
         distributed_system = self.distributed_system
         if distributed_system:
@@ -1716,14 +1737,6 @@ class Adapter(BASE, HelperMixin):
         parent = self.parent
         if parent:
             return parent.adapter_distributed_system
-        else:
-            return None
-
-    @property
-    def distributed_system_name(self):
-        distributed_system = self.adapter_distributed_system
-        if distributed_system:
-            return distributed_system.name
         else:
             return None
 
@@ -1751,21 +1764,24 @@ class Adapter(BASE, HelperMixin):
 
     def to_dict(self):
         dict_info = super(Adapter, self).to_dict()
-        adapter_roles = self.adapter_roles
-        supported_oses = self.adapter_supported_oses
         dict_info.update({
-            'roles': [role.to_dict() for role in adapter_roles],
-            'supported_oses': [
-                adapter_os.to_dict() for adapter_os in supported_oses
+            'roles': [
+                role.to_dict() for role in self.adapter_roles
             ],
-            'distributed_system_name': self.distributed_system_name,
-            'os_installer_name': self.os_installer_name,
-            'os_installer_type': self.os_installer_type,
-            'os_installer_config': self.os_installer_config,
-            'package_installer_name': self.package_installer_name,
-            'package_installer_type': self.package_installer_type,
-            'package_installer_config': self.package_installer_config
+            'supported_oses': [
+                adapter_os.to_dict()
+                for adapter_os in self.adapter_supported_oses
+            ],
         })
+        distributed_system = self.distributed_system
+        if distributed_system:
+            dict_info['distributed_system_name'] = distributed_system.name
+        os_installer = self.adapter_os_installer
+        if os_installer:
+            dict_info['os_installer'] = os_installer.to_dict()
+        package_installer = self.adapter_package_installer
+        if package_installer:
+            dict_info['package_installer'] = package_installer.to_dict()
         return dict_info
 
 
@@ -1817,8 +1833,8 @@ class OSInstaller(BASE, InstallerMixin):
         backref=backref('os_installer')
     )
 
-    def __init__(self, name, **kwargs):
-        self.name = name
+    def __init__(self, instance_name, **kwargs):
+        self.instance_name = instance_name
         super(OSInstaller, self).__init__(**kwargs)
 
 
@@ -1833,8 +1849,8 @@ class PackageInstaller(BASE, InstallerMixin):
         backref=backref('package_installer')
     )
 
-    def __init__(self, name, **kwargs):
-        self.name = name
+    def __init__(self, instance_name, **kwargs):
+        self.instance_name = instance_name
         super(PackageInstaller, self).__init__(**kwargs)
 
 
@@ -1857,10 +1873,10 @@ class Network(BASE, TimestampMixin, HelperMixin):
         self.subnet = subnet
         super(Network, self).__init__(**kwargs)
 
-    def intialize(self):
+    def initialize(self):
         if not self.name:
             self.name = self.subnet
-        super(Network, self).intialize()
+        super(Network, self).initialize()
 
     def validate(self):
         try:

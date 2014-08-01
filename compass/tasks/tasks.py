@@ -46,7 +46,10 @@ def global_celery_init(**_):
 
 
 @celery.task(name='compass.tasks.pollswitch')
-def pollswitch(ip_addr, credentials, req_obj='mac', oper='SCAN'):
+def pollswitch(
+    poller_email, ip_addr, credentials,
+    req_obj='mac', oper='SCAN'
+):
     """Query switch and return expected result.
 
     :param ip_addr: switch ip address.
@@ -60,14 +63,15 @@ def pollswitch(ip_addr, credentials, req_obj='mac', oper='SCAN'):
     """
     try:
         poll_switch.poll_switch(
-            ip_addr, credentials, req_obj=req_obj, oper=oper
+            poller_email, ip_addr, credentials,
+            req_obj=req_obj, oper=oper
         )
     except Exception as error:
         logging.exception(error)
 
 
 @celery.task(name='compass.tasks.deploy_cluster')
-def deploy_cluster(cluster_id, clusterhost_ids):
+def deploy_cluster(deployer_email, cluster_id, clusterhost_ids):
     """Deploy the given cluster.
 
     :param cluster_hosts: the cluster and hosts of each cluster to deploy.
@@ -77,7 +81,7 @@ def deploy_cluster(cluster_id, clusterhost_ids):
 
 
 @celery.task(name='compass.tasks.reinstall_cluster')
-def reinstall_cluster(cluster_id, clusterhost_ids):
+def reinstall_cluster(installer_email, cluster_id, clusterhost_ids):
     """reinstall the given cluster.
 
     :param cluster_hosts: the cluster and hosts of each cluster to reinstall.

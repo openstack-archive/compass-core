@@ -24,6 +24,7 @@ from celery.signals import setup_logging
 from compass.actions import deploy
 from compass.actions import poll_switch
 from compass.actions import reinstall
+from compass.actions import update_progress
 from compass.db.api import adapter_holder as adapter_api
 from compass.db.api import database
 from compass.db.api import metadata_holder as metadata_api
@@ -118,3 +119,16 @@ def reset_host(host_id):
     :type cluster_hosts: dict of int to list of int
     """
     pass
+
+
+@celery.task(name='compass.tasks.update_progress')
+def update_clusters_progress(cluster_hosts):
+    """Calculate the installing progress of the given cluster.
+
+    :param cluster_hosts: the cluster and hosts of each cluster to update.
+    :type cluster_hosts: dict of int to list of int
+    """
+    try:
+        update_progress.update_progress(cluster_hosts)
+    except Exception as error:
+        logging.exception(error)

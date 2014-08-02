@@ -155,6 +155,6 @@ def get_adapters_internal(session):
         else:
             logging.info(
                 'ignore adapter %s since it is not deployable',
-                adapter_dict
+                adapter.to_dict()
             )
     return adapter_mapping

@@ -1204,7 +1204,7 @@ def update_cluster_host_state(
 @utils.supported_filters(
     optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS
 )
-@database.run_in_session()
+## @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_CLUSTERHOST_STATE
 )
@@ -1223,7 +1223,7 @@ def update_clusterhost_state(
 @utils.supported_filters(
     optional_support_keys=UPDATED_CLUSTER_STATE_FIELDS
 )
-@database.run_in_session()
+## @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_CLUSTER_STATE
 )

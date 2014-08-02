@@ -45,6 +45,14 @@ def global_celery_init(**_):
     metadata_api.load_metadatas()
 
 
+@setup_logging.connect()
+def tasks_setup_logging(**_):
+    """Setup logging options from compass setting."""
+    flags.init()
+    flags.OPTIONS.logfile = setting.CELERY_LOGFILE
+    logsetting.init()
+
+
 @celery.task(name='compass.tasks.pollswitch')
 def pollswitch(
     poller_email, ip_addr, credentials,
@@ -77,7 +85,10 @@ def deploy_cluster(deployer_email, cluster_id, clusterhost_ids):
     :param cluster_hosts: the cluster and hosts of each cluster to deploy.
     :type cluster_hosts: dict of int to list of int
     """
-    pass
+    try:
+        deploy.deploy(cluster_id, clusterhost_ids, deployer_email)
+    except Exception as error:
+        logging.exception(error)
 
 
 @celery.task(name='compass.tasks.reinstall_cluster')

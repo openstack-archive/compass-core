@@ -81,6 +81,7 @@ def _filter_metadata(metadata):
                 'required_in_options': value['required_in_options'],
                 'field_type': value['field_type_data'],
                 'display_type': value.get('display_type', None),
+                'mapping_to': value.get('mapping_to', None)
             }
         else:
             filtered_metadata[key] = _filter_metadata(value)

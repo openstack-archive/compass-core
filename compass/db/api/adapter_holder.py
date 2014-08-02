@@ -29,6 +29,7 @@ SUPPORTED_FIELDS = [
 ]
 RESP_FIELDS = [
     'id', 'name', 'roles',
+    'os_installer', 'package_installer',
     'distributed_system_name',
     'supported_oses', 'display_name'
 ]

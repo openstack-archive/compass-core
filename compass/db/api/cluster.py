@@ -62,8 +62,7 @@ RESP_DEPLOYED_CONFIG_FIELDS = [
     'updated_at'
 ]
 RESP_METADATA_FIELDS = [
-    'os_config',
-    'package_config'
+    'metadata'
 ]
 RESP_CLUSTERHOST_CONFIG_FIELDS = [
     'package_config',
@@ -310,10 +309,10 @@ def get_cluster_metadata(session, getter, cluster_id, **kwargs):
         )
     adapter = cluster.adapter
     if adapter:
-        metadatas['package_ocnfig'] = (
+        metadatas['package_config'] = (
             metadata_api.get_package_metadata_internal(adapter.id)
         )
-    return metadatas
+    return {'metadata': metadatas}
 
 
 @user_api.check_user_permission_in_session(
@@ -324,10 +323,14 @@ def _update_cluster_config(session, updater, cluster, **kwargs):
     """Update a cluster config."""
     is_cluster_editable(session, cluster, updater)
     return utils.update_db_object(
-        session, cluster, config_validated=False, **kwargs
+        session, cluster, **kwargs
     )
 
 
+@utils.replace_filters(
+    os_config='deployed_os_config',
+    package_config='deployed_package_config'
+)
 @utils.supported_filters(
     optional_support_keys=UPDATED_DEPLOYED_CONFIG_FIELDS
 )
@@ -778,7 +781,7 @@ def update_cluster_host_config(
     package_config='deployed_package_config'
 )
 @database.run_in_session()
-def update_cluster_host_depolyed_config(
+def update_cluster_host_deployed_config(
     session, updater, cluster_id, host_id, **kwargs
 ):
     """Update clusterhost deployed config."""
@@ -857,12 +860,12 @@ def _patch_clusterhost_config(session, updater, clusterhost, **kwargs):
         os_config=os_config_validates,
         package_config=package_config_validates
     )
-    def update_config_internal(clusterhost, **in_kwargs):
-        return _update_cluster_config(
-            session, updater, clusterhost, **in_kwargs
+    def patch_config_internal(clusterhost, **in_kwargs):
+        return utils.update_db_object(
+            session, clusterhost, **in_kwargs
         )
 
-    return update_config_internal(
+    return patch_config_internal(
         clusterhost, **kwargs
     )
 
@@ -927,12 +930,12 @@ def _delete_clusterhost_config(
     @utils.output_validates(
         package_config=package_config_validates
     )
-    def update_config_internal(clusterhost, **in_kwargs):
+    def delete_config_internal(clusterhost, **in_kwargs):
         return utils.update_db_object(
             session, clusterhost, **in_kwargs
         )
 
-    return update_config_internal(
+    return delete_config_internal(
         clusterhost, os_config={},
         package_config={}
     )
@@ -1127,7 +1130,7 @@ def deploy_cluster(
             )
 
     celery_client.celery.send_task(
-        'compass.tasks.deploy',
+        'compass.tasks.deploy_cluster',
         (deployer.email, cluster_id, deploy.get('clusterhosts', []))
     )
     return {

@@ -61,7 +61,7 @@ def add_package_field_internal(session):
 
 
 def _add_metadata(
-    session, field_model, metadata_model, name, config,
+    session, field_model, metadata_model, path, name, config,
     parent=None, **kwargs
 ):
     metadata_self = config.get('_self', {})
@@ -73,7 +73,7 @@ def _add_metadata(
         field = None
     metadata = utils.add_db_object(
         session, metadata_model, True,
-        name, parent=parent, field=field,
+        path, name=name, parent=parent, field=field,
         display_name=metadata_self.get('display_name', name),
         description=metadata_self.get('description', None),
         is_required=metadata_self.get('is_required', False),
@@ -91,7 +91,8 @@ def _add_metadata(
     for key, value in config.items():
         if key not in '_self':
             _add_metadata(
-                session, field_model, metadata_model, key, value,
+                session, field_model, metadata_model,
+                '%s/%s' % (path, key), key, value,
                 parent=metadata, **kwargs
             )
     return metadata
@@ -111,7 +112,7 @@ def add_os_metadata_internal(session):
             os_metadatas.append(_add_metadata(
                 session, models.OSConfigField,
                 models.OSConfigMetadata,
-                key, value, parent=None,
+                key, key, value, parent=None,
                 os=os
             ))
     return os_metadatas
@@ -131,7 +132,7 @@ def add_package_metadata_internal(session):
             package_metadatas.append(_add_metadata(
                 session, models.PackageConfigField,
                 models.PackageConfigMetadata,
-                key, value, parent=None,
+                key, key, value, parent=None,
                 adapter=adapter
             ))
     return package_metadatas

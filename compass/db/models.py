@@ -104,15 +104,16 @@ class MetadataMixin(HelperMixin):
 
     def initialize(self):
         if not self.display_name:
-            self.display_name = self.name
-        if self.parent:
-            self.path = '%s/%s' % (self.parent.path, self.name)
-        else:
-            self.path = self.name
+            if self.name:
+                self.display_name = self.name
         super(MetadataMixin, self).initialize()
 
     @property
     def validator(self):
+        if not self.name:
+            raise exception.InvalidParamter(
+                'name is not set in os metadata %s' % self.id
+            )
         if not self.validator_data:
             return None
         func = eval(
@@ -519,6 +520,23 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     def os_installed(self):
         return self.host.os_installed
 
+    @property
+    def roles(self):
+        package_config = self.package_config
+        if 'roles' in package_config:
+            role_names = package_config['roles']
+            roles = self.cluster.adapter.roles
+            role_mapping = {}
+            for role in roles:
+                role_mapping[role.name] = role
+            filtered_roles = []
+            for role_name in role_names:
+                if role_name in role_mapping:
+                    filtered_roles.append(role_mapping[role_name])
+            return filtered_roles
+        else:
+            return None
+
     @hybrid_property
     def owner(self):
         return self.cluster.owner
@@ -547,7 +565,8 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
             'owner': self.owner,
             'clustername': self.clustername,
             'hostname': self.hostname,
-            'name': self.name
+            'name': self.name,
+            'roles': [role.to_dict() for role in self.roles]
         })
         return dict_info
 
@@ -686,6 +705,10 @@ class Host(BASE, TimestampMixin, HelperMixin):
     def os_installed(self):
         return self.state.state == 'SUCCESSFUL'
 
+    @property
+    def clusters(self):
+        return [clusterhost.cluster for clusterhost in self.clusterhosts]
+
     def state_dict(self):
         return self.state.to_dict()
 
@@ -699,7 +722,8 @@ class Host(BASE, TimestampMixin, HelperMixin):
             'networks': [
                 host_network.to_dict()
                 for host_network in self.host_networks
-            ]
+            ],
+            'clusters': [cluster.to_dict() for cluster in self.clusters]
         })
         return dict_info
 
@@ -1294,6 +1318,21 @@ class Machine(BASE, HelperMixin, TimestampMixin):
         location.update(value)
         self.location = location
 
+    def to_dict(self):
+        dict_info = {}
+        dict_info['switches'] = [
+            {
+                'switch_ip': switch_machine.switch_ip,
+                'port': switch_machine.port,
+                'vlans': switch_machine.vlans
+            }
+            for switch_machine in self.switch_machines
+        ]
+        if dict_info['switches']:
+            dict_info.update(dict_info['switches'][0])
+        dict_info.update(super(Machine, self).to_dict())
+        return dict_info
+
 
 class Switch(BASE, HelperMixin, TimestampMixin):
     """Switch table."""
@@ -1392,8 +1431,8 @@ class OSConfigMetadata(BASE, MetadataMixin):
         UniqueConstraint('path', 'os_id', name='constraint'),
     )
 
-    def __init__(self, name, **kwargs):
-        self.name = name
+    def __init__(self, path, **kwargs):
+        self.path = path
         super(OSConfigMetadata, self).__init__(**kwargs)
 
     def validate(self):
@@ -1579,9 +1618,9 @@ class PackageConfigMetadata(BASE, MetadataMixin):
     )
 
     def __init__(
-        self, name, **kwargs
+        self, path, **kwargs
     ):
-        self.name = name
+        self.path = path
         super(PackageConfigMetadata, self).__init__(**kwargs)
 
     def validate(self):

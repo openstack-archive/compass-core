@@ -190,3 +190,42 @@ def load_configs(
             raise error
         configs.append(config_locals)
     return configs
+
+
+def is_instance(instance, expected_types):
+    """Check instance type is in one of expected types.
+
+    :param instance: instance to check the type.
+    :param expected_types: types to check if instance type is in them.
+    :type expected_types: list of type
+
+    :returns: True if instance type is in expect_types.
+    """
+    for expected_type in expected_types:
+        if isinstance(instance, expected_type):
+            return True
+
+    return False
+
+
+def get_clusters_from_str(clusters_str):
+    """get clusters from string."""
+    clusters = {}
+    for cluster_and_hosts in clusters_str.split(';'):
+        if not cluster_and_hosts:
+            continue
+
+        if ':' in cluster_and_hosts:
+            cluster_str, hosts_str = cluster_and_hosts.split(
+                ':', 1)
+        else:
+            cluster_str = cluster_and_hosts
+            hosts_str = ''
+
+        hosts = [
+            host for host in hosts_str.split(',')
+            if host
+        ]
+        clusters[cluster_str] = hosts
+
+    return clusters

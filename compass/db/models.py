@@ -21,6 +21,7 @@ import simplejson as json
 from sqlalchemy import BigInteger
 from sqlalchemy import Boolean
 from sqlalchemy import Column
+from sqlalchemy import ColumnDefault
 from sqlalchemy import DateTime
 from sqlalchemy import Enum
 from sqlalchemy.ext.declarative import declarative_base
@@ -1885,3 +1886,46 @@ class Network(BASE, TimestampMixin, HelperMixin):
             raise exception.InvalidParameter(
                 'subnet %s format is uncorrect' % self.subnet
             )
+
+
+class LogProgressingHistory(BASE):
+    """host installing log history for each file.
+
+    :param id: int, identity as primary key.
+    :param pathname: str, the full path of the installing log file. unique.
+    :param position: int, the position of the log file it has processed.
+    :param partial_line: str, partial line of the log.
+    :param progressing: float, indicate the installing progress between 0 to 1.
+    :param message: str, str, the installing message.
+    :param severity: Enum, the installing message severity.
+                     ('ERROR', 'WARNING', 'INFO')
+    :param line_matcher_name: str, the line matcher name of the log processor.
+    :param update_timestamp: datetime, the latest timestamp the entry updated.
+    """
+    __tablename__ = 'log_progressing_history'
+    id = Column(Integer, primary_key=True)
+    pathname = Column(String(80), unique=True)
+    position = Column(Integer, ColumnDefault(0))
+    partial_line = Column(Text)
+    percentage = Column(Float, ColumnDefault(0.0))
+    message = Column(Text)
+    severity = Column(Enum('ERROR', 'WARNING', 'INFO'), ColumnDefault('INFO'))
+    line_matcher_name = Column(String(80), ColumnDefault('start'))
+    update_timestamp = Column(DateTime, default=datetime.datetime.now(),
+                              onupdate=datetime.datetime.now())
+
+    def __init__(self, **kwargs):
+        super(LogProgressingHistory, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return (
+            'LogProgressingHistory[%r: position %r,'
+            'partial_line %r,percentage %r,message %r,'
+            'severity %r]'
+        ) % (
+            self.pathname, self.position,
+            self.partial_line,
+            self.percentage,
+            self.message,
+            self.severity
+        )

@@ -19,8 +19,8 @@
 import logging
 import os.path
 
-from compass.db import database
-from compass.db.model import LogProgressingHistory
+from compass.db.api import database
+from compass.db.models import LogProgressingHistory
 from compass.log_analyzor.line_matcher import Progress
 from compass.utils import setting_wrapper as setting
 
@@ -109,24 +109,24 @@ class FileReader(object):
            in the last run, the progress, the message and the
            severity it has got in the last run.
         """
-        with database.session() as session:
-            history = session.query(
-                LogProgressingHistory
-            ).filter_by(
-                pathname=self.pathname_
-            ).first()
-            if history:
-                self.position_ = history.position
-                self.partial_line_ = history.partial_line
-                line_matcher_name = history.line_matcher_name
-                progress = Progress(history.progress,
-                                    history.message,
-                                    history.severity)
-            else:
-                line_matcher_name = 'start'
-                progress = Progress(0.0, '', None)
+        session = database.current_session()
+        history = session.query(
+            LogProgressingHistory
+        ).filter_by(
+            pathname=self.pathname_
+        ).first()
+        if history:
+            self.position_ = history.position
+            self.partial_line_ = history.partial_line
+            line_matcher_name = history.line_matcher_name
+            progress = Progress(history.percentage,
+                                history.message,
+                                history.severity)
+        else:
+            line_matcher_name = 'start'
+            progress = Progress(0.0, '', None)
 
-            return line_matcher_name, progress
+        return line_matcher_name, progress
 
     def update_history(self, line_matcher_name, progress):
         """Update log_progressing_history table.
@@ -138,37 +138,36 @@ class FileReader(object):
            The function should be called out of database session.
            It updates the log_processing_history table.
         """
-        with database.session() as session:
-            history = session.query(LogProgressingHistory).filter_by(
-                pathname=self.pathname_).first()
+        session = database.current_session()
+        history = session.query(LogProgressingHistory).filter_by(
+            pathname=self.pathname_).first()
+        if history:
+            if history.position >= self.position_:
+                logging.error(
+                    '%s history position %s is ahead of current '
+                    'position %s',
+                    self.pathname_,
+                    history.position,
+                    self.position_)
+                return
 
-            if history:
-                if history.position >= self.position_:
-                    logging.error(
-                        '%s history position %s is ahead of current '
-                        'position %s',
-                        self.pathname_,
-                        history.position,
-                        self.position_)
-                    return
-
-                history.position = self.position_
-                history.partial_line = self.partial_line_
-                history.line_matcher_name = line_matcher_name
-                history.progress = progress.progress
-                history.message = progress.message
-                history.severity = progress.severity
-            else:
-                history = LogProgressingHistory(
-                    pathname=self.pathname_, position=self.position_,
-                    partial_line=self.partial_line_,
-                    line_matcher_name=line_matcher_name,
-                    progress=progress.progress,
-                    message=progress.message,
-                    severity=progress.severity)
-                session.merge(history)
-            logging.debug('update file %s to history %s',
-                          self.pathname_, history)
+            history.position = self.position_
+            history.partial_line = self.partial_line_
+            history.line_matcher_name = line_matcher_name
+            history.progress = progress.progress
+            history.message = progress.message
+            history.severity = progress.severity
+        else:
+            history = LogProgressingHistory(
+                pathname=self.pathname_, position=self.position_,
+                partial_line=self.partial_line_,
+                line_matcher_name=line_matcher_name,
+                percentage=progress.progress,
+                message=progress.message,
+                severity=progress.severity)
+            session.merge(history)
+        logging.debug('update file %s to history %s',
+                      self.pathname_, history)
 
     def readline(self):
         """Generate each line of the log file."""

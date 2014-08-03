@@ -433,7 +433,7 @@ def _get_package_adapter_matcher(package_installer, target_system):
         else:
             logging.debug('configuration %s does not match %s and %s',
                           configuration, target_system, package_installer)
-    logging.error('No configuration found for os installer %s os %s',
+    logging.error('No configuration found for package installer %s os %s',
                   package_installer, target_system)
     return None
 

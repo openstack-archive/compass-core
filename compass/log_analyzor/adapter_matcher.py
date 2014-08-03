@@ -19,10 +19,18 @@
 import logging
 import re
 
-from compass.db import database
-from compass.db.model import Cluster
-from compass.db.model import ClusterHost
+from compass.db.api import cluster as cluster_api
+from compass.db.api import database
+from compass.db.api import host as host_api
+from compass.db.api import user as user_api
+
+from compass.db.models import Cluster
+from compass.db.models import ClusterHost
+from compass.db.models import Host
+
 from compass.log_analyzor.line_matcher import Progress
+
+import datetime
 
 
 class AdapterItemMatcher(object):
@@ -162,155 +170,101 @@ class AdapterMatcher(object):
 
     @classmethod
     def _get_host_progress(cls, hostid):
-        """Get Host Progress from database.
+        """Get Host Progress from HostState."""
 
-        .. notes::
-           The function should be called in database session.
-        """
         session = database.current_session()
         host = session.query(
-            ClusterHost
+            Host
         ).filter_by(id=hostid).first()
         if not host:
             logging.error(
-                'there is no host for %s in ClusterHost', hostid)
+                'there is no host for %s in Host', hostid)
             return None, None, None
 
         if not host.state:
             logging.error('there is no related HostState for %s',
                           hostid)
-            return host.fullname, None, None
+            return host.name, None, None
 
-        """
         return (
-            host.fullname,
+            host.name,
             host.state.state,
-            Progress(host.state.progress,
+            Progress(host.state.percentage,
                      host.state.message,
                      host.state.severity))
-        """
-        return {
-            'os': (
-                host.fullname,
-                host.state.state,
-                Progress(host.state.os_progress,
-                         host.state.os_message,
-                         host.state.os_severity)),
-            'package': (
-                host.fullname,
-                host.state.state,
-                Progress(host.state.progress,
-                         host.state.message,
-                         host.state.severity))}
 
     @classmethod
-    def _update_host_os_progress(cls, hostid, os_progress):
-        """Update host progress to database.
+    def _get_clusterhost_progress(cls, hostid):
+        """Get ClusterHost progress from ClusterHostState."""
 
-        .. note::
-           The function should be called in database session.
-        """
+        session = database.current_session()
+        clusterhost = session.query(
+            ClusterHost
+        ).filter_by(id=hostid).first()
+        if not clusterhost:
+            logging.error(
+                'there is no clusterhost for %s in ClusterHost',
+                hostid
+            )
+            return None, None, None
+
+        if not clusterhost.state:
+            logging.error(
+                'there is no related ClusterHostState for %s',
+                hostid
+            )
+            return clusterhost.name, None, None
+
+        return (
+            clusterhost.name,
+            clusterhost.state.state,
+            Progress(clusterhost.state.percentage,
+                     clusterhost.state.message,
+                     clusterhost.state.severity))
+
+    @classmethod
+    def _update_host_progress(cls, hostid, host_progress, updater):
+        """Updates host progress to db."""
+
         session = database.current_session()
         host = session.query(
-            ClusterHost).filter_by(id=hostid).first()
+            Host).filter_by(id=hostid).first()
         if not host:
             logging.error(
-                'there is no host for %s in ClusterHost', hostid)
-            return
+                'there is no host for %s in table Host',
+                hostid
+            )
 
         if not host.state:
             logging.error(
-                'there is no related HostState for %s', hostid)
-            return
+                'there is no related HostState for %s',
+                hostid
+            )
 
-        logging.debug('os progress: %s', os_progress.progress)
-
-        if host.state.os_progress > os_progress.progress:
+        if host.state.percentage > host_progress.progress:
             logging.error(
-                'host %s os_progress is not increased '
-                'from %s to %s',
-                hostid, host.state, os_progress)
+                'host %s progress has not been increased'
+                ' from %s to $s',
+                hostid, host.state, host_progress
+            )
             return
-        if (
-            host.state.os_progress == os_progress.progress and
-            host.state.os_message == os_progress.message
-        ):
+
+        if (host.state.percentage == host_progress.progress and
+                host.state.message == host_progress.message):
             logging.info(
-                'ignore update host %s progress %s to %s',
-                hostid, os_progress, host.state)
+                'host %s update ignored due to same progress'
+                'in database',
+                hostid
+            )
             return
 
-        host.state.os_progress = os_progress.progress
-        """host.state.os_progress = progress.progress"""
-        host.state.os_message = os_progress.message
-        if os_progress.severity:
-            host.state.os_severity = os_progress.severity
+        host.state.percentage = host_progress.progress
+        host.state.message = host_progress.message
+        if host_progress.severity:
+            host.state.severity = host_progress.severity
 
-        if host.state.os_progress >= 1.0:
-            host.state.os_state = 'OS_READY'
-
-        if host.state.os_severity == 'ERROR':
-            host.state.os_state = 'ERROR'
-
-        if host.state.os_state != 'INSTALLING':
-            host.mutable = True
-
-        logging.debug(
-            'update host %s state %s',
-            hostid, host.state)
-
-    @classmethod
-    def _update_host_package_progress(cls, hostid, progress):
-        """Update host progress to database.
-
-        .. note::
-           The function should be called in database session.
-        """
-        session = database.current_session()
-        host = session.query(
-            ClusterHost).filter_by(id=hostid).first()
-
-        logging.debug('package progress: %s', progress.progress)
-        logging.debug('package ssssstate: %s', host.state.state)
-        if not host:
-            logging.error(
-                'there is no host for %s in ClusterHost', hostid)
-            return
-
-        if not host.state:
-            logging.error(
-                'there is no related HostState for %s', hostid)
-            return
-
-        if not host.state.state in ['OS_READY', 'INSTALLING']:
-            logging.error(
-                'host %s issssss not in INSTALLING state',
-                hostid)
-            return
-
-        if host.state.progress > progress.progress:
-            logging.error(
-                'host %s progress is not increased '
-                'from %s to %s',
-                hostid, host.state, progress)
-            return
-
-        if (
-            host.state.progress == progress.progress and
-            host.state.message == progress.message
-        ):
-            logging.info(
-                'ignore update host %s progress %s to %s',
-                hostid, progress, host.state)
-            return
-
-        host.state.progress = progress.progress
-        host.state.message = progress.message
-        if progress.severity:
-            host.state.severity = progress.severity
-
-        if host.state.progress >= 1.0:
-            host.state.state = 'READY'
+        if host.state.percentage >= 1.0:
+            host.state.state = 'SUCCESSFUL'
 
         if host.state.severity == 'ERROR':
             host.state.state = 'ERROR'
@@ -318,9 +272,80 @@ class AdapterMatcher(object):
         if host.state.state != 'INSTALLING':
             host.mutable = True
 
+        host_api.update_host_state(
+            session,
+            updater,
+            hostid,
+            state=host.state.state,
+            percentage=host.state.percentage,
+            message=host.state.message,
+            id=hostid
+        )
+
         logging.debug(
             'update host %s state %s',
             hostid, host.state)
+
+    @classmethod
+    def _update_clusterhost_progress(
+        cls,
+        hostid,
+        clusterhost_progress,
+        updater
+    ):
+
+        session = database.current_session()
+        clusterhost = session.query(
+            ClusterHost).filter_by(id=hostid).first()
+
+        if not clusterhost.state:
+            logging.error(
+                'ClusterHost state not found for %s',
+                hostid)
+
+        if clusterhost.state.percentage > clusterhost_progress.progress:
+            logging.error(
+                'clusterhost %s state has not been increased'
+                ' from %s to %s',
+                hostid, clusterhost.state, clusterhost_progress
+            )
+            return
+
+        if (clusterhost.state.percentage == clusterhost_progress.progress and
+                clusterhost.state.message == clusterhost_progress.message):
+            logging.info(
+                'clusterhost %s update ignored due to same progress'
+                'in database',
+                hostid
+            )
+            return
+
+        clusterhost.state.percentage = clusterhost_progress.progress
+        clusterhost.state.message = clusterhost_progress.message
+        if clusterhost_progress.severity:
+            clusterhost.state.severity = clusterhost_progress.severity
+
+        if clusterhost.state.percentage >= 1.0:
+            clusterhost.state.state = 'SUCCESSFUL'
+
+        if clusterhost.state.severity == 'ERROR':
+            clusterhost.state.state = 'ERROR'
+
+        if clusterhost.state.state != 'INSTALLING':
+            clusterhost.mutable = True
+
+        cluster_api.update_clusterhost_state(
+            session,
+            updater,
+            hostid,
+            state=clusterhost.state.state,
+            percentage=clusterhost.state.percentage,
+            message=clusterhost.state.message
+        )
+
+        logging.debug(
+            'update clusterhost %s state %s',
+            hostid, clusterhost.state)
 
     @classmethod
     def _update_cluster_progress(cls, clusterid):
@@ -351,18 +376,41 @@ class AdapterMatcher(object):
         cluster_progress = 0.0
         cluster_messages = {}
         cluster_severities = set([])
+        cluster_installing_hosts = 0
+        cluster_failed_hosts = 0
         hostids = []
-        for host in cluster.hosts:
+        clusterhosts = cluster.clusterhosts
+        hosts = [clusterhost.host for clusterhost in clusterhosts]
+        for host in hosts:
             if host.state:
                 hostids.append(host.id)
-                cluster_progress += host.state.progress
+                cluster_progress += host.state.percentage
                 if host.state.message:
-                    cluster_messages[host.hostname] = host.state.message
+                    cluster_messages[host.name] = host.state.message
 
                 if host.state.severity:
                     cluster_severities.add(host.state.severity)
 
-        cluster.state.progress = cluster_progress / len(hostids)
+        for clusterhost in clusterhosts:
+            if clusterhost.state:
+                cluster_progress += clusterhost.state.percentage
+                if clusterhost.state.state == 'INSTALLING':
+                    cluster_installing_hosts += 1
+                elif (clusterhost.host.state.state not in
+                        ['ERROR', 'INITIALIZED'] and
+                        clusterhost.state.state != 'ERORR'):
+                    cluster_installing_hosts += 1
+                elif (clusterhost.state.state == 'ERROR' or
+                        clusterhost.host.state.state == 'ERROR'):
+                    cluster_failed_hosts += 1
+
+            if clusterhost.state.message:
+                cluster_messages[host.name] = clusterhost.state.message
+
+            if clusterhost.state.severity:
+                cluster_severities.add(clusterhost.state.severity)
+
+        cluster.state.percentage = cluster_progress / (len(hostids) * 2)
         cluster.state.message = '\n'.join(
             [
                 '%s: %s' % (hostname, message)
@@ -374,7 +422,7 @@ class AdapterMatcher(object):
                 cluster.state.severity = severity
                 break
 
-        if cluster.state.progress >= 1.0:
+        if cluster.state.percentage >= 1.0:
             cluster.state.state = 'READY'
 
         if cluster.state.severity == 'ERROR':
@@ -383,85 +431,92 @@ class AdapterMatcher(object):
         if cluster.state.state != 'INSTALLING':
             cluster.mutable = True
 
+        cluster.state.installing_hosts = cluster_installing_hosts
+        cluster.state.total_hosts = len(clusterhosts)
+        cluster.state.failed_hosts = cluster_failed_hosts
+        cluster.state.completed_hosts = cluster.state.total_hosts - \
+            cluster.state.installing_hosts - cluster.state.failed_hosts
+
         logging.debug(
             'update cluster %s state %s',
             clusterid, cluster.state)
 
     def update_progress(self, clusterid, hostids):
-        """Update cluster progress and hosts progresses.
 
-        :param clusterid: the id of the cluster to update.
-        :type clusterid: int.
-        :param hostids: the ids of the hosts to update.
-        :type hostids: list of int.
-        """
-        logging.debug('printing os_matcher %s', self.__str__())
-        host_os_progresses = {}
-        host_package_progresses = {}
+        host_progresses = {}
+        clusterhost_progresses = {}
+        updater = user_api.get_user_object(
+            'admin@abc.com',
+            expire_timestamp=datetime.datetime.now() +
+            datetime.timedelta(seconds=10000))
         with database.session():
             for hostid in hostids:
-                host_overall_state = (
-                    self._get_host_progress(hostid))
-                logging.debug('host overall state: %s', host_overall_state)
-                fullname, host_state, host_os_progress = (
-                    host_overall_state['os'])
-                _, _, host_package_progress = host_overall_state['package']
-                if (not fullname or
-                        not host_os_progress or
-                        not host_package_progress):
+                host_name, host_state, host_progress = \
+                    self._get_host_progress(hostid)
+                _, clusterhost_state, clusterhost_progress = \
+                    self._get_clusterhost_progress(hostid)
+
+                if (not host_name or
+                        not host_progress or
+                        not clusterhost_progress):
                     logging.error(
                         'nothing to update host %s',
-                        fullname)
+                        host_name)
                     continue
 
-                logging.debug('got host %s state %s os_progress %s'
-                              'package_progress %s',
-                              fullname,
-                              host_state, host_os_progress,
-                              host_package_progress)
+                logging.debug('got host %s host_state: %s '
+                              'host_progress: %s, '
+                              'clusterhost_state: %s, '
+                              'clusterhost_progress: %s ',
+                              host_name,
+                              host_state,
+                              host_progress,
+                              clusterhost_state,
+                              clusterhost_progress)
 
-                host_os_progresses[hostid] = (
-                    fullname, host_state, host_os_progress)
-                host_package_progresses[hostid] = (
-                    fullname, host_state, host_package_progress)
+                host_progresses[hostid] = (
+                    host_name, host_state, host_progress)
+                clusterhost_progresses[hostid] = (
+                    host_name, clusterhost_state, clusterhost_progress)
 
-        for hostid, host_value in host_os_progresses.items():
-            fullname, host_state, host_os_progress = host_value
-            if host_state == 'INSTALLING' and host_os_progress.progress < 1.0:
-                self.os_matcher_.update_progress(
-                    fullname, host_os_progress)
-            else:
-                logging.error(
-                    'there is no need to update host %s '
-                    'OS progress: state %s os_progress %s',
-                    fullname, host_state, host_os_progress)
+            for hostid, host_value in host_progresses.items():
+                host_name, host_state, host_progress = host_value
+                if (host_state == 'INSTALLING' and
+                        host_progress.progress < 1.0):
+                    self.os_matcher_.update_progress(
+                        host_name, host_progress)
+                else:
+                    logging.error(
+                        'there is no need to update host %s '
+                        'progress: state %s progress %s',
+                        host_name, host_state, host_progress)
 
-        for hostid, host_value in host_package_progresses.items():
-            fullname, host_state, host_package_progress = host_value
-            if (host_state == 'INSTALLING' and
-                    host_package_progress.progress < 1.0):
-                self.package_matcher_.update_progress(
-                    fullname, host_package_progress)
-            else:
-                logging.error(
-                    'there is no need to update host %s '
-                    'Package progress: state %s package_progress %s',
-                    fullname, host_state, host_package_progress)
+            for hostid, clusterhost_value in clusterhost_progresses.items():
+                host_name, clusterhost_state, clusterhost_progress = \
+                    clusterhost_value
+                if (clusterhost_state == 'INSTALLING' and
+                        clusterhost_progress.progress < 1.0):
+                    self.package_matcher_.update_progress(
+                        host_name, clusterhost_progress)
+                else:
+                    logging.error(
+                        'no need  to update clusterhost %s'
+                        'progress: state %s progress %s',
+                        host_name, clusterhost_state, clusterhost_progress)
 
-        with database.session():
             for hostid in hostids:
-                if hostid not in host_os_progresses:
+                if hostid not in host_progresses:
+                    continue
+                if hostid not in clusterhost_progresses:
                     continue
 
-                if hostid not in host_package_progresses:
-                    continue
-
-                _, _, host_os_progress = host_os_progresses[hostid]
-                _, _, host_package_progress = host_package_progresses[hostid]
-                self._update_host_os_progress(hostid, host_os_progress)
-                self._update_host_package_progress(
+                _, _, host_progress = host_progresses[hostid]
+                _, _, clusterhost_progress = clusterhost_progresses[hostid]
+                self._update_host_progress(hostid, host_progress, updater)
+                self._update_clusterhost_progress(
                     hostid,
-                    host_package_progress
+                    clusterhost_progress,
+                    updater
                 )
 
             self._update_cluster_progress(clusterid)

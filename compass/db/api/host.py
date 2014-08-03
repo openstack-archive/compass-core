@@ -589,7 +589,7 @@ def get_host_state(session, getter, host_id, **kwargs):
 
 
 @utils.supported_filters(UPDATED_STATE_FIELDS)
-@database.run_in_session()
+## @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_HOST_STATE
 )

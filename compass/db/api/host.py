@@ -324,7 +324,7 @@ def update_host_deployed_config(session, updater, host_id, **kwargs):
     permission.PERMISSION_ADD_HOST_CONFIG
 )
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-def update_host_config_internal(session, updater, host, **kwargs):
+def _update_host_config(session, updater, host, **kwargs):
     """Update host config."""
     is_host_editable(session, host, updater)
     return utils.update_db_object(session, host, **kwargs)
@@ -347,7 +347,7 @@ def update_host_config(session, updater, host_id, **kwargs):
         put_os_config=os_config_validates,
     )
     def update_config_internal(host, **in_kwargs):
-        return update_host_config_internal(
+        return _update_host_config(
             session, updater, host, **kwargs
         )
 
@@ -372,12 +372,12 @@ def patch_host_config(session, updater, host_id, **kwargs):
     @utils.output_validates(
         os_config=os_config_validates,
     )
-    def update_config_internal(host, **in_kwargs):
-        return update_host_config_internal(
+    def patch_config_internal(host, **in_kwargs):
+        return _update_host_config(
             session, updater, host, **in_kwargs
         )
 
-    return update_config_internal(
+    return patch_config_internal(
         session, updater, host, **kwargs
     )
 
@@ -395,7 +395,7 @@ def del_host_config(session, deleter, host_id):
     )
     is_host_editable(session, host, deleter)
     return utils.update_db_object(
-        session, host, os_config={}
+        session, host, os_config={}, config_validated=False
     )
 
 

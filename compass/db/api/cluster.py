@@ -1112,12 +1112,6 @@ def deploy_cluster(
         session, cluster.state, state='INITIALIZED'
     )
     for clusterhost in clusterhosts:
-        if cluster.distributed_system:
-            is_clusterhost_validated(session, clusterhost)
-            utils.update_db_object(
-                session, clusterhost.state,
-                state='INITIALIZED'
-            )
         host = clusterhost.host
         if host_api.is_host_editable(
             session, host, deployer,
@@ -1128,6 +1122,12 @@ def deploy_cluster(
             )
             utils.update_db_object(
                 session, host.state, state='INITIALIZED'
+            )
+        if cluster.distributed_system:
+            is_clusterhost_validated(session, clusterhost)
+            utils.update_db_object(
+                session, clusterhost.state,
+                state='INITIALIZED'
             )
 
     celery_client.celery.send_task(
@@ -1208,7 +1208,7 @@ def update_cluster_host_state(
 @utils.supported_filters(
     optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS
 )
-## @database.run_in_session()
+@database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_CLUSTERHOST_STATE
 )
@@ -1227,7 +1227,7 @@ def update_clusterhost_state(
 @utils.supported_filters(
     optional_support_keys=UPDATED_CLUSTER_STATE_FIELDS
 )
-## @database.run_in_session()
+@database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_CLUSTER_STATE
 )

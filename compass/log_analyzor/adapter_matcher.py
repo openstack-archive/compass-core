@@ -200,7 +200,7 @@ class AdapterMatcher(object):
         session = database.current_session()
         clusterhost = session.query(
             ClusterHost
-        ).filter_by(id=hostid).first()
+        ).filter_by(host_id=hostid).first()
         if not clusterhost:
             logging.error(
                 'there is no clusterhost for %s in ClusterHost',
@@ -226,7 +226,7 @@ class AdapterMatcher(object):
     def _update_host_progress(cls, hostid, host_progress, updater):
         """Updates host progress to db."""
 
-        state = ''
+        state = 'INSTALLING'
         with database.session() as session:
             host = session.query(
                 Host).filter_by(id=hostid).first()
@@ -265,13 +265,13 @@ class AdapterMatcher(object):
             if host.state.severity == 'ERROR':
                 state = 'ERROR'
 
+        logging.info('update host state by %s', updater)
         host_api.update_host_state(
             updater,
             hostid,
             state=state,
             percentage=host_progress.progress,
-            message=host_progress.message,
-            id=hostid
+            message=host_progress.message
         )
 
         logging.debug(
@@ -281,15 +281,16 @@ class AdapterMatcher(object):
     @classmethod
     def _update_clusterhost_progress(
         cls,
+        clusterid,
         hostid,
         clusterhost_progress,
         updater
     ):
 
-        clusterhost_state = ''
+        clusterhost_state = 'INSTALLING'
         with database.session() as session:
             clusterhost = session.query(
-                ClusterHost).filter_by(id=hostid).first()
+                ClusterHost).filter_by(host_id=hostid).first()
 
             if not clusterhost.state:
                 logging.error(
@@ -322,8 +323,10 @@ class AdapterMatcher(object):
             if clusterhost.state.severity == 'ERROR':
                 clusterhost_state = 'ERROR'
 
-        cluster_api.update_clusterhost_state(
+        logging.info('updatge clusterhost state by %s', updater)
+        cluster_api.update_cluster_host_state(
             updater,
+            clusterid,
             hostid,
             state=clusterhost_state,
             percentage=clusterhost_progress.progress,
@@ -410,13 +413,10 @@ class AdapterMatcher(object):
                 break
 
         if cluster.state.percentage >= 1.0:
-            cluster.state.state = 'READY'
+            cluster.state.state = 'SUCCESSFUL'
 
         if cluster.state.severity == 'ERROR':
             cluster.state.state = 'ERROR'
-
-        if cluster.state.state != 'INSTALLING':
-            cluster.mutable = True
 
         cluster.state.installing_hosts = cluster_installing_hosts
         cluster.state.total_hosts = len(clusterhosts)
@@ -433,7 +433,9 @@ class AdapterMatcher(object):
         host_progresses = {}
         clusterhost_progresses = {}
         updater = user_api.get_user_object(
-            'admin@abc.com'
+            'admin@abc.com',
+            expire_timestamp=datetime.datetime.now() +
+            datetime.timedelta(seconds=10000)
         )
         with database.session():
             for hostid in hostids:
@@ -500,6 +502,7 @@ class AdapterMatcher(object):
             _, _, clusterhost_progress = clusterhost_progresses[hostid]
             self._update_host_progress(hostid, host_progress, updater)
             self._update_clusterhost_progress(
+                clusterid,
                 hostid,
                 clusterhost_progress,
                 updater

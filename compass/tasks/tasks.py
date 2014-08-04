@@ -46,6 +46,14 @@ def global_celery_init(**_):
     metadata_api.load_metadatas()
 
 
+@setup_logging.connect()
+def tasks_setup_logging(**_):
+    """Setup logging options from compass setting."""
+    flags.init()
+    flags.OPTIONS.logfile = setting.CELERY_LOGFILE
+    logsetting.init()
+
+
 @celery.task(name='compass.tasks.pollswitch')
 def pollswitch(
     poller_email, ip_addr, credentials,
@@ -128,6 +136,7 @@ def update_clusters_progress(cluster_hosts):
     :param cluster_hosts: the cluster and hosts of each cluster to update.
     :type cluster_hosts: dict of int to list of int
     """
+    logging.info('update_clusters_progress: %s', cluster_hosts)
     try:
         update_progress.update_progress(cluster_hosts)
     except Exception as error:

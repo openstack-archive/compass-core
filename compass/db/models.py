@@ -173,7 +173,7 @@ class FieldMixin(HelperMixin):
     field_type_data = Column(
         'field_type',
         Enum('basestring', 'int', 'float', 'list', 'bool'),
-        default='basestring'
+        ColumnDefault('basestring')
     )
     display_type = Column(
         Enum(
@@ -181,7 +181,7 @@ class FieldMixin(HelperMixin):
             'multiselect', 'combobox', 'text',
             'multitext', 'password'
         ),
-        default='text'
+        ColumnDefault('text')
     )
     validator_data = Column('validator', Text)
     js_validator = Column(Text)
@@ -270,13 +270,13 @@ class StateMixin(TimestampMixin, HelperMixin):
             'UNINITIALIZED', 'INITIALIZED',
             'INSTALLING', 'SUCCESSFUL', 'ERROR'
         ),
-        default='UNINITIIALIZED'
+        ColumnDefault('UNINITIALIZED')
     )
     percentage = Column(Float, default=0.0)
     message = Column(Text, default='')
     severity = Column(
         Enum('INFO', 'WARNING', 'ERROR'),
-        default='INFO'
+        ColumnDefault('INFO')
     )
 
     def update(self):
@@ -391,6 +391,21 @@ class ClusterHostState(BASE, StateMixin):
         ForeignKey('clusterhost.id', onupdate='CASCADE', ondelete='CASCADE'),
         primary_key=True
     )
+
+    def update(self):
+        host_state = self.host.state
+        if self.state == 'INITIALIZED':
+            if host_state.state == 'UNINITIALIZED':
+                host_state.state = 'INITIALIZED'
+                host_state.update()
+        elif self.state == 'INSTALLING':
+            if host_state.state in ['UNINITIALIZED', 'INITIALIZED']:
+                host_state.state = 'INSTALLING'
+                host_state.update()
+        elif self.state == 'SUCCESSFUL':
+            host_state.state = 'SUCCESSFUL'
+            host_state.update()
+        super(ClusterHostState, self).update()
 
 
 class ClusterHost(BASE, TimestampMixin, HelperMixin):
@@ -670,6 +685,13 @@ class Host(BASE, TimestampMixin, HelperMixin):
     def update(self):
         if self.reinstall_os:
             self.state = HostState()
+            for clusterhost in self.clusterhosts:
+                clusterhost_state = clusterhost.state
+                if clusterhost_state.state in [
+                    'INSTALLING', 'SUCCESSFUL', 'ERROR'
+                ]:
+                    clusterhost_state.state = 'INITIALIZED'
+                    clusterhost_state.update()
         os = self.os
         if os:
             self.os_name = os.name
@@ -1345,7 +1367,7 @@ class Switch(BASE, HelperMixin, TimestampMixin):
     state = Column(Enum('initialized', 'unreachable', 'notsupported',
                         'repolling', 'error', 'under_monitoring',
                         name='switch_state'),
-                   default='initialized')
+                   ColumnDefault('initialized'))
     filters = Column(JSONEncoded, default=[])
     switch_machines = relationship(
         SwitchMachine,

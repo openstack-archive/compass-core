@@ -84,7 +84,7 @@ RESP_STATE_FIELDS = [
     'id', 'state', 'percentage', 'message'
 ]
 UPDATED_STATE_FIELDS = [
-    'id', 'state', 'percentage', 'message'
+    'state', 'percentage', 'message'
 ]
 
 
@@ -588,8 +588,8 @@ def get_host_state(session, getter, host_id, **kwargs):
     ).state_dict()
 
 
-@utils.supported_filters(UPDATED_STATE_FIELDS)
-## @database.run_in_session()
+@utils.supported_filters(optional_support_keys=UPDATED_STATE_FIELDS)
+@database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_HOST_STATE
 )

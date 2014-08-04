@@ -293,6 +293,19 @@ def get_user(
     )
 
 
+@utils.supported_filters()
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_FIELDS)
+def get_current_user(
+    session, getter,
+    exception_when_missing=True, **kwargs
+):
+    """get field dict of a user."""
+    return utils.get_db_object(
+        session, models.User, exception_when_missing, id=getter.id
+    )
+
+
 @utils.supported_filters(
     optional_support_keys=SUPPORTED_FIELDS
 )

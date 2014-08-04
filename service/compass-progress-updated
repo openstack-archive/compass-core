@@ -26,7 +26,7 @@ SUSE=/etc/SuSE-release
 PYTHON=$Python
 
 if [ -f $DEBIAN ]; then
-    . /lib/lsb/init_functions
+    . /lib/lsb/init-functions
 elif [ -f $SUSE -a -r /etc/rc.status ]; then
     . /etc/rc.status
 else

@@ -403,7 +403,7 @@ OS_ADAPTER_CONFIGURATIONS = [
 
 PACKAGE_ADAPTER_CONFIGURATIONS = [
     PackageMatcher(
-        package_installer_name='chef',
+        package_installer_name='chef.*',
         target_system='openstack',
         item_matcher=PACKAGE_INSTALLER_CONFIGURATIONS['openstack'],
         min_progress=0.0,

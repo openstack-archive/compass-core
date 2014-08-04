@@ -111,7 +111,7 @@ class PackageMatcher(object):
                                  self.__class__.__name__,
                                  min_progress, max_progress))
 
-        self.name_ = package_installer_name
+        self.name_ = re.compile(package_installer_name)
         self.target_system_ = target_system
         self.matcher_ = item_matcher
         self.matcher_.update_progress_range(min_progress, max_progress)
@@ -124,7 +124,7 @@ class PackageMatcher(object):
     def match(self, package_installer_name, target_system):
         """Check if the package matcher is acceptable."""
         return all([
-            self.name_ == package_installer_name,
+            self.name_.match(package_installer_name),
             self.target_system_ == target_system])
 
     def update_progress(self, fullname, progress):
@@ -226,65 +226,57 @@ class AdapterMatcher(object):
     def _update_host_progress(cls, hostid, host_progress, updater):
         """Updates host progress to db."""
 
-        session = database.current_session()
-        host = session.query(
-            Host).filter_by(id=hostid).first()
-        if not host:
-            logging.error(
-                'there is no host for %s in table Host',
-                hostid
-            )
+        state = ''
+        with database.session() as session:
+            host = session.query(
+                Host).filter_by(id=hostid).first()
+            if not host:
+                logging.error(
+                    'there is no host for %s in table Host',
+                    hostid
+                )
 
-        if not host.state:
-            logging.error(
-                'there is no related HostState for %s',
-                hostid
-            )
+            if not host.state:
+                logging.error(
+                    'there is no related HostState for %s',
+                    hostid
+                )
 
-        if host.state.percentage > host_progress.progress:
-            logging.error(
-                'host %s progress has not been increased'
-                ' from %s to $s',
-                hostid, host.state, host_progress
-            )
-            return
+            if host.state.percentage > host_progress.progress:
+                logging.error(
+                    'host %s progress has not been increased'
+                    ' from %s to $s',
+                    hostid, host.state, host_progress
+                )
+                return
+            if (
+                host.state.percentage == host_progress.progress and
+                host.state.message == host_progress.message
+            ):
+                logging.info(
+                    'host %s update ignored due to same progress'
+                    'in database',
+                    hostid
+                )
+                return
 
-        if (host.state.percentage == host_progress.progress and
-                host.state.message == host_progress.message):
-            logging.info(
-                'host %s update ignored due to same progress'
-                'in database',
-                hostid
-            )
-            return
-
-        host.state.percentage = host_progress.progress
-        host.state.message = host_progress.message
-        if host_progress.severity:
-            host.state.severity = host_progress.severity
-
-        if host.state.percentage >= 1.0:
-            host.state.state = 'SUCCESSFUL'
-
-        if host.state.severity == 'ERROR':
-            host.state.state = 'ERROR'
-
-        if host.state.state != 'INSTALLING':
-            host.mutable = True
+            if host.state.percentage >= 1.0:
+                state = 'SUCCESSFUL'
+            if host.state.severity == 'ERROR':
+                state = 'ERROR'
 
         host_api.update_host_state(
-            session,
             updater,
             hostid,
-            state=host.state.state,
-            percentage=host.state.percentage,
-            message=host.state.message,
+            state=state,
+            percentage=host_progress.progress,
+            message=host_progress.message,
             id=hostid
         )
 
         logging.debug(
             'update host %s state %s',
-            hostid, host.state)
+            hostid, state)
 
     @classmethod
     def _update_clusterhost_progress(
@@ -294,58 +286,53 @@ class AdapterMatcher(object):
         updater
     ):
 
-        session = database.current_session()
-        clusterhost = session.query(
-            ClusterHost).filter_by(id=hostid).first()
+        clusterhost_state = ''
+        with database.session() as session:
+            clusterhost = session.query(
+                ClusterHost).filter_by(id=hostid).first()
 
-        if not clusterhost.state:
-            logging.error(
-                'ClusterHost state not found for %s',
-                hostid)
+            if not clusterhost.state:
+                logging.error(
+                    'ClusterHost state not found for %s',
+                    hostid)
 
-        if clusterhost.state.percentage > clusterhost_progress.progress:
-            logging.error(
-                'clusterhost %s state has not been increased'
-                ' from %s to %s',
-                hostid, clusterhost.state, clusterhost_progress
-            )
-            return
+            if clusterhost.state.percentage > clusterhost_progress.progress:
+                logging.error(
+                    'clusterhost %s state has not been increased'
+                    ' from %s to %s',
+                    hostid, clusterhost.state, clusterhost_progress
+                )
+                return
 
-        if (clusterhost.state.percentage == clusterhost_progress.progress and
-                clusterhost.state.message == clusterhost_progress.message):
-            logging.info(
-                'clusterhost %s update ignored due to same progress'
-                'in database',
-                hostid
-            )
-            return
+            if (
+                clusterhost.state.percentage ==
+                clusterhost_progress.progress and
+                clusterhost.state.message == clusterhost_progress.message
+            ):
+                logging.info(
+                    'clusterhost %s update ignored due to same progress'
+                    'in database',
+                    hostid
+                )
+                return
 
-        clusterhost.state.percentage = clusterhost_progress.progress
-        clusterhost.state.message = clusterhost_progress.message
-        if clusterhost_progress.severity:
-            clusterhost.state.severity = clusterhost_progress.severity
+            if clusterhost.state.percentage >= 1.0:
+                clusterhost_state = 'SUCCESSFUL'
 
-        if clusterhost.state.percentage >= 1.0:
-            clusterhost.state.state = 'SUCCESSFUL'
-
-        if clusterhost.state.severity == 'ERROR':
-            clusterhost.state.state = 'ERROR'
-
-        if clusterhost.state.state != 'INSTALLING':
-            clusterhost.mutable = True
+            if clusterhost.state.severity == 'ERROR':
+                clusterhost_state = 'ERROR'
 
         cluster_api.update_clusterhost_state(
-            session,
             updater,
             hostid,
-            state=clusterhost.state.state,
-            percentage=clusterhost.state.percentage,
-            message=clusterhost.state.message
+            state=clusterhost_state,
+            percentage=clusterhost_progress.progress,
+            message=clusterhost_progress.message
         )
 
         logging.debug(
             'update clusterhost %s state %s',
-            hostid, clusterhost.state)
+            hostid, clusterhost_state)
 
     @classmethod
     def _update_cluster_progress(cls, clusterid):
@@ -397,11 +384,11 @@ class AdapterMatcher(object):
                 if clusterhost.state.state == 'INSTALLING':
                     cluster_installing_hosts += 1
                 elif (clusterhost.host.state.state not in
-                        ['ERROR', 'INITIALIZED'] and
-                        clusterhost.state.state != 'ERORR'):
+                      ['ERROR', 'INITIALIZED'] and
+                      clusterhost.state.state != 'ERORR'):
                     cluster_installing_hosts += 1
                 elif (clusterhost.state.state == 'ERROR' or
-                        clusterhost.host.state.state == 'ERROR'):
+                      clusterhost.host.state.state == 'ERROR'):
                     cluster_failed_hosts += 1
 
             if clusterhost.state.message:
@@ -446,9 +433,8 @@ class AdapterMatcher(object):
         host_progresses = {}
         clusterhost_progresses = {}
         updater = user_api.get_user_object(
-            'admin@abc.com',
-            expire_timestamp=datetime.datetime.now() +
-            datetime.timedelta(seconds=10000))
+            'admin@abc.com'
+        )
         with database.session():
             for hostid in hostids:
                 host_name, host_state, host_progress = \
@@ -504,19 +490,20 @@ class AdapterMatcher(object):
                         'progress: state %s progress %s',
                         host_name, clusterhost_state, clusterhost_progress)
 
-            for hostid in hostids:
-                if hostid not in host_progresses:
-                    continue
-                if hostid not in clusterhost_progresses:
-                    continue
+        for hostid in hostids:
+            if hostid not in host_progresses:
+                continue
+            if hostid not in clusterhost_progresses:
+                continue
 
-                _, _, host_progress = host_progresses[hostid]
-                _, _, clusterhost_progress = clusterhost_progresses[hostid]
-                self._update_host_progress(hostid, host_progress, updater)
-                self._update_clusterhost_progress(
-                    hostid,
-                    clusterhost_progress,
-                    updater
-                )
+            _, _, host_progress = host_progresses[hostid]
+            _, _, clusterhost_progress = clusterhost_progresses[hostid]
+            self._update_host_progress(hostid, host_progress, updater)
+            self._update_clusterhost_progress(
+                hostid,
+                clusterhost_progress,
+                updater
+            )
 
+        with database.session():
             self._update_cluster_progress(clusterid)

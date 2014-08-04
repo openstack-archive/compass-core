@@ -173,7 +173,7 @@ class FieldMixin(HelperMixin):
     field_type_data = Column(
         'field_type',
         Enum('basestring', 'int', 'float', 'list', 'bool'),
-        default='basestring'
+        ColumnDefault('basestring')
     )
     display_type = Column(
         Enum(
@@ -181,7 +181,7 @@ class FieldMixin(HelperMixin):
             'multiselect', 'combobox', 'text',
             'multitext', 'password'
         ),
-        default='text'
+        ColumnDefault('text')
     )
     validator_data = Column('validator', Text)
     js_validator = Column(Text)
@@ -270,13 +270,13 @@ class StateMixin(TimestampMixin, HelperMixin):
             'UNINITIALIZED', 'INITIALIZED',
             'INSTALLING', 'SUCCESSFUL', 'ERROR'
         ),
-        default='UNINITIIALIZED'
+        ColumnDefault('UNINITIALIZED')
     )
     percentage = Column(Float, default=0.0)
     message = Column(Text, default='')
     severity = Column(
         Enum('INFO', 'WARNING', 'ERROR'),
-        default='INFO'
+        ColumnDefault('INFO')
     )
 
     def update(self):
@@ -284,12 +284,13 @@ class StateMixin(TimestampMixin, HelperMixin):
             self.percentage = 0.0
             self.severity = 'INFO'
             self.message = ''
-        if self.severity == 'ERROR':
-            self.state = 'ERROR'
+        if self.state == 'INSTALLING':
+            if self.severity == 'ERROR':
+                self.state = 'ERROR'
+            elif self.percentage >= 1.0:
+                self.state = 'SUCCESSFUL'
+                self.percentage = 1.0
         if self.state == 'SUCCESSFUL':
-            self.percentage = 1.0
-        if self.percentage >= 1.0:
-            self.state = 'SUCCESSFUL'
             self.percentage = 1.0
         super(StateMixin, self).update()
 
@@ -392,6 +393,18 @@ class ClusterHostState(BASE, StateMixin):
         primary_key=True
     )
 
+    def update(self):
+        host_state = self.host.state
+        if self.state == 'INITIALIZED':
+            if host_state.state in ['UNINITIALIZED']:
+                host_state.state = 'INITIALIZED'
+                host_state.update()
+        elif self.state == 'INSTALLING':
+            if host_state.state in ['UNINITIALIZED', 'INITIALIZED']:
+                host_state.state = 'INSTALLING'
+                host_state.update()
+        super(ClusterHostState, self).update()
+
 
 class ClusterHost(BASE, TimestampMixin, HelperMixin):
     """ClusterHost table."""
@@ -429,6 +442,15 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         self.state = ClusterHostState()
         super(ClusterHost, self).__init__(**kwargs)
 
+    def update(self):
+        if self.host.reinstall_os:
+            if self.state in ['SUCCESSFUL', 'ERROR']:
+                if self.config_validated:
+                    self.state.state = 'INITIALIZED'
+                else:
+                    self.state.state = 'UNINITIALIZED'
+                self.state.update()
+
     @property
     def name(self):
         return '%s.%s' % (self.host.name, self.cluster.name)
@@ -440,6 +462,10 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     @patched_package_config.setter
     def patched_package_config(self, value):
         self.package_config = util.merge_dict(dict(self.package_config), value)
+        logging.info(
+            'patch clusterhost %s package config: %s',
+            self.id, value
+        )
         self.config_validated = False
 
     @property
@@ -451,6 +477,10 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         package_config = dict(self.package_config)
         package_config.update(value)
         self.package_config = package_config
+        logging.info(
+            'put clusterhost %s package config: %s',
+            self.id, value
+        )
         self.config_validated = False
 
     @property
@@ -460,7 +490,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     @patched_os_config.setter
     def patched_os_config(self, value):
         host = self.host
-        host.os_config = util.merge_dict(dict(host.os_config), value)
+        host.patched_os_config = value
 
     @property
     def put_os_config(self):
@@ -469,9 +499,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     @put_os_config.setter
     def put_os_config(self, value):
         host = self.host
-        os_config = dict(host.os_config)
-        os_config.update(value)
-        host.os_config = os_config
+        host.put_os_config = value
 
     @hybrid_property
     def distributed_system_name(self):
@@ -586,6 +614,26 @@ class HostState(BASE, StateMixin):
         host = self.host
         if self.state == 'INSTALLING':
             host.reinstall_os = False
+            for clusterhost in self.host.clusterhosts:
+                if clusterhost.state in [
+                    'SUCCESSFUL', 'ERROR'
+                ]:
+                    clusterhost.state = 'INSTALLING'
+                    clusterhost.state.update()
+        elif self.state == 'UNINITIALIZED':
+            for clusterhost in self.host.clusterhosts:
+                if clusterhost.state in [
+                    'INITIALIZED', 'INSTALLING', 'SUCCESSFUL', 'ERROR'
+                ]:
+                    clusterhost.state = 'UNINITIALIZED'
+                    clusterhost.state.update()
+        elif self.state == 'INITIALIZED':
+            for clusterhost in self.host.clusterhosts:
+                if clusterhost.state in [
+                    'INSTALLING', 'SUCCESSFUL', 'ERROR'
+                ]:
+                    clusterhost.state = 'INITIALIZED'
+                    clusterhost.state.update()
         super(HostState, self).update()
 
 
@@ -643,6 +691,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
     @patched_os_config.setter
     def patched_os_config(self, value):
         self.os_config = util.merge_dict(dict(self.os_config), value)
+        logging.info('patch host os config in %s: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -654,11 +703,11 @@ class Host(BASE, TimestampMixin, HelperMixin):
         os_config = dict(self.os_config)
         os_config.update(value)
         self.os_config = os_config
+        logging.info('put host os config in %s: %s', self.id, value)
         self.config_validated = False
 
     def __init__(self, id, **kwargs):
         self.id = id
-        self.name = str(self.id)
         self.state = HostState()
         super(Host, self).__init__(**kwargs)
 
@@ -669,7 +718,12 @@ class Host(BASE, TimestampMixin, HelperMixin):
 
     def update(self):
         if self.reinstall_os:
-            self.state = HostState()
+            if self.state in ['SUCCESSFUL', 'ERROR']:
+                if self.config_validated:
+                    self.state.state = 'INITIALIZED'
+                else:
+                    self.state.state = 'UNINITIALIZED'
+                self.state.update()
         os = self.os
         if os:
             self.os_name = os.name
@@ -864,7 +918,12 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
 
     def update(self):
         if self.reinstall_distributed_system:
-            self.state = ClusterState()
+            if self.state in ['SUCCESSFUL', 'ERROR']:
+                if self.config_validated:
+                    self.state.state = 'INITIALIZED'
+                else:
+                    self.state.state = 'UNINITIALIZED'
+                self.state.update()
         os = self.os
         if os:
             self.os_name = os.name
@@ -876,14 +935,10 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
             self.adapter_name = adapter.name
             self.distributed_system = adapter.adapter_distributed_system
             self.distributed_system_name = self.distributed_system.name
-            self.put_package_config = {
-                'roles': [role.name for role in adapter.roles]
-            }
         else:
             self.adapter_name = None
             self.distributed_system = None
             self.distributed_system_name = None
-            self.package_config = {}
         super(Cluster, self).update()
 
     def validate(self):
@@ -926,6 +981,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     @patched_os_config.setter
     def patched_os_config(self, value):
         self.os_config = util.merge_dict(dict(self.os_config), value)
+        logging.info('patch cluster %s os config: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -937,6 +993,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         os_config = dict(self.os_config)
         os_config.update(value)
         self.os_config = os_config
+        logging.info('put cluster %s os config: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -947,6 +1004,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     def patched_package_config(self, value):
         package_config = dict(self.package_config)
         self.package_config = util.merge_dict(package_config, value)
+        logging.info('patch cluster %s package config: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -958,6 +1016,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         package_config = dict(self.package_config)
         package_config.update(value)
         self.package_config = package_config
+        logging.info('put cluster %s package config: %s', self.id, value)
         self.config_validated = False
 
     @hybrid_property
@@ -1345,7 +1404,7 @@ class Switch(BASE, HelperMixin, TimestampMixin):
     state = Column(Enum('initialized', 'unreachable', 'notsupported',
                         'repolling', 'error', 'under_monitoring',
                         name='switch_state'),
-                   default='initialized')
+                   ColumnDefault('initialized'))
     filters = Column(JSONEncoded, default=[])
     switch_machines = relationship(
         SwitchMachine,

@@ -88,16 +88,13 @@ def update_progress(cluster_hosts):
             clusterid = cluster.id
 
             adapter = cluster.adapter
-            os_installer = adapter.os_installer
+            os_installer = adapter.adapter_os_installer
             os_installer_name = os_installer.instance_name
-            package_installer = adapter.package_installer
+            package_installer = adapter.adapter_package_installer
             package_installer_name = package_installer.instance_name
 
-            distributed_system = cluster.distributed_system
-            distributed_system_name = distributed_system.name
-
-            host = session.query(models.Host).first()
-            os_name = host.os_name
+            distributed_system_name = cluster.distributed_system_name
+            os_name = cluster.os_name
             os_names[clusterid] = os_name
             distributed_systems[clusterid] = distributed_system_name
 

@@ -238,6 +238,17 @@ def show_user(user_id):
     )
 
 
+@app.route("/current-user", methods=['GET'])
+@log_user_action
+@login_required
+def show_current_user():
+    """Get user."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200, user_api.get_current_user(current_user, **data)
+    )
+
+
 @app.route("/users/<int:user_id>", methods=['PUT'])
 @log_user_action
 @login_required

@@ -4,6 +4,7 @@ flask-restful
 flask-sqlalchemy
 flask-login
 celery
+cheetah
 netaddr
 paramiko==1.7.5
 simplejson

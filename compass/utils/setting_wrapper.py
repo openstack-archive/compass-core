@@ -70,6 +70,7 @@ OS_FIELD_DIR = '/etc/compass/os_field'
 PACKAGE_FIELD_DIR = '/etc/compass/package_field'
 ADAPTER_ROLE_DIR = '/etc/compass/role'
 VALIDATOR_DIR = '/etc/compass/validator'
+TMPL_DIR = '/etc/compass/templates'
 if (
     'COMPASS_IGNORE_SETTING' in os.environ and
     os.environ['COMPASS_IGNORE_SETTING']

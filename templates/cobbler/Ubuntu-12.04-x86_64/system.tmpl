@@ -1,0 +1,36 @@
+{
+    "name": "$host.fullname",
+    "hostname": "$host.hostname",
+    "profile": "$host.profile",
+    "gateway": "$host.gateway",
+    "name_servers": "$host.name_servers",
+    "name_servers_search": "$host.search_path",
+    "proxy": "$host.http_proxy",
+    "modify_interface":
+        #import simplejson
+        #set interfaces = $host.networks.interfaces
+        #set rekeyed = {}
+        #for $nic, $val in $interfaces.iteritems():
+            #set $rekeyed = { "ipaddress-vnet0" : $val.ip, "netmask-vnet0": $val.netmask, "management-vnet0": $val.is_mgmt, "static-vnet0" : True }
+        #if $val.is_mgmt:
+          #set $rekeyed["macaddress-vnet0"] = $host.mac_address
+          #set $rekeyed["dnsname-vnet0"] = $host.dns
+            #end if
+        #end for
+        #set $str=simplejson.dumps($rekeyed, encoding='utf-8')
+        $str
+    ,
+    "ksmeta":{
+        "username": "$host.server_credentials.username",
+        #import crypt
+        #set $password = crypt.crypt($host.server_credentials.password, "az")
+        "password": "$password",
+        #set f=[(k + ' ' + v['vol_percentage'] or v['vol_size']) for k,v in $host.partition.iteritems()]
+        #set $partition_config = '; '.join($f)
+        "partition": "$partition_config",
+        "https_proxy": "$host.https_proxy",
+        "ignore_proxy": "$host.ignore_proxy",
+        "ntp_server": "$host.ntp_server"
+    }
+}
+

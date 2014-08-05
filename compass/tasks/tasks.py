@@ -19,11 +19,9 @@
 import logging
 
 from celery.signals import celeryd_init
-from celery.signals import setup_logging
 
 from compass.actions import deploy
 from compass.actions import poll_switch
-from compass.actions import reinstall
 from compass.actions import update_progress
 from compass.db.api import adapter_holder as adapter_api
 from compass.db.api import database
@@ -78,7 +76,10 @@ def deploy_cluster(deployer_email, cluster_id, clusterhost_ids):
     :param cluster_hosts: the cluster and hosts of each cluster to deploy.
     :type cluster_hosts: dict of int to list of int
     """
-    pass
+    try:
+        deploy.deploy(cluster_id, clusterhost_ids, deployer_email)
+    except Exception as error:
+        logging.exception(error)
 
 
 @celery.task(name='compass.tasks.reinstall_cluster')

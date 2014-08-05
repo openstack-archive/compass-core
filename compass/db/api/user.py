@@ -325,8 +325,8 @@ def add_user(
 
 
 @utils.supported_filters()
-@database.run_in_session()
 @check_user_admin()
+@database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_user(session, deleter, user_id, **kwargs):
     """delete a user and return the deleted user object."""

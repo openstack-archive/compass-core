@@ -29,8 +29,7 @@ class DhcpCheck(base.BaseCheck):
 
     def run(self):
         """do health check."""
-        installer = self.config.OS_INSTALLER
-        method_name = "self.check_" + installer + "_dhcp()"
+        method_name = "self.check_" + self.os_installer['name'] + "_dhcp()"
         return eval(method_name)
 
     def check_cobbler_dhcp(self):
@@ -38,10 +37,10 @@ class DhcpCheck(base.BaseCheck):
 
         try:
             remote = xmlrpclib.Server(
-                self.config.COBBLER_INSTALLER_URL,
+                self.os_installer['url'],
                 allow_none=True)
             remote.login(
-                *self.config.COBBLER_INSTALLER_TOKEN)
+                *self.os_installer['token'])
         except Exception:
             self._set_status(
                 0,

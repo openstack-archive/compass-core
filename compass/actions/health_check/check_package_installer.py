@@ -28,8 +28,7 @@ class PackageInstallerCheck(base.BaseCheck):
 
     def run(self):
         """do health check."""
-        installer = self.config.PACKAGE_INSTALLER
-        method_name = "self." + installer + "_check()"
+        method_name = "self." + self.package_installer['name'] + "_check()"
         return eval(method_name)
 
     def chef_check(self):

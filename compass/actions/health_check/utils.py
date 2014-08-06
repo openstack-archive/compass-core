@@ -16,6 +16,7 @@
 import commands
 import os
 import platform
+import re
 
 
 def validate_setting(module, setting, param):
@@ -91,3 +92,23 @@ def check_chkconfig(service_name):
             break
 
     return chk_on
+
+
+def strip_name(name):
+    """Reformats names."""
+    if not any([s in name for s in "(,),-,_".split(',')]):
+        return name
+
+    paren_regex = re.compile("(.*?)\s*\(")
+    dash_regex = re.compile("(.*?)\s*\-")
+    under_dash_regex = re.compile("(.*?)\s*\_")
+
+    r1 = paren_regex.match(name)
+    r2 = dash_regex.match(name)
+    r3 = under_dash_regex.match(name)
+    shortest = 'AVeryLongStringForDefualt'
+    for r in [r1, r2, r3]:
+        if r and len(r.group(1)) < len(shortest):
+            shortest = r.group(1)
+
+    return shortest

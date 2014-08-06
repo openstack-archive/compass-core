@@ -27,8 +27,7 @@ class TftpCheck(base.BaseCheck):
 
     def run(self):
         """do health check."""
-        installer = self.config.OS_INSTALLER
-        method_name = "self.check_" + installer + "_tftp()"
+        method_name = "self.check_" + self.os_installer['name'] + "_tftp()"
         return eval(method_name)
 
     def check_cobbler_tftp(self):
@@ -40,10 +39,10 @@ class TftpCheck(base.BaseCheck):
 
         try:
             remote = xmlrpclib.Server(
-                self.config.COBBLER_INSTALLER_URL,
+                self.os_installer['name'],
                 allow_none=True)
             remote.login(
-                *self.config.COBBLER_INSTALLER_TOKEN)
+                *self.os_installer['token'])
         except Exception:
             self._set_status(
                 0,

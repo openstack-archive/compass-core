@@ -225,6 +225,7 @@ class ChefInstaller(PKInstaller):
            :param dict vars_dict: The dictionary used in cheetah searchList to
                                   render attributes from templates.
         """
+        print vars_dict
         import chef
         env_config = self._get_env_attributes(vars_dict)
         env = chef.Environment(env_name, api=self.chef_api)
@@ -465,7 +466,7 @@ class ChefConfigManager(BaseConfigManager):
 
     def get_chef_databag_names(self):
         pk_installer_settings = self.get_pk_installer_settings()
-        if self.DATABAGS in pk_installer_settings:
+        if self.DATABAGS not in pk_installer_settings:
             logging.info("No databags is set!")
             return None
 

@@ -73,7 +73,7 @@ class CobblerInstaller(OSInstaller):
         return os.path.join(compass_setting.TMPL_DIR, 'cobbler')
 
     def __repr__(self):
-        return '%r[name=%r,remote=%r,token=%r' % (
+        return '%r[remote=%r,token=%r' % (
             self.__class__.__name__, self.remote, self.token)
 
     def _get_cobbler_server(self, cobbler_url):
@@ -137,7 +137,7 @@ class CobblerInstaller(OSInstaller):
 
             # set host deploy config
             temp = {}
-            temp = self.config_manager.get_host_deploy_os_config(host_id)
+            temp = self.config_manager.get_host_deployed_os_config(host_id)
             temp[const.TMPL_VARS_DICT] = vars_dict
             host_config = {const.DEPLOYED_OS_CONFIG: temp}
             hosts_deploy_config[host_id] = host_config
@@ -193,10 +193,9 @@ class CobblerInstaller(OSInstaller):
         """Sync the updated config to cobbler and trigger installation."""
         try:
             self.remote.sync(self.token)
-            logging.debug('sync %s', self)
             os.system('sudo service rsyslog restart')
         except Exception as ex:
-            logging.debug("Failed to sync cobbler server! Error:", ex.message)
+            logging.debug("Failed to sync cobbler server! Error: %" % ex)
             raise ex
 
     def _get_system_config(self, host_id, vars_dict):

@@ -66,7 +66,7 @@ class DeployManager(object):
 
         # Package installer cleans previous installing progress.
         if self.pk_installer:
-            self.package_installer.clean_progress()
+            self.pk_installer.clean_progress()
 
     def prepare_for_deploy(self):
         self.clean_progress()
@@ -78,7 +78,7 @@ class DeployManager(object):
         if self.pk_installer:
             # generate target system config which will be installed by OS
             # installer right after OS installation is completed.
-            pk_instl_confs = self.package_installer.generate_installer_config()
+            pk_instl_confs = self.pk_installer.generate_installer_config()
             logging.debug('[DeployManager][deploy] pk_instl_confs is %s',
                           pk_instl_confs)
 
@@ -100,7 +100,7 @@ class DeployManager(object):
             logging.info('DeployManager][deploy]get package installer %s',
                          self.pk_installer)
 
-            pk_deploy_config = self.package_installer.deploy()
+            pk_deploy_config = self.pk_installer.deploy()
             util.merge_dict(deploy_config, pk_deploy_config)
 
         return deploy_config
@@ -110,8 +110,8 @@ class DeployManager(object):
         if self.os_installer:
             self.os_installer.redeploy()
 
-        if self.package_installer:
-            self.package_installer.redeploy()
+        if self.pk_installer:
+            self.pk_installer.redeploy()
 
     def remove_hosts(self):
         """Remove hosts from both OS and package installlers server side."""

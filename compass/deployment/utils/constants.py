@@ -33,7 +33,7 @@ DIST_SYS_NAME = 'distributed_system_name'
 INSTALLER_SETTINGS = 'settings'
 METADATA = 'metadata'
 OS_INSTALLER = 'os_installer'
-PK_INSTALLER = 'pk_installer'
+PK_INSTALLER = 'package_installer'
 SUPPORT_OSES = 'supported_oses'
 
 

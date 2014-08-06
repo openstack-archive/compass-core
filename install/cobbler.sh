@@ -7,6 +7,8 @@ if [[ "$?" != "0" ]]; then
     echo "failed to install cobbler related packages"
     exit 1
 else
+    # patch cobbler code
+    find /usr/lib -name manage_bind.py |xargs  perl -pi.old -e 's/(\s+)(self\.logger\s+\= logger)/$1$2\n$1if self\.logger is None:\n$\1    import clogger\n$1    self\.logger = clogger.Logger\(\)/'
     echo "cobbler related packages are installed"
 fi
 

@@ -40,8 +40,9 @@ RESP_FIELDS = [
 ]
 RESP_CLUSTERHOST_FIELDS = [
     'id', 'host_id', 'machine_id', 'name', 'hostname',
-    'cluster_id', 'clustername',
-    'mac', 'os_installed', 'distributed_system_installed',
+    'cluster_id', 'clustername', 'location', 'tag',
+    'networks', 'mac',
+    'os_installed', 'distributed_system_installed',
     'os_name', 'distributed_system_name',
     'reinstall_os', 'reinstall_distributed_system',
     'owner', 'cluster_id',
@@ -1023,15 +1024,15 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
         session, models.Cluster, id=cluster_id
     )
     is_cluster_editable(session, cluster, reviewer)
+    host_ids = review.get('hosts', [])
     clusterhost_ids = review.get('clusterhosts', [])
-    filters = {
-        'cluster_id': cluster_id
-    }
-    if clusterhost_ids:
-        filters['id'] = clusterhost_ids
-    clusterhosts = utils.list_db_objects(
-        session, models.ClusterHost, **filters
-    )
+    clusterhosts = []
+    for clusterhost in cluster.clusterhosts:
+        if (
+            clusterhost.id in clusterhost_ids or
+            clusterhost.host_id in host_ids
+        ):
+            clusterhosts.append(clusterhost)
     os_config = cluster.os_config
     if os_config:
         metadata_api.validate_os_config(
@@ -1074,7 +1075,7 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
     utils.update_db_object(session, cluster, config_validated=True)
     return {
         'cluster': cluster,
-        'clusterhosts': cluster.clusterhosts
+        'clusterhosts': clusterhosts
     }
 
 
@@ -1097,15 +1098,15 @@ def deploy_cluster(
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
+    host_ids = deploy.get('hosts', [])
     clusterhost_ids = deploy.get('clusterhosts', [])
-    filters = {
-        'cluster_id': cluster_id
-    }
-    if clusterhost_ids:
-        filters['id'] = clusterhost_ids
-    clusterhosts = utils.list_db_objects(
-        session, models.ClusterHost, **filters
-    )
+    clusterhosts = []
+    for clusterhost in cluster.clusterhosts:
+        if (
+            clusterhost.id in clusterhost_ids or
+            clusterhost.host_id in host_ids
+        ):
+            clusterhosts.append(clusterhost)
     is_cluster_editable(session, cluster, deployer)
     is_cluster_validated(session, cluster)
     utils.update_db_object(session, cluster.state, state='INITIALIZED')
@@ -1127,12 +1128,15 @@ def deploy_cluster(
 
     celery_client.celery.send_task(
         'compass.tasks.deploy_cluster',
-        (deployer.email, cluster_id, deploy.get('clusterhosts', []))
+        (
+            deployer.email, cluster_id,
+            [clusterhost.id for clusterhost in clusterhosts]
+        )
     )
     return {
         'status': 'deploy action sent',
         'cluster': cluster,
-        'clusterhosts': cluster.clusterhosts
+        'clusterhosts': clusterhosts
     }
 
 

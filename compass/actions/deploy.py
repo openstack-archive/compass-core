@@ -24,9 +24,6 @@ from compass.deployment.deploy_manager import DeployManager
 from compass.deployment.utils import constants as const
 
 
-import logging
-
-
 def deploy(cluster_id, hosts_id_list, username=None):
     """Deploy clusters.
 
@@ -47,11 +44,8 @@ def deploy(cluster_id, hosts_id_list, username=None):
 
         adapter_info = ActionHelper.get_adapter_info(adapter_id, cluster_id,
                                                      user)
-        hosts_info = ActionHelper.get_hosts_info(hosts_id_list, user)
-
-        logging.debug('[action][deploy]: adapter_info is %s', adapter_info)
-        logging.debug('[action][deploy]: cluster_info is %s', cluster_info)
-        logging.debug('[action][deploy]: hosts_info is %s', hosts_info)
+        hosts_info = ActionHelper.get_hosts_info(cluster_id, hosts_id_list,
+                                                 user)
 
         deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
         #deploy_manager.prepare_for_deploy()
@@ -230,7 +224,7 @@ class ActionHelper(object):
         return hosts_info
 
     @staticmethod
-    def save_deployed_config(self, deployed_config, user):
+    def save_deployed_config(deployed_config, user):
         cluster_config = deployed_config[const.CLUSTER]
         cluster_id = cluster_config[const.ID]
         del cluster_config[const.ID]

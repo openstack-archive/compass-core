@@ -368,7 +368,7 @@ class BaseConfigManager(object):
             logging.info("Adapter Info is None!")
             return None
 
-        return self.adapter_info.setdefault(const.DIST_SYS_NAME, None)
+        return self.adapter_info.setdefault(const.NAME, None)
 
     def get_adapter_roles(self):
         if not self.adapter_info:
@@ -449,7 +449,7 @@ class BaseConfigManager(object):
         interfaces = self.get_host_interfaces(host_id)
         temp = {}
         for key in network_mapping:
-            nic = network_mapping[key][const.NIC]
+            nic = network_mapping[key]
             if nic in interfaces:
                 temp[key] = self.get_host_interface_config(host_id, nic)
                 temp[key][const.NIC] = nic

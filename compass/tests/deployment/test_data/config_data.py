@@ -35,7 +35,7 @@ adapter_test_config = {
             }
         }
     },
-    "pk_installer": {
+    "package_installer": {
         "name": "chef_installer",
         "settings": {
             "chef_url": "https://127.0.0.1",
@@ -205,15 +205,9 @@ cluster_test_config = {
             }
         },
         "network_mapping": {
-            "management": {
-                "interface": "eth0"
-            },
-            "public": {
-                "interface": "eth2"
-            },
-            "tenant": {
-                "interface": "eth1"
-            }
+            "management": "eth0",
+            "public": "eth2",
+            "tenant": "eth1"
         }
     }
 }
@@ -258,12 +252,8 @@ hosts_test_config = {
         },
         "package_config": {
             "network_mapping": {
-                "management": {
-                    "interface": "vnet0"
-                },
-                "tenant": {
-                    "interface": "vnet1"
-                }
+                "management": "vnet0",
+                "tenant": "vnet1"
             },
             "roles": ["os-controller"]
         }

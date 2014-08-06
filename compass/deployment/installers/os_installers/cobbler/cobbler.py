@@ -137,7 +137,7 @@ class CobblerInstaller(OSInstaller):
 
             # set host deploy config
             temp = {}
-            temp = self.config_manager.get_host_deploy_os_config(host_id)
+            temp = self.config_manager.get_host_deployed_os_config(host_id)
             temp[const.TMPL_VARS_DICT] = vars_dict
             host_config = {const.DEPLOYED_OS_CONFIG: temp}
             hosts_deploy_config[host_id] = host_config

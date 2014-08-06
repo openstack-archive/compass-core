@@ -465,7 +465,7 @@ class ChefConfigManager(BaseConfigManager):
 
     def get_chef_databag_names(self):
         pk_installer_settings = self.get_pk_installer_settings()
-        if self.DATABAGS in pk_installer_settings:
+        if self.DATABAGS not in pk_installer_settings:
             logging.info("No databags is set!")
             return None
 

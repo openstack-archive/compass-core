@@ -48,6 +48,7 @@
             #set partition_config = ';'.join((partition_config, $path))
         #end for
         #set partition_config = partition_config[1:]
+        #import crypt
         #set $password = crypt.crypt($host.server_credentials.password, "az")
         #set no_proxy = ','.join($host.no_proxy)
         "username": "$host.server_credentials.username",

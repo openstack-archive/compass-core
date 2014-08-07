@@ -1,3 +1,4 @@
+argparse
 flask
 flask-script
 flask-restful
@@ -5,6 +6,7 @@ flask-sqlalchemy
 flask-login
 celery
 cheetah==2.4.1
+mysql-python
 netaddr
 paramiko==1.7.5
 simplejson

@@ -10,6 +10,7 @@ mkdir -p /var/www/compass
 sudo cp -rf $COMPASSDIR/misc/apache/ods-server.conf /etc/httpd/conf.d/ods-server.conf
 sudo cp -rf $COMPASSDIR/misc/apache/compass.wsgi /var/www/compass/compass.wsgi
 sudo cp -rf $COMPASSDIR/conf/* /etc/compass/
+sudo cp -rf $COMPASSDIR/templates /etc/compass/
 sudo cp -rf $COMPASSDIR/service/* /etc/init.d/
 sudo cp -rf $COMPASSDIR/bin/*.py /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/*.sh /opt/compass/bin/

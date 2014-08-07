@@ -92,7 +92,7 @@ class DeployManager(object):
             # start to deploy OS
             try:
                 os_deploy_config = self.os_installer.deploy()
-                deploy_config = os_deploy_config
+                deploy_config['os_config'] = os_deploy_config
             except Exception as ex:
                 logging.error(ex.message)
 
@@ -101,7 +101,7 @@ class DeployManager(object):
                          self.pk_installer)
 
             pk_deploy_config = self.pk_installer.deploy()
-            util.merge_dict(deploy_config, pk_deploy_config)
+            deploy_config['package_config'] = pk_deploy_config
 
         return deploy_config
 

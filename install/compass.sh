@@ -17,7 +17,7 @@ sudo cp -rf $COMPASSDIR/bin/compass /usr/bin/
 sudo cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
 sudo cp -rf $WEB_HOME/public/* /var/www/compass_web/
 sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
-
+sudo cp -rf $COMPASSDIR/templates /etc/compass/
 # add apache user to the group of virtualenv user
 sudo usermod -a -G `groups $USER|awk '{print$3}'` apache
 sudo chkconfig compass-progress-updated on

@@ -81,10 +81,6 @@ class ChefInstaller(PKInstaller):
         """Generate environment name."""
         return "-".join((dist_sys_name, cluster_name))
 
-    def get_databag_name(self):
-        """Get databag name."""
-        return self.config_manager.get_dist_system_name()
-
     def get_databag(self, databag_name):
         """Get databag object from chef server. Creating the databag if its
            doesnot exist.
@@ -94,7 +90,7 @@ class ChefInstaller(PKInstaller):
         bag.save()
         return bag
 
-    def get_node(self, node_name, env_name=None):
+    def get_node(self, node_name, env_name):
         """Get chef node if existing, otherwise create one and set its
            environment.
 
@@ -253,11 +249,15 @@ class ChefInstaller(PKInstaller):
         import chef
         databags_dir = os.path.join(self.tmpl_dir, self.DATABAG_TMPL_DIR)
         for databag_name in databag_names:
-            databag = self.get_databag(databag_name)
             databag_tmpl = os.paht.join(databags_dir, databag_name)
             databagitem_attri = self._get_databagitem_attributes(databag_tmpl,
                                                                  vars_dict)
+            if not databagitem_attri:
+                logging.info("Databag template not found or vars_dict is None")
+                logging.info("databag template is %s", databag_tmpl)
+                continue
 
+            databag = self.get_databag(databag_name)
             for item, item_values in databagitem_attri.iteritems():
                 databagitem = chef.DataBagItem(databag, item,
                                                api=self.chef_api)
@@ -351,7 +351,9 @@ class ChefInstaller(PKInstaller):
             # set each host deployed config
             tmp = self.config_manager.get_host_deployed_package_config(host_id)
             tmp[const.TMPL_VARS_DICT] = vars_dict
-            hosts_deployed_configs[host_id][const.DEPLOYED_PK_CONFIG] = tmp
+            host_config = {}
+            host_config[const.DEPLOYED_PK_CONFIG] = tmp
+            hosts_deployed_configs[host_id] = host_config
 
         # set cluster deployed config
         cl_config = self.config_manager.get_cluster_deployed_package_config()

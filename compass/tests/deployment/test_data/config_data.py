@@ -41,8 +41,7 @@ adapter_test_config = {
             "chef_url": "https://127.0.0.1",
             "key_dir": "xxx",
             "client_name": "xxx",
-            "databags": ["user_passwords", "db_passwords", "service_passwords",
-                         "secrets"]
+            "databags": ["user_passwords", "db_passwords"]
         }
     },
     "metadata": {

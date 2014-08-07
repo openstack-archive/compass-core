@@ -84,23 +84,24 @@ def update_progress(cluster_hosts):
         os_names = {}
         distributed_systems = {}
         with database.session() as session:
-            cluster = session.query(models.Cluster).first()
-            clusterid = cluster.id
+            clusters = session.query(models.Cluster).all()
+            for cluster in clusters:
+                clusterid = cluster.id
 
-            adapter = cluster.adapter
-            os_installer = adapter.adapter_os_installer
-            os_installer_name = os_installer.instance_name
-            package_installer = adapter.adapter_package_installer
-            package_installer_name = package_installer.instance_name
+                adapter = cluster.adapter
+                os_installer = adapter.adapter_os_installer
+                os_installer_name = os_installer.instance_name
+                package_installer = adapter.adapter_package_installer
+                package_installer_name = package_installer.instance_name
 
-            distributed_system_name = cluster.distributed_system_name
-            os_name = cluster.os_name
-            os_names[clusterid] = os_name
-            distributed_systems[clusterid] = distributed_system_name
+                distributed_system_name = cluster.distributed_system_name
+                os_name = cluster.os_name
+                os_names[clusterid] = os_name
+                distributed_systems[clusterid] = distributed_system_name
 
-            clusterhosts = cluster.clusterhosts
-            hostids = [clusterhost.host.id for clusterhost in clusterhosts]
-            cluster_hosts.update({clusterid: hostids})
+                clusterhosts = cluster.clusterhosts
+                hostids = [clusterhost.host.id for clusterhost in clusterhosts]
+                cluster_hosts.update({clusterid: hostids})
 
         progress_calculator.update_progress(
             os_installer_name,

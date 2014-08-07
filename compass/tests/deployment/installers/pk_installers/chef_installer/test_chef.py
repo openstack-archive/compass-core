@@ -129,3 +129,59 @@ class TestChefInstaller(unittest2.TestCase):
         output = self.test_chef._get_env_attributes(vars_dict)
         self.maxDiff = None
         self.assertDictEqual(expected_env, output)
+
+    def test_get_databagitem_attributes(self):
+        vars_dict = {
+            "cluster": {
+                "deployed_package_config": {
+                    "service_credentials": {
+                        "nova": {
+                            "username": "nova",
+                            "password": "compute"
+                        }
+                    },
+                    "users_credentials": {
+                        "ksadmin": {
+                            "username": "ksadmin",
+                            "password": "ksadmin"
+                        },
+                        "demo": {
+                            "username": "demo",
+                            "password": "demo"
+                        }
+                    }
+                }
+            }
+        }
+        expected_output = {
+            "user_passwords": {
+                "admin": {
+                    "admin": "admin",
+                },
+                "ksadmin": {
+                    "ksadmin": "ksadmin"
+                },
+                "demo": {
+                    "demo": "demo"
+                }
+            },
+            "db_passwords": {
+                "nova": {
+                    "nova": "compute",
+                },
+                "horizon": {
+                    "horizon": "horizon"
+                },
+                "keystone": {
+                    "keystone": "keystone"
+                }
+            }
+        }
+        databag_dir = os.path.join(self.test_chef.get_tmpl_path(), 'databags')
+        databags = self.test_chef.config_manager.get_chef_databag_names()
+        for bag in databags:
+            tmpl_path = os.path.join(databag_dir, '.'.join((bag, 'tmpl')))
+            output = self.test_chef._get_databagitem_attributes(tmpl_path,
+                                                                vars_dict)
+            self.maxDiff = None
+            self.assertDictEqual(expected_output[bag], output)

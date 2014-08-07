@@ -118,9 +118,9 @@ class BaseInstaller(object):
 
     def get_config_from_template(self, tmpl_dir, vars_dict):
         if not os.path.exists(tmpl_dir) or not vars_dict:
-            logging.info("Template or variables dict is not specified!")
+            logging.info("Template dir or vars_dict is None!")
             logging.debug("template dir is %s", tmpl_dir)
-            logging.debug("template vars dict is %s", vars_dict)
+            logging.debug("vars_dict is %s", vars_dict)
             return {}
 
         tmpl = Template(file=tmpl_dir, searchList=[vars_dict])

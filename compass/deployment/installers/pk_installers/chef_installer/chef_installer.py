@@ -77,9 +77,9 @@ class ChefInstaller(PKInstaller):
 
         return chef_api
 
-    def get_env_name(self, dist_sys_name, cluster_id):
+    def get_env_name(self, dist_sys_name, cluster_name):
         """Generate environment name."""
-        return "-".join((dist_sys_name, cluster_id))
+        return "-".join((dist_sys_name, cluster_name))
 
     def get_databag_name(self):
         """Get databag name."""
@@ -162,8 +162,9 @@ class ChefInstaller(PKInstaller):
 
         run_list = node.run_list
         for role in roles:
-            if role not in run_list:
-                node.run_list.append('role[%s]' % role)
+            node_role = 'role[%s]' % role
+            if node_role not in run_list:
+                node.run_list.append(node_role)
 
         node.save()
         logging.debug('Runlist for node %s is %s', node.name, node.run_list)
@@ -326,7 +327,8 @@ class ChefInstaller(PKInstaller):
         """
         adapter_name = self.config_manager.get_adapter_name()
         cluster_id = self.config_manager.get_cluster_id()
-        env_name = self.get_env_name(adapter_name, str(cluster_id))
+        cluster_name = self.config_manager.get_clustername()
+        env_name = self.get_env_name(adapter_name, cluster_name)
 
         global_vars_dict = self._get_cluster_tmpl_vars()
         # Update environment
@@ -349,7 +351,7 @@ class ChefInstaller(PKInstaller):
             # set each host deployed config
             tmp = self.config_manager.get_host_deployed_package_config(host_id)
             tmp[const.TMPL_VARS_DICT] = vars_dict
-            hosts_deployed_configs[host_id] = tmp
+            hosts_deployed_configs[host_id][const.DEPLOYED_PK_CONFIG] = tmp
 
         # set cluster deployed config
         cl_config = self.config_manager.get_cluster_deployed_package_config()

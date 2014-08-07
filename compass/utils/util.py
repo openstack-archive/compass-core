@@ -208,6 +208,14 @@ def is_instance(instance, expected_types):
     return False
 
 
+def pretty_print(*contents):
+    """pretty print contents."""
+    if len(contents) == 0:
+        print ""
+    else:
+        print "\n".join(content for content in contents)
+
+
 def get_clusters_from_str(clusters_str):
     """get clusters from string."""
     clusters = {}

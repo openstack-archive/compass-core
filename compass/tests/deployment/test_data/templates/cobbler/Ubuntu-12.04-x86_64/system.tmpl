@@ -38,7 +38,7 @@
     ,
     "ksmeta":{
         #set partition_config = ''
-        #for k, v in $host.partition.iteritems():
+        #for k, v in sorted($host.partition.iteritems()):
             #set path = ''
             #if v['vol_percentage']:
                 #set $path = k + ' ' + str(v['vol_percentage']) + '%'

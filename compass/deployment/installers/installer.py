@@ -101,7 +101,7 @@ class BaseInstaller(object):
         raise KeyError("'%s' is an invalid metadata!" % key)
 
     def _get_tmpl_vars_helper(self, metadata, config, output):
-        for key, config_value in config.iteritems():
+        for key, config_value in sorted(config.iteritems()):
             is_regular_key, sub_meta = self._get_submeta_by_key(metadata, key)
             mapping_to = self._get_key_mapping(sub_meta, key, is_regular_key)
 

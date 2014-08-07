@@ -65,10 +65,6 @@ class TestCobblerInstaller(unittest2.TestCase):
                     }
                 },
                 "partition": {
-                    "/var": {
-                        "vol_size": 30,
-                        "vol_percentage": 30
-                    },
                     "/home": {
                         "vol_size": 50,
                         "vol_percentage": 40
@@ -76,6 +72,10 @@ class TestCobblerInstaller(unittest2.TestCase):
                     "/test": {
                         "vol_size": 10,
                         "vol_percentage": 10
+                    },
+                    "/var": {
+                        "vol_size": 30,
+                        "vol_percentage": 30
                     }
                 },
                 "server_credentials": {
@@ -148,7 +148,7 @@ class TestCobblerInstaller(unittest2.TestCase):
             "ksmeta": {
                 "promisc_nics": "",
                 "timezone": "UTC",
-                "partition": "/test 10%;/var 30%;/home 40%",
+                "partition": "/home 40%;/test 10%;/var 30%",
                 "https_proxy": "",
                 "ntp_server": "127.0.0.1",
                 "chef_url": "https://127.0.0.1",

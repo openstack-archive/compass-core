@@ -52,6 +52,7 @@ def deploy(cluster_id, hosts_id_list, username=None):
         deployed_config = deploy_manager.deploy()
 
         ActionHelper.save_deployed_config(deployed_config, user)
+        ActionHelper.update_state(cluster_id, hosts_id_list, user)
 
 
 def redeploy(cluster_id, hosts_id_list, username=None):
@@ -78,6 +79,7 @@ def redeploy(cluster_id, hosts_id_list, username=None):
         deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
         #deploy_manager.prepare_for_deploy()
         deploy_manager.redeploy()
+        ActionHelper.update_state(cluster_id, hosts_id_list, user)
 
 
 def poweron(host_id):
@@ -192,13 +194,8 @@ class ActionHelper(object):
         hosts_info = {}
         for clusterhost_id in hosts_id_list:
             info = cluster_db.get_clusterhost(user, clusterhost_id)
-            host_id = info[const.HOST_ID]
-            temp = host_db.get_host(user, host_id)
-            config = cluster_db.get_cluster_host_config(user, cluster_id,
-                                                        host_id)
+            config = cluster_db.get_clusterhost_config(user, clusterhost_id)
             # Delete 'id' from temp
-            del temp['id']
-            info.update(temp)
             info.update(config)
 
             networks = info[const.NETWORKS]
@@ -238,3 +235,13 @@ class ActionHelper(object):
             cluster_db.update_clusterhost_deployed_config(user,
                                                           clusterhost_id,
                                                           **config)
+
+    @staticmethod
+    def update_state(cluster_id, clusterhost_id_list, user):
+        # update cluster state
+        cluster_db.update_cluster_state(user, cluster_id, state='INSTALLING')
+
+        # update all clusterhosts state
+        for clusterhost_id in clusterhost_id_list:
+            cluster_db.update_clusterhost_state(user, clusterhost_id,
+                                                state='INSTALLING')

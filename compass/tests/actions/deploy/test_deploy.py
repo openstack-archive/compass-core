@@ -93,18 +93,20 @@ class TestDeployAction(unittest2.TestCase):
         self.maxDiff = None
         self.assertDictEqual(expected_output, output)
 
-    @patch('compass.db.api.cluster.get_cluster_host_config')
-    @patch('compass.db.api.host.get_host')
+    @patch('compass.db.api.cluster.get_clusterhost_config')
     @patch('compass.db.api.cluster.get_clusterhost')
-    def test_get_hosts_info(self, mock_get_clusterhost, mock_get_host,
-                            mock_get_cluster_host_config):
+    def test_get_hosts_info(self, mock_get_clusterhost,
+                            mock_get_clusterhost_config):
+        mock_get_clusterhost_config.return_value = {
+            "os_config": {},
+            "package_config": {},
+            "deployed_os_config": {},
+            "deployed_package_config": {}
+        }
         mock_get_clusterhost.return_value = {
             "id": 1,
             "host_id": 10,
-            "name": "test"
-        }
-        mock_get_host.return_value = {
-            "id": 10,
+            "name": "test",
             "mac": "00:89:23:a1:e9:10",
             "hostname": "server01",
             "networks": [
@@ -114,15 +116,9 @@ class TestDeployAction(unittest2.TestCase):
                     "netmask": "255.255.255.0",
                     "is_mgmt": True,
                     "subnet": "127.0.0.0/24",
-                    "is_promiscuous": False
+                    "is_promiscuous": False,
                 }
             ]
-        }
-        mock_get_cluster_host_config.return_value = {
-            "os_config": {},
-            "package_config": {},
-            "deployed_os_config": {},
-            "deployed_package_config": {}
         }
         expected_output = {
             1: {

@@ -51,9 +51,7 @@ def deploy(cluster_id, hosts_id_list, username=None):
         #deploy_manager.prepare_for_deploy()
         deployed_config = deploy_manager.deploy()
 
-        ActionHelper.save_deployed_config(
-            cluster_id, hosts_id_list, deployed_config, user
-        )
+        ActionHelper.save_deployed_config(deployed_config, user)
 
 
 def redeploy(cluster_id, hosts_id_list, username=None):
@@ -226,25 +224,17 @@ class ActionHelper(object):
         return hosts_info
 
     @staticmethod
-    def save_deployed_config(
-        cluster_id, hosts_id_list, deployed_config, user
-    ):
-        cluster_config = dict([
-            (key, value[const.CLUSTER])
-            for key, value in deployed_config.items()
-        ])
-        for key, value in cluster_config.items():
-            if const.ID in value:
-                del value[const.ID]
+    def save_deployed_config(deployed_config, user):
+        cluster_config = deployed_config[const.CLUSTER]
+        cluster_id = cluster_config[const.ID]
+        del cluster_config[const.ID]
 
         cluster_db.update_cluster_deployed_config(user, cluster_id,
                                                   **cluster_config)
 
+        hosts_id_list = deployed_config[const.HOSTS].keys()
         for clusterhost_id in hosts_id_list:
-            config = dict([
-                (key, value[const.HOSTS][clusterhost_id])
-                for key, value in deployed_config.items()
-            ])
+            config = deployed_config[const.HOSTS][clusterhost_id]
             cluster_db.update_clusterhost_deployed_config(user,
                                                           clusterhost_id,
                                                           **config)

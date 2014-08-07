@@ -271,6 +271,7 @@ else
     deactivate
 fi
 
+# TODO(xicheng): Please add comments to ths function. e.g, arg list
 download()
 {
     url=$1
@@ -310,21 +311,9 @@ download()
         echo "copy /tmp/$package to $destdir"
         destdir=$4
         sudo cp /tmp/$package $destdir
-    elif [[ "$action" == "unzip" ]]; then
-        unzipped_package=${package%%.zip}
-        destdir=$4
-        echo "unzip /tmp/$package to /tmp/$unzipped_package and copy to $destdir"
-        sudo rm -rf /tmp/$unzipped_package
-        pushd `pwd`
-        cd /tmp
-        sudo unzip -o /tmp/$package
-        popd
-        sudo cp -rf /tmp/$unzipped_package/. $destdir
     fi
 }
 
-# download js mvc
-download http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip $JS_MVC.zip unzip $WEB_HOME/public/ || exit $?
 
 # download cobbler related packages
 centos_ppa_repo_packages="

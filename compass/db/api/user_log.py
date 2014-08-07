@@ -45,16 +45,16 @@ def _compress_response(actions, user_id):
 
 
 def _compress_response_by_user(actions):
-    actions = {}
+    actions_by_user = {}
     for action in actions:
         action_dict = action.to_dict()
         user_id = action_dict['user_id']
         del action_dict['user_id']
-        actions.setdefault(user_id, []).append(action_dict)
+        actions_by_user.setdefault(user_id, []).append(action_dict)
 
     return [
         {'user_id': user_id, 'logs': user_actions}
-        for user_id, user_actions in actions.items()
+        for user_id, user_actions in actions_by_user.items()
     ]
 
 

@@ -158,14 +158,17 @@ fi
 #update mysqld
 sudo service mysqld restart
 MYSQL_USER=${MYSQL_USER:-root}
-MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-}
+MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-root}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
 MYSQL_SERVER=${MYSQL_SERVER:-127.0.0.1}
 MYSQL_PORT=${MYSQL_PORT:-3306}
 MYSQL_DATABASE=${MYSQL_DATABASE:-db}
 # first time set mysql password
-sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} password ${MYSQL_PASSWORD}
 sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} -p"${MYSQL_OLD_PASSWORD}" password ${MYSQL_PASSWORD}
+if [[ "$?" != "0" ]]; then
+echo "setting up mysql initial password"
+sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} password ${MYSQL_PASSWORD}
+fi
 mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "show databases;"
 if [[ "$?" != "0" ]]; then
     echo "mysql password set failed"

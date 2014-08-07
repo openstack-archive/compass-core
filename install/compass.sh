@@ -7,7 +7,7 @@ mkdir -p /var/log/compass
 mkdir -p /opt/compass/db
 mkdir -p /var/www/compass
 
-sudo cp -rf $COMPASSDIR/misc/apache/ods-server /etc/httpd/conf.d/ods-server.conf
+sudo cp -rf $COMPASSDIR/misc/apache/ods-server.conf /etc/httpd/conf.d/ods-server.conf
 sudo cp -rf $COMPASSDIR/misc/apache/compass.wsgi /var/www/compass/compass.wsgi
 sudo cp -rf $COMPASSDIR/conf/* /etc/compass/
 sudo cp -rf $COMPASSDIR/service/* /etc/init.d/
@@ -16,9 +16,8 @@ sudo cp -rf $COMPASSDIR/bin/*.sh /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/compass /usr/bin/
 sudo cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
 sudo cp -rf $WEB_HOME/public/* /var/www/compass_web/
-if [[ -f /etc/compass/package_installer/chef-icehouse.conf ]]; then
-    sudo sed -i "s/127.0.0.1/$ippaddr/g" /etc/compass/package_installer/chef-icehouse.conf
-fi
+sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
+
 # add apache user to the group of virtualenv user
 sudo usermod -a -G `groups $USER|awk '{print$3}'` apache
 sudo chkconfig compass-progress-updated on
@@ -45,7 +44,9 @@ else
 fi
 
 sudo sed -i "/COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/cobbler_api'" /etc/compass/setting
+sudo sed -i "s/\$cobbler_ip/$ipaddr/g" /etc/compass/os_installer/cobbler.conf
 sudo sed -i "/CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
+sudo sed -i "s/\$chef_ip/$ipaddr/g" /etc/compass/package_installer/chef-icehouse.conf
 sudo sed -i "s/\$compass_ip/$ipaddr/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_testmode/$TESTMODE/g" /etc/compass/global_config

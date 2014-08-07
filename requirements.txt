@@ -18,7 +18,3 @@ PyChef
 simplejson
 requests
 redis
-
-
-
-

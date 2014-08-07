@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 /opt/compass/bin/manage_db.py createdb
 service httpd restart
 service rsyslog restart

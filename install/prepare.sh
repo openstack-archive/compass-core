@@ -6,6 +6,11 @@ copy2dir()
     repo=$1
     destdir=$2
     git_branch=master
+
+    if [  -n "$4" ]; then
+       git_branch=$4
+    fi
+
     if [[ "$repo" =~ (git|http|https|ftp):// ]]; then
         if [[ -d $destdir || -L $destdir ]]; then
             cd $destdir
@@ -190,7 +195,7 @@ if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1
 else
-    echo "mysqld conf is updated" 
+    echo "mysqld conf is updated"
 fi
 
 cd $SCRIPT_DIR
@@ -204,7 +209,7 @@ if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" || exit $?
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" dev/experimental || exit $?
 
 if [ "$tempest" == "true" ]; then
     if [[ ! -e /tmp/tempest ]]; then

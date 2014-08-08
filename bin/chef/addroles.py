@@ -37,7 +37,7 @@ def main():
     roles_dir = flags.OPTIONS.roles_dir
 
     for item in os.listdir(roles_dir):
-        if item.endswith('.rb'):
+        if item.endswith('.rb') or item.endswith('.json'):
             rolelist.append(os.path.join(roles_dir, item))
         else:
             logging.info('ignore %s in %s', item, roles_dir)

@@ -238,6 +238,7 @@ if [ "$tempest" == "true" ]; then
     fi
 fi
 
+source `which virtualenvwrapper.sh`
 if ! lsvirtualenv |grep compass-core>/dev/null; then
     mkvirtualenv compass-core
 fi

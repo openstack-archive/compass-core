@@ -302,9 +302,7 @@ def filter_output(filter_callbacks, filters, obj, missing_ok=False):
             if missing_ok:
                 continue
             else:
-                raise exception.InvalidResponse(
-                    '%s is not in %s' % (callback_key, obj)
-                )
+                return False
         if not callback_value(
             filters[callback_key], obj[callback_key]
         ):

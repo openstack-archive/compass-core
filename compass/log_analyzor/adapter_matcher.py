@@ -16,6 +16,7 @@
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
+import datetime
 import logging
 import re
 
@@ -29,8 +30,7 @@ from compass.db.models import ClusterHost
 from compass.db.models import Host
 
 from compass.log_analyzor.line_matcher import Progress
-
-import datetime
+from compass.utils import setting_wrapper as setting
 
 
 class AdapterItemMatcher(object):
@@ -436,9 +436,7 @@ class AdapterMatcher(object):
         host_progresses = {}
         clusterhost_progresses = {}
         updater = user_api.get_user_object(
-            'admin@abc.com',
-            expire_timestamp=datetime.datetime.now() +
-            datetime.timedelta(seconds=10000)
+            setting.COMPASS_ADMIN_EMAIL
         )
         with database.session():
             for hostid in hostids:

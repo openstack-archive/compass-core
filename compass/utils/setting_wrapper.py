@@ -51,7 +51,7 @@ SWITCHES = [
 USER_SECRET_KEY = datetime.datetime.now().isoformat()
 USER_AUTH_HEADER_NAME = 'X-Auth-Token'
 USER_TOKEN_DURATION = '2h'
-COMPASS_ADMIN_EMAIL = 'admin@abc.com'
+COMPASS_ADMIN_EMAIL = 'admin@huawei.com'
 COMPASS_ADMIN_PASSWORD = 'admin'
 COMPASS_DEFAULT_PERMISSIONS = [
     'list_permissions',

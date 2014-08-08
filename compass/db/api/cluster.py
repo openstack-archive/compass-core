@@ -33,7 +33,7 @@ SUPPORTED_FIELDS = [
 SUPPORTED_CLUSTERHOST_FIELDS = []
 RESP_FIELDS = [
     'id', 'name', 'os_name', 'os_id', 'distributed_system_id',
-    'reinstall_distributed_system',
+    'reinstall_distributed_system', 'flavor',
     'distributed_system_name', 'distributed_system_installed',
     'owner', 'adapter_id',
     'created_at', 'updated_at'
@@ -95,9 +95,9 @@ RESP_REVIEW_FIELDS = [
 RESP_DEPLOY_FIELDS = [
     'status', 'cluster', 'clusterhosts'
 ]
-ADDED_FIELDS = ['name', 'adapter_id']
-OPTIONAL_ADDED_FIELDS = ['os_id']
-UPDATED_FIELDS = ['name', 'reinstall_distributed_system']
+ADDED_FIELDS = ['name', 'adapter_id', 'os_id']
+OPTIONAL_ADDED_FIELDS = ['flavor']
+UPDATED_FIELDS = ['name', 'reinstall_distributed_system', 'flavor']
 ADDED_HOST_FIELDS = ['machine_id']
 UPDATED_HOST_FIELDS = ['name', 'reinstall_os']
 UPDATED_CONFIG_FIELDS = [

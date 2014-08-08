@@ -394,7 +394,7 @@ class ClusterHostState(BASE, StateMixin):
     )
 
     def update(self):
-        host_state = self.host.state
+        host_state = self.clusterhost.host.state
         if self.state == 'INITIALIZED':
             if host_state.state in ['UNINITIALIZED']:
                 host_state.state = 'INITIALIZED'
@@ -402,6 +402,10 @@ class ClusterHostState(BASE, StateMixin):
         elif self.state == 'INSTALLING':
             if host_state.state in ['UNINITIALIZED', 'INITIALIZED']:
                 host_state.state = 'INSTALLING'
+                host_state.update()
+        elif self.state == 'SUCCESSFUL':
+            if host_state.state != 'SUCCESSFUL':
+                host_state.state = 'SUCCESSFUL'
                 host_state.update()
         super(ClusterHostState, self).update()
 
@@ -433,7 +437,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         uselist=False,
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',
-        backref=backref('host')
+        backref=backref('clusterhost')
     )
 
     def __init__(self, cluster_id, host_id, **kwargs):
@@ -834,7 +838,7 @@ class ClusterState(BASE, StateMixin):
                     host = clusterhost.host
                     host_state = host.state.state
                     if host_state == 'INSTALLING':
-                        self.intsalling_hosts += 1
+                        self.installing_hosts += 1
                     elif host_state == 'ERROR':
                         self.failed_hosts += 1
                     elif host_state == 'SUCCESSFUL':
@@ -843,7 +847,7 @@ class ClusterState(BASE, StateMixin):
                 for clusterhost in clusterhosts:
                     clusterhost_state = clusterhost.state.state
                     if clusterhost_state == 'INSTALLING':
-                        self.intsalling_hosts += 1
+                        self.installing_hosts += 1
                     elif clusterhost_state == 'ERROR':
                         self.failed_hosts += 1
                     elif clusterhost_state == 'SUCCESSFUL':
@@ -855,10 +859,10 @@ class ClusterState(BASE, StateMixin):
                     float(self.total_hosts)
                 )
             self.message = (
-                'toal %s, installing %s, complted: %s, error $s'
+                'total %s, installing %s, completed: %s, error %s'
             ) % (
                 self.total_hosts, self.completed_hosts,
-                self.intsalling_hosts, self.failed_hosts
+                self.installing_hosts, self.failed_hosts
             )
             if self.failed_hosts:
                 self.severity = 'ERROR'
@@ -875,6 +879,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     config_step = Column(String(80), default='')
     os_id = Column(Integer, ForeignKey('os.id'), nullable=True)
     os_name = Column(String(80), nullable=True)
+    flavor = Column(String(80), nullable=True)
     distributed_system_id = Column(
         Integer, ForeignKey('distributed_system.id'),
         nullable=True

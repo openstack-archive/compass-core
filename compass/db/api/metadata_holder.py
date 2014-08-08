@@ -74,6 +74,7 @@ def _filter_metadata(metadata):
             filtered_metadata[key] = {
                 'name': value['name'],
                 'description': value.get('description', None),
+                'default_value': value.get('default_value', None),
                 'is_required': value['is_required'],
                 'required_in_whole_config': value['required_in_whole_config'],
                 'js_validator': value.get('js_validator', None),

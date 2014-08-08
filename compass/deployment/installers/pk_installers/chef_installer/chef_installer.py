@@ -15,6 +15,7 @@
 __author__ = "Grace Yu (grace.yu@huawei.com)"
 
 """package installer: chef plugin."""
+
 import logging
 import os
 import shutil
@@ -82,8 +83,8 @@ class ChefInstaller(PKInstaller):
         return "-".join((dist_sys_name, cluster_name))
 
     def get_databag(self, databag_name):
-        """Get databag object from chef server. Creating the databag if its
-           doesnot exist.
+        """Get databag object from chef server. Create the databag if it
+           does not exist.
         """
         import chef
         bag = chef.DataBag(databag_name, api=self.chef_api)
@@ -231,13 +232,13 @@ class ChefInstaller(PKInstaller):
         env.save()
 
     def _get_databagitem_attributes(self, tmpl_dir, vars_dict):
-        databagitem_attri = self.get_config_from_template(tmpl_dir,
+        databagitem_attrs = self.get_config_from_template(tmpl_dir,
                                                           vars_dict)
 
-        return databagitem_attri
+        return databagitem_attrs
 
     def update_databags(self, vars_dict):
-        """Update datbag item attributes.
+        """Update databag item attributes.
 
            :param dict vars_dict: The dictionary used to get attributes from
                                   templates.
@@ -249,16 +250,16 @@ class ChefInstaller(PKInstaller):
         import chef
         databags_dir = os.path.join(self.tmpl_dir, self.DATABAG_TMPL_DIR)
         for databag_name in databag_names:
-            databag_tmpl = os.paht.join(databags_dir, databag_name)
-            databagitem_attri = self._get_databagitem_attributes(databag_tmpl,
+            databag_tmpl = os.path.join(databags_dir, databag_name)
+            databagitem_attrs = self._get_databagitem_attributes(databag_tmpl,
                                                                  vars_dict)
-            if not databagitem_attri:
+            if not databagitem_attrs:
                 logging.info("Databag template not found or vars_dict is None")
                 logging.info("databag template is %s", databag_tmpl)
                 continue
 
             databag = self.get_databag(databag_name)
-            for item, item_values in databagitem_attri.iteritems():
+            for item, item_values in databagitem_attrs.iteritems():
                 databagitem = chef.DataBagItem(databag, item,
                                                api=self.chef_api)
                 for key, value in item_values.iteritems():
@@ -331,6 +332,7 @@ class ChefInstaller(PKInstaller):
         env_name = self.get_env_name(adapter_name, cluster_name)
 
         global_vars_dict = self._get_cluster_tmpl_vars()
+
         # Update environment
         self.update_environment(env_name, global_vars_dict)
 

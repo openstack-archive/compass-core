@@ -12,7 +12,11 @@ function mac_address() {
 }
 
 function tear_down_machines() {
-    virtmachines=$(virsh list --name)
+    if [[ -z $NO_TEAR_DOWN ]]; then
+        virtmachines=$(virsh list | awk '{print$2}'| tail -n +3)    
+    else
+        virtmachines=
+    fi
     for virtmachine in $virtmachines; do
         echo "destroy $virtmachine"
         virsh destroy $virtmachine
@@ -21,7 +25,11 @@ function tear_down_machines() {
             exit 1
         fi
     done
-    virtmachines=$(virsh list --all --name)
+    if [[ -z $NO_TEAR_DOWN ]]; then
+        virtmachines=$(virsh list --all | awk '{print$2}'| tail -n +3)
+    else
+        virtmachines=
+    fi
     for virtmachine in $virtmachines; do
         echo "undefine $virtmachine"
         virsh undefine $virtmachine
@@ -52,19 +60,19 @@ tear_down_machines
 
 echo "setup $VIRT_NUM virt machines"
 for i in `seq $VIRT_NUM`; do
-    if [[ ! -e /home/pxe${i}.raw ]]; then
+    if [[ ! -e /tmp/pxe${i}.raw ]]; then
         echo "create image for instance pxe$i"
-        qemu-img create -f raw /home/pxe${i}.raw ${VIRT_DISK}
+        qemu-img create -f raw /tmp/pxe${i}.raw ${VIRT_DISK}
         if [[ "$?" != "0" ]]; then
-            echo "create image /home/pxe${i}.raw failed"
+            echo "create image /tmp/pxe${i}.raw failed"
             exit 1
         fi 
     else
         echo "recreate image for instance pxe$i"
-        rm -rf /home/pxe${i}.raw
-        qemu-img create -f raw /home/pxe${i}.raw ${VIRT_DISK}
+        rm -rf /tmp/pxe${i}.raw
+        qemu-img create -f raw /tmp/pxe${i}.raw ${VIRT_DISK}
         if [[ "$?" != "0" ]]; then
-            echo "create image /home/pxe${i}.raw failed"
+            echo "create image /tmp/pxe${i}.raw failed"
             exit 1
         fi 
     fi
@@ -76,7 +84,7 @@ for i in `seq $VIRT_NUM`; do
         --network=bridge:installation \
         --network=bridge:installation \
         --name pxe${i} --ram=${VIRT_MEM} \
-        --disk /home/pxe${i}.raw,format=raw \
+        --disk /tmp/pxe${i}.raw,format=raw \
         --vcpus=${VIRT_CPUS} \
         --graphics vnc,listen=0.0.0.0 \
         --noautoconsole \
@@ -138,9 +146,6 @@ fi
 if [[ ! -L compass_logs ]]; then
     ln -s /var/log/compass compass_logs
 fi
-if [[ ! -e compass_logs/squid_access.log ]]; then
-    ln -s /var/log/squid/access.log compass_logs/squid_access.log
-fi
 CLIENT_SCRIPT=/opt/compass/bin/client.py
 /opt/compass/bin/refresh.sh
 if [[ "$?" != "0" ]]; then
@@ -169,7 +174,7 @@ else
     POLL_SWITCHES_FLAG="poll_switches"
 fi
 
-${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --adapter_os_name="${ADAPTER_OS_NAME_PATTERN}" --adapter_target_system="${ADAPTER_TARGET_SYSTEM_NAME}" --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG}
+${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG}
 rc=$?
 deactivate
 # Tear down machines after the test

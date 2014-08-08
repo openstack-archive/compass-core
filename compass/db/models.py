@@ -875,6 +875,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     config_step = Column(String(80), default='')
     os_id = Column(Integer, ForeignKey('os.id'), nullable=True)
     os_name = Column(String(80), nullable=True)
+    flavor = Column(String(80), nullable=True)
     distributed_system_id = Column(
         Integer, ForeignKey('distributed_system.id'),
         nullable=True

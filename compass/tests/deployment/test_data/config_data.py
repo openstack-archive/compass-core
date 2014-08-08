@@ -19,6 +19,7 @@ import os
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
 test_tmpl_dir = os.path.join(curr_dir, 'templates')
+test_client_key = os.path.join(curr_dir, 'client.pem')
 
 
 adapter_test_config = {

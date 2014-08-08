@@ -179,7 +179,7 @@ class BaseConfigManager(object):
 
         return base_info
 
-    def get_host_name(self, host_id):
+    def get_host_fullname(self, host_id):
         host_info = self._get_host_info(host_id)
         if not host_info:
             return None

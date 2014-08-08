@@ -117,7 +117,7 @@ class ChefInstaller(PKInstaller):
             self.delete_node(host_id)
 
     def delete_node(self, host_id):
-        fullname = self.config_manager.get_host_name(host_id)
+        fullname = self.config_manager.get_host_fullname(host_id)
         node = self.get_node(fullname)
         self._delete_node(node)
 
@@ -343,7 +343,7 @@ class ChefInstaller(PKInstaller):
         hosts_deployed_configs = {}
 
         for host_id in host_list:
-            node_name = self.config_manager.get_host_name(host_id)
+            node_name = self.config_manager.get_host_fullname(host_id)
             roles = self.config_manager.get_host_roles(host_id)
 
             node = self.get_node(node_name, env_name)
@@ -386,7 +386,7 @@ class ChefInstaller(PKInstaller):
         host_ids = self.config_manager.get_host_id_list()
         os_installer_configs = {}
         for host_id in host_ids:
-            fullname = self.config_manager.get_host_name(host_id)
+            fullname = self.config_manager.get_host_fullname(host_id)
             temp = {
                 "tool": "chef",
                 "chef_url": self.installer_url
@@ -402,7 +402,7 @@ class ChefInstaller(PKInstaller):
         log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[self.NAME]
         hosts_list = self.config_manager.get_host_id_list()
         for host_id in hosts_list:
-            fullname = self.config_manager.get_host_name()
+            fullname = self.config_manager.get_host_fullname()
             self._clean_log(log_dir_prefix, fullname)
 
     def _clean_log(self, log_dir_prefix, node_name):

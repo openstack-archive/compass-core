@@ -127,13 +127,13 @@ class CobblerInstaller(OSInstaller):
         hosts_deploy_config = {}
 
         for host_id in clusterhost_ids:
-            fullname = self.config_manager.get_host_name(host_id)
+            hostname = self.config_manager.get_hostname(host_id)
             vars_dict = self._get_host_tmpl_vars_dict(host_id,
                                                       global_vars_dict,
-                                                      fullname=fullname,
+                                                      hostname=hostname,
                                                       profile=profile)
 
-            self.update_host_config_to_cobbler(host_id, fullname, vars_dict)
+            self.update_host_config_to_cobbler(host_id, hostname, vars_dict)
 
             # set host deploy config
             temp = {}
@@ -163,15 +163,15 @@ class CobblerInstaller(OSInstaller):
         log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[self.NAME]
 
         for host_id in clusterhost_list:
-            fullname = self.config_manager.get_host_name(host_id)
-            self._clean_log(log_dir_prefix, fullname)
+            hostname = self.config_manager.get_hostname(host_id)
+            self._clean_log(log_dir_prefix, hostname)
 
     def redeploy(self):
         """redeploy hosts."""
         host_ids = self.config_manager.get_host_id_list()
         for host_id in host_ids:
-            fullname = self.config_manager.get_host_name(host_id)
-            sys_id = self._get_system_id(fullname)
+            hostname = self.config_manager.get_hostname(host_id)
+            sys_id = self._get_system_id(hostname)
             if sys_id:
                 self._netboot_enabled(sys_id)
 
@@ -229,25 +229,25 @@ class CobblerInstaller(OSInstaller):
         profile = result[0]
         return profile
 
-    def _get_system_id(self, fullname):
+    def _get_system_id(self, hostname):
         """get system reference id for the host."""
-        sys_name = fullname
+        sys_name = hostname
         sys_id = None
-        system_info = self.remote.find_system({"name": fullname})
+        system_info = self.remote.find_system({"name": hostname})
 
         if not system_info:
             # Create a new system
             sys_id = self.remote.new_system(self.token)
-            self.remote.modify_system(sys_id, "name", fullname, self.token)
+            self.remote.modify_system(sys_id, "name", hostname, self.token)
             logging.debug('create new system %s for %s', sys_id, sys_name)
         else:
             sys_id = self.remote.get_system_handle(sys_name, self.token)
 
         return sys_id
 
-    def _clean_system(self, fullname):
+    def _clean_system(self, hostname):
         """clean system."""
-        sys_name = fullname
+        sys_name = hostname
         try:
             self.remote.remove_system(sys_name, self.token)
             logging.debug('system %s is removed', sys_name)
@@ -271,9 +271,9 @@ class CobblerInstaller(OSInstaller):
         log_dir = os.path.join(log_dir_prefix, system_name)
         shutil.rmtree(log_dir, True)
 
-    def update_host_config_to_cobbler(self, host_id, fullname, vars_dict):
+    def update_host_config_to_cobbler(self, host_id, hostname, vars_dict):
         """update host config and upload to cobbler server."""
-        sys_id = self._get_system_id(fullname)
+        sys_id = self._get_system_id(hostname)
 
         system_config = self._get_system_config(host_id, vars_dict)
         logging.debug('%s system config to update: %s', host_id, system_config)
@@ -290,11 +290,11 @@ class CobblerInstaller(OSInstaller):
         """Delete the host from cobbler server and clean up the installation
            progress.
         """
-        fullname = self.config_manager.get_host_name(host_id)
+        hostname = self.config_manager.get_hostname(host_id)
         try:
             log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[self.NAME]
-            self._clean_system(fullname)
-            self._clean_log(log_dir_prefix, fullname)
+            self._clean_system(hostname)
+            self._clean_log(log_dir_prefix, hostname)
         except Exception as ex:
             logging.info("Deleting host got exception: %s", ex.message)
 
@@ -313,7 +313,7 @@ class CobblerInstaller(OSInstaller):
             profile = self._get_profile_from_server(os_version)
         vars_dict[self.PROFILE] = profile
 
-        # Set fullname, MAC address and hostname, networks, dns and so on.
+        # Set hostname, MAC address and hostname, networks, dns and so on.
         host_baseinfo = self.config_manager.get_host_baseinfo(host_id)
         util.merge_dict(vars_dict, host_baseinfo)
 
@@ -340,8 +340,8 @@ class CobblerInstaller(OSInstaller):
             logging.info("System is None!")
             return False
 
-        fullname = self.config_manager.get_host_name(host_id)
-        system = self.remote.get_system_as_rendered(fullname)
+        hostname = self.config_manager.get_hostname(host_id)
+        system = self.remote.get_system_as_rendered(hostname)
         if system[self.POWER_TYPE] != 'ipmilan' or not system[self.POWER_USER]:
             ipmi_info = self.config_manager.get_host_ipmi_info(host_id)
             if not ipmi_info:
@@ -360,8 +360,8 @@ class CobblerInstaller(OSInstaller):
         return True
 
     def poweron(self, host_id):
-        fullname = self.config_manager.get_host_name(host_id)
-        sys_id = self._get_system_id(fullname)
+        hostname = self.config_manager.get_hostname(host_id)
+        sys_id = self._get_system_id(hostname)
         if not self._check_and_set_system_impi(sys_id):
             return
 
@@ -369,8 +369,8 @@ class CobblerInstaller(OSInstaller):
         logging.info("Host with ID=%d starts to power on!" % host_id)
 
     def poweroff(self, host_id):
-        fullname = self.config_manager.get_host_name(host_id)
-        sys_id = self._get_system_id(fullname)
+        hostname = self.config_manager.get_hostname(host_id)
+        sys_id = self._get_system_id(hostname)
         if not self._check_and_set_system_impi(sys_id):
             return
 
@@ -378,8 +378,8 @@ class CobblerInstaller(OSInstaller):
         logging.info("Host with ID=%d starts to power off!" % host_id)
 
     def reset(self, host_id):
-        fullname = self.config_manager.get_host_name(host_id)
-        sys_id = self._get_system_id(fullname)
+        hostname = self.config_manager.get_hostname(host_id)
+        sys_id = self._get_system_id(hostname)
         if not self._check_and_set_system_impi(sys_id):
             return
 

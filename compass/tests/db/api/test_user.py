@@ -17,13 +17,19 @@ import logging
 import os
 import unittest2
 
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
+
 from compass.db.api import database
 from compass.db.api import user as user_api
 from compass.db import exception
 from compass.utils import flags
 from compass.utils import logsetting
-
-os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
 class BaseTest(unittest2.TestCase):
@@ -35,7 +41,7 @@ class BaseTest(unittest2.TestCase):
         database.create_db()
         self.user_object = (
             user_api.get_user_object(
-                'admin@abc.com'
+                setting.COMPASS_ADMIN_EMAIL
             )
         )
 
@@ -58,7 +64,7 @@ class TestGetUserObject(unittest2.TestCase):
         super(TestGetUserObject, self).tearDown()
 
     def test_get_user_object(self):
-        user_object = user_api.get_user_object('admin@abc.com')
+        user_object = user_api.get_user_object(setting.COMPASS_ADMIN_EMAIL)
         self.assertIsNotNone(user_object)
 
     def test_get_user_object_unauthorized(self):
@@ -194,14 +200,14 @@ class TestUpdateUser(BaseTest):
         user_objs = user_api.update_user(
             self.user_object,
             self.user_object.id,
-            email='admin@abc.com',
+            email=setting.COMPASS_ADMIN_EMAIL,
             firstname='a',
             lastname='b',
             password='ab',
             is_admin=True,
             active=True
         )
-        self.assertEqual('admin@abc.com', user_objs['email'])
+        self.assertEqual(setting.COMPASS_ADMIN_EMAIL, user_objs['email'])
 
     def test_user_id(self):
         user_api.add_user(
@@ -325,5 +331,8 @@ class TestUpdatePermissions(BaseTest):
             item in add_permission[0].items() for item in expected.items()
         )
 
+
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

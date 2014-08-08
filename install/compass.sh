@@ -54,6 +54,11 @@ sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /var/www/compass/compass.wsgi
 sudo sed -e 's|$Python|'$VIRTUAL_ENV/bin/python'|' -i /etc/init.d/compass-progress-updated
 sudo sed -e 's|$CeleryPath|'$VIRTUAL_ENV/bin/celeryd'|' -i /etc/init.d/compass-celeryd
 sudo sed -e 's|$Python|'$VIRTUAL_ENV/bin/python'|' -i /usr/bin/compassd
+sudo sed -i "s/\$ipaddr/$ipaddr/g" /etc/compass/os_metadata/general.conf
+sudo sed -i "s/\$hostname/$HOSTNAME/g" /etc/compass/os_metadata/general.conf
+sed -i "s/\$gateway/$OPTION_ROUTER/g" /etc/compass/os_metadata/general.conf
+domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")
+sudo sed -i "s/\$domain/$domains/g" /etc/compass/os_metadata/general.conf
 
 # add cookbooks, databags and roles
 sudo chmod +x /opt/compass/bin/addcookbooks.py	

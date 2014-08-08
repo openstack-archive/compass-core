@@ -17,14 +17,19 @@ import logging
 import os
 import unittest2
 
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
+
 from compass.db.api import database
 from compass.db.api import user as user_api
 from compass.db.api import user_log
 from compass.db import exception
 from compass.utils import flags
 from compass.utils import logsetting
-
-os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
 class BaseTest(unittest2.TestCase):
@@ -36,7 +41,7 @@ class BaseTest(unittest2.TestCase):
         database.create_db()
         self.user_object = (
             user_api.get_user_object(
-                'admin@abc.com',
+                setting.COMPASS_ADMIN_EMAIL,
             )
         )
 
@@ -153,5 +158,8 @@ class TestDelActions(BaseTest):
         )
         self.assertEqual([], del_action)
 
+
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

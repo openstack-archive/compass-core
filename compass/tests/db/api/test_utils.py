@@ -21,6 +21,8 @@ os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
 from compass.utils import setting_wrapper as setting
+reload(setting)
+
 
 from compass.db.api import database
 from compass.db.api import utils
@@ -29,8 +31,6 @@ from compass.db import models
 
 from compass.utils import flags
 from compass.utils import logsetting
-
-reload(setting)
 
 
 class TestModelQuery(unittest2.TestCase):

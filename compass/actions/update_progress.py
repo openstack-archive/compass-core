@@ -90,9 +90,15 @@ def update_progress(cluster_hosts):
 
                 adapter = cluster.adapter
                 os_installer = adapter.adapter_os_installer
-                os_installer_name = os_installer.instance_name
+                if os_installer:
+                    os_installer_name = os_installer.name
+                else:
+                    os_installer_name = None
                 package_installer = adapter.adapter_package_installer
-                package_installer_name = package_installer.instance_name
+                if package_installer:
+                    package_installer_name = package_installer.name
+                else:
+                    package_installer_name = None
 
                 distributed_system_name = cluster.distributed_system_name
                 os_name = cluster.os_name
@@ -103,6 +109,19 @@ def update_progress(cluster_hosts):
                 hostids = [clusterhost.host.id for clusterhost in clusterhosts]
                 cluster_hosts.update({clusterid: hostids})
 
+        logging.info(
+            'update progress for '
+            'os_installer_name %s,'
+            'os_names %s,'
+            'package_installer_name %s,'
+            'distributed_systems %s,'
+            'cluster_hosts %s',
+            os_installer_name,
+            os_names,
+            package_installer_name,
+            distributed_systems,
+            cluster_hosts
+        )
         progress_calculator.update_progress(
             os_installer_name,
             os_names,

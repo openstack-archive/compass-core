@@ -52,7 +52,7 @@ sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_testmode/$TESTMODE/g" /etc/compass/global_config
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /var/www/compass/compass.wsgi
 sudo sed -e 's|$Python|'$VIRTUAL_ENV/bin/python'|' -i /etc/init.d/compass-progress-updated
-sudo sed -e 's|$CeleryPath|'$VIRTUAL_ENV/bin/celeryd'|' -i /etc/init.d/compass-celeryd
+sudo sed -e 's|$CeleryPath|'$VIRTUAL_ENV/bin/celery'|' -i /etc/init.d/compass-celeryd
 sudo sed -e 's|$Python|'$VIRTUAL_ENV/bin/python'|' -i /usr/bin/compassd
 sudo sed -i "s/\$ipaddr/$ipaddr/g" /etc/compass/os_metadata/general.conf
 sudo sed -i "s/\$hostname/$HOSTNAME/g" /etc/compass/os_metadata/general.conf

@@ -89,9 +89,13 @@ class OSMatcher(object):
 
     def match(self, os_installer_name, os_name):
         """Check if the os matcher is acceptable."""
-        return all([
-            self.name_ == os_installer_name,
-            self.os_regex_.match(os_name)])
+        if os_name is None:
+            return False
+        else:
+            return all([
+                self.name_ == os_installer_name,
+                self.os_regex_.match(os_name)
+            ])
 
     def update_progress(self, fullname, progress):
         """Update progress."""
@@ -123,9 +127,13 @@ class PackageMatcher(object):
 
     def match(self, package_installer_name, target_system):
         """Check if the package matcher is acceptable."""
-        return all([
-            self.name_.match(package_installer_name),
-            self.target_system_ == target_system])
+        if package_installer_name is None:
+            return False
+        else:
+            return all([
+                self.name_.match(package_installer_name),
+                self.target_system_ == target_system
+            ])
 
     def update_progress(self, fullname, progress):
         """Update progress."""

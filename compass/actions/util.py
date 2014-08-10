@@ -29,9 +29,11 @@ from compass.db import models
 def lock(lock_name, blocking=True, timeout=10):
     redis_instance = redis.Redis()
     instance_lock = redis_instance.lock(lock_name, timeout=timeout)
+    owned = False
     try:
         locked = instance_lock.acquire(blocking=blocking)
         if locked:
+            owned = True
             logging.debug('acquired lock %s', lock_name)
             yield instance_lock
         else:
@@ -45,9 +47,13 @@ def lock(lock_name, blocking=True, timeout=10):
         yield None
 
     finally:
-        instance_lock.acquired_until = 0
-        instance_lock.release()
-        logging.debug('released lock %s', lock_name)
+        if owned:
+            instance_lock.acquired_until = 0
+            instance_lock.release()
+            logging.debug('released lock %s', lock_name)
+        else:
+            logging.debug('nothing to release %s', lock_name)
+
 
 """
 def update_cluster_hosts(cluster_hosts,

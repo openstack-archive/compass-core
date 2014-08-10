@@ -33,7 +33,7 @@ def deploy(cluster_id, hosts_id_list, username=None):
     .. note::
         The function should be called out of database session.
     """
-    with util.lock('serialized_action') as lock:
+    with util.lock('serialized_action', timeout=1000) as lock:
         if not lock:
             raise Exception('failed to acquire lock to deploy')
 

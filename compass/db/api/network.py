@@ -88,8 +88,8 @@ def get_subnet(
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def add_subnet(
-    session, creator, subnet,
-    exception_when_existing=True, **kwargs
+    session, creator, exception_when_existing=True,
+    subnet=None, **kwargs
 ):
     """Create a subnet."""
     return utils.add_db_object(

@@ -586,7 +586,8 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
             host.state.state != 'SUCCESSFUL'
         ):
             return host.state_dict()
-        return self.state.to_dict()
+        else:
+            return self.state.to_dict()
 
     def to_dict(self):
         dict_info = self.host.to_dict()
@@ -598,9 +599,11 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
             'owner': self.owner,
             'clustername': self.clustername,
             'hostname': self.hostname,
-            'name': self.name,
-            'roles': [role.to_dict() for role in self.roles]
+            'name': self.name
         })
+        roles = self.roles
+        if roles:
+            dict_info['roles'] = [role.to_dict() for role in roles]
         return dict_info
 
 

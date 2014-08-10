@@ -12,7 +12,11 @@ function mac_address() {
 }
 
 function tear_down_machines() {
-    virtmachines=$(virsh list --name)
+    if [[ -z $NO_TEAR_DOWN ]] || [[ $PRE_CLEAN == true ]]; then
+        virtmachines=$(virsh list | awk '{print$2}'| tail -n +3)
+    else
+        virtmachines=
+    fi
     for virtmachine in $virtmachines; do
         echo "destroy $virtmachine"
         virsh destroy $virtmachine
@@ -21,7 +25,11 @@ function tear_down_machines() {
             exit 1
         fi
     done
-    virtmachines=$(virsh list --all --name)
+    if [[ -z $NO_TEAR_DOWN ]] || [[ $PRE_CLEAN == true ]]; then
+        virtmachines=$(virsh list --all | awk '{print$2}'| tail -n +3)
+    else
+        virtmachines=
+    fi
     for virtmachine in $virtmachines; do
         echo "undefine $virtmachine"
         virsh undefine $virtmachine
@@ -48,7 +56,7 @@ echo "role list: ${roles_list[@]}"
 roles_offset=0
 host_roles_list=''
 
-tear_down_machines
+PRE_CLEAN=true tear_down_machines
 
 echo "setup $VIRT_NUM virt machines"
 for i in `seq $VIRT_NUM`; do

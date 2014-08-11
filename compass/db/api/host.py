@@ -31,7 +31,8 @@ SUPPORTED_NETOWORK_FIELDS = [
     'interface', 'ip', 'subnet', 'is_mgmt', 'is_promiscuous'
 ]
 RESP_FIELDS = [
-    'id', 'name', 'os_name', 'os_id', 'owner', 'mac',
+    'id', 'name', 'hostname', 'os_name', 'os_id', 'owner', 'mac',
+    'switch_ip', 'port', 'switches',
     'reinstall_os', 'os_installed', 'tag', 'location', 'networks',
     'created_at', 'updated_at'
 ]

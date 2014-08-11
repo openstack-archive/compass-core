@@ -364,10 +364,6 @@ def _output_validates(kwargs_validators, obj):
             kwargs_validators[key](value)
 
 
-def validate_outputs(kwargs_validators, obj):
-    return _output_validates(kwargs_validators, obj)
-
-
 def output_validates(**kwargs_validators):
     def decorator(func):
         @functools.wraps(func)
@@ -378,6 +374,7 @@ def output_validates(**kwargs_validators):
                     _output_validates(kwargs_validators, obj_item)
             else:
                 _output_validates(kwargs_validators, obj)
+            return obj
         return wrapper
     return decorator
 

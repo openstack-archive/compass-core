@@ -41,7 +41,7 @@ RESP_FIELDS = [
 RESP_CLUSTERHOST_FIELDS = [
     'id', 'host_id', 'machine_id', 'name', 'hostname',
     'cluster_id', 'clustername', 'location', 'tag',
-    'networks', 'mac',
+    'networks', 'mac', 'switch_ip', 'port', 'switches',
     'os_installed', 'distributed_system_installed',
     'os_name', 'distributed_system_name',
     'reinstall_os', 'reinstall_distributed_system',

@@ -32,6 +32,7 @@ SUPPORTED_NETOWORK_FIELDS = [
 ]
 RESP_FIELDS = [
     'id', 'name', 'os_name', 'os_id', 'owner', 'mac',
+    'switch_ip', 'port', 'switches',
     'reinstall_os', 'os_installed', 'tag', 'location', 'networks',
     'created_at', 'updated_at'
 ]

@@ -26,7 +26,6 @@ from sqlalchemy import DateTime
 from sqlalchemy import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy import Float
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -254,7 +253,7 @@ class FieldMixin(HelperMixin):
 class InstallerMixin(HelperMixin):
     name = Column(String(80))
     instance_name = Column(String(80), unique=True)
-    settings = Column(MutableDict.as_mutable(JSONEncoded), default={})
+    settings = Column(JSONEncoded, default={})
 
     def validate(self):
         if not self.name:
@@ -592,6 +591,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     def to_dict(self):
         dict_info = self.host.to_dict()
         dict_info.update(super(ClusterHost, self).to_dict())
+        state_dict = self.state_dict()
         dict_info.update({
             'distributed_system_name': self.distributed_system_name,
             'distributed_system_installed': self.distributed_system_installed,
@@ -599,7 +599,8 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
             'owner': self.owner,
             'clustername': self.clustername,
             'hostname': self.hostname,
-            'name': self.name
+            'name': self.name,
+            'state': state_dict['state']
         })
         roles = self.roles
         if roles:
@@ -777,6 +778,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
     def to_dict(self):
         dict_info = self.machine.to_dict()
         dict_info.update(super(Host, self).to_dict())
+        state_dict = self.state_dict()
         dict_info.update({
             'machine_id': self.machine.id,
             'owner': self.owner,
@@ -785,7 +787,8 @@ class Host(BASE, TimestampMixin, HelperMixin):
                 host_network.to_dict()
                 for host_network in self.host_networks
             ],
-            'clusters': [cluster.to_dict() for cluster in self.clusters]
+            'clusters': [cluster.to_dict() for cluster in self.clusters],
+            'state': state_dict['state']
         })
         return dict_info
 
@@ -923,6 +926,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
             self.put_package_config = {
                 'roles': [role.name for role in adapter.roles]
             }
+        super(Cluster, self).initialize()
 
     def update(self):
         if self.reinstall_distributed_system:
@@ -1647,6 +1651,7 @@ class AdapterRole(BASE, HelperMixin):
             self.description = self.name
         if not self.display_name:
             self.display_name = self.name
+        super(AdapterRole, self).initialize()
 
 
 class PackageConfigMetadata(BASE, MetadataMixin):
@@ -1802,6 +1807,7 @@ class Adapter(BASE, HelperMixin):
     def initialize(self):
         if not self.display_name:
             self.display_name = self.name
+        super(Adapter, self).initialize()
 
     @property
     def root_metadatas(self):

@@ -302,7 +302,9 @@ def filter_output(filter_callbacks, filters, obj, missing_ok=False):
             if missing_ok:
                 continue
             else:
-                return False
+                raise exception.InvalidResponse(
+                    '%s is not in %s' % (callback_key, obj)
+                )
         if not callback_value(
             filters[callback_key], obj[callback_key]
         ):
@@ -378,6 +380,7 @@ def output_validates(**kwargs_validators):
                     _output_validates(kwargs_validators, obj_item)
             else:
                 _output_validates(kwargs_validators, obj)
+            return obj
         return wrapper
     return decorator
 

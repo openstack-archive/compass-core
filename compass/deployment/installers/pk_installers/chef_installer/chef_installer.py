@@ -87,9 +87,13 @@ class ChefInstaller(PKInstaller):
            does not exist.
         """
         import chef
-        bag = chef.DataBag(databag_name, api=self.chef_api)
-        bag.save()
-        return bag
+        databag = None
+        if databag_name not in chef.DataBag.list(api=self.chef_api):
+            databag = chef.DataBag.create(databag_name, api=self.chef_api)
+        else:
+            databag = chef.DataBag(databag_name, api=self.chef_api)
+
+        return databag
 
     def get_node(self, node_name, env_name):
         """Get chef node if existing, otherwise create one and set its
@@ -204,7 +208,7 @@ class ChefInstaller(PKInstaller):
         # Update node attributes.
         node_config = self._get_node_attributes(roles, vars_dict)
         for attr in node_config:
-            setattr(node, attr, node_config[attr])
+            node.attributes[attr] = node_config[attr]
 
         node.save()
 
@@ -215,6 +219,18 @@ class ChefInstaller(PKInstaller):
         env_attri = self.get_config_from_template(env_tmpl, vars_dict)
         return env_attri
 
+    def get_environment(self, env_name):
+        import chef
+        env = chef.Environment(env_name, api=self.chef_api)
+        env.save()
+        return env
+
+    def _update_env(self, env, env_attrs):
+        for attr in env_attrs:
+            if attr in env.attributes:
+                setattr(env, attr, env_attrs[attr])
+        env.save()
+
     def update_environment(self, env_name, vars_dict):
         """Generate environment attributes based on the template file and
            upload it to chef server.
@@ -223,13 +239,9 @@ class ChefInstaller(PKInstaller):
            :param dict vars_dict: The dictionary used in cheetah searchList to
                                   render attributes from templates.
         """
-        import chef
         env_config = self._get_env_attributes(vars_dict)
-        env = chef.Environment(env_name, api=self.chef_api)
-        for attr in env_config:
-            if attr in env.attributes:
-                setattr(env, attr, env_config[attr])
-        env.save()
+        env = self.get_environment(env_name)
+        self._update_env(env, env_config)
 
     def _get_databagitem_attributes(self, tmpl_dir, vars_dict):
         databagitem_attrs = self.get_config_from_template(tmpl_dir,
@@ -260,8 +272,7 @@ class ChefInstaller(PKInstaller):
 
             databag = self.get_databag(databag_name)
             for item, item_values in databagitem_attrs.iteritems():
-                databagitem = chef.DataBagItem(databag, item,
-                                               api=self.chef_api)
+                databagitem = chef.DataBagItem(databag, item, self.chef_api)
                 for key, value in item_values.iteritems():
                     databagitem[key] = value
                 databagitem.save()
@@ -407,7 +418,7 @@ class ChefInstaller(PKInstaller):
 
     def _clean_log(self, log_dir_prefix, node_name):
         log_dir = os.path.join(log_dir_prefix, node_name)
-        shutil.rmtree(log_dir, True)
+        shutil.rmtree(log_dir, False)
 
     def get_supported_dist_systems(self):
         """get target systems from chef. All target_systems for compass will
@@ -432,10 +443,10 @@ class ChefInstaller(PKInstaller):
             bag_item.delete()
             logging.debug('databag item %s is removed from databag',
                           item_name)
+            bag_item.save()
         except Exception as error:
             logging.debug('Failed to delete item  %s from databag! Error: %s',
                           item_name, error)
-        databag.save()
 
     def redeploy(self):
         """reinstall host."""

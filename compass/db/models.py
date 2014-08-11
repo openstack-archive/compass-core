@@ -26,7 +26,6 @@ from sqlalchemy import DateTime
 from sqlalchemy import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy import Float
 from sqlalchemy import ForeignKey
 from sqlalchemy import Integer
@@ -254,7 +253,7 @@ class FieldMixin(HelperMixin):
 class InstallerMixin(HelperMixin):
     name = Column(String(80))
     instance_name = Column(String(80), unique=True)
-    settings = Column(MutableDict.as_mutable(JSONEncoded), default={})
+    settings = Column(JSONEncoded, default={})
 
     def validate(self):
         if not self.name:

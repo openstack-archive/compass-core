@@ -29,6 +29,8 @@ from compass.utils import setting_wrapper as setting
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
+reload(setting)
+
 class BaseTest(unittest2.TestCase):
     """Base Class for unit test."""
 

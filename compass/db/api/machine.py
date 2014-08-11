@@ -116,5 +116,5 @@ def patch_machine(session, updater, machine_id, **kwargs):
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_machine(session, deleter, machine_id, **kwargs):
     """Delete a machine."""
-    machine = utils.get_db_object(session, models.Switch, id=machine_id)
+    machine = utils.get_db_object(session, models.Machine, id=machine_id)
     return utils.del_db_object(session, machine)

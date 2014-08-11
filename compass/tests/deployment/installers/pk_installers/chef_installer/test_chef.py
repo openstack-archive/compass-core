@@ -185,3 +185,13 @@ class TestChefInstaller(unittest2.TestCase):
                                                                 vars_dict)
             self.maxDiff = None
             self.assertDictEqual(expected_output[bag], output)
+
+    def test_clean_log(self):
+        host_id = 1
+        fullname = self.test_chef.config_manager.get_host_fullname(host_id)
+        test_log_dir = os.path.join('/tmp', fullname)
+        if not os.path.exists(test_log_dir):
+            os.makedirs(test_log_dir)
+
+        self.test_chef._clean_log('/tmp', fullname)
+        self.assertFalse(os.path.exists(test_log_dir))

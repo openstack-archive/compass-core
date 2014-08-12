@@ -39,9 +39,10 @@ RESP_FIELDS = [
     'created_at', 'updated_at'
 ]
 RESP_CLUSTERHOST_FIELDS = [
-    'id', 'host_id', 'machine_id', 'name', 'hostname',
+    'id', 'host_id', 'clusterhost_id', 'machine_id',
+    'name', 'hostname',
     'cluster_id', 'clustername', 'location', 'tag',
-    'networks', 'mac',
+    'networks', 'mac', 'switch_ip', 'port', 'switches',
     'os_installed', 'distributed_system_installed',
     'os_name', 'distributed_system_name',
     'reinstall_os', 'reinstall_distributed_system',
@@ -557,7 +558,7 @@ def get_clusterhost(
     return utils.get_db_object(
         session, models.ClusterHost,
         exception_when_missing,
-        id=clusterhost_id
+        clusterhost_id=clusterhost_id
     )
 
 
@@ -611,7 +612,7 @@ def del_clusterhost(session, deleter, clusterhost_id, **kwargs):
     """Delete cluster host."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost,
-        id=clusterhost_id
+        clusterhost_id=clusterhost_id
     )
     return utils.del_db_object(
         session, clusterhost
@@ -657,7 +658,7 @@ def get_cluster_host_deployed_config(
 def get_clusterhost_config(session, getter, clusterhost_id, **kwargs):
     """Get clusterhost config."""
     return utils.get_db_object(
-        session, models.ClusterHost, id=clusterhost_id
+        session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
 
 
@@ -670,7 +671,7 @@ def get_clusterhost_config(session, getter, clusterhost_id, **kwargs):
 def get_clusterhost_deployed_config(session, getter, clusterhost_id, **kwargs):
     """Get clusterhost deployed config."""
     return utils.get_db_object(
-        session, models.ClusterHost, id=clusterhost_id
+        session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
 
 
@@ -805,7 +806,7 @@ def update_clusterhost_config(
 ):
     """Update clusterhost config."""
     clusterhost = utils.get_db_object(
-        session, models.ClusterHost, id=clusterhost_id
+        session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _update_clusterhost_config(
         session, updater, clusterhost, **kwargs
@@ -822,7 +823,7 @@ def update_clusterhost_deployed_config(
 ):
     """Update clusterhost deployed config."""
     clusterhost = utils.get_db_object(
-        session, models.ClusterHost, id=clusterhost_id
+        session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _update_clusterhost_deployed_config(
         session, updater, clusterhost, **kwargs
@@ -899,7 +900,7 @@ def patch_clusterhost_config(
 ):
     """patch clusterhost config."""
     clusterhost = utils.get_db_object(
-        session, models.ClusterHost, id=clusterhost_id
+        session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _patch_clusterhost_config(
         session, updater, clusterhost, **kwargs
@@ -967,7 +968,7 @@ def delete_cluster_host_config(
 def delete_clusterhost_config(session, deleter, clusterhost_id):
     """Delet a clusterhost config."""
     clusterhost = utils.get_db_object(
-        session, models.ClusterHost, id=clusterhost_id
+        session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _delete_clusterhost_config(
         session, deleter, clusterhost
@@ -1001,9 +1002,7 @@ def update_cluster_hosts(
     if set_hosts is not None:
         _set_clusterhosts(session, cluster, **set_hosts)
     return {
-        'hosts': [
-            clusterhost.host for clusterhost in cluster.clusterhosts
-        ]
+        'hosts': cluster.clusterhosts
     }
 
 
@@ -1075,7 +1074,7 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
     utils.update_db_object(session, cluster, config_validated=True)
     return {
         'cluster': cluster,
-        'clusterhosts': clusterhosts
+        'hosts': clusterhosts
     }
 
 
@@ -1103,7 +1102,7 @@ def deploy_cluster(
     clusterhosts = []
     for clusterhost in cluster.clusterhosts:
         if (
-            clusterhost.id in clusterhost_ids or
+            clusterhost.clusterhost_id in clusterhost_ids or
             clusterhost.host_id in host_ids
         ):
             clusterhosts.append(clusterhost)
@@ -1130,13 +1129,13 @@ def deploy_cluster(
         'compass.tasks.deploy_cluster',
         (
             deployer.email, cluster_id,
-            [clusterhost.id for clusterhost in clusterhosts]
+            [clusterhost.host_id for clusterhost in clusterhosts]
         )
     )
     return {
         'status': 'deploy action sent',
         'cluster': cluster,
-        'clusterhosts': clusterhosts
+        'hosts': clusterhosts
     }
 
 

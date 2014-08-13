@@ -24,6 +24,8 @@ import logging
 import os
 import simplejson as json
 
+from compass.deployment.installers.config_manager import BaseConfigManager
+
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -135,8 +137,9 @@ class BaseInstaller(object):
             mod_file, path, descr = imp.find_module(name, [path])
             if mod_file:
                 mod = imp.load_module(name, mod_file, path, descr)
-                return getattr(mod, mod.NAME)(adapter_info, cluster_info,
-                                              hosts_info)
+                config_manager = BaseConfigManager(adapter_info, cluster_info,
+                                                   hosts_info)
+                return getattr(mod, mod.NAME)(config_manager)
 
         except ImportError as exc:
             logging.error('No such module found: %s', name)

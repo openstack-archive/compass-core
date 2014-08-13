@@ -90,11 +90,8 @@ class DeployManager(object):
                 self.os_installer.set_package_installer_config(pk_instl_confs)
 
             # start to deploy OS
-            try:
-                os_deploy_config = self.os_installer.deploy()
-                deploy_config = os_deploy_config
-            except Exception as ex:
-                logging.error(ex.message)
+            os_deploy_config = self.os_installer.deploy()
+            deploy_config = os_deploy_config
 
         if self.pk_installer:
             logging.info('DeployManager][deploy]get package installer %s',

@@ -18,7 +18,7 @@
 from compass.actions import util
 from compass.db.api import adapter_holder as adapter_db
 from compass.db.api import cluster as cluster_db
-from compass.db.api import host as host_db
+from compass.db.api import machine as machine_db
 from compass.db.api import user as user_db
 from compass.deployment.deploy_manager import DeployManager
 from compass.deployment.utils import constants as const
@@ -77,22 +77,43 @@ def redeploy(cluster_id, hosts_id_list, username=None):
                                                  user)
 
         deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
-        #deploy_manager.prepare_for_deploy()
+        # deploy_manager.prepare_for_deploy()
         deploy_manager.redeploy()
         ActionHelper.update_state(cluster_id, hosts_id_list, user)
 
 
-def poweron(host_id):
-    """Power on a list of hosts."""
-    pass
+class ServerPowerMgmt(object):
+    """Power management for bare-metal machines by IPMI command."""
+    @staticmethod
+    def poweron(machine_id, user):
+        """Power on the specified machine."""
+        pass
+
+    @staticmethod
+    def poweroff(machine_id, user):
+        pass
+
+    @staticmethod
+    def reset(machine_id, user):
+        pass
 
 
-def poweroff(host_id):
-    pass
+class HostPowerMgmt(object):
+    """Power management for hosts installed OS by OS installer. OS installer
+       will poweron/poweroff/reset host.
+    """
+    @staticmethod
+    def poweron(host_id, user):
+        """Power on the specified host."""
+        pass
 
+    @staticmethod
+    def poweroff(host_id, user):
+        pass
 
-def reset(host_id):
-    pass
+    @staticmethod
+    def reset(host_id, user):
+        pass
 
 
 class ActionHelper(object):
@@ -103,7 +124,11 @@ class ActionHelper(object):
            {
               "id": 1,
               "name": "xxx",
-              "roles": ['xxx', 'yyy', ...],
+              "flavor": {
+                  "flavor_name": "xxx",
+                  "roles": ['xxx', 'yyy', ...],
+                  "template": "xxx.tmpl"
+              },
               "metadata": {
                   "os_config": {
                       ...
@@ -128,30 +153,44 @@ class ActionHelper(object):
         metadata = cluster_db.get_cluster_metadata(user, cluster_id)
         adapter_info.update(metadata)
 
-        roles_info = adapter_info[const.ROLES]
+        roles_info = adapter_info[const.FLAVOR][const.ROLES]
         roles_list = [role[const.NAME] for role in roles_info]
-        adapter_info[const.ROLES] = roles_list
+        adapter_info[const.FLAVOR][const.ROLES] = roles_list
 
         return adapter_info
+
+    @staticmethod
+    def _get_role_names(roles):
+        return [role[const.NAME] for role in roles]
 
     @staticmethod
     def get_cluster_info(cluster_id, user):
         """Get cluster information.Return a dictionary as below,
            {
-               "cluster": {
-                   "id": 1,
-                   "adapter_id": 1,
-                   "os_version": "CentOS-6.5-x86_64",
-                   "name": "cluster_01",
-                   "os_config": {..},
-                   "package_config": {...},
-                   "deployed_os_config": {},
-                   "deployed_package_config": {},
-                   "owner": "xxx"
+               "id": 1,
+               "adapter_id": 1,
+               "os_version": "CentOS-6.5-x86_64",
+               "name": "cluster_01",
+               "flavor": {
+                   "flavor_name": "zzz",
+                   "template": "xx.tmpl",
+                   "roles": [...]
                }
+               "os_config": {..},
+               "package_config": {...},
+               "deployed_os_config": {},
+               "deployed_package_config": {},
+               "owner": "xxx"
            }
         """
         cluster_info = cluster_db.get_cluster(user, cluster_id)
+
+        # convert roles retrieved from db into a list of role names
+        roles_info = cluster_info[const.FLAVOR][const.ROLES]
+        cluster_info[const.FLAVOR][const.ROLES] = \
+            ActionHelper._get_role_names(roles_info)
+
+        # get cluster config info
         cluster_config = cluster_db.get_cluster_config(user, cluster_id)
         cluster_info.update(cluster_config)
 
@@ -166,10 +205,11 @@ class ActionHelper(object):
         """Get hosts information. Return a dictionary as below,
            {
                "hosts": {
-                   1($clusterhost_id/host_id): {
+                   1($host_id): {
                         "reinstall_os": True,
                         "mac": "xxx",
                         "name": "xxx",
+                        "roles": [xxx, yyy]
                         },
                         "networks": {
                             "eth0": {
@@ -192,10 +232,13 @@ class ActionHelper(object):
            }
         """
         hosts_info = {}
-        for clusterhost_id in hosts_id_list:
-            info = cluster_db.get_clusterhost(user, clusterhost_id)
-            config = cluster_db.get_clusterhost_config(user, clusterhost_id)
-            # Delete 'id' from temp
+        for host_id in hosts_id_list:
+            info = cluster_db.get_cluster_host(user, cluster_id, host_id)
+            info[const.ROLES] = ActionHelper._get_role_names(info[const.ROLES])
+
+            config = cluster_db.get_cluster_host_config(user,
+                                                        cluster_id,
+                                                        host_id)
             info.update(config)
 
             networks = info[const.NETWORKS]
@@ -216,7 +259,7 @@ class ActionHelper(object):
 
             info[const.NETWORKS] = networks_dict
 
-            hosts_info[clusterhost_id] = info
+            hosts_info[host_id] = info
 
         return hosts_info
 
@@ -230,18 +273,24 @@ class ActionHelper(object):
                                                   **cluster_config)
 
         hosts_id_list = deployed_config[const.HOSTS].keys()
-        for clusterhost_id in hosts_id_list:
-            config = deployed_config[const.HOSTS][clusterhost_id]
-            cluster_db.update_clusterhost_deployed_config(user,
-                                                          clusterhost_id,
-                                                          **config)
+        for host_id in hosts_id_list:
+            config = deployed_config[const.HOSTS][host_id]
+            cluster_db.update_cluster_host_deployed_config(user,
+                                                           cluster_id,
+                                                           host_id,
+                                                           **config)
 
     @staticmethod
-    def update_state(cluster_id, clusterhost_id_list, user):
+    def update_state(cluster_id, host_id_list, user):
         # update cluster state
         cluster_db.update_cluster_state(user, cluster_id, state='INSTALLING')
 
         # update all clusterhosts state
-        for clusterhost_id in clusterhost_id_list:
-            cluster_db.update_clusterhost_state(user, clusterhost_id,
-                                                state='INSTALLING')
+        for host_id in host_id_list:
+            cluster_db.update_cluster_host_state(user, cluster_id, host_id,
+                                                 state='INSTALLING')
+
+    @staticmethod
+    def get_machine_IPMI(machine_id, user):
+        machine_info = machine_db.get_machine(user, machine_id)
+        return machine_info[const.IPMI_CREDS]

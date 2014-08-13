@@ -71,6 +71,12 @@ PACKAGE_FIELD_DIR = '/etc/compass/package_field'
 ADAPTER_ROLE_DIR = '/etc/compass/role'
 VALIDATOR_DIR = '/etc/compass/validator'
 TMPL_DIR = '/etc/compass/templates'
+
+# For test chef server. please replace these config info with your own.
+TEST_CHEF_URL = "https://api.opscode.com/organizations/compasscheftest"
+TEST_CLIENT_KEY_PATH = "/etc/compass/client.pem"
+TEST_CLIENT_NAME = "graceyu"
+
 if (
     'COMPASS_IGNORE_SETTING' in os.environ and
     os.environ['COMPASS_IGNORE_SETTING']

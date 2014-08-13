@@ -16,11 +16,11 @@ __author__ = "Grace Yu (grace.yu@huawei.com)"
 
 """package installer: chef plugin."""
 
+from copy import deepcopy
 import logging
 import os
 import shutil
 
-from compass.deployment.installers.config_manager import BaseConfigManager
 from compass.deployment.installers.installer import PKInstaller
 from compass.deployment.utils import constants as const
 from compass.utils import setting_wrapper as compass_setting
@@ -32,21 +32,26 @@ NAME = 'ChefInstaller'
 
 class ChefInstaller(PKInstaller):
     """chef package installer."""
-    ENV_TMPL_NAME = 'env.tmpl'
-    NODE_TMPL_DIR = 'node'
+    ENV_TMPL_DIR = 'environments'
+    NODE_TMPL_DIR = 'nodes'
     DATABAG_TMPL_DIR = 'databags'
-    COMMON_NODE_TMPL_NAME = 'node.tmpl'
 
-    def __init__(self, adapter_info, cluster_info, hosts_info):
+    # keywords in package installer settings of adapter info
+    DATABAGS = "databags"
+    CHEFSERVER_URL = "chef_url"
+    KEY_DIR = "key_dir"
+    CLIENT = "client_name"
+
+    def __init__(self, config_manager):
         super(ChefInstaller, self).__init__()
 
-        self.config_manager = ChefConfigManager(adapter_info, cluster_info,
-                                                hosts_info)
+        self.config_manager = config_manager
         adapter_name = self.config_manager.get_dist_system_name()
         self.tmpl_dir = ChefInstaller.get_tmpl_path(adapter_name)
 
-        self.installer_url = self.config_manager.get_chef_url()
-        key, client = self.config_manager.get_chef_credentials()
+        installer_settings = self.config_manager.get_pk_installer_settings()
+        self.installer_url = self.get_chef_url(installer_settings)
+        key, client = self.get_chef_credentials(installer_settings)
 
         self.chef_api = self._get_chef_api(key, client)
         logging.debug('%s instance created', self)
@@ -215,8 +220,11 @@ class ChefInstaller(PKInstaller):
     def _get_env_attributes(self, vars_dict):
         """Get environment attributes from env templates."""
 
-        env_tmpl = os.path.join(self.tmpl_dir, self.ENV_TMPL_NAME)
-        env_attri = self.get_config_from_template(env_tmpl, vars_dict)
+        env_tmpl_fname = self.config_manager.get_cluster_flavor_template()
+        env_tmpl_path = os.path.join(
+            os.path.join(self.tmpl_dir, self.ENV_TMPL_DIR), env_tmpl_fname
+        )
+        env_attri = self.get_config_from_template(env_tmpl_path, vars_dict)
         return env_attri
 
     def get_environment(self, env_name):
@@ -255,7 +263,7 @@ class ChefInstaller(PKInstaller):
            :param dict vars_dict: The dictionary used to get attributes from
                                   templates.
         """
-        databag_names = self.config_manager.get_chef_databag_names()
+        databag_names = self.get_chef_databag_names()
         if not databag_names:
             return
 
@@ -288,7 +296,7 @@ class ChefInstaller(PKInstaller):
         vars_dict = {}
         if global_vars_dict:
             temp = global_vars_dict[const.CLUSTER][const.DEPLOYED_PK_CONFIG]
-            vars_dict[const.DEPLOYED_PK_CONFIG] = temp
+            vars_dict[const.DEPLOYED_PK_CONFIG] = deepcopy(temp)
 
         host_baseinfo = self.config_manager.get_host_baseinfo(host_id)
         util.merge_dict(vars_dict, host_baseinfo)
@@ -298,7 +306,8 @@ class ChefInstaller(PKInstaller):
             # Get host template variables and merge to vars_dict
             metadata = self.config_manager.get_pk_config_meatadata()
             host_dict = self.get_tmpl_vars_from_metadata(metadata, pk_config)
-            util.merge_dict(vars_dict[const.DEPLOYED_PK_CONFIG], host_dict)
+            #util.merge_dict(vars_dict[const.DEPLOYED_PK_CONFIG], host_dict)
+            vars_dict[const.DEPLOYED_PK_CONFIG].update(host_dict)
 
         # Set role_mapping for host
         mapping = self.config_manager.get_host_roles_mapping(host_id)
@@ -308,14 +317,17 @@ class ChefInstaller(PKInstaller):
 
     def _get_cluster_tmpl_vars(self):
         vars_dict = {}
+        # set cluster basic information to vars_dict
         cluster_baseinfo = self.config_manager.get_cluster_baseinfo()
         util.merge_dict(vars_dict, cluster_baseinfo)
 
+        # get and set template variables from cluster package config.
         pk_metadata = self.config_manager.get_pk_config_meatadata()
         pk_config = self.config_manager.get_cluster_package_config()
         meta_dict = self.get_tmpl_vars_from_metadata(pk_metadata, pk_config)
         vars_dict[const.DEPLOYED_PK_CONFIG] = meta_dict
 
+        # get and set roles_mapping to vars_dict
         mapping = self.config_manager.get_cluster_roles_mapping()
         vars_dict[const.DEPLOYED_PK_CONFIG][const.ROLES_MAPPING] = mapping
 
@@ -327,7 +339,11 @@ class ChefInstaller(PKInstaller):
            {
                "cluster": {
                    "id": 1,
-                   "deployed_package_config": {...}
+                   "deployed_package_config": {
+                       "roles_mapping": {...},
+                       "service_credentials": {...},
+                       ....
+                   }
                },
                "hosts": {
                    1($clusterhost_id): {
@@ -338,7 +354,6 @@ class ChefInstaller(PKInstaller):
            }
         """
         adapter_name = self.config_manager.get_adapter_name()
-        cluster_id = self.config_manager.get_cluster_id()
         cluster_name = self.config_manager.get_clustername()
         env_name = self.get_env_name(adapter_name, cluster_name)
 
@@ -362,23 +377,22 @@ class ChefInstaller(PKInstaller):
             self.update_node(node, roles, vars_dict)
 
             # set each host deployed config
-            tmp = self.config_manager.get_host_deployed_package_config(host_id)
-            tmp[const.TMPL_VARS_DICT] = vars_dict
+            tmp = {}
             host_config = {}
-            host_config[const.DEPLOYED_PK_CONFIG] = tmp
-            hosts_deployed_configs[host_id] = host_config
+            tmp.update(vars_dict[const.HOST][const.DEPLOYED_PK_CONFIG])
+            host_config = {
+                host_id: {const.DEPLOYED_PK_CONFIG: tmp}
+            }
+            hosts_deployed_configs.update(host_config)
 
         # set cluster deployed config
-        cl_config = self.config_manager.get_cluster_deployed_package_config()
-        cl_config[const.TMPL_VARS_DICT] = global_vars_dict
+        cl_config = {}
+        cl_config.update(global_vars_dict)
 
-        return {
-            const.CLUSTER: {
-                const.ID: cluster_id,
-                const.DEPLOYED_PK_CONFIG: cl_config
-            },
-            const.HOSTS: hosts_deployed_configs
-        }
+        output = {}
+        output.update(cl_config)
+        output.update({const.HOSTS: hosts_deployed_configs})
+        return output
 
     def generate_installer_config(self):
         """Render chef config file (client.rb) by OS installing right after
@@ -452,38 +466,34 @@ class ChefInstaller(PKInstaller):
         """reinstall host."""
         pass
 
+    def get_chef_url(self, installer_settings=None):
+        settings = installer_settings
+        if settings is None:
+            settings = self.config_manager.get_pk_installer_settings()
 
-class ChefConfigManager(BaseConfigManager):
-    TMPL_DIR = 'tmpl_dir'
-    DATABAGS = "databags"
-    CHEFSERVER_URL = "chef_url"
-    KEY_DIR = "key_dir"
-    CLIENT = "client_name"
-
-    def __init__(self, adapter_info, cluster_info, hosts_info):
-        super(ChefConfigManager, self).__init__(adapter_info,
-                                                cluster_info,
-                                                hosts_info)
-
-    def get_chef_url(self):
-        pk_installer_settings = self.get_pk_installer_settings()
-        if self.CHEFSERVER_URL not in pk_installer_settings:
+        if self.CHEFSERVER_URL not in settings:
             raise KeyError("'%s' must be set in package settings!",
                            self.CHEFSERVER_URL)
 
-        return pk_installer_settings[self.CHEFSERVER_URL]
+        return settings[self.CHEFSERVER_URL]
 
-    def get_chef_credentials(self):
-        installer_settings = self.get_pk_installer_settings()
-        key_dir = installer_settings.setdefault(self.KEY_DIR, None)
-        client = installer_settings.setdefault(self.CLIENT, None)
+    def get_chef_credentials(self, installer_settings=None):
+        settings = installer_settings
+        if settings is None:
+            settings = self.config_manager.get_pk_installer_settings()
+
+        key_dir = settings.setdefault(self.KEY_DIR, None)
+        client = settings.setdefault(self.CLIENT, None)
 
         return (key_dir, client)
 
-    def get_chef_databag_names(self):
-        pk_installer_settings = self.get_pk_installer_settings()
-        if self.DATABAGS not in pk_installer_settings:
+    def get_chef_databag_names(self, installer_settings=None):
+        settings = installer_settings
+        if settings is None:
+            settings = self.config_manager.get_pk_installer_settings()
+
+        if self.DATABAGS not in settings:
             logging.info("No databags is set!")
             return None
 
-        return pk_installer_settings[self.DATABAGS]
+        return settings[self.DATABAGS]

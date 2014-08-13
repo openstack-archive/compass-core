@@ -15,17 +15,31 @@
 __author__ = "Grace Yu (grace.yu@huawei.com)"
 
 import os
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as compass_setting
+reload(compass_setting)
 
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
 test_tmpl_dir = os.path.join(curr_dir, 'templates')
-test_client_key = os.path.join(curr_dir, 'client.pem')
+
+test_chef_url = compass_setting.TEST_CHEF_URL
+test_client_key = compass_setting.TEST_CLIENT_KEY_PATH
+test_client = compass_setting.TEST_CLIENT_NAME
 
 
 adapter_test_config = {
     "name": "openstack_icehouse",
     "distributed_system_name": "openstack_icehouse",
-    "roles": ["os-controller", "os-compute-worker", "os-network"],
+    "flavors": [
+        {
+            "falvor_name": "test_flavor",
+            "roles": ["os-controller", "os-compute-worker", "os-network"],
+            "template": "multinodes.tmpl"
+        }
+    ],
     "os_installer": {
         "name": "cobbler",
         "settings": {
@@ -170,6 +184,11 @@ cluster_test_config = {
     "id": 1,
     "os_name": "Ubuntu-12.04-x86_64",
     "name": "test",
+    "flavor": {
+        "falvor_name": "test_flavor",
+        "roles": ["os-controller", "os-compute-worker", "os-network"],
+        "template": "multinodes.tmpl"
+    },
     "os_config": {
         "general": {
             "language": "EN",
@@ -221,6 +240,7 @@ hosts_test_config = {
         "mac": "00:0c:29:3e:60:e9",
         "name": "server01.test",
         "hostname": "server01",
+        "roles": ["os-controller"],
         "networks": {
             "vnet0": {
                 "ip": "12.234.32.100",
@@ -256,8 +276,7 @@ hosts_test_config = {
             "network_mapping": {
                 "management": "vnet0",
                 "tenant": "vnet1"
-            },
-            "roles": ["os-controller"]
+            }
         }
     },
     2: {
@@ -266,6 +285,7 @@ hosts_test_config = {
         "mac": "00:0c:29:3e:60:a1",
         "name": "server02.test",
         "hostname": "server02",
+        "roles": ["os-compute"],
         "networks": {
             "eth0": {
                 "ip": "12.234.32.101",
@@ -296,15 +316,15 @@ hosts_test_config = {
             }
         },
         "package_config": {
-            "roles": ["os-compute"]
         }
     },
     3: {
         "host_id": 10,
         "reinstall_os": False,
-        "mac_address": "00:0c:29:3e:60:a2",
+        "mac": "00:0c:29:3e:60:a2",
         "name": "server03.test",
         "hostname": "server03",
+        "roles": ["os-network", "os-compute"],
         "networks": {
             "eth0": {
                 "ip": "12.234.32.103",
@@ -352,7 +372,95 @@ hosts_test_config = {
             }
         },
         "package_config": {
-            "roles": ["os-network"]
         }
     }
 }
+
+
+metadata_test_cases = [
+    {
+        "metadata": {
+            "general": {
+                "_self": {},
+                "language": {
+                    "_self": {"mapping_to": "lan"}
+                },
+                "timezone": {
+                    "_self": {"mapping_to": "timezone"}
+                }
+            }
+        },
+        "config": {
+            "general": {
+                "language": "EN",
+                "timezone": "UTC"
+            }
+        },
+        "expected_output": {
+            "lan": "EN",
+            "timezone": "UTC"
+        }
+    },
+    {
+        "metadata": {
+            "security": {
+                "_self": {"mapping_to": "security"},
+                "$credentials": {
+                    "_self": {},
+                    "$service": {
+                        "username": {
+                            "_self": {"mapping_to": "user"}
+                        },
+                        "password": {
+                            "_self": {"mapping_to": "pass"}
+                        }
+                    }
+                }
+            },
+            "test": {
+                "_self": {"mapping_to": "test_section"},
+                "item1": {
+                    "_self": {"mapping_to": "itema"}
+                },
+                "item2": {
+                    "_self": {"mapping_to": "itemb"}
+                }
+            }
+        },
+        "config": {
+            "security": {
+                "service_credentials": {
+                    "glance": {"username": "glance", "password": "glance"},
+                    "identity": {"username": "keystone",
+                                 "password": "keystone"},
+                    "dash": {"username": "dash", "password": "dash"}
+                },
+                "db_credentials": {
+                    "mysql": {"username": "root", "password": "root"},
+                    "rabbit_mq": {"username": "guest", "password": "guest"}
+                }
+            },
+            "test": {
+                "item1": "a",
+                "item2": "b"
+            }
+        },
+        "expected_output": {
+            "security": {
+                "service_credentials": {
+                    "glance": {"user": "glance", "pass": "glance"},
+                    "identity": {"user": "keystone", "pass": "keystone"},
+                    "dash": {"user": "dash", "pass": "dash"}
+                },
+                "db_credentials": {
+                    "mysql": {"user": "root", "pass": "root"},
+                    "rabbit_mq": {"user": "guest", "pass": "guest"}
+                }
+            },
+            "test_section": {
+                "itema": "a",
+                "itemb": "b"
+            }
+        }
+    }
+]

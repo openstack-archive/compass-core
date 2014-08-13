@@ -30,6 +30,10 @@ USERNAME = 'username'
 
 # Adapter info related keywords
 DIST_SYS_NAME = 'distributed_system_name'
+FLAVOR = 'flavor'
+FLAVORS = 'flavors'
+FLAVOR_NAME= 'flavor_name'
+TMPL = 'template'
 INSTALLER_SETTINGS = 'settings'
 METADATA = 'metadata'
 OS_INSTALLER = 'os_installer'

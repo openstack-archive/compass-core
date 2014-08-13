@@ -20,7 +20,6 @@ __author__ = "Grace Yu (grace.yu@huawei.com)"
 """Test Chef installer module.
 """
 
-from copy import deepcopy
 from mock import Mock
 import os
 import unittest2
@@ -28,6 +27,7 @@ import unittest2
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
+from compass.deployment.installers.config_manager import BaseConfigManager
 from compass.tests.deployment.test_data import config_data
 from compass.utils import setting_wrapper as compass_setting
 reload(compass_setting)
@@ -47,9 +47,12 @@ class TestChefInstaller(unittest2.TestCase):
         super(TestChefInstaller, self).tearDown()
 
     def _get_chef_installer(self):
-        adapter_info = deepcopy(config_data.adapter_test_config)
-        cluster_info = deepcopy(config_data.cluster_test_config)
-        hosts_info = deepcopy(config_data.hosts_test_config)
+        adapter_info = config_data.adapter_test_config
+        cluster_info = config_data.cluster_test_config
+        hosts_info = config_data.hosts_test_config
+
+        config_manager = BaseConfigManager(adapter_info, cluster_info,
+                                           hosts_info)
 
         ChefInstaller.get_tmpl_path = Mock()
         test_tmpl_dir = os.path.join(os.path.join(config_data.test_tmpl_dir,
@@ -59,7 +62,7 @@ class TestChefInstaller(unittest2.TestCase):
 
         ChefInstaller._get_chef_api = Mock()
         ChefInstaller._get_chef_api.return_value = 'mock_server'
-        chef_installer = ChefInstaller(adapter_info, cluster_info, hosts_info)
+        chef_installer = ChefInstaller(config_manager)
         return chef_installer
 
     def test_get_tmpl_vars(self):
@@ -178,7 +181,7 @@ class TestChefInstaller(unittest2.TestCase):
             }
         }
         databag_dir = os.path.join(self.test_chef.get_tmpl_path(), 'databags')
-        databags = self.test_chef.config_manager.get_chef_databag_names()
+        databags = self.test_chef.get_chef_databag_names()
         for bag in databags:
             tmpl_path = os.path.join(databag_dir, '.'.join((bag, 'tmpl')))
             output = self.test_chef._get_databagitem_attributes(tmpl_path,
@@ -195,3 +198,218 @@ class TestChefInstaller(unittest2.TestCase):
 
         self.test_chef._clean_log('/tmp', fullname)
         self.assertFalse(os.path.exists(test_log_dir))
+
+    def test_deploy(self):
+        expected_output = {
+            "cluster": {
+                "id": 1,
+                "name": "test",
+                "os_name": "Ubuntu-12.04-x86_64",
+                "deployed_package_config": {
+                    "service_credentials": {
+                        "mq": {
+                            "username": "guest",
+                            "password": "test"
+                        }
+                    },
+                    "roles_mapping": {
+                        "os_controller": {
+                            "management": {
+                                "interface": "vnet0",
+                                "ip": "12.234.32.100",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": True,
+                                "is_promiscuous": False,
+                                "subnet": "12.234.32.0/24"
+                            },
+                            "tenant": {
+                                "interface": "vnet1",
+                                "ip": "172.16.1.1",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": False,
+                                "is_promiscuous": False,
+                                "subnet": "172.16.1.0/24"
+                            }
+                        },
+                        "os_compute": {
+                            "management": {
+                                "interface": "eth0",
+                                "ip": "12.234.32.101",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": True,
+                                "is_promiscuous": False,
+                                "subnet": "12.234.32.0/24"
+                            },
+                            "tenant": {
+                                "interface": "eth1",
+                                "ip": "172.16.1.2",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": False,
+                                "is_promiscuous": False,
+                                "subnet": "172.16.1.0/24"
+                            }
+                        },
+                        "os_network": {
+                            "management": {
+                                "interface": "eth0",
+                                "ip": "12.234.32.103",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": True,
+                                "is_promiscuous": False,
+                                "subnet": "12.234.32.0/24"
+                            },
+                            "tenant": {
+                                "interface": "eth1",
+                                "ip": "172.16.1.3",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": False,
+                                "is_promiscuous": False,
+                                "subnet": "172.16.1.0/24"
+                            },
+                            "public": {
+                                "interface": "eth2",
+                                "ip": "10.0.0.1",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": False,
+                                "is_promiscuous": True,
+                                "subnet": "10.0.0.0/24"
+                            }
+                        }
+                    }
+                }
+            },
+            "hosts": {
+                1: {
+                    "deployed_package_config": {
+                         "roles_mapping": {
+                             "os_controller": {
+                                 "management": {
+                                     "interface": "vnet0",
+                                     "ip": "12.234.32.100",
+                                     "netmask": "255.255.255.0",
+                                     "is_mgmt": True,
+                                     "is_promiscuous": False,
+                                     "subnet": "12.234.32.0/24"
+                                 },
+                                 "tenant": {
+                                     "interface": "vnet1",
+                                     "ip": "172.16.1.1",
+                                     "netmask": "255.255.255.0",
+                                     "is_mgmt": False,
+                                     "is_promiscuous": False,
+                                     "subnet": "172.16.1.0/24"
+                                 }
+                             }
+                         },
+                         "service_credentials": {
+                             "mq": {
+                                 "username": "guest",
+                                 "password": "test"
+                             }
+                         }
+                    }
+                },
+                2: {
+                    "deployed_package_config": {
+                        "roles_mapping": {
+                            "os_compute": {
+                                "management": {
+                                    "interface": "eth0",
+                                    "ip": "12.234.32.101",
+                                    "netmask": "255.255.255.0",
+                                    "is_mgmt": True,
+                                    "is_promiscuous": False,
+                                    "subnet": "12.234.32.0/24"
+                                },
+                                "tenant": {
+                                    "interface": "eth1",
+                                    "ip": "172.16.1.2",
+                                    "netmask": "255.255.255.0",
+                                    "is_mgmt": False,
+                                    "is_promiscuous": False,
+                                    "subnet": "172.16.1.0/24"
+                                }
+                            }
+                        },
+                        "service_credentials": {
+                            "mq": {
+                                "username": "guest",
+                                "password": "test"
+                            }
+                        }
+                    }
+                },
+                3: {
+                    "deployed_package_config": {
+                        "roles_mapping": {
+                            "os_network": {
+                                "management": {
+                                    "interface": "eth0",
+                                    "ip": "12.234.32.103",
+                                    "netmask": "255.255.255.0",
+                                    "is_mgmt": True,
+                                    "is_promiscuous": False,
+                                    "subnet": "12.234.32.0/24"
+                                },
+                                "tenant": {
+                                    "interface": "eth1",
+                                    "ip": "172.16.1.3",
+                                    "netmask": "255.255.255.0",
+                                    "is_mgmt": False,
+                                    "is_promiscuous": False,
+                                    "subnet": "172.16.1.0/24"
+                                },
+                                "public": {
+                                    "interface": "eth2",
+                                    "ip": "10.0.0.1",
+                                    "netmask": "255.255.255.0",
+                                    "is_mgmt": False,
+                                    "is_promiscuous": True,
+                                    "subnet": "10.0.0.0/24"
+                                }
+                            },
+                            "os_compute": {
+                                "management": {
+                                    "interface": "eth0",
+                                    "ip": "12.234.32.103",
+                                    "netmask": "255.255.255.0",
+                                    "is_mgmt": True,
+                                    "is_promiscuous": False,
+                                    "subnet": "12.234.32.0/24"
+                                },
+                                "tenant": {
+                                    "interface": "eth1",
+                                    "ip": "172.16.1.3",
+                                    "netmask": "255.255.255.0",
+                                    "is_mgmt": False,
+                                    "is_promiscuous": False,
+                                    "subnet": "172.16.1.0/24"
+                                },
+                                "public": {
+                                    "interface": "eth2",
+                                    "ip": "10.0.0.1",
+                                    "netmask": "255.255.255.0",
+                                    "is_mgmt": False,
+                                    "is_promiscuous": True,
+                                    "subnet": "10.0.0.0/24"
+                                }
+                            }
+                        },
+                        "service_credentials": {
+                            "mq": {
+                                "username": "guest",
+                                "password": "test"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.test_chef.update_environment = Mock()
+        self.test_chef.update_databags = Mock()
+        self.test_chef.get_node = Mock()
+        self.test_chef.update_node = Mock()
+
+        output = self.test_chef.deploy()
+        self.maxDiff = None
+        self.assertDictEqual(expected_output, output)

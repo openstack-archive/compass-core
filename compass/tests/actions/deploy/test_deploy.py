@@ -43,16 +43,20 @@ class TestDeployAction(unittest2.TestCase):
         mock_get_adapter.return_value = {
             "id": 1,
             "name": "test_adapter",
-            "roles": [
-                {
-                    "name": "test-role-1",
-                    "display_name": "test role 1"
-                },
-                {
-                    "name": "test-role-2",
-                    "display_name": "test role 2"
-                }
-            ],
+            "flavor": {
+                "flavor_name": "test_flavor",
+                "template": "test_tmpl.tmpl",
+                "roles": [
+                    {
+                        "name": "test-role-1",
+                        "display_name": "test role 1"
+                    },
+                    {
+                        "name": "test-role-2",
+                        "display_name": "test role 2"
+                    }
+                ]
+            },
             "os_installer": {
                 "name": "test_os_installer",
                 "settings": {
@@ -73,7 +77,11 @@ class TestDeployAction(unittest2.TestCase):
         expected_output = {
             "id": 1,
             "name": "test_adapter",
-            "roles": ["test-role-1", "test-role-2"],
+            "flavor": {
+                "flavor_name": "test_flavor",
+                "template": "test_tmpl.tmpl",
+                "roles": ["test-role-1", "test-role-2"]
+            },
             "os_installer": {
                 "name": "test_os_installer",
                 "settings": {
@@ -93,22 +101,32 @@ class TestDeployAction(unittest2.TestCase):
         self.maxDiff = None
         self.assertDictEqual(expected_output, output)
 
-    @patch('compass.db.api.cluster.get_clusterhost_config')
-    @patch('compass.db.api.cluster.get_clusterhost')
-    def test_get_hosts_info(self, mock_get_clusterhost,
-                            mock_get_clusterhost_config):
-        mock_get_clusterhost_config.return_value = {
+    @patch('compass.db.api.cluster.get_cluster_host_config')
+    @patch('compass.db.api.cluster.get_cluster_host')
+    def test_get_hosts_info(self, mock_get_cluster_host,
+                            mock_get_cluster_host_config):
+        mock_get_cluster_host_config.return_value = {
             "os_config": {},
             "package_config": {},
             "deployed_os_config": {},
             "deployed_package_config": {}
         }
-        mock_get_clusterhost.return_value = {
+        mock_get_cluster_host.return_value = {
             "id": 1,
             "host_id": 10,
             "name": "test",
             "mac": "00:89:23:a1:e9:10",
             "hostname": "server01",
+            "roles": [
+                {
+                    "name": "test-role-1",
+                    "display_name": "test role 1"
+                },
+                {
+                    "name": "test-role-2",
+                    "display_name": "test role 2"
+                }
+            ],
             "networks": [
                 {
                     "interface": "eth0",
@@ -127,6 +145,7 @@ class TestDeployAction(unittest2.TestCase):
                 "name": "test",
                 "mac": "00:89:23:a1:e9:10",
                 "hostname": "server01",
+                "roles": ["test-role-1", "test-role-2"],
                 "networks": {
                     "eth0": {
                         "ip": "127.0.0.1",

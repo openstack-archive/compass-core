@@ -28,6 +28,7 @@ import unittest2
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
+from compass.deployment.installers.config_manager import BaseConfigManager
 from compass.deployment.installers.os_installers.cobbler.cobbler \
     import CobblerInstaller
 from compass.tests.deployment.test_data import config_data
@@ -98,11 +99,14 @@ class TestCobblerInstaller(unittest2.TestCase):
         del self.test_cobbler
 
     def _get_cobbler_installer(self):
-        adapter_info = deepcopy(config_data.adapter_test_config)
-        cluster_info = deepcopy(config_data.cluster_test_config)
+        adapter_info = config_data.adapter_test_config
+        cluster_info = config_data.cluster_test_config
         hosts_info = deepcopy(config_data.hosts_test_config)
         # In config_data, only hosts with ID 1 and 2 needs to install OS.
         del hosts_info[3]
+
+        config_manager = BaseConfigManager(adapter_info, cluster_info,
+                                           hosts_info)
 
         CobblerInstaller._get_cobbler_server = Mock()
         CobblerInstaller._get_cobbler_server.return_value = "mock_server"
@@ -112,7 +116,7 @@ class TestCobblerInstaller(unittest2.TestCase):
         CobblerInstaller.get_tmpl_path = Mock()
         test_tmpl_dir = os.path.join(config_data.test_tmpl_dir, 'cobbler')
         CobblerInstaller.get_tmpl_path.return_value = test_tmpl_dir
-        return CobblerInstaller(adapter_info, cluster_info, hosts_info)
+        return CobblerInstaller(config_manager)
 
     def test_get_host_tmpl_vars_dict(self):
         host_id = 1
@@ -171,3 +175,149 @@ class TestCobblerInstaller(unittest2.TestCase):
             host_id, self.expected_host_vars_dict)
         self.maxDiff = None
         self.assertEqual(expected_system_config, output)
+
+    def test_deploy(self):
+        profile = 'Ubuntu-12.04-x86_64'
+        self.test_cobbler._get_profile_from_server = Mock()
+        self.test_cobbler._get_profile_from_server.return_value = profile
+        self.test_cobbler.update_host_config_to_cobbler = Mock()
+        self.test_cobbler._sync = Mock()
+
+        expected_output = {
+            "cluster": {
+                "id": 1,
+                "deployed_os_config": {
+                    "language": "EN",
+                    "timezone": "UTC",
+                    "gateway": "12.234.32.1",
+                    "http_proxy": "http://127.0.0.1:3128",
+                    "https_proxy": "",
+                    "ntp_server": "127.0.0.1",
+                    "nameservers": ["127.0.0.1"],
+                    "search_path": ["1.ods.com", "ods.com"],
+                    "partition": {
+                        "/var": {
+                            "vol_percentage": 20,
+                            "vol_size": 20
+                        },
+                        "/home": {
+                            "vol_percentage": 40,
+                            "vol_size": 50
+                        }
+                    },
+                    "server_credentials": {
+                        "username": "root",
+                        "password": "huawei"
+                    }
+                }
+            },
+            "hosts": {
+                1: {
+                    "deployed_os_config": {
+                        "mac": "00:0c:29:3e:60:e9",
+                        "name": "server01.test",
+                        "hostname": "server01",
+                        "profile": "Ubuntu-12.04-x86_64",
+                        "reinstall_os": True,
+                        "dns": "server01.test.ods.com",
+                        "networks": {
+                            "vnet0": {
+                                "ip": "12.234.32.100",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": True,
+                                "is_promiscuous": False,
+                                "subnet": "12.234.32.0/24"
+                            },
+                            "vnet1": {
+                                "ip": "172.16.1.1",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": False,
+                                "is_promiscuous": False,
+                                "subnet": "172.16.1.0/24"
+                            }
+                        },
+                        "language": "EN",
+                        "timezone": "UTC",
+                        "gateway": "10.145.88.1",
+                        "http_proxy": "http://127.0.0.1:3128",
+                        "https_proxy": "",
+                        "ntp_server": "127.0.0.1",
+                        "nameservers": ["127.0.0.1"],
+                        "search_path": ["1.ods.com", "ods.com"],
+                        "partition": {
+                            "/var": {
+                                "vol_percentage": 30,
+                                "vol_size": 30
+                            },
+                            "/home": {
+                                "vol_percentage": 40,
+                                "vol_size": 50
+                            },
+                            "/test": {
+                                "vol_percentage": 10,
+                                "vol_size": 10
+                            }
+                        },
+                        "server_credentials": {
+                            "username": "root",
+                            "password": "huawei"
+                        }
+                    }
+                },
+                2: {
+                    "deployed_os_config": {
+                        "mac": "00:0c:29:3e:60:a1",
+                        "name": "server02.test",
+                        "hostname": "server02",
+                        "profile": "Ubuntu-12.04-x86_64",
+                        "reinstall_os": True,
+                        "dns": "server02.test.ods.com",
+                        "networks": {
+                            "eth0": {
+                                "ip": "12.234.32.101",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": True,
+                                "is_promiscuous": False,
+                                "subnet": "12.234.32.0/24"
+                            },
+                            "eth1": {
+                                "ip": "172.16.1.2",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": False,
+                                "is_promiscuous": False,
+                                "subnet": "172.16.1.0/24"
+                            }
+                        },
+                        "language": "EN",
+                        "timezone": "UTC",
+                        "gateway": "12.234.32.1",
+                        "http_proxy": "http://127.0.0.1:3128",
+                        "https_proxy": "",
+                        "ntp_server": "127.0.0.1",
+                        "nameservers": ["127.0.0.1"],
+                        "search_path": ["1.ods.com", "ods.com"],
+                        "partition": {
+                            "/var": {
+                                "vol_percentage": 20,
+                                "vol_size": 20
+                            },
+                            "/home": {
+                                "vol_percentage": 40,
+                                "vol_size": 50
+                            },
+                            "/test": {
+                                "vol_percentage": 20,
+                                "vol_size": 10
+                            }
+                        },
+                        "server_credentials": {
+                            "username": "root",
+                            "password": "huawei"
+                        }
+                    }
+                }
+            }
+        }
+        output = self.test_cobbler.deploy()
+        self.maxDiff = None
+        self.assertDictEqual(expected_output, output)

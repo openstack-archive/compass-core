@@ -20,7 +20,6 @@ __author__ = "Grace Yu (grace.yu@huawei.com)"
 """Test Chef installer functionalities regarding to chef server side.
 """
 
-from copy import deepcopy
 from mock import Mock
 import os
 import unittest2
@@ -33,6 +32,7 @@ from compass.utils import setting_wrapper as compass_setting
 reload(compass_setting)
 
 
+from compass.deployment.installers.config_manager import BaseConfigManager
 from compass.deployment.installers.pk_installers.chef_installer.chef_installer\
     import ChefInstaller
 
@@ -49,7 +49,7 @@ class TestChefInstaller(unittest2.TestCase):
     def tearDown(self):
         import chef
         super(TestChefInstaller, self).tearDown()
-        databag_names = self.test_chef.config_manager.get_chef_databag_names()
+        databag_names = self.test_chef.get_chef_databag_names()
         del self.test_chef
         for obj in self.objects:
             try:
@@ -65,16 +65,20 @@ class TestChefInstaller(unittest2.TestCase):
 
     def _get_testchefapi(self):
         import chef
-        url = 'https://api.opscode.com/organizations/compasscheftest'
-        return chef.ChefAPI(url, config_data.test_client_key, 'graceyu')
+        return chef.ChefAPI(config_data.test_chef_url,
+                            config_data.test_client_key,
+                            config_data.test_client)
 
     def _register(self, obj):
         self.objects.append(obj)
 
     def _get_chef_installer(self):
-        adapter_info = deepcopy(config_data.adapter_test_config)
-        cluster_info = deepcopy(config_data.cluster_test_config)
-        hosts_info = deepcopy(config_data.hosts_test_config)
+        adapter_info = config_data.adapter_test_config
+        cluster_info = config_data.cluster_test_config
+        hosts_info = config_data.hosts_test_config
+
+        config_manager = BaseConfigManager(adapter_info, cluster_info,
+                                           hosts_info)
 
         ChefInstaller.get_tmpl_path = Mock()
         test_tmpl_dir = os.path.join(os.path.join(config_data.test_tmpl_dir,
@@ -84,7 +88,7 @@ class TestChefInstaller(unittest2.TestCase):
 
         ChefInstaller._get_chef_api = Mock()
         ChefInstaller._get_chef_api.return_value = self.chef_test_api
-        chef_installer = ChefInstaller(adapter_info, cluster_info, hosts_info)
+        chef_installer = ChefInstaller(config_manager)
         return chef_installer
 
     def test_update_node(self):
@@ -231,7 +235,7 @@ class TestChefInstaller(unittest2.TestCase):
             }
         }
         self.test_chef.update_databags(vars_dict)
-        databag_names = self.test_chef.config_manager.get_chef_databag_names()
+        databag_names = self.test_chef.get_chef_databag_names()
 
         for name in databag_names:
             test_databag = chef.DataBag(name, self.chef_test_api)

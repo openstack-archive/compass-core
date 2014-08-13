@@ -19,11 +19,11 @@ import os
 import shutil
 import xmlrpclib
 
-from compass.deployment.installers.config_manager import BaseConfigManager
 from compass.deployment.installers.installer import OSInstaller
 from compass.deployment.utils import constants as const
 from compass.utils import setting_wrapper as compass_setting
 from compass.utils import util
+from copy import deepcopy
 
 
 NAME = 'CobblerInstaller'
@@ -45,12 +45,10 @@ class CobblerInstaller(OSInstaller):
     POWER_USER = 'power_user'
     POWER_PASS = 'power_pass'
 
-    def __init__(self, adapter_info, cluster_info, hosts_info):
+    def __init__(self, config_manager):
         super(CobblerInstaller, self).__init__()
 
-        self.config_manager = CobblerConfigManager(adapter_info,
-                                                   cluster_info,
-                                                   hosts_info)
+        self.config_manager = config_manager
         installer_settings = self.config_manager.get_os_installer_settings()
         try:
             username = installer_settings[self.CREDENTIALS][self.USERNAME]
@@ -137,14 +135,9 @@ class CobblerInstaller(OSInstaller):
 
             # set host deploy config
             temp = {}
-            temp = self.config_manager.get_host_deployed_os_config(host_id)
-            temp[const.TMPL_VARS_DICT] = vars_dict
+            temp.update(vars_dict[const.HOST])
             host_config = {const.DEPLOYED_OS_CONFIG: temp}
             hosts_deploy_config[host_id] = host_config
-
-        # set cluster deploy config
-        cluster_deconfig = self.config_manager.get_cluster_deployed_os_config()
-        cluster_deconfig[const.TMPL_VARS_DICT] = global_vars_dict
 
         # sync to cobbler and trigger installtion.
         self._sync()
@@ -152,7 +145,7 @@ class CobblerInstaller(OSInstaller):
         return {
             const.CLUSTER: {
                 const.ID: self.config_manager.get_cluster_id(),
-                const.DEPLOYED_OS_CONFIG: cluster_deconfig
+                const.DEPLOYED_OS_CONFIG: global_vars_dict[const.CLUSTER]
             },
             const.HOSTS: hosts_deploy_config
         }
@@ -304,7 +297,7 @@ class CobblerInstaller(OSInstaller):
         vars_dict = {}
         if global_vars_dict:
             # Set cluster template vars_dict from cluster os_config.
-            util.merge_dict(vars_dict, global_vars_dict)
+            vars_dict.update(deepcopy(global_vars_dict[const.CLUSTER]))
 
         if self.PROFILE in kwargs:
             profile = kwargs[self.PROFILE]
@@ -333,7 +326,7 @@ class CobblerInstaller(OSInstaller):
 
         vars_dict = self.get_tmpl_vars_from_metadata(os_config_metadata,
                                                      cluster_os_config)
-        return vars_dict
+        return {const.CLUSTER: vars_dict}
 
     def _check_and_set_system_impi(self, host_id, sys_id):
         if not sys_id:
@@ -385,30 +378,3 @@ class CobblerInstaller(OSInstaller):
 
         self.remote.power_system(sys_id, self.token, power='reboot')
         logging.info("Host with ID=%d starts to reboot!" % host_id)
-
-
-class CobblerConfigManager(BaseConfigManager):
-
-    def __init__(self, adapter_info, cluster_info, hosts_info):
-        super(CobblerConfigManager, self).__init__(adapter_info,
-                                                   cluster_info,
-                                                   hosts_info)
-
-    def get_host_ipmi_info(self, host_id):
-        host_info = self._get_host_info(host_id)
-        if not host_info:
-            return None
-
-        if self.IPMI not in host_info:
-            return None
-
-        ipmi_info = host_info[const.IPMI]
-
-        if not ipmi_info:
-            raise Exception('Cannot find IPMI information!')
-
-        ipmi_ip = ipmi_info[const.IP_ADDR]
-        ipmi_user = ipmi_info[const.IPMI_CREDS][const.USERNAME]
-        ipmi_pass = ipmi_info[const.IPMI_CREDS][const.PASSWORD]
-
-        return (ipmi_ip, ipmi_user, ipmi_pass)

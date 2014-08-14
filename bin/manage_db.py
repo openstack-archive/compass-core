@@ -116,38 +116,6 @@ def dropdb():
 
 
 @app_manager.command
-def createtable():
-    """Create database table."""
-    database.init()
-    if not flags.OPTIONS.table_name:
-        print 'flag --table_name is missing'
-        return
-
-    table_name = flags.OPTIONS.table_name
-    if table_name not in TABLE_MAPPING:
-        print '--table_name should be in %s' % TABLE_MAPPING.keys()
-        return
-
-    database.create_table(TABLE_MAPPING[table_name])
-
-
-@app_manager.command
-def droptable():
-    """Drop database table."""
-    database.init()
-    if not flags.OPTIONS.table_name:
-        print 'flag --table_name is missing'
-        return
-
-    table_name = flags.OPTIONS.table_name
-    if table_name not in TABLE_MAPPING:
-        print '--table_name should be in %s' % TABLE_MAPPING.keys()
-        return
-
-    database.drop_table(TABLE_MAPPING[table_name])
-
-
-@app_manager.command
 def reinstall_clusters():
     """Reinstall hosts in clusters.
 

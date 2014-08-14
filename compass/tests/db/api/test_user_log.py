@@ -37,6 +37,11 @@ class BaseTest(unittest2.TestCase):
 
     def setUp(self):
         super(BaseTest, self).setUp()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
         self.user_object = (
@@ -47,6 +52,7 @@ class BaseTest(unittest2.TestCase):
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(BaseTest, self).tearDown()
 
 
@@ -55,11 +61,9 @@ class TestListUserActions(BaseTest):
 
     def setUp(self):
         super(TestListUserActions, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListUserActions, self).tearDown()
-        database.drop_db()
 
     def test_list_user_actions(self):
         user_log.log_user_action(
@@ -92,11 +96,9 @@ class TestListActions(BaseTest):
 
     def setUp(self):
         super(TestListActions, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListActions, self).tearDown()
-        database.drop_db()
 
     def test_list_actions(self):
         user_log.log_user_action(
@@ -112,11 +114,9 @@ class TestDelUserActions(BaseTest):
 
     def setUp(self):
         super(TestDelUserActions, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestDelUserActions, self).tearDown()
-        database.drop_db()
 
     def test_del_user_actions(self):
         user_log.log_user_action(
@@ -139,11 +139,9 @@ class TestDelActions(BaseTest):
 
     def setUp(self):
         super(TestDelActions, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestDelActions, self).setUp()
-        database.drop_db()
 
     def test_del_actions(self):
         user_log.log_user_action(

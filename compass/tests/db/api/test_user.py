@@ -31,6 +31,11 @@ class BaseTest(unittest2.TestCase):
 
     def setUp(self):
         super(BaseTest, self).setUp()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
         self.user_object = (
@@ -41,6 +46,7 @@ class BaseTest(unittest2.TestCase):
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(BaseTest, self).tearDown()
 
 
@@ -49,12 +55,17 @@ class TestGetUserObject(unittest2.TestCase):
 
     def setUp(self):
         super(TestGetUserObject, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestGetUserObject, self).tearDown()
 
     def test_get_user_object(self):
@@ -76,11 +87,9 @@ class TestGetRecordCleanToken(BaseTest):
 
     def setUp(self):
         super(TestGetRecordCleanToken, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
-        super(TestGetRecordCleanToken, self).setUp()
-        database.drop_db
+        super(TestGetRecordCleanToken, self).tearDown()
 
     def test_record_user_token(self):
         token = user_api.record_user_token(
@@ -115,11 +124,9 @@ class TestGetUser(BaseTest):
 
     def setUp(self):
         super(TestGetUser, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetUser, self).tearDown()
-        database.drop_db()
 
     def test_get_user(self):
         user = user_api.get_user(self.user_object, self.user_object.id)
@@ -147,11 +154,9 @@ class TestAddUser(BaseTest):
 
     def setUp(self):
         super(TestAddUser, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestAddUser, self).tearDown()
-        database.drop_db()
 
     def test_add_user(self):
         user_objs = user_api.add_user(
@@ -167,11 +172,9 @@ class TestDelUser(BaseTest):
 
     def setUp(self):
         super(TestDelUser, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestDelUser, self).tearDown()
-        database.drop_db()
 
     def test_del_user(self):
         user_api.del_user(self.user_object, self.user_object.id)
@@ -184,11 +187,9 @@ class TestUpdateUser(BaseTest):
 
     def setUp(self):
         super(TestUpdateUser, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdateUser, self).tearDown()
-        database.drop_db()
 
     def test_update_admin(self):
         user_objs = user_api.update_user(
@@ -231,11 +232,9 @@ class TestGetPermissions(BaseTest):
 
     def setUp(self):
         super(TestGetPermissions, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetPermissions, self).tearDown()
-        database.drop_db()
 
     def test_get_permissions(self):
         user_permissions = user_api.get_permissions(
@@ -252,11 +251,9 @@ class TestAddGetDelUserPermission(BaseTest):
 
     def setUp(self):
         super(TestAddGetDelUserPermission, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestAddGetDelUserPermission, self).tearDown()
-        database.drop_db()
 
     def test_get_permission(self):
         permission = user_api.get_permission(
@@ -296,11 +293,9 @@ class TestUpdatePermissions(BaseTest):
 
     def setUp(self):
         super(TestUpdatePermissions, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdatePermissions, self).tearDown()
-        database.drop_db()
 
     def test_remove_permissions(self):
         user_api.update_permissions(
@@ -325,5 +320,8 @@ class TestUpdatePermissions(BaseTest):
             item in add_permission[0].items() for item in expected.items()
         )
 
+
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

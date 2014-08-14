@@ -131,6 +131,36 @@ def reset_host(host_id):
     pass
 
 
+@celery.task(name='compass.tasks.poweron_machine')
+def poweron_machine(machine_id):
+    """Deploy the given cluster.
+
+    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
+    :type cluster_hosts: dict of int to list of int
+    """
+    pass
+
+
+@celery.task(name='compass.tasks.poweroff_machine')
+def poweroff_machine(machine_id):
+    """Deploy the given cluster.
+
+    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
+    :type cluster_hosts: dict of int to list of int
+    """
+    pass
+
+
+@celery.task(name='compass.tasks.reset_machine')
+def reset_machine(machine_id):
+    """Deploy the given cluster.
+
+    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
+    :type cluster_hosts: dict of int to list of int
+    """
+    pass
+
+
 @celery.task(name='compass.tasks.update_progress')
 def update_clusters_progress(cluster_hosts):
     """Calculate the installing progress of the given cluster.

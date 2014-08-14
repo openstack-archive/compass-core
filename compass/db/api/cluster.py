@@ -40,7 +40,7 @@ RESP_FIELDS = [
 ]
 RESP_CLUSTERHOST_FIELDS = [
     'id', 'host_id', 'clusterhost_id', 'machine_id',
-    'name', 'hostname',
+    'name', 'hostname', 'roles', 'os_installer',
     'cluster_id', 'clustername', 'location', 'tag',
     'networks', 'mac', 'switch_ip', 'port', 'switches',
     'os_installed', 'distributed_system_installed',
@@ -97,10 +97,12 @@ RESP_DEPLOY_FIELDS = [
     'status', 'cluster', 'clusterhosts'
 ]
 ADDED_FIELDS = ['name', 'adapter_id', 'os_id']
-OPTIONAL_ADDED_FIELDS = ['flavor']
-UPDATED_FIELDS = ['name', 'reinstall_distributed_system', 'flavor']
+OPTIONAL_ADDED_FIELDS = ['flavor_id']
+UPDATED_FIELDS = ['name', 'reinstall_distributed_system']
 ADDED_HOST_FIELDS = ['machine_id']
 UPDATED_HOST_FIELDS = ['name', 'reinstall_os']
+UPDATED_CLUSTERHOST_FIELDS = ['roles']
+PATCHED_CLUSTERHOST_FIELDS = ['patched_roles']
 UPDATED_CONFIG_FIELDS = [
     'put_os_config', 'put_package_config', 'config_step'
 ]
@@ -211,7 +213,8 @@ def is_cluster_editable(
 
 
 @utils.supported_filters(
-    ADDED_FIELDS, optional_support_keys=OPTIONAL_ADDED_FIELDS
+    ADDED_FIELDS,
+    optional_support_keys=OPTIONAL_ADDED_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -446,6 +449,13 @@ def add_clusterhost_internal(
         machine_id=None, **kwargs
 ):
     from compass.db.api import host as host_api
+    clusterhost_dict = {}
+    host_dict = {}
+    for key, value in kwargs.items():
+        if key in UPDATED_CLUSTERHOST_FIELDS:
+            clusterhost_dict[key] = value
+        else:
+            host_dict[key] = value
     host = utils.get_db_object(
         session, models.Host, False, id=machine_id
     )
@@ -457,20 +467,21 @@ def add_clusterhost_internal(
         ):
             utils.update_db_object(
                 session, host,
-                **kwargs
+                **host_dict
             )
         else:
             logging.info('host %s is not editable', host.name)
     else:
-        utils.add_db_object(
+        host = utils.add_db_object(
             session, models.Host, False, machine_id,
             os=cluster.os,
+            os_installer=cluster.adapter.adapter_os_installer,
             creator=cluster.creator,
-            **kwargs
+            **host_dict
         )
-    utils.add_db_object(
+    return utils.add_db_object(
         session, models.ClusterHost, exception_when_existing,
-        cluster.id, machine_id
+        cluster.id, host.id, **clusterhost_dict
     )
 
 
@@ -562,10 +573,6 @@ def get_clusterhost(
     )
 
 
-@utils.supported_filters(
-    ADDED_HOST_FIELDS,
-    optional_support_keys=UPDATED_HOST_FIELDS
-)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_CLUSTER_HOSTS
@@ -579,10 +586,119 @@ def add_cluster_host(
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
+    is_cluster_editable(session, cluster, creator)
     return add_clusterhost_internal(
         session, cluster, exception_when_existing,
         **kwargs
     )
+
+
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_CLUSTER_HOSTS
+)
+@utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
+def _update_clusterhost(session, updater, clusterhost, **kwargs):
+    def roles_validates(roles):
+        cluster_roles = []
+        cluster = clusterhost.cluster
+        flavor = cluster.flavor
+        if not flavor:
+            raise exception.InvalidParameter(
+                'not flavor in cluster %s' % cluster.name
+            )
+        for flavor_roles in flavor.flavor_roles:
+            cluster_roles.append(flavor_roles.role.name)
+        for role in roles:
+            if role not in cluster_roles:
+                raise exception.InvalidParameter(
+                    'role %s is not in cluster roles %s' % (
+                        role, cluster_roles
+                    )
+                )
+
+    @utils.input_validates(
+        roles=roles_validates,
+        patched_roles=roles_validates
+    )
+    def update_internal(clusterhost, **in_kwargs):
+        return utils.update_db_object(
+            session, clusterhost, **in_kwargs
+        )
+
+    return update_internal(
+        clusterhost, **kwargs
+    )
+
+    is_cluster_editable(session, clusterhost.cluster, updater)
+    return utils.update_db_object(
+        session, clusterhost, **kwargs
+    )
+
+
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+)
+@database.run_in_session()
+def update_cluster_host(
+    session, updater, cluster_id, host_id,
+    **kwargs
+):
+    """Update cluster host."""
+    clusterhost = utils.get_db_object(
+        session, models.Cluster, cluster_id=cluster_id, host_id=host_id
+    )
+    return _update_clusterhost(session, updater, clusterhost, **kwargs)
+
+
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+)
+@database.run_in_session()
+def update_clusterhost(
+    session, updater, clusterhost_id,
+    **kwargs
+):
+    """Update cluster host."""
+    clusterhost = utils.get_db_object(
+        session, models.Cluster, clusterhost_id=clusterhost_id
+    )
+    return _update_clusterhost(session, updater, clusterhost, **kwargs)
+
+
+@utils.replace_filters(
+    roles='patched_roles'
+)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+)
+@database.run_in_session()
+def patch_cluster_host(
+    session, updater, cluster_id, host_id,
+    **kwargs
+):
+    """Update cluster host."""
+    clusterhost = utils.get_db_object(
+        session, models.Cluster, cluster_id=cluster_id, host_id=host_id
+    )
+    return _update_clusterhost(session, updater, clusterhost, **kwargs)
+
+
+@utils.replace_filters(
+    roles='patched_roles'
+)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+)
+@database.run_in_session()
+def patch_clusterhost(
+    session, updater, clusterhost_id,
+    **kwargs
+):
+    """Update cluster host."""
+    clusterhost = utils.get_db_object(
+        session, models.Cluster, clusterhost_id=clusterhost_id
+    )
+    return _update_clusterhost(session, updater, clusterhost, **kwargs)
 
 
 @utils.supported_filters([])

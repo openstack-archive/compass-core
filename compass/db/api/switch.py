@@ -134,12 +134,13 @@ def _check_vlans(vlans):
 
 
 def add_switch_internal(
-    session, ip_int, exception_when_existing=True, **kwargs
+    session, ip_int, exception_when_existing=True,
+    filters=setting.SWITCHES_DEFAULT_FILTERS, **kwargs
 ):
     with session.begin(subtransactions=True):
         return utils.add_db_object(
             session, models.Switch, exception_when_existing, ip_int,
-            filters=setting.SWITCHES_DEFAULT_FILTERS, **kwargs
+            **kwargs
         )
 
 
@@ -325,44 +326,6 @@ def patch_switch_filter(session, updater, switch_id, **kwargs):
     return utils.update_db_object(session, switch, **kwargs)
 
 
-def filter_machine_internal(filters, port):
-    for port_filter in filters:
-        logging.debug('apply filter %s on port %s', port_filter, port)
-        filter_allowed = port_filter['filter_type'] == 'allow'
-        if 'ports' in port_filter:
-            if port in port_filter['ports']:
-                logging.debug('port is allowed? %s', filter_allowed)
-                return filter_allowed
-            else:
-                logging.debug('port is allowed? %s', not filter_allowed)
-                return not filter_allowed
-        port_prefix = port_filter.get('port_prefix', '')
-        port_suffix = port_filter.get('port_suffix', '')
-        pattern = re.compile(r'%s(\d+)%s' % (port_prefix, port_suffix))
-        match = pattern.match(port)
-        if match:
-            logging.debug(
-                'port %s matches pattern %s',
-                port, pattern.pattern
-            )
-            port_number = match.group(1)
-            if (
-                'port_start' not in port_filter or
-                port_number >= port_filter['port_start']
-            ) and (
-                'port_end' not in port_filter or
-                port_number <= port_filter['port_end']
-            ):
-                logging.debug('port is allowed? %s', filter_allowed)
-                return filter_allowed
-        else:
-            logging.debug(
-                'port %s does not match pattern %s',
-                port, pattern.pattern
-            )
-    return True
-
-
 def get_switch_machines_internal(session, **filters):
     return utils.list_db_objects(
         session, models.SwitchMachine, **filters
@@ -427,13 +390,13 @@ def _filter_vlans(vlan_filter, obj):
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def _filter_switch_machines(session, user, switch_machines, **filters):
-    return [
-        switch_machine for switch_machine in switch_machines
-        if filter_machine_internal(
-            switch_machine.switch.filters,
-            switch_machine.port
-        )
-    ]
+    if 'ip_int' in filters:
+        return switch_machines
+    else:
+        return [
+            switch_machine for switch_machine in switch_machines
+            if not switch_machine.filtered
+        ]
 
 
 @user_api.check_user_permission_in_session(
@@ -452,29 +415,21 @@ def _filter_switch_machines(session, user, switch_machines, **filters):
     clusters=RESP_CLUSTER_FIELDS
 )
 def _filter_switch_machines_hosts(session, user, switch_machines, **filters):
-    filtered_switch_machines = [
-        switch_machine for switch_machine in switch_machines
-        if filter_machine_internal(
-            switch_machine.switch.filters,
-            switch_machine.port
-        )
-    ]
+    if 'ip_int' in filters:
+        filtered_switch_machines = switch_machines
+    else:
+        filtered_switch_machines = [
+            switch_machine for switch_machine in switch_machines
+            if not switch_machine.filtered
+        ]
     switch_machines_hosts = []
     for switch_machine in filtered_switch_machines:
-        switch_machine_host_dict = {}
         machine = switch_machine.machine
         host = machine.host
         if host:
-            clusters = [
-                clusterhost.cluster
-                for clusterhost in host.clusterhosts
-            ]
-            switch_machine_host_dict.update(
-                host.to_dict()
-            )
-            switch_machine_host_dict['clusters'] = [
-                cluster.to_dict() for cluster in clusters
-            ]
+            switch_machine_host_dict = host.to_dict()
+        else:
+            switch_machine_host_dict = machine.to_dict()
         switch_machine_host_dict.update(
             switch_machine.to_dict()
         )
@@ -506,15 +461,8 @@ def list_switchmachines(session, lister, **filters):
     switch_machines = get_switch_machines_internal(
         session, **filters
     )
-    if 'ip_int' in filters:
-        filtered_switch_machines = switch_machines
-    else:
-        filtered_switch_machines = [
-            switch_machine for switch_machine in switch_machines
-            if switch_machine.switch_ip != setting.DEFAULT_SWITCH_IP
-        ]
     return _filter_switch_machines(
-        session, lister, filtered_switch_machines, **filters
+        session, lister, switch_machines, **filters
     )
 
 

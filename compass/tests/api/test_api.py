@@ -30,7 +30,9 @@ reload(setting)
 
 
 # from compass.api import app
+from compass.db.api import adapter_holder as adapter_api
 from compass.db.api import database
+from compass.db.api import metadata_holder as metadata_api
 from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import util
@@ -41,12 +43,19 @@ class ApiTestCase(unittest2.TestCase):
 
     def setUp(self):
         super(ApiTestCase, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
+        adapter_api.load_adapters()
+        metadata_api.load_metadatas()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(ApiTestCase, self).tearDown()
 
     def test_login(self):

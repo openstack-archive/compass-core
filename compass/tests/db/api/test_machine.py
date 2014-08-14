@@ -35,6 +35,11 @@ class BaseTest(unittest2.TestCase):
 
     def setUp(self):
         super(BaseTest, self).setUp()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
         self.user_object = (
@@ -45,6 +50,7 @@ class BaseTest(unittest2.TestCase):
 
     def tearDown(self):
         super(BaseTest, self).setUp()
+        reload(setting)
         database.drop_db()
 
 
@@ -53,7 +59,6 @@ class TestGetMachine(BaseTest):
 
     def setUp(self):
         super(TestGetMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetMachine, self).tearDown()
@@ -77,7 +82,6 @@ class TestListMachines(BaseTest):
 
     def setUp(self):
         super(TestListMachines, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListMachines, self).tearDown()
@@ -98,7 +102,6 @@ class TestUpdateMachine(BaseTest):
 
     def setUp(self):
         super(TestUpdateMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdateMachine, self).tearDown()
@@ -127,7 +130,6 @@ class TestPatchMachine(BaseTest):
 
     def setUp(self):
         super(TestPatchMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestPatchMachine, self).tearDown()
@@ -156,7 +158,6 @@ class TestDelMachine(BaseTest):
 
     def setUp(self):
         super(TestDelMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestDelMachine, self).tearDown()

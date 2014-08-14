@@ -16,6 +16,7 @@
 import datetime
 import logging
 import netaddr
+import re
 import simplejson as json
 
 from sqlalchemy import BigInteger
@@ -80,6 +81,8 @@ class HelperMixin(object):
         keys = self.__mapper__.columns.keys()
         dict_info = {}
         for key in keys:
+            if key.startswith('_'):
+                continue
             value = getattr(self, key)
             if value is not None:
                 if isinstance(value, datetime.datetime):
@@ -252,13 +255,13 @@ class FieldMixin(HelperMixin):
 
 class InstallerMixin(HelperMixin):
     name = Column(String(80))
-    instance_name = Column(String(80), unique=True)
+    alias = Column(String(80), unique=True)
     settings = Column(JSONEncoded, default={})
 
     def validate(self):
         if not self.name:
             raise exception.InvalidParameter(
-                'name is not set in installer %s' % self.instance_name
+                'name is not set in installer %s' % self.name
             )
         super(InstallerMixin, self).validate()
 
@@ -307,7 +310,7 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         String(80))
     subnet_id = Column(
         Integer,
-        ForeignKey('network.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('subnet.id', onupdate='CASCADE', ondelete='CASCADE')
     )
     ip_int = Column(BigInteger, unique=True)
     is_mgmt = Column(Boolean, default=False)
@@ -342,6 +345,9 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
     def netmask(self):
         return str(netaddr.IPNetwork(self.subnet).netmask)
 
+    def update(self):
+        self.host.config_validated = False
+
     def validate(self):
         if not self.network:
             raise exception.InvalidParameter(
@@ -353,14 +359,6 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
             raise exception.InvalidParameter(
                 'ip is not set in %s interface %s' % (
                     self.host_id, self.interface
-                )
-            )
-        try:
-            netaddr.IPAddress(self.ip_int)
-        except Exception:
-            raise exception.InvalidParameter(
-                'ip %s format is uncorrect in %s interface %s' % (
-                    self.ip_int, self.host_id, self.interface
                 )
             )
         ip = netaddr.IPAddress(self.ip_int)
@@ -425,6 +423,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         Integer,
         ForeignKey('host.id', onupdate='CASCADE', ondelete='CASCADE')
     )
+    _roles = Column(JSONEncoded, default=[])
     config_step = Column(String(80), default='')
     package_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
@@ -468,10 +467,6 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     @patched_package_config.setter
     def patched_package_config(self, value):
         self.package_config = util.merge_dict(dict(self.package_config), value)
-        logging.info(
-            'patch clusterhost %s package config: %s',
-            self.id, value
-        )
         self.config_validated = False
 
     @property
@@ -483,10 +478,6 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         package_config = dict(self.package_config)
         package_config.update(value)
         self.package_config = package_config
-        logging.info(
-            'put clusterhost %s package config: %s',
-            self.id, value
-        )
         self.config_validated = False
 
     @property
@@ -557,20 +548,34 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @property
     def roles(self):
-        package_config = self.package_config
-        if 'roles' in package_config:
-            role_names = package_config['roles']
-            roles = self.cluster.adapter.roles
-            role_mapping = {}
-            for role in roles:
-                role_mapping[role.name] = role
-            filtered_roles = []
-            for role_name in role_names:
-                if role_name in role_mapping:
-                    filtered_roles.append(role_mapping[role_name])
-            return filtered_roles
-        else:
+        role_names = list(self._roles)
+        if not role_names:
             return None
+        flavor = self.cluster.flavor
+        if not flavor:
+            return None
+        roles = []
+        for flavor_role in flavor.flavor_roles:
+            role = flavor_role.role
+            if role.name in role_names:
+                roles.append(role)
+        return roles
+
+    @roles.setter
+    def roles(self, value):
+        self._roles = value
+        self.config_validated = False
+
+    @property
+    def patched_roles(self):
+        return self.roles
+
+    @patched_roles.setter
+    def patched_roles(self, value):
+        roles = list(self._roles)
+        roles.extend(value)
+        self._roles = roles
+        self.config_validated = False
 
     @hybrid_property
     def owner(self):
@@ -602,9 +607,13 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
             'owner': self.owner,
             'clustername': self.clustername,
             'name': self.name,
-            'state': state_dict['state'],
-            'roles': self.roles
+            'state': state_dict['state']
         })
+        roles = self.roles
+        if roles:
+            dict_info['roles'] = [
+                role.to_dict() for role in roles
+            ]
         return dict_info
 
 
@@ -657,6 +666,12 @@ class Host(BASE, TimestampMixin, HelperMixin):
     deployed_os_config = Column(JSONEncoded, default={})
     os_name = Column(String(80))
     creator_id = Column(Integer, ForeignKey('user.id'))
+    owner = Column(String(80))
+    os_installer_id = Column(
+        Integer,
+        ForeignKey('os_installer.id')
+    )
+
     id = Column(
         Integer,
         ForeignKey('machine.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -725,6 +740,9 @@ class Host(BASE, TimestampMixin, HelperMixin):
         super(Host, self).initialize()
 
     def update(self):
+        creator = self.creator
+        if creator:
+            self.owner = creator.email
         if self.reinstall_os:
             if self.state in ['SUCCESSFUL', 'ERROR']:
                 if self.config_validated:
@@ -740,29 +758,26 @@ class Host(BASE, TimestampMixin, HelperMixin):
         super(Host, self).update()
 
     def validate(self):
-        os = self.os
-        if not os:
-            raise exception.InvalidParameter(
-                'os is not set in host %s' % self.id
-            )
-        if not os.deployable:
-            raise exception.InvalidParameter(
-                'os %s is not deployable' % os.name
-            )
         creator = self.creator
         if not creator:
             raise exception.InvalidParameter(
                 'creator is not set in host %s' % self.id
             )
+        os = self.os
+        if not os:
+            raise exception.InvalidParameter(
+                'os is not set in host %s' % self.id
+            )
+        os_installer = self.os_installer
+        if not os_installer:
+            raise exception.Invalidparameter(
+                'os_installer is not set in host %s' % self.id
+            )
+        if not os.deployable:
+            raise exception.InvalidParameter(
+                'os %s is not deployable in host %s' % (os.name, self.id)
+            )
         super(Host, self).validate()
-
-    @hybrid_property
-    def owner(self):
-        return self.creator.email
-
-    @owner.expression
-    def owner(cls):
-        return cls.creator.email
 
     @property
     def os_installed(self):
@@ -781,13 +796,13 @@ class Host(BASE, TimestampMixin, HelperMixin):
         state_dict = self.state_dict()
         dict_info.update({
             'machine_id': self.machine.id,
-            'owner': self.owner,
             'os_installed': self.os_installed,
             'hostname': self.name,
             'networks': [
                 host_network.to_dict()
                 for host_network in self.host_networks
             ],
+            'os_installer': self.os_installer.to_dict(),
             'clusters': [cluster.to_dict() for cluster in self.clusters],
             'state': state_dict['state']
         })
@@ -884,9 +899,14 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     name = Column(String(80), unique=True)
     reinstall_distributed_system = Column(Boolean, default=True)
     config_step = Column(String(80), default='')
-    os_id = Column(Integer, ForeignKey('os.id'), nullable=True)
-    os_name = Column(String(80), nullable=True)
-    flavor = Column(String(80), nullable=True)
+    os_id = Column(Integer, ForeignKey('os.id'))
+    os_name = Column(String(80))
+    flavor_id = Column(
+        Integer,
+        ForeignKey('adapter_flavor.id'),
+        nullable=True
+    )
+    flavor_name = Column(String(80), nullable=True)
     distributed_system_id = Column(
         Integer, ForeignKey('distributed_system.id'),
         nullable=True
@@ -902,6 +922,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     adapter_id = Column(Integer, ForeignKey('adapter.id'))
     adapter_name = Column(String(80), nullable=True)
     creator_id = Column(Integer, ForeignKey('user.id'))
+    owner = Column(String(80))
     clusterhosts = relationship(
         ClusterHost,
         passive_deletes=True, passive_updates=True,
@@ -922,14 +943,12 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         super(Cluster, self).__init__(**kwargs)
 
     def initialize(self):
-        adapter = self.adapter
-        if adapter:
-            self.put_package_config = {
-                'roles': [role.name for role in adapter.roles]
-            }
         super(Cluster, self).initialize()
 
     def update(self):
+        creator = self.creator
+        if creator:
+            self.owner = creator.email
         if self.reinstall_distributed_system:
             if self.state in ['SUCCESSFUL', 'ERROR']:
                 if self.config_validated:
@@ -948,10 +967,17 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
             self.adapter_name = adapter.name
             self.distributed_system = adapter.adapter_distributed_system
             self.distributed_system_name = self.distributed_system.name
+            flavor = self.flavor
+            if flavor:
+                self.flavor_name = flavor.name
+            else:
+                self.flavor_name = None
         else:
             self.adapter_name = None
             self.distributed_system = None
             self.distributed_system_name = None
+            self.flavor = None
+            self.flavor_name = None
         super(Cluster, self).update()
 
     def validate(self):
@@ -961,28 +987,47 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
                 'creator is not set in cluster %s' % self.id
             )
         os = self.os
-        if os and not os.deployable:
+        if not os:
+            raise exception.InvalidParameter(
+                'os is not set in cluster %s' % self.id
+            )
+        if not os.deployable:
             raise exception.InvalidParameter(
                 'os %s is not deployable' % os.name
             )
         adapter = self.adapter
-        if adapter:
-            if not adapter.deployable:
-                raise exception.InvalidParameter(
-                    'adapter %s is not deployable' % adapter.name
-                )
-            supported_os_ids = [
-                adapter_os.os.id for adapter_os in adapter.supported_oses
-            ]
-            if os and os.id not in supported_os_ids:
-                raise exception.InvalidParameter(
-                    'os %s is not supported' % os.name
-                )
-            distributed_system = self.distributed_system
-            if distributed_system and not distributed_system.deployable:
+        if not adapter:
+            raise exception.InvalidParameter(
+                'adapter is not set in cluster %s' % self.id
+            )
+        if not adapter.deployable:
+            raise exception.InvalidParameter(
+                'adapter %s is not deployable' % adapter.name
+            )
+        supported_os_ids = [
+            adapter_os.os.id for adapter_os in adapter.supported_oses
+        ]
+        if os.id not in supported_os_ids:
+            raise exception.InvalidParameter(
+                'os %s is not supported' % os.name
+            )
+        distributed_system = self.distributed_system
+        if distributed_system:
+            if not distributed_system.deployable:
                 raise exception.InvalidParamerter(
                     'distributed system %s is not deployable' % (
                         distributed_system.name
+                    )
+                )
+            flavor = self.flavor
+            if not flavor:
+                raise exception.InvalidParameter(
+                    'flavor is not set in cluster %s' % self.id
+                )
+            if flavor.adapter_id != self.adapter_id:
+                raise exception.InvalidParameter(
+                    'flavor adapter id %s does not match adapter id %s' % (
+                        flavor.adapter_id, self.adapter_id
                     )
                 )
         super(Cluster, self).validate()
@@ -1032,14 +1077,6 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         logging.info('put cluster %s package config: %s', self.id, value)
         self.config_validated = False
 
-    @hybrid_property
-    def owner(self):
-        return self.creator.email
-
-    @owner.expression
-    def owner(cls):
-        return cls.creator.email
-
     @property
     def distributed_system_installed(self):
         return self.state.state == 'SUCCESSFUL'
@@ -1049,10 +1086,11 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
 
     def to_dict(self):
         dict_info = super(Cluster, self).to_dict()
-        dict_info.update({
-            'distributed_system_installed': self.distributed_system_installed,
-            'owner': self.owner,
-        })
+        dict_info['distributed_system_installed'] = (
+            self.distributed_system_installed
+        )
+        if self.flavor:
+            dict_info['flavor'] = self.flavor.to_dict()
         return dict_info
 
 
@@ -1318,6 +1356,44 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
                 vlans.append(item)
         self.vlans = vlans
 
+    @property
+    def filtered(self):
+        filters = self.switch.filters
+        port = self.port
+        for port_filter in filters:
+            logging.debug('apply filter %s on port %s', port_filter, port)
+            denied = port_filter['filter_type'] != 'allow'
+            if 'ports' in port_filter:
+                if port in port_filter['ports']:
+                    logging.debug('port %s is allowed? %s', port, not denied)
+                    return denied
+            port_prefix = port_filter.get('port_prefix', '')
+            port_suffix = port_filter.get('port_suffix', '')
+            pattern = re.compile(r'%s(\d+)%s' % (port_prefix, port_suffix))
+            match = pattern.match(port)
+            if match:
+                logging.debug(
+                    'port %s matches pattern %s',
+                    port, pattern.pattern
+                )
+                port_number = match.group(1)
+                if (
+                    'port_start' not in port_filter or
+                    port_number >= port_filter['port_start']
+                ) and (
+                    'port_end' not in port_filter or
+                    port_number <= port_filter['port_end']
+                ):
+                    logging.debug('port %s is allowed? %s', port, not denied)
+                    return denied
+            else:
+                logging.debug(
+                    'port %s does not match pattern %s',
+                    port, pattern.pattern
+                )
+        logging.debug('port %s is allowed', port)
+        return False
+
     def to_dict(self):
         dict_info = self.machine.to_dict()
         dict_info.update(super(SwitchMachine, self).to_dict())
@@ -1400,6 +1476,7 @@ class Machine(BASE, HelperMixin, TimestampMixin):
                 'vlans': switch_machine.vlans
             }
             for switch_machine in self.switch_machines
+            if not switch_machine.filtered
         ]
         if dict_info['switches']:
             dict_info.update(dict_info['switches'][0])
@@ -1620,6 +1697,105 @@ class OperatingSystem(BASE, HelperMixin):
         return dict_info
 
 
+class AdapterFlavorRole(BASE, HelperMixin):
+    """Adapter flavor roles."""
+
+    __tablename__ = 'adapter_flavor_role'
+
+    flavor_id = Column(
+        Integer,
+        ForeignKey(
+            'adapter_flavor.id',
+            onupdate='CASCADE', ondelete='CASCADE'
+        ),
+        primary_key=True
+    )
+    role_id = Column(
+        Integer,
+        ForeignKey(
+            'adapter_role.id',
+            onupdate='CASCADE', ondelete='CASCADE'
+        ),
+        primary_key=True
+    )
+
+    def __init__(self, flavor_id, role_id):
+        self.flavor_id = flavor_id
+        self.role_id = role_id
+        super(AdapterFlavorRole, self).__init__()
+
+    def validate(self):
+        flavor_adapter_id = self.flavor.adapter_id
+        role_adapter_id = self.role.adapter_id
+        if flavor_adapter_id != role_adapter_id:
+            raise exception.InvalidParameter(
+                'flavor adapter %s and role adapter %s does not match' % (
+                    flavor_adapter_id, role_adapter_id
+                )
+            )
+
+    def to_dict(self):
+        dict_info = super(AdapterFlavorRole, self).to_dict()
+        dict_info.update(
+            self.role.to_dict()
+        )
+        return dict_info
+
+
+class AdapterFlavor(BASE, HelperMixin):
+    """Adapter's flavors."""
+
+    __tablename__ = 'adapter_flavor'
+
+    id = Column(Integer, primary_key=True)
+    adapter_id = Column(
+        Integer,
+        ForeignKey('adapter.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    name = Column(String(80), unique=True)
+    display_name = Column(String(80))
+    template = Column(String(80))
+
+    flavor_roles = relationship(
+        AdapterFlavorRole,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('flavor')
+    )
+    clusters = relationship(
+        Cluster,
+        backref=backref('flavor')
+    )
+
+    __table_args__ = (
+        UniqueConstraint('name', 'adapter_id', name='constraint'),
+    )
+
+    def __init__(self, name, adapter_id, **kwargs):
+        self.name = name
+        self.adapter_id = adapter_id
+        super(AdapterFlavor, self).__init__(**kwargs)
+
+    def initialize(self):
+        if not self.display_name:
+            self.display_name = self.name
+        super(AdapterFlavor, self).initialize()
+
+    def validate(self):
+        if not self.template:
+            raise exception.InvalidParameter(
+                'template is not set in adapter flavor %s' % self.id
+            )
+        super(AdapterFlavor, self).validate()
+
+    def to_dict(self):
+        dict_info = super(AdapterFlavor, self).to_dict()
+        dict_info['roles'] = [
+            flavor_role.to_dict() for flavor_role in self.flavor_roles
+        ]
+        return dict_info
+
+
 class AdapterRole(BASE, HelperMixin):
     """Adapter's roles."""
 
@@ -1636,6 +1812,13 @@ class AdapterRole(BASE, HelperMixin):
             onupdate='CASCADE',
             ondelete='CASCADE'
         )
+    )
+
+    flavor_roles = relationship(
+        AdapterFlavorRole,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('role')
     )
 
     __table_args__ = (
@@ -1776,6 +1959,12 @@ class Adapter(BASE, HelperMixin):
         cascade='all, delete-orphan',
         backref=backref('adapter')
     )
+    flavors = relationship(
+        AdapterFlavor,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('adapter')
+    )
     children = relationship(
         'Adapter',
         passive_deletes=True, passive_updates=True,
@@ -1876,6 +2065,17 @@ class Adapter(BASE, HelperMixin):
         else:
             return []
 
+    @property
+    def adapter_flavors(self):
+        flavors = self.flavors
+        if flavors:
+            return flavors
+        parent = self.parent
+        if parent:
+            return parent.adapter_flavors
+        else:
+            return []
+
     def to_dict(self):
         dict_info = super(Adapter, self).to_dict()
         dict_info.update({
@@ -1886,6 +2086,9 @@ class Adapter(BASE, HelperMixin):
                 adapter_os.to_dict()
                 for adapter_os in self.adapter_supported_oses
             ],
+            'flavors': [
+                flavor.to_dict() for flavor in self.adapter_flavors
+            ]
         })
         distributed_system = self.adapter_distributed_system
         if distributed_system:
@@ -1947,9 +2150,13 @@ class OSInstaller(BASE, InstallerMixin):
         cascade='all, delete-orphan',
         backref=backref('os_installer')
     )
+    hosts = relationship(
+        Host,
+        backref=backref('os_installer')
+    )
 
-    def __init__(self, instance_name, **kwargs):
-        self.instance_name = instance_name
+    def __init__(self, alias, **kwargs):
+        self.alias = alias
         super(OSInstaller, self).__init__(**kwargs)
 
 
@@ -1964,45 +2171,37 @@ class PackageInstaller(BASE, InstallerMixin):
         backref=backref('package_installer')
     )
 
-    def __init__(self, instance_name, **kwargs):
-        self.instance_name = instance_name
+    def __init__(self, alias, **kwargs):
+        self.alias = alias
         super(PackageInstaller, self).__init__(**kwargs)
 
 
-class Network(BASE, TimestampMixin, HelperMixin):
+class Subnet(BASE, TimestampMixin, HelperMixin):
     """network table."""
-    __tablename__ = 'network'
+    __tablename__ = 'subnet'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True)
     subnet = Column(String(80), unique=True)
 
-    host_networks = relationship(
+    host_interfaces = relationship(
         HostNetwork,
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',
-        backref=backref('network')
+        backref=backref('subnet')
     )
 
     def __init__(self, subnet, **kwargs):
         self.subnet = subnet
-        super(Network, self).__init__(**kwargs)
+        super(Subnet, self).__init__(**kwargs)
 
     def initialize(self):
         if not self.name:
             self.name = self.subnet
-        super(Network, self).initialize()
-
-    def validate(self):
-        try:
-            netaddr.IPNetwork(self.subnet)
-        except Exception:
-            raise exception.InvalidParameter(
-                'subnet %s format is uncorrect' % self.subnet
-            )
+        super(Subnet, self).initialize()
 
 
-class LogProgressingHistory(BASE):
+class LogProgressingHistory(BASE, TimestampMixin, HelperMixin):
     """host installing log history for each file.
 
     :param id: int, identity as primary key.
@@ -2014,21 +2213,25 @@ class LogProgressingHistory(BASE):
     :param severity: Enum, the installing message severity.
                      ('ERROR', 'WARNING', 'INFO')
     :param line_matcher_name: str, the line matcher name of the log processor.
-    :param update_timestamp: datetime, the latest timestamp the entry updated.
     """
     __tablename__ = 'log_progressing_history'
     id = Column(Integer, primary_key=True)
-    pathname = Column(String(80), unique=True)
-    position = Column(Integer, ColumnDefault(0))
-    partial_line = Column(Text)
-    percentage = Column(Float, ColumnDefault(0.0))
-    message = Column(Text)
-    severity = Column(Enum('ERROR', 'WARNING', 'INFO'), ColumnDefault('INFO'))
-    line_matcher_name = Column(String(80), ColumnDefault('start'))
-    update_timestamp = Column(DateTime, default=datetime.datetime.now(),
-                              onupdate=datetime.datetime.now())
 
-    def __init__(self, **kwargs):
+    pathname = Column(String(80), unique=True)
+    position = Column(Integer, default=0)
+    partial_line = Column(Text, default='')
+    percentage = Column(Float, default=0.0)
+    message = Column(Text, default='')
+    severity = Column(
+        Enum('ERROR', 'WARNING', 'INFO'),
+        ColumnDefault('INFO')
+    )
+    line_matcher_name = Column(
+        String(80), default='start'
+    )
+
+    def __init__(self, pathname, **kwargs):
+        self.pathname = pathname
         super(LogProgressingHistory, self).__init__(**kwargs)
 
     def __repr__(self):

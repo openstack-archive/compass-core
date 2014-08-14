@@ -83,6 +83,8 @@ def update_progress(cluster_hosts):
                      cluster_hosts)
         os_names = {}
         distributed_systems = {}
+        os_installers = {}
+        package_installers = {}
         with database.session() as session:
             clusters = session.query(models.Cluster).all()
             for cluster in clusters:
@@ -91,14 +93,14 @@ def update_progress(cluster_hosts):
                 adapter = cluster.adapter
                 os_installer = adapter.adapter_os_installer
                 if os_installer:
-                    os_installer_name = os_installer.name
+                    os_installers[clusterid] = os_installer.name
                 else:
-                    os_installer_name = None
+                    os_installers[clusterid] = None
                 package_installer = adapter.adapter_package_installer
                 if package_installer:
-                    package_installer_name = package_installer.name
+                    package_installers[clusterid] = package_installer.name
                 else:
-                    package_installer_name = None
+                    package_installers[clusterid] = None
 
                 distributed_system_name = cluster.distributed_system_name
                 os_name = cluster.os_name
@@ -111,20 +113,20 @@ def update_progress(cluster_hosts):
 
         logging.info(
             'update progress for '
-            'os_installer_name %s,'
+            'os_installers %s,'
             'os_names %s,'
-            'package_installer_name %s,'
+            'package_installers %s,'
             'distributed_systems %s,'
             'cluster_hosts %s',
-            os_installer_name,
+            os_installers,
             os_names,
-            package_installer_name,
+            package_installers,
             distributed_systems,
             cluster_hosts
         )
         progress_calculator.update_progress(
-            os_installer_name,
+            os_installers,
             os_names,
-            package_installer_name,
+            package_installers,
             distributed_systems,
             cluster_hosts)

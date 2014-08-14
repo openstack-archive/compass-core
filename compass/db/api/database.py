@@ -147,7 +147,13 @@ def _setup_switch_table(switch_session):
     logging.info('setup switch table')
     from compass.db.api import switch
     switch.add_switch_internal(
-        switch_session, long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP))
+        switch_session, long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP)),
+        True, filters=[{
+            'filter_name': 'deny-all',
+            'filter_type': 'deny',
+            'port_prefix': '.*',
+            'port_suffix': '.*'
+        }]
     )
 
 
@@ -224,10 +230,33 @@ def _setup_package_metadatas(metadata_session):
 
 
 def _setup_adapter_roles(role_session):
-    """Initialize package adapter role table."""
+    """Initialize adapter role table."""
     logging.info('setup adapter role table')
     from compass.db.api import adapter
     adapter.add_roles_internal(role_session)
+
+
+def _setup_adapter_flavors(flavor_session):
+    """Initialize adapter flavor table."""
+    logging.info('setup adapter flavor table')
+    from compass.db.api import adapter
+    adapter.add_flavors_internal(flavor_session)
+
+
+def _update_others(other_session):
+    """Update other tables."""
+    logging.info('update other tables')
+    from compass.db.api import utils
+    from compass.db import models
+    utils.update_db_objects(
+        other_session, models.Cluster
+    )
+    utils.update_db_objects(
+        other_session, models.Host
+    )
+    utils.update_db_objects(
+        other_session, models.ClusterHost
+    )
 
 
 @run_in_session()
@@ -243,62 +272,14 @@ def create_db(my_session):
     _setup_distributed_systems(my_session)
     _setup_adapters(my_session)
     _setup_adapter_roles(my_session)
+    _setup_adapter_flavors(my_session)
     _setup_os_fields(my_session)
     _setup_package_fields(my_session)
     _setup_os_metadatas(my_session)
     _setup_package_metadatas(my_session)
+    _update_others(my_session)
 
 
 def drop_db():
     """Drop database."""
     models.BASE.metadata.drop_all(bind=ENGINE)
-
-
-@run_in_session()
-def create_table(my_session, table):
-    """Create table.
-
-    :param table: Class of the Table defined in the model.
-    """
-    table.__table__.create(bind=ENGINE, checkfirst=True)
-    if table == models.User:
-        _setup_user_table(my_session)
-    elif table == models.Permission:
-        _setup_permission_table(my_session)
-    elif table == models.Switch:
-        _setup_switch_table(my_session)
-    elif table in [
-        models.OSInstaller,
-        models.PackageInstaller,
-        models.OperatingSystem,
-        models.DistributedSystems,
-        models.Adapter
-    ]:
-        _setup_os_installers(my_session)
-        _setup_package_installers(my_session)
-        _setup_adapter_roles(my_session)
-        _setup_adapters(my_session)
-        _setup_os_fields(my_session)
-        _setup_os_metadatas(my_session)
-        _setup_package_fields(my_session)
-        _setup_package_metadatas(my_session)
-    elif table == models.AdapterRole:
-        _setup_adapter_roles(my_session)
-    elif table in [
-        models.OSConfigField,
-        models.PackageConfigField,
-        models.OSConfigMetadata,
-        models.PackageConfigMetadata
-    ]:
-        _setup_os_fields(my_session)
-        _setup_os_metadatas(my_session)
-        _setup_package_fields(my_session)
-        _setup_package_metadatas(my_session)
-
-
-def drop_table(table):
-    """Drop table.
-
-    :param table: Class of the Table defined in the model.
-    """
-    table.__table__.drop(bind=ENGINE, checkfirst=True)

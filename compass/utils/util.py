@@ -172,6 +172,7 @@ def load_configs(
     env_globals={}, env_locals={}
 ):
     configs = []
+    config_dir = str(config_dir)
     if not os.path.exists(config_dir):
         logging.debug('path %s does not exist', config_dir)
         return configs
@@ -179,6 +180,7 @@ def load_configs(
         if not component.endswith(config_name_suffix):
             continue
         path = os.path.join(config_dir, component)
+        logging.debug('load config from %s', path)
         config_globals = {}
         config_globals.update(env_globals)
         config_locals = {}

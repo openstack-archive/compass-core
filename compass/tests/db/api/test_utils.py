@@ -38,10 +38,15 @@ class TestModelQuery(unittest2.TestCase):
 
     def setUp(self):
         super(TestModelQuery, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
 
     def tearDown(self):
+        reload(setting)
         super(TestModelQuery, self).tearDown()
 
     def test_model_query(self):
@@ -65,12 +70,17 @@ class TestModelFilter(unittest2.TestCase):
 
     def setUp(self):
         super(TestModelFilter, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestModelFilter, self).tearDown()
 
     def _filter_test_dict_util(self, op, exp_name, exp_id, **kwargs):
@@ -265,12 +275,17 @@ class TestModelFilter(unittest2.TestCase):
 class TestGetDbObject(unittest2.TestCase):
     def setUp(self):
         super(TestGetDbObject, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestGetDbObject, self).tearDown()
 
     def test_get_alias(self):
@@ -307,12 +322,17 @@ class TestGetDbObject(unittest2.TestCase):
 class TestAddDbObject(unittest2.TestCase):
     def setUp(self):
         super(TestAddDbObject, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestAddDbObject, self).tearDown()
 
     def test_add_alias(self):
@@ -403,12 +423,17 @@ class TestAddDbObject(unittest2.TestCase):
 class TestListDbObjects(unittest2.TestCase):
     def setUp(self):
         super(TestListDbObjects, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestListDbObjects, self).tearDown()
 
     def test_list_specific_obj(self):
@@ -459,12 +484,17 @@ class TestListDbObjects(unittest2.TestCase):
 class TestDelDbObjects(unittest2.TestCase):
     def setUp(self):
         super(TestDelDbObjects, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestDelDbObjects, self).tearDown()
 
     def test_del_all_objects(self):
@@ -497,12 +527,17 @@ class TestDelDbObjects(unittest2.TestCase):
 class TestUpdateDbObject(unittest2.TestCase):
     def setUp(self):
         super(TestUpdateDbObject, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestUpdateDbObject, self).tearDown()
 
     def test_update_db_object(self):
@@ -540,12 +575,17 @@ class TestUpdateDbObject(unittest2.TestCase):
 class TestDelDbObject(unittest2.TestCase):
     def setUp(self):
         super(TestDelDbObject, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestDelDbObject, self).tearDown()
 
     def test_del_db_object(self):
@@ -570,12 +610,17 @@ class TestDelDbObject(unittest2.TestCase):
 class TestCheckIp(unittest2.TestCase):
     def setUp(self):
         super(TestCheckIp, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestCheckIp, self).tearDown()
 
     def test_check_ip_correct(self):
@@ -594,12 +639,17 @@ class TestCheckIp(unittest2.TestCase):
 class TestCheckMac(unittest2.TestCase):
     def setUp(self):
         super(TestCheckMac, self).setUp()
-        logsetting.init()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(TestCheckMac, self).tearDown()
 
     def test_check_mac_correct(self):

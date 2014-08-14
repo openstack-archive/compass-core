@@ -29,7 +29,7 @@ def _add_field_internal(session, model, configs):
     fields = []
     for config in configs:
         fields.append(utils.add_db_object(
-            session, model, True,
+            session, model, False,
             config['NAME'],
             field_type=config.get('FIELD_TYPE', basestring),
             display_type=config.get('DISPLAY_TYPE', 'text'),
@@ -72,7 +72,7 @@ def _add_metadata(
     else:
         field = None
     metadata = utils.add_db_object(
-        session, metadata_model, True,
+        session, metadata_model, False,
         path, name=name, parent=parent, field=field,
         display_name=metadata_self.get('display_name', name),
         description=metadata_self.get('description', None),

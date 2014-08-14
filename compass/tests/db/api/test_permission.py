@@ -33,6 +33,11 @@ class BaseTest(unittest2.TestCase):
 
     def setUp(self):
         super(BaseTest, self).setUp()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
         database.create_db()
         self.user_object = (
@@ -43,6 +48,7 @@ class BaseTest(unittest2.TestCase):
 
     def tearDown(self):
         database.drop_db()
+        reload(setting)
         super(BaseTest, self).tearDown()
 
 
@@ -51,11 +57,9 @@ class TestListPermissions(BaseTest):
 
     def setUp(self):
         super(TestListPermissions, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListPermissions, self).tearDown()
-        database.drop_db()
 
     def test_list_permissions(self):
         permissions = permission.list_permissions(self.user_object)
@@ -67,15 +71,16 @@ class TestGetPermission(BaseTest):
 
     def setUp(self):
         super(TestGetPermission, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetPermission, self).tearDown()
-        database.drop_db()
 
     def test_get_permission(self):
         get_permission = permission.get_permission(self.user_object, 1)
         self.assertIsNotNone(get_permission)
 
+
 if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
     unittest2.main()

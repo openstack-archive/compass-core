@@ -34,7 +34,7 @@ def _add_system(session, model, configs):
         )
         object = utils.add_db_object(
             session, model,
-            True, config['NAME'],
+            False, config['NAME'],
             deployable=config.get('DEPLOYABLE', False)
         )
         parents[config['NAME']] = (
@@ -73,20 +73,20 @@ def add_adapters_internal(session):
         if 'OS_INSTALLER' in config:
             os_installer = utils.get_db_object(
                 session, models.OSInstaller,
-                instance_name=config['OS_INSTALLER']
+                alias=config['OS_INSTALLER']
             )
         else:
             os_installer = None
         if 'PACKAGE_INSTALLER' in config:
             package_installer = utils.get_db_object(
                 session, models.PackageInstaller,
-                instance_name=config['PACKAGE_INSTALLER']
+                alias=config['PACKAGE_INSTALLER']
             )
         else:
             package_installer = None
         adapter = utils.add_db_object(
             session, models.Adapter,
-            True,
+            False,
             config['NAME'],
             display_name=config.get('DISPLAY_NAME', None),
             distributed_system=distributed_system,
@@ -127,7 +127,7 @@ def add_roles_internal(session):
     configs = util.load_configs(setting.ADAPTER_ROLE_DIR)
     for config in configs:
         logging.info(
-            'add config to role', config
+            'add config %s to role', config
         )
         adapter = utils.get_db_object(
             session, models.Adapter,
@@ -136,11 +136,38 @@ def add_roles_internal(session):
         for role_dict in config['ROLES']:
             utils.add_db_object(
                 session, models.AdapterRole,
-                True, role_dict['role'], adapter.id,
+                False, role_dict['role'], adapter.id,
                 display_name=role_dict.get('display_name', None),
                 description=role_dict.get('description', None),
                 optional=role_dict.get('optional', False)
             )
+
+
+def add_flavors_internal(session):
+    configs = util.load_configs(setting.ADAPTER_FLAVOR_DIR)
+    for config in configs:
+        logging.info('add config %s to flavor', config)
+        adapter = utils.get_db_object(
+            session, models.Adapter,
+            name=config['ADAPTER_NAME']
+        )
+        for flavor_dict in config['FLAVORS']:
+            flavor = utils.add_db_object(
+                session, models.AdapterFlavor,
+                False, flavor_dict['flavor'], adapter.id,
+                display_name=flavor_dict.get('display_name', None),
+                template=flavor_dict.get('template', None)
+            )
+            role_names = flavor_dict.get('roles', [])
+            for role_name in role_names:
+                role = utils.get_db_object(
+                    session, models.AdapterRole,
+                    name=role_name, adapter_id=adapter.id
+                )
+                utils.add_db_object(
+                    session, models.AdapterFlavorRole,
+                    False, flavor.id, role.id
+                )
 
 
 def get_adapters_internal(session):

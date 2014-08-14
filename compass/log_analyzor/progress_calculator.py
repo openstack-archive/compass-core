@@ -438,28 +438,33 @@ def _get_package_adapter_matcher(package_installer, target_system):
     return None
 
 
-def update_progress(os_installer, os_names, package_installer, target_systems,
-                    cluster_hosts):
+def update_progress(
+    os_installers, os_names, package_installers, target_systems,
+    cluster_hosts
+):
     """Update adapter installing progress.
 
-    :param os_installer: os installer name
-    :param package_installer: package installer name.
+    :param os_installers: cluster id to os installer name
+    :param package_installers: cluster id to package installer name.
     :param cluster_hosts: clusters and hosts in each cluster to update.
     :param cluster_hosts: dict of int to list of int.
     """
     for clusterid, hostids in cluster_hosts.items():
         """
-        adapter = _get_adapter_matcher(os_installer, os_names[clusterid],
-                                       package_installer,
+        adapter = _get_adapter_matcher(os_installers[clusterid],
+                                       os_names[clusterid],
+                                       package_installers[clusterid],
                                        target_systems[clusterid])
         if not adapter:
             continue
 
         adapter.update_progress(clusterid, hostids)
         """
-        os_adapter = _get_os_adapter_matcher(os_installer, os_names[clusterid])
+        os_adapter = _get_os_adapter_matcher(
+            os_installers[clusterid], os_names[clusterid]
+        )
         package_adapter = _get_package_adapter_matcher(
-            package_installer,
+            package_installers[clusterid],
             target_systems[clusterid]
         )
         if not (os_adapter or package_adapter):

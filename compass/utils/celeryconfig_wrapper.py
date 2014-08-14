@@ -31,8 +31,8 @@ CELERY_IMPORTS = ('compass.tasks.tasks',)
 
 if setting.CELERYCONFIG_FILE:
     CELERY_CONFIG = os.path.join(
-        setting.CELERYCONFIG_DIR,
-        setting.CELERYCONFIG_FILE)
+        str(setting.CELERYCONFIG_DIR),
+        str(setting.CELERYCONFIG_FILE))
 
     try:
         logging.info('load celery config from %s', CELERY_CONFIG)

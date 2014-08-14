@@ -29,7 +29,6 @@ app.debug = True
 # app.register_blueprint(blueprint, url_prefix='/api')
 
 
-app.config['SECRET_KEY'] = setting.USER_SECRET_KEY
 app.config['AUTH_HEADER_NAME'] = setting.USER_AUTH_HEADER_NAME
 app.config['REMEMBER_COOKIE_DURATION'] = (
     datetime.timedelta(

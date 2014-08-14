@@ -38,10 +38,15 @@ class TestModelQuery(unittest2.TestCase):
 
     def setUp(self):
         super(TestModelQuery, self).setUp()
-        logsetting.init()
+        self.backup_config_dir = setting.CONFIG_DIR
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
         database.init('sqlite://')
 
     def tearDown(self):
+        setting.CONFIG_DIR = self.backup_config_dir
         super(TestModelQuery, self).tearDown()
 
     def test_model_query(self):

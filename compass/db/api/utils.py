@@ -470,6 +470,22 @@ def del_db_objects(session, table, **filters):
         return db_objects
 
 
+def update_db_objects(session, table, **filters):
+    """Update db objects."""
+    with session.begin(subtransactions=True):
+        logging.debug('update db objects by filters %s in table %s',
+                      filters, table.__name__)
+        query = model_filter(
+            model_query(session, table), table, **filters
+        )
+        db_objects = query.all()
+        for db_object in db_objects:
+            logging.debug('update db object %s', db_object)
+            db_object.update()
+            db_object.validate()
+        return db_objects
+
+
 def update_db_object(session, db_object, **kwargs):
     """Update db object."""
     with session.begin(subtransactions=True):

@@ -302,11 +302,25 @@ def take_user_action(user_id):
         ),
         200
     )
+    disable_user_func = _wrap_response(
+        functools.partial(
+            user_api.update_user, current_user, user_id, active=False
+        ),
+        200
+    )
+    enable_user_func = _wrap_response(
+        functools.partial(
+            user_api.update_user, current_user, user_id, active=True
+        ),
+        200
+    )
     return _group_data_action(
         data,
         add_permission=update_permissions_func,
         remove_permissions=update_permissions_func,
-        set_permissions=update_permissions_func
+        set_permissions=update_permissions_func,
+        enable_user=enable_user_func,
+        disable_user=disable_user_func
     )
 
 
@@ -851,6 +865,42 @@ def take_switch_action(switch_id):
     )
 
 
+@app.route("/machines/<int:machine_id>/action", methods=['POST'])
+@log_user_action
+@login_required
+def take_machine_action(machine_id):
+    """update machine."""
+    data = _get_request_data()
+    tag_func = _wrap_response(
+        functools.partial(
+            machine_api.update_machine, current_user, machine_id
+        ),
+        200
+    )
+    poweron_func = _wrap_response(
+        functools.partial(
+            machine_api.poweron_machine, current_user, machine_id
+        )
+    )
+    poweroff_func = _wrap_response(
+        functools.partial(
+            machine_api.poweroff_machine, current_user, machine_id
+        )
+    )
+    reset_func = _wrap_response(
+        functools.partial(
+            machine_api.reset_machine, current_user, machine_id
+        )
+    )
+    return _group_data_action(
+        data,
+        tag=tag_func,
+        poweron=poweron_func,
+        poweroff=poweroff_func,
+        reset=reset_func
+    )
+
+
 @app.route("/switch-machines", methods=['GET'])
 @log_user_action
 @login_required
@@ -1167,6 +1217,23 @@ def show_os_metadata(os_id):
     )
 
 
+@app.route(
+    "/adapters/<int:adapter_id>/oses/<int:os_id>/metadata",
+    methods=['GET']
+)
+@log_user_action
+@login_required
+def show_adapter_os_metadata(adapter_id, os_id):
+    """Get adapter metadata."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        metadata_api.get_package_os_metadata(
+            current_user, adapter_id, os_id, **data
+        )
+    )
+
+
 @app.route("/clusters", methods=['GET'])
 @log_user_action
 @login_required
@@ -1414,6 +1481,74 @@ def add_cluster_host(cluster_id):
     return utils.make_json_response(
         200,
         cluster_api.add_cluster_host(current_user, cluster_id, **data)
+    )
+
+
+@app.route(
+    '/clusters/<int:cluster_id>/hosts/<int:host_id>',
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_cluster_host(cluster_id, host_id):
+    """Update cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_cluster_host(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route(
+    '/clusterhosts/<int:clusterhost_id>',
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_clusterhost(clusterhost_id):
+    """Update cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_clusterhost(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    '/clusters/<int:cluster_id>/hosts/<int:host_id>',
+    methods=['PATCH']
+)
+@log_user_action
+@login_required
+def patch_cluster_host(cluster_id, host_id):
+    """Update cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.patch_cluster_host(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route(
+    '/clusterhosts/<int:clusterhost_id>',
+    methods=['PATCH']
+)
+@log_user_action
+@login_required
+def patch_clusterhost(clusterhost_id):
+    """Update cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.patch_clusterhost(
+            current_user, clusterhost_id, **data
+        )
     )
 
 

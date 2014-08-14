@@ -32,7 +32,7 @@ SUPPORTED_NETOWORK_FIELDS = [
 ]
 RESP_FIELDS = [
     'id', 'name', 'hostname', 'os_name', 'os_id', 'owner', 'mac',
-    'switch_ip', 'port', 'switches',
+    'switch_ip', 'port', 'switches', 'os_installer',
     'reinstall_os', 'os_installed', 'tag', 'location', 'networks',
     'created_at', 'updated_at'
 ]
@@ -472,6 +472,9 @@ def get_hostnetwork(session, getter, host_network_id, **kwargs):
 @utils.supported_filters(
     ADDED_NETWORK_FIELDS, optional_support_keys=OPTIONAL_ADDED_NETWORK_FIELDS
 )
+@utils.input_validates(
+    ip=utils.check_ip
+)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_HOST_NETWORK
@@ -497,6 +500,9 @@ def add_host_network(
 @utils.supported_filters(
     optional_support_keys=UPDATED_NETWORK_FIELDS,
     ignore_support_keys=IGNORED_NETWORK_FIELDS
+)
+@utils.input_validates(
+    ip=utils.check_ip
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -524,6 +530,9 @@ def update_host_network(
 @utils.supported_filters(
     optional_support_keys=UPDATED_NETWORK_FIELDS,
     ignore_support_keys=IGNORED_NETWORK_FIELDS
+)
+@utils.input_validates(
+    ip=utils.check_ip
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(

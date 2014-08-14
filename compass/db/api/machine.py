@@ -33,8 +33,12 @@ PATCHED_FIELDS = [
     'patched_location'
 ]
 RESP_FIELDS = [
-    'id', 'mac', 'ipmi_credentials',
+    'id', 'mac', 'ipmi_credentials', 'switches', 'switch_ip',
+    'port', 'vlans',
     'tag', 'location', 'created_at', 'updated_at'
+]
+RESP_DEPLOY_FIELDS = [
+    'status', 'machine'
 ]
 
 
@@ -118,3 +122,84 @@ def del_machine(session, deleter, machine_id, **kwargs):
     """Delete a machine."""
     machine = utils.get_db_object(session, models.Machine, id=machine_id)
     return utils.del_db_object(session, machine)
+
+
+@utils.supported_filters(optional_support_keys=['poweron'])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEPLOY_HOST
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    machine=RESP_FIELDS
+)
+def poweron_machine(
+    session, deployer, machine_id, poweron={}, **kwargs
+):
+    """power on machine."""
+    from compass.tasks import client as celery_client
+    machine = utils.get_db_object(
+        session, models.Machine, id=machine_id
+    )
+    celery_client.celery.send_task(
+        'compass.tasks.poweron_machine',
+        (machine_id,)
+    )
+    return {
+        'status': 'poweron %s action sent' % machine.mac,
+        'machine': machine
+    }
+
+
+@utils.supported_filters(optional_support_keys=['poweroff'])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEPLOY_HOST
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    machine=RESP_FIELDS
+)
+def poweroff_machine(
+    session, deployer, machine_id, poweroff={}, **kwargs
+):
+    """power off machine."""
+    from compass.tasks import client as celery_client
+    machine = utils.get_db_object(
+        session, models.Machine, id=machine_id
+    )
+    celery_client.celery.send_task(
+        'compass.tasks.poweroff_machine',
+        (machine_id,)
+    )
+    return {
+        'status': 'poweroff %s action sent' % machine.mac,
+        'machine': machine
+    }
+
+
+@utils.supported_filters(optional_support_keys=['reset'])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEPLOY_HOST
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    machine=RESP_FIELDS
+)
+def reset_machine(
+    session, deployer, machine_id, reset={}, **kwargs
+):
+    """reset machine."""
+    from compass.tasks import client as celery_client
+    machine = utils.get_db_object(
+        session, models.Machine, id=machine_id
+    )
+    celery_client.celery.send_task(
+        'compass.tasks.reset_machine',
+        (machine_id,)
+    )
+    return {
+        'status': 'reset %s action sent' % machine.mac,
+        'machine': machine
+    }

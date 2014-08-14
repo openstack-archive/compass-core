@@ -23,6 +23,11 @@ from compass.db.api import utils
 from compass.db import exception
 
 
+RESP_METADATA_FIELDS = [
+    'os_config', 'package_config'
+]
+
+
 @database.run_in_session()
 def load_metadatas(session):
     global OS_METADATA_MAPPING
@@ -103,8 +108,9 @@ def get_package_metadata_internal(adapter_id):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_METADATAS
 )
+@utils.wrap_to_dict(RESP_METADATA_FIELDS)
 def get_package_metadata(session, getter, adapter_id, **kwargs):
-    return get_package_metadata_internal(adapter_id)
+    return {'package_config': get_package_metadata_internal(adapter_id)}
 
 
 def get_os_metadata_internal(os_id):
@@ -121,6 +127,33 @@ def get_os_metadata_internal(os_id):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_METADATAS
 )
+@utils.wrap_to_dict(RESP_METADATA_FIELDS)
 def get_os_metadata(session, getter, os_id, **kwargs):
     """get os metadatas."""
-    return get_os_metadata_internal(os_id)
+    return {'os_config': get_os_metadata_internal(os_id)}
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_METADATAS
+)
+@utils.wrap_to_dict(RESP_METADATA_FIELDS)
+def get_package_os_metadata(session, getter, adapter_id, os_id, **kwargs):
+    from compass.db.api import adapter_holder as adapter_api
+    adapter = adapter_api.get_adapter_internal(adapter_id)
+    os_ids = [os['os_id'] for os in adapter['supported_oses']]
+    if os_id not in os_ids:
+        raise exception.InvalidParameter(
+            'os %s is not in the supported os list of adapter %s' % (
+                os_id, adapter_id
+            )
+        )
+    metadatas = {}
+    metadatas['os_config'] = get_os_metadata_internal(
+        os_id
+    )
+    metadatas['package_config'] = get_package_metadata_internal(
+        adapter_id
+    )
+    return metadatas

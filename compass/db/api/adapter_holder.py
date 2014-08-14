@@ -28,7 +28,7 @@ SUPPORTED_FIELDS = [
     'distributed_system_name',
 ]
 RESP_FIELDS = [
-    'id', 'name', 'roles',
+    'id', 'name', 'roles', 'flavors',
     'os_installer', 'package_installer',
     'distributed_system_id',
     'distributed_system_name',
@@ -39,6 +39,9 @@ RESP_OS_FIELDS = [
 ]
 RESP_ROLES_FIELDS = [
     'id', 'name', 'display_name', 'description', 'optional'
+]
+RESP_FLAVORS_FIELDS = [
+    'id', 'name', 'display_name', 'template', 'roles'
 ]
 
 
@@ -84,11 +87,22 @@ def _filter_adapters(adapter_config, filter_name, filter_value):
 )
 @utils.wrap_to_dict(
     RESP_FIELDS,
-    supported_oses=RESP_OS_FIELDS
+    supported_oses=RESP_OS_FIELDS,
+    roles=RESP_ROLES_FIELDS,
+    flavors=RESP_FLAVORS_FIELDS
 )
 def list_adapters(session, lister, **filters):
     """list adapters."""
     return ADAPTER_MAPPING.values()
+
+
+def get_adapter_internal(adapter_id):
+    """get adapter."""
+    if adapter_id not in ADAPTER_MAPPING:
+        raise exception.RecordNotExists(
+            'adpater %s does not exist' % adapter_id
+        )
+    return ADAPTER_MAPPING[adapter_id]
 
 
 @utils.supported_filters([])
@@ -98,15 +112,13 @@ def list_adapters(session, lister, **filters):
 )
 @utils.wrap_to_dict(
     RESP_FIELDS,
-    supported_oses=RESP_OS_FIELDS
+    supported_oses=RESP_OS_FIELDS,
+    roles=RESP_ROLES_FIELDS,
+    flavors=RESP_FLAVORS_FIELDS
 )
 def get_adapter(session, getter, adapter_id, **kwargs):
     """get adapter."""
-    if adapter_id not in ADAPTER_MAPPING:
-        raise exception.RecordNotExists(
-            'adpater %s does not exist' % adapter_id
-        )
-    return ADAPTER_MAPPING[adapter_id]
+    return get_adapter_internal(adapter_id)
 
 
 @utils.supported_filters([])

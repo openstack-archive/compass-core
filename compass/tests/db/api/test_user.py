@@ -17,6 +17,7 @@ import logging
 import os
 import unittest2
 
+from base import BaseTest
 from compass.db.api import database
 from compass.db.api import user as user_api
 from compass.db import exception
@@ -24,24 +25,7 @@ from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
-
-
-class BaseTest(unittest2.TestCase):
-    """Base Class for unit test."""
-
-    def setUp(self):
-        super(BaseTest, self).setUp()
-        database.init('sqlite://')
-        database.create_db()
-        self.user_object = (
-            user_api.get_user_object(
-                setting.COMPASS_ADMIN_EMAIL
-            )
-        )
-
-    def tearDown(self):
-        database.drop_db()
-        super(BaseTest, self).tearDown()
+reload(setting)
 
 
 class TestGetUserObject(unittest2.TestCase):

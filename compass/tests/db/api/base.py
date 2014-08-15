@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import datetime
 import logging
 import os
 import unittest2
 
-from base import BaseTest
 from compass.db.api import database
-from compass.db.api import permission
+from compass.db.api import switch
 from compass.db.api import user as user_api
 from compass.db import exception
 from compass.utils import flags
@@ -29,36 +29,22 @@ from compass.utils import setting_wrapper as setting
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
-class TestListPermissions(BaseTest):
-    """Test list permissions."""
+reload(setting)
+
+
+class BaseTest(unittest2.TestCase):
+    """Base Class for unit test."""
 
     def setUp(self):
-        super(TestListPermissions, self).setUp()
-        logsetting.init()
+        super(BaseTest, self).setUp()
+        database.init('sqlite://')
+        database.create_db()
+        self.user_object = (
+            user_api.get_user_object(
+                setting.COMPASS_ADMIN_EMAIL
+            )
+        )
 
     def tearDown(self):
-        super(TestListPermissions, self).tearDown()
+        super(BaseTest, self).setUp()
         database.drop_db()
-
-    def test_list_permissions(self):
-        permissions = permission.list_permissions(self.user_object)
-        self.assertIsNotNone(permissions)
-
-
-class TestGetPermission(BaseTest):
-    """Test get permission."""
-
-    def setUp(self):
-        super(TestGetPermission, self).setUp()
-        logsetting.init()
-
-    def tearDown(self):
-        super(TestGetPermission, self).tearDown()
-        database.drop_db()
-
-    def test_get_permission(self):
-        get_permission = permission.get_permission(self.user_object, 1)
-        self.assertIsNotNone(get_permission)
-
-if __name__ == '__main__':
-    unittest2.main()

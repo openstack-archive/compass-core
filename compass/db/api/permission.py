@@ -89,14 +89,14 @@ PERMISSION_LIST_ADAPTERS = PermissionWrapper(
 PERMISSION_LIST_METADATAS = PermissionWrapper(
     'list_metadatas', 'list metadatas', 'list metadatas'
 )
-PERMISSION_LIST_NETWORKS = PermissionWrapper(
-    'list_networks', 'list networks', 'list networks'
+PERMISSION_LIST_SUBNETS = PermissionWrapper(
+    'list_subnets', 'list subnets', 'list subnets'
 )
-PERMISSION_ADD_NETWORK = PermissionWrapper(
-    'add_network', 'add network', 'add network'
+PERMISSION_ADD_SUBNET = PermissionWrapper(
+    'add_subnet', 'add subnet', 'add subnet'
 )
-PERMISSION_DEL_NETWORK = PermissionWrapper(
-    'del_network', 'del network', 'del network'
+PERMISSION_DEL_SUBNET = PermissionWrapper(
+    'del_subnet', 'del subnet', 'del subnet'
 )
 PERMISSION_LIST_CLUSTERS = PermissionWrapper(
     'list_clusters', 'list clusters', 'list clusters'
@@ -224,9 +224,9 @@ PERMISSIONS = [
     PERMISSION_DEL_MACHINE,
     PERMISSION_LIST_ADAPTERS,
     PERMISSION_LIST_METADATAS,
-    PERMISSION_LIST_NETWORKS,
-    PERMISSION_ADD_NETWORK,
-    PERMISSION_DEL_NETWORK,
+    PERMISSION_LIST_SUBNETS,
+    PERMISSION_ADD_SUBNET,
+    PERMISSION_DEL_SUBNET,
     PERMISSION_LIST_CLUSTERS,
     PERMISSION_ADD_CLUSTER,
     PERMISSION_DEL_CLUSTER,

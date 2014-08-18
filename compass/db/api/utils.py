@@ -151,12 +151,43 @@ def model_filter(query, model, **filters):
     return query
 
 
+def replace_output(**output_mapping):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            return _replace_output(
+                func(*args, **kwargs), **output_mapping
+            )
+        return wrapper
+    return decorator
+
+
+def _replace_output(data, **output_mapping):
+    """Helper to replace output data."""
+    if isinstance(data, list):
+        return [
+            _replace_output(item, **output_mapping)
+            for item in data
+        ]
+    info = {}
+    for key, value in data.items():
+        if key in output_mapping:
+            output_key = output_mapping[key]
+            if isinstance(output_key, basestring):
+                info[output_key] = value
+            else:
+                info[key] = (
+                    _replace_output(value, **output_key)
+                )
+        else:
+            info[key] = value
+    return info
+
+
 def wrap_to_dict(support_keys=[], **filters):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            logging.info('wrap to dict: args: %s', str(args))
-            logging.info('wrap to dict: kwargs: %s', kwargs)
             return _wrapper_dict(
                 func(*args, **kwargs), support_keys, **filters
             )
@@ -181,10 +212,34 @@ def _wrapper_dict(data, support_keys, **filters):
     for key in support_keys:
         if key in data:
             if key in filters:
-                info[key] = _wrapper_dict(data[key], filters[key])
+                filter_keys = filters[key]
+                if isinstance(filter_keys, dict):
+                    info[key] = _wrapper_dict(
+                        data[key], filter_keys.keys(),
+                        **filter_keys
+                    )
+                else:
+                    info[key] = _wrapper_dict(
+                        data[key], filter_keys
+                    )
             else:
                 info[key] = data[key]
     return info
+
+
+def replace_input_types(**kwarg_mapping):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            replaced_kwargs = {}
+            for key, value in kwargs.items():
+                if key in kwarg_mapping:
+                    replaced_kwargs[key] = kwarg_mapping[key](value)
+                else:
+                    replaced_kwargs[key] = value
+            return func(*args, **replaced_kwargs)
+        return wrapper
+    return decorator
 
 
 def replace_filters(**filter_mapping):

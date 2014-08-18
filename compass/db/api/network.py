@@ -51,20 +51,20 @@ def _check_subnet(subnet):
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
-    permission.PERMISSION_LIST_NETWORKS
+    permission.PERMISSION_LIST_SUBNETS
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_subnets(session, lister, **filters):
     """List subnets."""
     return utils.list_db_objects(
-        session, models.Network, **filters
+        session, models.Subnet, **filters
     )
 
 
 @utils.supported_filters([])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
-    permission.PERMISSION_LIST_NETWORKS
+    permission.PERMISSION_LIST_SUBNETS
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_subnet(
@@ -73,7 +73,8 @@ def get_subnet(
 ):
     """Get subnet info."""
     return utils.get_db_object(
-        session, models.Network, exception_when_missing, id=subnet_id
+        session, models.Subnet,
+        exception_when_missing, id=subnet_id
     )
 
 
@@ -84,7 +85,7 @@ def get_subnet(
 @utils.input_validates(subnet=_check_subnet)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
-    permission.PERMISSION_ADD_NETWORK
+    permission.PERMISSION_ADD_SUBNET
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def add_subnet(
@@ -93,7 +94,7 @@ def add_subnet(
 ):
     """Create a subnet."""
     return utils.add_db_object(
-        session, models.Network,
+        session, models.Subnet,
         exception_when_existing, subnet, **kwargs
     )
 
@@ -105,26 +106,26 @@ def add_subnet(
 @utils.input_validates(subnet=_check_subnet)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
-    permission.PERMISSION_ADD_NETWORK
+    permission.PERMISSION_ADD_SUBNET
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def update_subnet(session, updater, subnet_id, **kwargs):
     """Update a subnet."""
-    network = utils.get_db_object(
-        session, models.Network, id=subnet_id
+    subnet = utils.get_db_object(
+        session, models.Subnet, id=subnet_id
     )
-    return utils.update_db_object(session, network, **kwargs)
+    return utils.update_db_object(session, subnet, **kwargs)
 
 
 @utils.supported_filters([])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
-    permission.PERMISSION_DEL_NETWORK
+    permission.PERMISSION_DEL_SUBNET
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_subnet(session, deleter, subnet_id, **kwargs):
     """Delete a subnet."""
-    network = utils.get_db_object(
-        session, models.Network, id=subnet_id
+    subnet = utils.get_db_object(
+        session, models.Subnet, id=subnet_id
     )
-    return utils.del_db_object(session, network)
+    return utils.del_db_object(session, subnet)

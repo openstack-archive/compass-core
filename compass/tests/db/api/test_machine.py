@@ -68,7 +68,7 @@ class TestGetMachine(BaseTest):
             self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port=1
+            port='1'
         )
         get_machine = machine.get_machine(
             self.user_object,
@@ -91,7 +91,7 @@ class TestListMachines(BaseTest):
             self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port=1
+            port='1'
         )
         list_machine = machine.list_machines(self.user_object)
         self.assertIsNotNone(list_machine)
@@ -111,7 +111,7 @@ class TestUpdateMachine(BaseTest):
             self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port=1
+            port='1'
         )
         machine.update_machine(
             self.user_object,
@@ -139,7 +139,7 @@ class TestPatchMachine(BaseTest):
             self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port=1
+            port='1'
         )
         machine.patch_machine(
             self.user_object,
@@ -167,7 +167,7 @@ class TestDelMachine(BaseTest):
             self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port=1
+            port='1'
         )
         machine.del_machine(
             self.user_object,

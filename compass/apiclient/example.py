@@ -1,6 +1,5 @@
 #!/usr/bin/python
-#
-# Copyright 2014 Huawei Technologies Co. Ltd
+# copyright 2014 Huawei Technologies Co. Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,47 +20,50 @@ import requests
 import sys
 import time
 
-from compass.apiclient.restful import Client
+# from compass.apiclient.restful import Client
+from restful import Client
 
-
-COMPASS_SERVER_URL = 'http://127.0.0.1/api'
-SWITCH_IP = '10.145.81.220'
-SWITCH_SNMP_VERSION = 'v2c'
+COMPASS_SERVER_URL = 'http://10.145.89.120/api'
+COMPASS_LOGIN_EMAIL = 'admin@huawei.com'
+COMPASS_LOGIN_PASSWORD = 'admin'
+SWITCH_IP = '172.29.8.40'
+SWITCH_SNMP_VERSION = '2c'
 SWITCH_SNMP_COMMUNITY = 'public'
-#MACHINES_TO_ADD = ['00:11:20:30:40:01']
-CLUSTER_NAME = 'cluster2'
+#MACHINES_TO_ADD = ['00:0c:29:05:bd:eb']
+CLUSTER_NAME = 'test_cluster'
 HOST_NAME_PREFIX = 'host'
 SERVER_USERNAME = 'root'
 SERVER_PASSWORD = 'root'
 SERVICE_USERNAME = 'service'
 SERVICE_PASSWORD = 'service'
-CONSOLE_USERNAME = 'console'
-CONSOLE_PASSWORD = 'console'
+DASHBOARD_USERNAME = 'console'
+DASHBOARD_PASSWORD = 'console'
 HA_VIP = ''
-#NAMESERVERS = '192.168.10.6'
-SEARCH_PATH = 'ods.com'
-#GATEWAY = '192.168.10.6'
+#NAMESERVERS = '10.145.88.211'
+SEARCH_PATH = ['ods.com']
+#GATEWAY = '10.145.88.1'
 #PROXY = 'http://192.168.10.6:3128'
-#NTP_SERVER = '192.168.10.6'
-MANAGEMENT_IP_START = '192.168.10.130'
-MANAGEMENT_IP_END = '192.168.10.254'
-MANAGEMENT_IP_GATEWAY = '192.168.10.1'
+#NTP_SERVER = '10.145.88.211'
+
+MANAGEMENT_IP_START = '10.145.88.130'
+MANAGEMENT_IP_END = '10.145.88.254'
+MANAGEMENT_IP_GATEWAY = '10.145.88.1'
 MANAGEMENT_NETMASK = '255.255.255.0'
 MANAGEMENT_NIC = 'eth0'
 MANAGEMENT_PROMISC = 0
-TENANT_IP_START = '192.168.10.100'
+TENANT_IP_START = '192.168.10.130'
 TENANT_IP_END = '192.168.10.255'
 TENANT_IP_GATEWAY = '192.168.10.1'
 TENANT_NETMASK = '255.255.255.0'
 TENANT_NIC = 'eth0'
 TENANT_PROMISC = 0
-PUBLIC_IP_START = '12.234.32.100'
+PUBLIC_IP_START = '12.234.32.130'
 PUBLIC_IP_END = '12.234.32.255'
 PUBLIC_IP_GATEWAY = '12.234.32.1'
 PUBLIC_NETMASK = '255.255.255.0'
 PUBLIC_NIC = 'eth1'
 PUBLIC_PROMISC = 1
-STORAGE_IP_START = '172.16.100.100'
+STORAGE_IP_START = '172.16.100.130'
 STORAGE_IP_END = '172.16.100.255'
 STORAGE_NETMASK = '255.255.255.0'
 STORAGE_IP_GATEWAY = '172.16.100.1'
@@ -71,14 +73,22 @@ HOME_PERCENTAGE = 5
 TMP_PERCENTAGE = 5
 VAR_PERCENTAGE = 10
 #ROLES_LIST = [['os-dashboard']]
+HOST_OS = 'CentOS-6.5-x86_64'
+
+LANGUAGE = 'EN'
+TIMEZONE = 'GMT -7:00'
+HTTPS_PROXY = 'https://10.145.88.211:3128'
+NO_PROXY = ['127.0.0.1']
+DNS_SERVER = '10.145.88.211'
+DOMAIN = 'ods.com'
 
 PRESET_VALUES = {
-    'NAMESERVERS': '192.168.10.1',
-    'NTP_SERVER': '192.168.10.1',
-    'GATEWAY': '192.168.10.1',
-    'PROXY': 'http://192.168.10.1:3128',
-    'ROLES_LIST': 'os-dashboard',
-    'MACHINES_TO_ADD': '00:11:20:30:40:01',
+    'NAMESERVERS': ['10.145.88.211'],
+    'NTP_SERVER': '10.145.88.211',
+    'GATEWAY': '10.145.88.211',
+    'PROXY': 'http://10.145.88.211:3128',
+    'ROLES_LIST': ['allinone'],
+    'MACHINES_TO_ADD': ['00:0c:29:05:bd:eb'],
     'BUILD_TIMEOUT': 60
 }
 for v in PRESET_VALUES:
@@ -88,218 +98,295 @@ for v in PRESET_VALUES:
     else:
         print (PRESET_VALUES[v])
 
-# get apiclient object.
+# instantiate a client
 client = Client(COMPASS_SERVER_URL)
 
+# login
+status, token = client.login(COMPASS_LOGIN_EMAIL, COMPASS_LOGIN_PASSWORD)
 
-# get all switches.
-status, resp = client.get_switches()
-print 'get all switches status: %s resp: %s' % (status, resp)
+# list all switches
+status, response = client.list_switches()
+print '============================================================='
+print 'get all switches status: %s response: %s' % (status, response)
 
-# add a switch.
-status, resp = client.add_switch(
-    SWITCH_IP, version=SWITCH_SNMP_VERSION,
-    community=SWITCH_SNMP_COMMUNITY)
+# add a switch
+status, response = client.add_switch(
+    SWITCH_IP,
+    SWITCH_SNMP_VERSION,
+    SWITCH_SNMP_COMMUNITY
+)
+print '============================================'
+print 'adding a switch..status: %s, response: %s' % (status, response)
 
-print 'add a switch status: %s resp: %s' % (status, resp)
-
+# if switch already exists, get one from all switches
+switch = None
 if status < 400:
-    switch = resp['switch']
+    switch = response
 else:
-    status, resp = client.get_switches()
-    print 'get all switches status: %s resp: %s' % (status, resp)
-    switch = None
-    for switch in resp['switches']:
-        if switch['ip'] == SWITCH_IP:
+    status, response = client.list_switches()
+    for switch_ in response:
+        if switch_['ip'] == SWITCH_IP:
+            switch = switch_
             break
 
 switch_id = switch['id']
 switch_ip = switch['ip']
+print '======================'
+print 'switch has been set as %s' % switch_ip
 
-
-# if the switch is not in under_monitoring, wait for the poll switch task
-# update the swich information and change the switch state.
+# wait till switch state becomes under_monitoring
 while switch['state'] != 'under_monitoring':
-    print 'waiting for the switch into under_monitoring'
+    print 'waiting for state to become under_monitoring'
+    client.poll_switch(switch_id)
     status, resp = client.get_switch(switch_id)
-    print 'get switch %s status: %s, resp: %s' % (switch_id, status, resp)
-    switch = resp['switch']
-    time.sleep(10)
+    switch = resp
+    print 'switch is in state: %s' % switch['state']
+    time.sleep(5)
+status, response = client.poll_switch(switch_id)
+print '========================================='
+print 'switch state now is %s' % (switch['state'])
 
-
-# get machines connected to the switch.
-status, resp = client.get_machines(switch_id=switch_id)
-print 'get all machines under switch %s status: %s, resp: %s' % (
-    switch_id, status, resp)
+# create a machine list
+machine_macs = {}
 machines = {}
-MACHINES_TO_ADD = PRESET_VALUES['MACHINES_TO_ADD'].split()
-for machine in resp['machines']:
-    mac = machine['mac']
-    if mac in MACHINES_TO_ADD:
-        machines[machine['id']] = mac
+for machine in PRESET_VALUES['MACHINES_TO_ADD']:
+    status, response = client.list_machines(mac=machine)
+    if status == 200 and response != []:
+        id = response[0]['id']
+        machine_macs[id] = response[0]['mac']
+        machines = response
 
-print 'machine to add: %s' % machines
+print '================================='
+print 'found machines are : %s' % machines
 
-if set(machines.values()) != set(MACHINES_TO_ADD):
+MACHINES_TO_ADD = PRESET_VALUES['MACHINES_TO_ADD']
+if set(machine_macs.values()) != set(MACHINES_TO_ADD):
     print 'only found macs %s while expected are %s' % (
-        machines.values(), MACHINES_TO_ADD)
+        machine_macs.values(), MACHINES_TO_ADD)
     sys.exit(1)
 
-
-# get adapters.
-status, resp = client.get_adapters()
-print 'get all adapters status: %s, resp: %s' % (status, resp)
+# list all adapters
+status, response = client.list_adapters()
+print '==============================='
+print 'all adapters are: %s' % response
+adapters = response
 adapter_ids = []
-for adapter in resp['adapters']:
+for adapter in adapters:
     adapter_ids.append(adapter['id'])
 
 adapter_id = adapter_ids[0]
-print 'adpater for deploying a cluster: %s' % adapter_id
+adapter = adapters[adapter_id]
+print '=========================='
+print 'using adapter %s to deploy cluster' % adapter_id
 
+# get all supported oses
+supported_oses = adapter['supported_oses']
 
-# add a cluster.
-status, resp = client.add_cluster(
-    cluster_name=CLUSTER_NAME, adapter_id=adapter_id)
-print 'add cluster %s status: %s, resp: %s' % (CLUSTER_NAME, status, resp)
-cluster = resp['cluster']
+# get os_id
+os_id = None
+os_name = None
+for supported_os in supported_oses:
+    if HOST_OS in supported_os.values():
+        os_id = supported_os['os_id']
+        os_name = supported_os['name']
+        break
+
+print '===================================='
+print 'use %s as host os, the os_id is %s' % (os_name, os_id)
+
+"""
+# get flavor_id
+flavor_id = None
+flavors = adapter['flavors']
+print '=============================='
+print 'all flavors are: %s' % flavors
+
+for flavor in flavors:
+    if flavor['name'] == PRESET_VALUES['ROLES_LIST']:
+        flavor_id = flavor['id']
+        break
+
+print '===================================='
+print 'cluster info: adapter_id: %s, os_id: %s, flavor_id: %s' %
+    (adapter_id, os_id, flavor_id)
+"""
+
+# add a cluster
+status, response = client.add_cluster(
+    CLUSTER_NAME,
+    adapter_id,
+    os_id,
+    #flavor_id
+)
+if status < 400:
+    print 'add cluster %s: %s' % (CLUSTER_NAME, response)
+    cluster = response
+else:
+    status, response = client.list_clusters(name=CLUSTER_NAME)
+    print response
+    cluster = response[0]
+    print 'cluster already exists, fetching it'
 cluster_id = cluster['id']
 
-# add hosts to the cluster.
-status, resp = client.add_hosts(
-    cluster_id=cluster_id,
-    machine_ids=machines.keys())
-print 'add hosts to cluster %s status: %s, resp: %s' % (
-    cluster_id, status, resp)
-host_ids = []
-for host in resp['cluster_hosts']:
-    host_ids.append(host['id'])
+print '=================='
+print 'cluster is %s' % cluster
 
-print 'added hosts: %s' % host_ids
+# Add hosts to the cluster
+machines_dict = {}
+machine_id_list = []
+for machine in machines:
+    id_mapping = {}
+    id_mapping['machine_id'] = machine['id']
+    machine_id_list.append(id_mapping)
+
+machines_dict['machines'] = machine_id_list
+
+status, response = client.add_hosts_to_cluster(
+    cluster_id, machines_dict
+)
+print '==================================='
+print 'add hosts %s to cluster: %s' % (machines_dict, response)
+
+# Add two subnets
+subnet_1 = '10.145.89.0/24'
+subnet_2 = '192.168.100.0/24'
+
+status, response = client.add_subnet(subnet_1)
+print '=================='
+print 'add subnet %s' % response
+
+status, response = client.add_subnet(subnet_2)
+print '=================='
+print 'add subnet %s' % response
+
+status, subnet1 = client.list_subnets(subnet=subnet_1)
+status, subnet2 = client.list_subnets(subnet=subnet_2)
+subnet1_id = subnet1[0]['id']
+subnet2_id = subnet2[0]['id']
+print '========================'
+print 'subnet1 has id: %s, subnet is %s' % (subnet1_id, subnet1)
+print 'subnet2 has id: %s, subnet is %s' % (subnet2_id, subnet2)
+
+# Add host network
+status, response = client.list_cluster_hosts(cluster_id)
+host = response[0]
+host_id = host['id']
+print '=================='
+print 'host is: %s' % host
+
+status, response = client.add_host_network(
+    host_id,
+    'eth0',
+    '10.145.89.200',
+    subnet1_id,
+    is_mgmt=True
+)
+print '======================='
+print 'add eth0 network: %s' % response
+
+status, response = client.add_host_network(
+    host_id,
+    'eth1',
+    '192.168.100.200',
+    subnet2_id,
+    is_promiscuous=True
+)
+print '======================='
+print 'add eth1 network: %s' % response
+
+# Update os config to cluster
+cluster_os_config = {
+    'general': {
+        'language': LANGUAGE,
+        'timezone': TIMEZONE,
+        'http_proxy': PRESET_VALUES['PROXY'],
+        'https_proxy': HTTPS_PROXY,
+        'no_proxy': NO_PROXY,
+        'ntp_server': PRESET_VALUES['NTP_SERVER'],
+        'dns_servers': PRESET_VALUES['NAMESERVERS'],
+        'domain': DOMAIN,
+        'search_path': SEARCH_PATH,
+        'default_gateway': PRESET_VALUES['GATEWAY']
+    },
+    'server_credentials': {
+        'username': SERVER_USERNAME,
+        'password': SERVER_PASSWORD
+    },
+    'partition': {
+        '/var': {
+            'percentage': VAR_PERCENTAGE,
+        },
+        '/home': {
+            'percentage': HOME_PERCENTAGE,
+        }
+    }
+}
 
 
-# set cluster security
-status, resp = client.set_security(
-    cluster_id, server_username=SERVER_USERNAME,
-    server_password=SERVER_PASSWORD,
-    service_username=SERVICE_USERNAME,
-    service_password=SERVICE_PASSWORD,
-    console_username=CONSOLE_USERNAME,
-    console_password=CONSOLE_PASSWORD)
-print 'set security config to cluster %s status: %s, resp: %s' % (
-    cluster_id, status, resp)
+cluster_package_config = {
+    'roles': PRESET_VALUES['ROLES_LIST'],
+    'security': {
+        'service_credential': {
+            'image': {
+                'username': SERVICE_USERNAME,
+                'password': SERVICE_PASSWORD
+            },
+            'compute': {
+                'username': SERVICE_USERNAME,
+                'password': SERVICE_PASSWORD
+            },
+            'dashboard': {
+                'username': SERVICE_USERNAME,
+                'password': SERVICE_PASSWORD
+            },
+            'identity': {
+                'username': SERVICE_USERNAME,
+                'password': SERVICE_PASSWORD
+            },
+            'metering': {
+                'username': SERVICE_USERNAME,
+                'password': SERVICE_PASSWORD
+            },
+            'rabbitmq': {
+                'username': SERVICE_USERNAME,
+                'password': SERVICE_PASSWORD
+            },
+            'volume': {
+                'username': SERVICE_USERNAME,
+                'password': SERVICE_PASSWORD
+            },
+            'mysql': {
+                'username': SERVICE_USERNAME,
+                'password': SERVICE_PASSWORD
+            }
+        },
+        'dashboard_credential': {
+            'username': DASHBOARD_USERNAME,
+            'password': DASHBOARD_PASSWORD
+        }
+    },
+    'network_mapping': {
+        'management': MANAGEMENT_NIC,
+        'tenant': TENANT_NIC,
+        'storage': STORAGE_NIC,
+        'public': PUBLIC_NIC
+    }
+}
 
-
-# set cluster networking
-status, resp = client.set_networking(
+status, response = client.update_cluster_config(
     cluster_id,
-    nameservers=PRESET_VALUES["NAMESERVERS"],
-    search_path=SEARCH_PATH,
-    gateway=PRESET_VALUES["GATEWAY"],
-    proxy=PRESET_VALUES["PROXY"],
-    ntp_server=PRESET_VALUES["NTP_SERVER"],
-    ha_vip=HA_VIP,
-    management_ip_start=MANAGEMENT_IP_START,
-    management_ip_end=MANAGEMENT_IP_END,
-    management_netmask=MANAGEMENT_NETMASK,
-    management_nic=MANAGEMENT_NIC,
-    management_gateway=MANAGEMENT_IP_GATEWAY,
-    management_promisc=MANAGEMENT_PROMISC,
-    tenant_ip_start=TENANT_IP_START,
-    tenant_ip_end=TENANT_IP_END,
-    tenant_netmask=TENANT_NETMASK,
-    tenant_nic=TENANT_NIC,
-    tenant_gateway=TENANT_IP_GATEWAY,
-    tenant_promisc=TENANT_PROMISC,
-    public_ip_start=PUBLIC_IP_START,
-    public_ip_end=PUBLIC_IP_END,
-    public_netmask=PUBLIC_NETMASK,
-    public_nic=PUBLIC_NIC,
-    public_gateway=PUBLIC_IP_GATEWAY,
-    public_promisc=PUBLIC_PROMISC,
-    storage_ip_start=STORAGE_IP_START,
-    storage_ip_end=STORAGE_IP_END,
-    storage_netmask=STORAGE_NETMASK,
-    storage_nic=STORAGE_NIC,
-    storage_gateway=STORAGE_IP_GATEWAY,
-    storage_promisc=STORAGE_PROMISC)
-print 'set networking config to cluster %s status: %s, resp: %s' % (
-    cluster_id, status, resp)
+    cluster_os_config,
+    cluster_package_config
+)
 
+print '======================================='
+print 'cluster %s has been updated to: %s' % (cluster_id, response)
 
-# set partiton of each host in cluster
-status, resp = client.set_partition(
-    cluster_id,
-    home_percentage=HOME_PERCENTAGE,
-    tmp_percentage=TMP_PERCENTAGE,
-    var_percentage=VAR_PERCENTAGE)
-print 'set partition config to cluster %s status: %s, resp: %s' % (
-    cluster_id, status, resp)
+# Review and deploy
+status, response = client.review_cluster(cluster_id)
+print '======================================='
+print 'reviewing cluster: %s' % response
 
-
-# set each host config in cluster.
-ROLES_LIST = [PRESET_VALUES['ROLES_LIST'].split()]
-for host_id in host_ids:
-    if ROLES_LIST:
-        roles = ROLES_LIST.pop(0)
-    else:
-        roles = []
-    status, resp = client.update_host_config(
-        host_id, hostname='%s%s' % (HOST_NAME_PREFIX, host_id),
-        roles=roles)
-    print 'set roles to host %s status: %s, resp: %s' % (
-        host_id, status, resp)
-
-
-# deploy cluster.
-status, resp = client.deploy_hosts(cluster_id)
-print 'deploy cluster %s status: %s, resp: %s' % (cluster_id, status, resp)
-
-
-# get intalling progress.
-BUILD_TIMEOUT = float(PRESET_VALUES['BUILD_TIMEOUT'])
-timeout = time.time() + BUILD_TIMEOUT * 60
-while True:
-    status, resp = client.get_cluster_installing_progress(cluster_id)
-    print 'get cluster %s installing progress status: %s, resp: %s' % (
-        cluster_id, status, resp)
-    progress = resp['progress']
-    if (
-        progress['state'] not in ['UNINITIALIZED', 'INSTALLING'] or
-        progress['percentage'] >= 1.0
-    ):
-        break
-    if (
-        time.time() > timeout
-    ):
-        raise Exception("Timeout! The system is not ready in time.")
-
-    for host_id in host_ids:
-        status, resp = client.get_host_installing_progress(host_id)
-        print 'get host %s installing progress status: %s, resp: %s' % (
-            host_id, status, resp)
-
-    time.sleep(60)
-
-
-status, resp = client.get_dashboard_links(cluster_id)
-print 'get cluster %s dashboardlinks status: %s, resp: %s' % (
-    cluster_id, status, resp)
-dashboardlinks = resp['dashboardlinks']
-if not dashboardlinks.keys():
-    raise Exception("Dashboard link is not found!")
-for x in dashboardlinks.keys():
-    if x in ("os-dashboard", "os-controller"):
-        dashboardurl = dashboardlinks.get(x)
-        if dashboardurl is None:
-            raise Exception("No dashboard link is found")
-        r = requests.get(dashboardurl, verify=False)
-        r.raise_for_status()
-        match = re.search(
-            r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)', r.text)
-        if match:
-            print 'dashboard login page can be downloaded'
-            break
-        print (
-            'dashboard login page failed to be downloaded\n'
-            'the context is:\n%s\n') % r.text
-        raise Exception("os-dashboard is not properly installed!")
+status, response = client.deploy_cluster(cluster_id)
+print '======================================='
+print 'deploy cluster %s' % response

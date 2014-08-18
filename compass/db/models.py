@@ -74,8 +74,34 @@ class HelperMixin(object):
     def update(self):
         pass
 
+    @staticmethod
+    def type_compatible(value, column_type):
+        if value is None:
+            return True
+        if not hasattr(column_type, 'python_type'):
+            return True
+        column_python_type = column_type.python_type
+        if isinstance(value, column_python_type):
+            return True
+        if issubclass(column_python_type, basestring):
+            return isinstance(value, basestring)
+        if column_python_type in [int, long]:
+            return type(value) in [int, long]
+        if column_python_type in [float]:
+            return type(value) in [float]
+        if column_python_type in [bool]:
+            return type(value) in [bool]
+        return False
+
     def validate(self):
-        pass
+        for key, column in self.__mapper__.columns.items():
+            value = getattr(self, key)
+            if not self.type_compatible(value, column.type):
+                raise exception.InvalidParameter(
+                    'column %s value %r type is unexpected: %s' % (
+                        key, value, column.type
+                    )
+                )
 
     def to_dict(self):
         keys = self.__mapper__.columns.keys()
@@ -259,11 +285,11 @@ class InstallerMixin(HelperMixin):
     settings = Column(JSONEncoded, default={})
 
     def validate(self):
+        super(InstallerMixin, self).validate()
         if not self.name:
             raise exception.InvalidParameter(
                 'name is not set in installer %s' % self.name
             )
-        super(InstallerMixin, self).validate()
 
 
 class StateMixin(TimestampMixin, HelperMixin):
@@ -335,11 +361,11 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
 
     @hybrid_property
     def subnet(self):
-        return self.network.subnet
+        return self.subnet.subnet
 
     @subnet.expression
     def subnet(cls):
-        return cls.network.subnet
+        return cls.subnet.subnet
 
     @property
     def netmask(self):
@@ -349,7 +375,8 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         self.host.config_validated = False
 
     def validate(self):
-        if not self.network:
+        super(HostNetwork, self).validate()
+        if not self.subnet:
             raise exception.InvalidParameter(
                 'subnet is not set in %s interface %s' % (
                     self.host_id, self.interface
@@ -369,7 +396,6 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
                     str(ip), str(subnet)
                 )
             )
-        super(HostNetwork, self).validate()
 
     def to_dict(self):
         dict_info = super(HostNetwork, self).to_dict()
@@ -758,6 +784,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
         super(Host, self).update()
 
     def validate(self):
+        super(Host, self).validate()
         creator = self.creator
         if not creator:
             raise exception.InvalidParameter(
@@ -777,7 +804,6 @@ class Host(BASE, TimestampMixin, HelperMixin):
             raise exception.InvalidParameter(
                 'os %s is not deployable in host %s' % (os.name, self.id)
             )
-        super(Host, self).validate()
 
     @property
     def os_installed(self):
@@ -981,6 +1007,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         super(Cluster, self).update()
 
     def validate(self):
+        super(Cluster, self).validate()
         creator = self.creator
         if not creator:
             raise exception.InvalidParameter(
@@ -1024,13 +1051,22 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
                 raise exception.InvalidParameter(
                     'flavor is not set in cluster %s' % self.id
                 )
-            if flavor.adapter_id != self.adapter_id:
+            flavor_adapter_id = flavor.adapter_id
+            adapter_id = self.adapter_id
+            logging.info(
+                'flavor adapter type %s value %s',
+                type(flavor_adapter_id), flavor_adapter_id
+            )
+            logging.info(
+                'adapter type %s value %s',
+                type(adapter_id), adapter_id
+            )
+            if flavor_adapter_id != adapter_id:
                 raise exception.InvalidParameter(
                     'flavor adapter id %s does not match adapter id %s' % (
-                        flavor.adapter_id, self.adapter_id
+                        flavor_adapter_id, adapter_id
                     )
                 )
-        super(Cluster, self).validate()
 
     @property
     def patched_os_config(self):
@@ -1164,11 +1200,11 @@ class UserToken(BASE, HelperMixin):
         super(UserToken, self).__init__(**kwargs)
 
     def validate(self):
+        super(UserToken, self).validate()
         if not self.user:
             raise exception.InvalidParameter(
                 'user is not set in token: %s' % self.token
             )
-        super(UserToken, self).validate()
 
 
 class UserLog(BASE, HelperMixin):
@@ -1188,11 +1224,11 @@ class UserLog(BASE, HelperMixin):
         return self.user.email
 
     def validate(self):
+        super(UserLog, self).validate()
         if not self.user:
             raise exception.InvalidParameter(
                 'user is not set in user log: %s' % self.id
             )
-        super(UserLog, self).validate()
 
 
 class User(BASE, HelperMixin, TimestampMixin):
@@ -1238,11 +1274,11 @@ class User(BASE, HelperMixin, TimestampMixin):
         super(User, self).__init__(**kwargs)
 
     def validate(self):
+        super(User, self).validate()
         if not self.crypted_password:
             raise exception.InvalidParameter(
                 'password is not set in user : %s' % self.email
             )
-        super(User, self).validate()
 
     @property
     def password(self):
@@ -1301,6 +1337,7 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
         super(SwitchMachine, self).__init__(**kwargs)
 
     def validate(self):
+        super(SwitchMachine, self).validate()
         if not self.switch:
             raise exception.InvalidParameter(
                 'switch is not set in %s' % self.id
@@ -1429,13 +1466,13 @@ class Machine(BASE, HelperMixin, TimestampMixin):
         super(Machine, self).__init__(**kwargs)
 
     def validate(self):
+        super(Machine, self).validate()
         try:
             netaddr.EUI(self.mac)
         except Exception:
             raise exception.InvalidParameter(
                 'mac address %s format uncorrect' % self.mac
             )
-        super(Machine, self).validate()
 
     @property
     def patched_ipmi_credentials(self):
@@ -1586,11 +1623,11 @@ class OSConfigMetadata(BASE, MetadataMixin):
         super(OSConfigMetadata, self).__init__(**kwargs)
 
     def validate(self):
+        super(OSConfigMetadata, self).validate()
         if not self.os:
             raise exception.InvalidParameter(
                 'os is not set in os metadata %s' % self.id
             )
-        super(OSConfigMetadata, self).validate()
 
 
 class OSConfigField(BASE, FieldMixin):
@@ -1725,6 +1762,7 @@ class AdapterFlavorRole(BASE, HelperMixin):
         super(AdapterFlavorRole, self).__init__()
 
     def validate(self):
+        super(AdapterFlavorRole, self).validate()
         flavor_adapter_id = self.flavor.adapter_id
         role_adapter_id = self.role.adapter_id
         if flavor_adapter_id != role_adapter_id:
@@ -1782,11 +1820,11 @@ class AdapterFlavor(BASE, HelperMixin):
         super(AdapterFlavor, self).initialize()
 
     def validate(self):
+        super(AdapterFlavor, self).validate()
         if not self.template:
             raise exception.InvalidParameter(
                 'template is not set in adapter flavor %s' % self.id
             )
-        super(AdapterFlavor, self).validate()
 
     def to_dict(self):
         dict_info = super(AdapterFlavor, self).to_dict()
@@ -1881,11 +1919,11 @@ class PackageConfigMetadata(BASE, MetadataMixin):
         super(PackageConfigMetadata, self).__init__(**kwargs)
 
     def validate(self):
+        super(PackageConfigMetadata, self).validate()
         if not self.adapter:
             raise exception.InvalidParameter(
                 'adapter is not set in package metadata %s' % self.id
             )
-        super(PackageConfigMetadata, self).validate()
 
 
 class PackageConfigField(BASE, FieldMixin):
@@ -2117,7 +2155,7 @@ class DistributedSystem(BASE, HelperMixin):
         nullable=True
     )
     name = Column(String(80), unique=True)
-    deployable = Column(String(80), default=False)
+    deployable = Column(Boolean, default=False)
 
     adapters = relationship(
         Adapter,
@@ -2184,7 +2222,7 @@ class Subnet(BASE, TimestampMixin, HelperMixin):
     name = Column(String(80), unique=True)
     subnet = Column(String(80), unique=True)
 
-    host_interfaces = relationship(
+    host_networks = relationship(
         HostNetwork,
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',

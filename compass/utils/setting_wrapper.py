@@ -58,6 +58,8 @@ TEST_CHEF_URL = "https://api.opscode.com/organizations/compasscheftest"
 TEST_CLIENT_KEY_PATH = "/etc/compass/client.pem"
 TEST_CLIENT_NAME = "graceyu"
 
+PROGRESS_UPDATE_PID_FILE = '/var/run/progress_update.pid'
+
 OS_INSTALLER_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'os_installer')
 )

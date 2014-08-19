@@ -359,17 +359,9 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
     def ip(self, value):
         self.ip_int = int(netaddr.IPAddress(value))
 
-    @hybrid_property
-    def subnet(self):
-        return self.subnet.subnet
-
-    @subnet.expression
-    def subnet(cls):
-        return cls.subnet.subnet
-
     @property
     def netmask(self):
-        return str(netaddr.IPNetwork(self.subnet).netmask)
+        return str(netaddr.IPNetwork(self.subnet.subnet).netmask)
 
     def update(self):
         self.host.config_validated = False
@@ -389,7 +381,7 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
                 )
             )
         ip = netaddr.IPAddress(self.ip_int)
-        subnet = netaddr.IPNetwork(self.subnet)
+        subnet = netaddr.IPNetwork(self.subnet.subnet)
         if ip not in subnet:
             raise exception.InvalidParameter(
                 'ip %s is not in subnet %s' % (
@@ -402,7 +394,7 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         dict_info['ip'] = self.ip
         dict_info['interface'] = self.interface
         dict_info['netmask'] = self.netmask
-        dict_info['subnet'] = self.subnet
+        dict_info['subnet'] = self.subnet.subnet
         return dict_info
 
 
@@ -1649,7 +1641,7 @@ class AdapterOS(BASE, HelperMixin):
     """Adapter OS table."""
     __tablename__ = 'adapter_os'
 
-    id = Column(Integer, primary_key=True)
+    adapter_os_id = Column('id', Integer, primary_key=True)
     os_id = Column(
         Integer,
         ForeignKey(
@@ -1732,6 +1724,17 @@ class OperatingSystem(BASE, HelperMixin):
         for metadata in self.root_metadatas:
             dict_info.update(metadata.to_dict())
         return dict_info
+
+    @property
+    def os_supported_adapters(self):
+        supported_adapters = self.supported_adapters
+        if supported_adapters:
+            return supported_adapters
+        parent = self.parent
+        if parent:
+            return parent.os_supported_adapters
+        else:
+            return []
 
 
 class AdapterFlavorRole(BASE, HelperMixin):

@@ -28,7 +28,7 @@ from compass.db import models
 SUPPORTED_FIELDS = ['name', 'os_name', 'owner', 'mac']
 SUPPORTED_MACHINE_HOST_FIELDS = ['mac', 'tag', 'location', 'os_name', 'os_id']
 SUPPORTED_NETOWORK_FIELDS = [
-    'interface', 'ip', 'subnet', 'is_mgmt', 'is_promiscuous'
+    'interface', 'ip', 'is_mgmt', 'is_promiscuous'
 ]
 RESP_FIELDS = [
     'id', 'name', 'hostname', 'os_name', 'os_id', 'owner', 'mac',

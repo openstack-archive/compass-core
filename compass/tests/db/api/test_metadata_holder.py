@@ -12,50 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import datetime
 import logging
 import os
 import unittest2
 
 from base import BaseTest
+from compass.db.api import adapter_holder as adapter
 from compass.db.api import database
-from compass.db.api import permission
+from compass.db.api import metadata_holder as metadata
 from compass.db.api import user as user_api
 from compass.db import exception
 from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
 
+
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
-reload(setting)
 
 
-class TestListPermissions(BaseTest):
-    """Test list permissions."""
-
-    def setUp(self):
-        super(TestListPermissions, self).setUp()
-
-    def tearDown(self):
-        super(TestListPermissions, self).tearDown()
-
-    def test_list_permissions(self):
-        permissions = permission.list_permissions(self.user_object)
-        self.assertIsNotNone(permissions)
-
-
-class TestGetPermission(BaseTest):
-    """Test get permission."""
+class TestGetPackageMetadata(BaseTest):
+    """test get package metadata."""
 
     def setUp(self):
-        super(TestGetPermission, self).setUp()
+        super(TestGetPackageMetadata, self).setUp()
 
     def tearDown(self):
-        super(TestGetPermission, self).tearDown()
+        super(TestGetPackageMetadata, self).tearDown()
 
-    def test_get_permission(self):
-        get_permission = permission.get_permission(self.user_object, 1)
-        self.assertIsNotNone(get_permission)
+    def test_get_package_metadata(self):
+        adapter_object = adapter.list_adapters(self.user_object)
+        package_metadata = metadata.get_package_metadata(
+            self.user_object,
+            adapter_object[0]['id']
+        )
+        self.assertIsNotNone(package_metadata)
 
 
 if __name__ == '__main__':

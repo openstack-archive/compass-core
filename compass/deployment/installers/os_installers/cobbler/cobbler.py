@@ -188,7 +188,7 @@ class CobblerInstaller(OSInstaller):
             self.remote.sync(self.token)
             os.system('sudo service rsyslog restart')
         except Exception as ex:
-            logging.debug("Failed to sync cobbler server! Error: %" % ex)
+            logging.debug("Failed to sync cobbler server! Error: %s" % ex)
             raise ex
 
     def _get_system_config(self, host_id, vars_dict):

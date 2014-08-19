@@ -54,6 +54,8 @@ adapter_test_config = {
         "name": "chef_installer",
         "settings": {
             "chef_url": "https://127.0.0.1",
+            "chef_server_ip": "127.0.0.1",
+            "chef_server_dns": "test_chef",
             "key_dir": "xxx",
             "client_name": "xxx",
             "databags": ["user_passwords", "db_passwords"]

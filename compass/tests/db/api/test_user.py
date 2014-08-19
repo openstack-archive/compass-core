@@ -17,6 +17,7 @@ import logging
 import os
 import unittest2
 
+from base import BaseTest
 from compass.db.api import database
 from compass.db.api import user as user_api
 from compass.db import exception
@@ -24,30 +25,7 @@ from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
-
-
-class BaseTest(unittest2.TestCase):
-    """Base Class for unit test."""
-
-    def setUp(self):
-        super(BaseTest, self).setUp()
-        reload(setting)
-        setting.CONFIG_DIR = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            'data'
-        )
-        database.init('sqlite://')
-        database.create_db()
-        self.user_object = (
-            user_api.get_user_object(
-                setting.COMPASS_ADMIN_EMAIL
-            )
-        )
-
-    def tearDown(self):
-        database.drop_db()
-        reload(setting)
-        super(BaseTest, self).tearDown()
+reload(setting)
 
 
 class TestGetUserObject(unittest2.TestCase):
@@ -64,9 +42,8 @@ class TestGetUserObject(unittest2.TestCase):
         database.create_db()
 
     def tearDown(self):
-        database.drop_db()
         reload(setting)
-        super(TestGetUserObject, self).tearDown()
+        database.drop_db()
 
     def test_get_user_object(self):
         user_object = user_api.get_user_object(setting.COMPASS_ADMIN_EMAIL)
@@ -138,11 +115,9 @@ class TestListUsers(BaseTest):
 
     def setUp(self):
         super(TestListUsers, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListUsers, self).tearDown()
-        database.drop_db()
 
     def test_list_users(self):
         user = user_api.list_users(self.user_object)

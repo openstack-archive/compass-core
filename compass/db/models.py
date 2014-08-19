@@ -94,7 +94,8 @@ class HelperMixin(object):
         return False
 
     def validate(self):
-        for key, column in self.__mapper__.columns.items():
+        columns = self.__mapper__.columns
+        for key, column in columns.items():
             value = getattr(self, key)
             if not self.type_compatible(value, column.type):
                 raise exception.InvalidParameter(

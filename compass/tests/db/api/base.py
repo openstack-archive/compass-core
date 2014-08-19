@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import datetime
 import logging
 import os
 import unittest2
 
-from base import BaseTest
+from compass.db.api import adapter_holder as adapter_api
 from compass.db.api import database
-from compass.db.api import permission
+from compass.db.api import metadata_holder as metadata_api
+from compass.db.api import switch
 from compass.db.api import user as user_api
 from compass.db import exception
 from compass.utils import flags
@@ -27,38 +29,32 @@ from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
 reload(setting)
 
 
-class TestListPermissions(BaseTest):
-    """Test list permissions."""
+class BaseTest(unittest2.TestCase):
+    """Base Class for unit test."""
 
     def setUp(self):
-        super(TestListPermissions, self).setUp()
+        super(BaseTest, self).setUp()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
+        database.init('sqlite://')
+        database.create_db()
+        adapter_api.load_adapters()
+        metadata_api.load_metadatas()
+        self.user_object = (
+            user_api.get_user_object(
+                setting.COMPASS_ADMIN_EMAIL
+            )
+        )
 
     def tearDown(self):
-        super(TestListPermissions, self).tearDown()
-
-    def test_list_permissions(self):
-        permissions = permission.list_permissions(self.user_object)
-        self.assertIsNotNone(permissions)
-
-
-class TestGetPermission(BaseTest):
-    """Test get permission."""
-
-    def setUp(self):
-        super(TestGetPermission, self).setUp()
-
-    def tearDown(self):
-        super(TestGetPermission, self).tearDown()
-
-    def test_get_permission(self):
-        get_permission = permission.get_permission(self.user_object, 1)
-        self.assertIsNotNone(get_permission)
-
-
-if __name__ == '__main__':
-    flags.init()
-    logsetting.init()
-    unittest2.main()
+        super(BaseTest, self).setUp()
+        reload(setting)
+        database.drop_db()

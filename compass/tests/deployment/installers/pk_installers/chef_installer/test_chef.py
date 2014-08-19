@@ -413,3 +413,78 @@ class TestChefInstaller(unittest2.TestCase):
         output = self.test_chef.deploy()
         self.maxDiff = None
         self.assertDictEqual(expected_output, output)
+
+    def test_generate_installer_config(self):
+        test_data = [
+            {
+                "settings": {
+                    "chef_url": "https://127.0.0.1",
+                    "chef_server_dns": "test_chef",
+                    "key_dir": "xxx",
+                    "client_name": "xxx",
+                    "databags": ["user_passwords", "db_passwords"]
+                },
+                "excepted_output": {
+                    1: {
+                        "tool": "chef",
+                        "chef_url": "https://127.0.0.1",
+                        "chef_node_name": "test_node",
+                        "chef_client_name": "test_node",
+                        "chef_server_ip": "127.0.0.1",
+                        "chef_server_dns": "test_chef"
+                    }
+                }
+            },
+            {
+                "settings": {
+                    "chef_url": "https://test_chef",
+                    "chef_server_ip": "127.0.0.1",
+                    "key_dir": "xxx",
+                    "client_name": "xxx",
+                    "databags": ["user_passwords", "db_passwords"]
+                },
+                "excepted_output": {
+                    1: {
+                        "tool": "chef",
+                        "chef_url": "https://test_chef",
+                        "chef_node_name": "test_node",
+                        "chef_client_name": "test_node",
+                        "chef_server_ip": "127.0.0.1",
+                        "chef_server_dns": "test_chef"
+                    }
+                }
+            },
+            {
+                "settings": {
+                    "chef_url": "https://test_chef",
+                    "key_dir": "xxx",
+                    "client_name": "xxx",
+                    "databags": ["user_passwords", "db_passwords"]
+                },
+                "excepted_output": {
+                    1: {
+                        "tool": "chef",
+                        "chef_url": "https://test_chef",
+                        "chef_node_name": "test_node",
+                        "chef_client_name": "test_node"
+                    }
+                }
+            }
+        ]
+        nname = 'test_node'
+        self.test_chef.config_manager.get_host_id_list = Mock()
+        self.test_chef.config_manager.get_host_id_list.return_value = [1]
+        self.test_chef.config_manager.get_host_fullname = Mock()
+        self.test_chef.config_manager.get_host_fullname.return_value = nname
+
+        for entry in test_data:
+            chef_config = entry["settings"]
+            chef_url = chef_config["chef_url"]
+            self.test_chef.installer_url = chef_url
+            self.test_chef.config_manager.get_pk_installer_settings = Mock()
+            self.test_chef.config_manager.get_pk_installer_settings\
+                .return_value = chef_config
+
+            output = self.test_chef.generate_installer_config()
+            self.maxDiff = None
+            self.assertDictEqual(entry["excepted_output"], output)

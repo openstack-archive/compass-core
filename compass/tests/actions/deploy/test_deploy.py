@@ -43,20 +43,22 @@ class TestDeployAction(unittest2.TestCase):
         mock_get_adapter.return_value = {
             "id": 1,
             "name": "test_adapter",
-            "flavor": {
-                "flavor_name": "test_flavor",
-                "template": "test_tmpl.tmpl",
-                "roles": [
-                    {
-                        "name": "test-role-1",
-                        "display_name": "test role 1"
-                    },
-                    {
-                        "name": "test-role-2",
-                        "display_name": "test role 2"
-                    }
-                ]
-            },
+            "flavors": [
+                {
+                    "flavor_name": "test_flavor",
+                    "template": "test_tmpl.tmpl",
+                    "roles": [
+                        {
+                            "name": "test-role-1",
+                            "display_name": "test role 1"
+                        },
+                        {
+                            "name": "test-role-2",
+                            "display_name": "test role 2"
+                        }
+                    ]
+                }
+            ],
             "os_installer": {
                 "name": "test_os_installer",
                 "settings": {
@@ -77,11 +79,11 @@ class TestDeployAction(unittest2.TestCase):
         expected_output = {
             "id": 1,
             "name": "test_adapter",
-            "flavor": {
+            "flavors": [{
                 "flavor_name": "test_flavor",
                 "template": "test_tmpl.tmpl",
                 "roles": ["test-role-1", "test-role-2"]
-            },
+            }],
             "os_installer": {
                 "name": "test_os_installer",
                 "settings": {

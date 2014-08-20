@@ -124,11 +124,14 @@ class ActionHelper(object):
            {
               "id": 1,
               "name": "xxx",
-              "flavor": {
-                  "flavor_name": "xxx",
-                  "roles": ['xxx', 'yyy', ...],
-                  "template": "xxx.tmpl"
-              },
+              "flavors": [
+                  {
+                      "flavor_name": "xxx",
+                      "roles": ['xxx', 'yyy', ...],
+                      "template": "xxx.tmpl"
+                  },
+                  ...
+              ],
               "metadata": {
                   "os_config": {
                       ...
@@ -153,9 +156,9 @@ class ActionHelper(object):
         metadata = cluster_db.get_cluster_metadata(user, cluster_id)
         adapter_info.update(metadata)
 
-        roles_info = adapter_info[const.FLAVOR][const.ROLES]
-        roles_list = [role[const.NAME] for role in roles_info]
-        adapter_info[const.FLAVOR][const.ROLES] = roles_list
+        for flavor_info in adapter_info[const.FLAVORS]:
+            roles = flavor_info[const.ROLES]
+            flavor_info[const.ROLES] = ActionHelper._get_role_names(roles)
 
         return adapter_info
 

@@ -114,6 +114,18 @@ def _get_request_data():
         return {}
 
 
+def _get_request_data_as_list():
+    if request.data:
+        try:
+            return json.loads(request.data)
+        except Exception:
+            raise exception_handler.BadRequest(
+                'request data is not json formatted: %s' % request.data
+            )
+    else:
+        return []
+
+
 def _get_request_args():
     return dict(request.args)
 
@@ -1846,6 +1858,20 @@ def update_host(host_id):
     )
 
 
+@app.route("/hosts", methods=['PUT'])
+@log_user_action
+@login_required
+def update_hosts():
+    """update hosts."""
+    data = _get_request_data_as_list()
+    return utils.make_json_response(
+        200,
+        host_api.update_hosts(
+            current_user, data
+        )
+    )
+
+
 @app.route("/hosts/<int:host_id>", methods=['DELETE'])
 @log_user_action
 @login_required
@@ -1937,7 +1963,7 @@ def list_host_networks(host_id):
     )
 
 
-@app.route("/host-networks", methods=['GET'])
+@app.route("/host/networks", methods=['GET'])
 @log_user_action
 @login_required
 def list_hostnetworks():
@@ -1965,7 +1991,7 @@ def show_host_network(host_id, host_network_id):
     )
 
 
-@app.route("/host-networks/<int:host_network_id>", methods=['GET'])
+@app.route("/host/networks/<int:host_network_id>", methods=['GET'])
 @log_user_action
 @login_required
 def show_hostnetwork(host_network_id):
@@ -1987,6 +2013,17 @@ def add_host_network(host_id):
     data = _get_request_data()
     return utils.make_json_response(
         200, host_api.add_host_network(current_user, host_id, **data)
+    )
+
+
+@app.route("/hosts/networks", methods=['POST'])
+@log_user_action
+@login_required
+def add_host_networks():
+    """add host networks."""
+    data = _get_request_data_as_list()
+    return utils.make_json_response(
+        200, host_api.add_host_networks(current_user, data)
     )
 
 

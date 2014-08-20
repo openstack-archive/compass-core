@@ -1144,7 +1144,7 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
     clusterhosts = []
     for clusterhost in cluster.clusterhosts:
         if (
-            clusterhost.id in clusterhost_ids or
+            clusterhost.clusterhost_id in clusterhost_ids or
             clusterhost.host_id in host_ids
         ):
             clusterhosts.append(clusterhost)

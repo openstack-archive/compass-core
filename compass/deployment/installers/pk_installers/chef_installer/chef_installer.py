@@ -18,7 +18,9 @@ __author__ = "Grace Yu (grace.yu@huawei.com)"
 
 from copy import deepcopy
 import logging
+from netaddr import IPAddress
 import os
+import re
 import shutil
 
 from compass.deployment.installers.installer import PKInstaller
@@ -39,6 +41,8 @@ class ChefInstaller(PKInstaller):
     # keywords in package installer settings of adapter info
     DATABAGS = "databags"
     CHEFSERVER_URL = "chef_url"
+    CHEFSERVER_DNS = "chef_server_dns"
+    CHEFSERVER_IP = "chef_server_ip"
     KEY_DIR = "key_dir"
     CLIENT = "client_name"
 
@@ -403,19 +407,33 @@ class ChefInstaller(PKInstaller):
                   'tool': 'chef',
                   'chef_url': 'https://xxx',
                   'chef_client_name': '$host_name',
-                  'chef_node_name': '$host_name'
+                  'chef_node_name': '$host_name',
+                  'chef_server_ip': 'xxx',(op)
+                  'chef_server_dns': 'xxx' (op)
               },
               .....
            }
         """
         host_ids = self.config_manager.get_host_id_list()
         os_installer_configs = {}
+        regex = "http[s]?://([^:/]+)[:\d]?.*"
         for host_id in host_ids:
             fullname = self.config_manager.get_host_fullname(host_id)
             temp = {
                 "tool": "chef",
                 "chef_url": self.installer_url
             }
+            chef_host = re.search(regex, self.installer_url).groups()[0]
+            try:
+                IPAddress(chef_host)
+                temp['chef_server_ip'] = chef_host
+                temp['chef_server_dns'] = self.get_chef_server_dns()
+            except Exception:
+                chef_server_ip = self.get_chef_server_ip()
+                if chef_server_ip:
+                    temp['chef_server_ip'] = chef_server_ip
+                    temp['chef_server_dns'] = chef_host
+
             temp['chef_client_name'] = fullname
             temp['chef_node_name'] = fullname
             os_installer_configs[host_id] = temp
@@ -466,14 +484,21 @@ class ChefInstaller(PKInstaller):
         """reinstall host."""
         pass
 
+    def get_chef_server_ip(self, installer_settings=None):
+        settings = installer_settings
+        if settings is None:
+            settings = self.config_manager.get_pk_installer_settings()
+
+        return settings.setdefault(self.CHEFSERVER_IP, None)
+
     def get_chef_url(self, installer_settings=None):
         settings = installer_settings
         if settings is None:
             settings = self.config_manager.get_pk_installer_settings()
 
         if self.CHEFSERVER_URL not in settings:
-            raise KeyError("'%s' must be set in package settings!",
-                           self.CHEFSERVER_URL)
+            err_msg = "%s is not in chef server settings" % self.CHEFSERVER_URL
+            raise Exception(err_msg)
 
         return settings[self.CHEFSERVER_URL]
 
@@ -497,3 +522,10 @@ class ChefInstaller(PKInstaller):
             return None
 
         return settings[self.DATABAGS]
+
+    def get_chef_server_dns(self, installer_settings=None):
+        settings = installer_settings
+        if settings is None:
+            settings = self.config_manager.get_pk_installer_settings()
+
+        return settings.setdefault(self.CHEFSERVER_DNS, None)

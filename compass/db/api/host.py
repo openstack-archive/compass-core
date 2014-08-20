@@ -15,6 +15,7 @@
 """Host database operations."""
 import functools
 import logging
+import netaddr
 
 from compass.db.api import database
 from compass.db.api import metadata_holder as metadata_api
@@ -60,7 +61,7 @@ RESP_DEPLOYED_CONFIG_FIELDS = [
 RESP_DEPLOY_FIELDS = [
     'status', 'host'
 ]
-UPDATED_FIELDS = ['name', 'reinstall_os']
+UPDATED_FIELDS = ['host_id', 'name', 'reinstall_os']
 UPDATED_CONFIG_FIELDS = [
     'put_os_config'
 ]
@@ -244,13 +245,9 @@ def validate_host(session, host):
 
 
 @utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
-@database.run_in_session()
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_UPDATE_HOST
-)
 @utils.wrap_to_dict(RESP_FIELDS)
-def update_host(session, updater, host_id, **kwargs):
-    """Update a host."""
+def _update_host(session, updater, host_id, **kwargs):
+    """Update a host internal."""
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
@@ -259,6 +256,26 @@ def update_host(session, updater, host_id, **kwargs):
         reinstall_os_set=kwargs.get('reinstall_os', False)
     )
     return utils.update_db_object(session, host, **kwargs)
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_HOST
+)
+def update_host(session, updater, host_id, **kwargs):
+    """Update a host."""
+    return _update_host(session, updater, host_id=host_id, **kwargs)
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_HOST
+)
+def update_hosts(session, updater, data=[]):
+    hosts = []
+    for host_data in data:
+        hosts.append(_update_host(session, updater, **host_data))
+    return hosts
 
 
 @utils.supported_filters([])
@@ -475,26 +492,69 @@ def get_hostnetwork(session, getter, host_network_id, **kwargs):
 @utils.input_validates(
     ip=utils.check_ip
 )
+@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def _add_host_network(
+    session, creator, host_id, exception_when_existing=True,
+    interface=None, ip=None, **kwargs
+):
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
+    )
+    is_host_editable(session, host, creator)
+    ip_int = long(netaddr.IPAddress(ip))
+    host_network = utils.get_db_object(
+        session, models.HostNetwork, False,
+        ip_int=ip_int
+    )
+    if host_network:
+        raise exception.InvalidParameter(
+            'ip %s exists in database' % ip
+        )
+    return utils.add_db_object(
+        session, models.HostNetwork,
+        exception_when_existing,
+        host_id, interface, ip=ip, **kwargs
+    )
+
+
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_HOST_NETWORK
 )
-@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 def add_host_network(
     session, creator, host_id,
     exception_when_existing=True,
     interface=None, **kwargs
 ):
     """Create a host network."""
-    host = utils.get_db_object(
-        session, models.Host, id=host_id
+    return _add_host_network(
+        session, creator, host_id, exception_when_existing,
+        interface=interface, **kwargs
     )
-    is_host_editable(session, host, creator)
-    return utils.add_db_object(
-        session, models.HostNetwork,
-        exception_when_existing,
-        host_id, interface, **kwargs
-    )
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_NETWORK
+)
+def add_host_networks(
+    session, creator,
+    exception_when_existing=True,
+    data=[]
+):
+    """Create host networks."""
+    hosts = []
+    for host_data in data:
+        host_id = host_data['host_id']
+        networks = host_data['networks']
+        host_networks = []
+        hosts.append({'host_id': host_id, 'networks': host_networks})
+        for network in networks:
+            host_networks.append(_add_host_network(
+                session, creator, host_id, exception_when_existing,
+                **network
+            ))
+    return hosts
 
 
 @utils.supported_filters(

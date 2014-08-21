@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__all__ = ['Flask', 'SQLAlchemy', 'compass_api']
+
 import datetime
 from flask import Blueprint
 from flask.ext.login import LoginManager
@@ -40,3 +42,5 @@ app.config['REMEMBER_COOKIE_DURATION'] = (
 login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
+
+from compass.api import api as compass_api

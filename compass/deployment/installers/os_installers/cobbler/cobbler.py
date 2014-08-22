@@ -116,15 +116,19 @@ class CobblerInstaller(OSInstaller):
                }
            }
         """
+        host_ids = self.config_manager.get_host_id_list()
+        if not host_ids:
+            # No hosts need to install OS
+            return {}
+
         os_version = self.config_manager.get_os_version()
         profile = self._get_profile_from_server(os_version)
 
         global_vars_dict = self._get_cluster_tmpl_vars_dict()
 
-        clusterhost_ids = self.config_manager.get_host_id_list()
         hosts_deploy_config = {}
 
-        for host_id in clusterhost_ids:
+        for host_id in host_ids:
             hostname = self.config_manager.get_hostname(host_id)
             vars_dict = self._get_host_tmpl_vars_dict(host_id,
                                                       global_vars_dict,

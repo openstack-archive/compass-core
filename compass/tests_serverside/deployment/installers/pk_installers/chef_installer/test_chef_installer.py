@@ -116,9 +116,11 @@ class TestChefInstaller(unittest2.TestCase):
         self.assertEqual(result_node.chef_environment, env_name)
         expected_node_attr = {
             "override_attributes": {
-                "endpoints": {
-                    "compute-vnc-bind": {
-                        "host": "12.234.32.101"
+                "openstack": {
+                    "endpoints": {
+                        "compute-vnc-bind": {
+                            "host": "12.234.32.101"
+                        }
                     }
                 }
             }

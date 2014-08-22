@@ -193,14 +193,16 @@ class ChefInstaller(PKInstaller):
             return {}
 
         node_tmpl_dir = os.path.join(self.tmpl_dir, self.NODE_TMPL_DIR)
-        node_attri = {}
+        node_attr = {}
         for role in roles:
             role = role.replace('-', '_')
             tmpl_name = '.'.join((role, 'tmpl'))
             node_tmpl = os.path.join(node_tmpl_dir, tmpl_name)
-            node_attri = self.get_config_from_template(node_tmpl, vars_dict)
+            util.merge_dict(
+                node_attr, self.get_config_from_template(node_tmpl, vars_dict)
+            )
 
-        return node_attri
+        return node_attr
 
     def update_node(self, node, roles, vars_dict):
         """Update node attributes to chef server."""

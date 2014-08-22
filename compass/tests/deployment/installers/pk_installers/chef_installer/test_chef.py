@@ -73,9 +73,11 @@ class TestChefInstaller(unittest2.TestCase):
         vars_dict = self.test_chef._get_host_tmpl_vars(2, cluster_dict)
         expected_node_attr = {
             "override_attributes": {
-                "endpoints": {
-                    "compute-vnc-bind": {
-                        "host": "12.234.32.101"
+                "openstack": {
+                    "endpoints": {
+                        "compute-vnc-bind": {
+                            "host": "12.234.32.101"
+                        }
                     }
                 }
             }

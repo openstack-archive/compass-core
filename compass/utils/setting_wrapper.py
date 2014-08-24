@@ -99,6 +99,8 @@ VALIDATOR_DIR = lazypy.delay(
 TMPL_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'templates')
 )
+PROXY_URL_PREFIX = 'http://10.145.81.205:5000'
+
 if (
     'COMPASS_IGNORE_SETTING' in os.environ and
     os.environ['COMPASS_IGNORE_SETTING']

@@ -18,6 +18,7 @@ import datetime
 import functools
 import logging
 import netaddr
+import requests
 import simplejson as json
 
 from flask import flash
@@ -48,6 +49,7 @@ from compass.db.api import user as user_api
 from compass.db.api import user_log as user_log_api
 from compass.utils import flags
 from compass.utils import logsetting
+from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
@@ -2016,14 +2018,15 @@ def add_host_network(host_id):
     )
 
 
-@app.route("/hosts/networks", methods=['POST'])
+@app.route("/hosts/networks", methods=['PUT'])
 @log_user_action
 @login_required
-def add_host_networks():
+def update_host_networks():
     """add host networks."""
     data = _get_request_data_as_list()
     return utils.make_json_response(
-        200, host_api.add_host_networks(current_user, data)
+        200, host_api.add_host_networks(
+            current_user, data)
     )
 
 
@@ -2172,6 +2175,121 @@ def take_host_action(host_id):
         poweron=poweron_func,
         poweroff=poweroff_func,
         reset=reset_func,
+    )
+
+
+def _get_headers(*keys):
+    headers = {}
+    for key in keys:
+        if key in request.headers:
+            headers[key] = request.headers[key]
+    return headers
+
+
+def _get_response_json(response):
+    try:
+        return response.json()
+    except ValueError:
+        return response.text
+
+
+@app.route("/proxy/<path:url>", methods=['GET'])
+@log_user_action
+@login_required
+def proxy_get(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding', app.config['AUTH_HEADER_NAME'],
+        'Cookie'
+    )
+    response = requests.get(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        params=_get_request_args(),
+        headers=headers,
+        stream=True
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/proxy/<path:url>", methods=['POST'])
+@log_user_action
+@login_required
+def proxy_post(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding',
+        'Cookie'
+    )
+    response = requests.post(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        data=request.data,
+        headers=headers
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/proxy/<path:url>", methods=['PUT'])
+@log_user_action
+@login_required
+def proxy_put(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding',
+        'Cookie'
+    )
+    response = requests.put(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        data=request.data,
+        headers=headers
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/proxy/<path:url>", methods=['DELETE'])
+@log_user_action
+@login_required
+def proxy_delete(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding',
+        'Cookie'
+    )
+    response = requests.delete(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        headers=headers
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
     )
 
 

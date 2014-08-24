@@ -539,22 +539,36 @@ def add_host_network(
 )
 def add_host_networks(
     session, creator,
-    exception_when_existing=True,
+    exception_when_existing=False,
     data=[]
 ):
     """Create host networks."""
     hosts = []
+    failed_hosts = []
     for host_data in data:
         host_id = host_data['host_id']
         networks = host_data['networks']
         host_networks = []
-        hosts.append({'host_id': host_id, 'networks': host_networks})
+        failed_host_networks = []
         for network in networks:
-            host_networks.append(_add_host_network(
-                session, creator, host_id, exception_when_existing,
-                **network
-            ))
-    return hosts
+            try:
+                host_networks.append(_add_host_network(
+                    session, creator, host_id, exception_when_existing,
+                    **network
+                ))
+            except exception.DatabaseException as error:
+                logging.exception(error)
+                failed_host_networks.append(network)
+        if host_networks:
+            hosts.append({'host_id': host_id, 'networks': host_networks})
+        if failed_host_networks:
+            failed_hosts.append({
+                'host_id': host_id, 'networks': failed_host_networks
+            })
+    return {
+        'hosts': hosts,
+        'failed_hosts': failed_hosts
+    }
 
 
 @utils.supported_filters(

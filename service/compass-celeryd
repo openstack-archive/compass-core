@@ -23,7 +23,7 @@
 # Checking Sanity
 DEBIAN=/etc/debian_version
 SUSE=/etc/SuSE-release
-CELERY=$CeleryPath
+CELERY="/root/.virtualenvs/compass-core/bin/celery"
 
 if [ -f $DEBIAN ]; then
     . /lib/lsb/init-functions
@@ -54,14 +54,14 @@ start() {
 stop() {
     echo -n "Stopping Compass Celeryd: "
     if [ -f $SUSE ]; then
-        killproc -t 10 -p /var/run/celery-worker.pid $CELERY worker
+        killproc -t 10 -p /var/run/celery-worker.pid $CELERY
         rc_status -v
         RETVAL=$?
     elif [ -f $DEBIAN ]; then
-        killproc -p /var/run/celery-worker.pid $CELERY worker -TERM
+        killproc -p /var/run/celery-worker.pid $CELERY -TERM
         RETVAL=$?
     else
-        killproc -p /var/run/celery-worker.pid -d 30 $CELERY worker
+        killproc -p /var/run/celery-worker.pid -d 30 $CELERY
         RETVAL=$?
     fi
     echo
@@ -78,12 +78,12 @@ case "$1" in
     status)
         echo -n "Checking compass celeryd: "
         if [ -f $SUSE ]; then
-            checkproc -v -p /var/run/celery-worker.pid $CELERY worker
+            checkproc -v -p /var/run/celery-worker.pid $CELERY
             rc_status -v
         elif [ -f $DEBIAN ]; then
-            status_of_proc -p /var/run/celery-worker.pid $CELERY worker
+            status_of_proc -p /var/run/celery-worker.pid $CELERY
         else
-            status -p /var/run/celery-worker.pid $CELERY worker
+            status -p /var/run/celery-worker.pid $CELERY
             echo
         fi
         ;;

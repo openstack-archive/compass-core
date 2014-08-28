@@ -80,12 +80,16 @@ def _filter_metadata(metadata):
                 'name': value['name'],
                 'description': value.get('description', None),
                 'default_value': value.get('default_value', None),
-                'is_required': value['is_required'],
-                'required_in_whole_config': value['required_in_whole_config'],
+                'is_required': value.get(
+                    'is_required', False),
+                'required_in_whole_config': value.get(
+                    'required_in_whole_config', False),
                 'js_validator': value.get('js_validator', None),
                 'options': value.get('options', []),
-                'required_in_options': value['required_in_options'],
-                'field_type': value['field_type_data'],
+                'required_in_options': value.get(
+                    'required_in_options', False),
+                'field_type': value.get(
+                    'field_type_data', 'str'),
                 'display_type': value.get('display_type', None),
                 'mapping_to': value.get('mapping_to', None)
             }

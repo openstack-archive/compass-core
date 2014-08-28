@@ -36,7 +36,6 @@ class TestParseDatetime(unittest2.TestCase):
 
     def setUp(self):
         super(TestParseDatetime, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestParseDatetime, self).tearDown()
@@ -53,7 +52,6 @@ class TestParseDatetimeRange(unittest2.TestCase):
 
     def setUp(self):
         super(TestParseDatetimeRange, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestParseDatetimeRange, self).tearDown()
@@ -97,7 +95,6 @@ class TestParseRequestArgDict(unittest2.TestCase):
 
     def setUp(self):
         super(TestParseRequestArgDict, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestParseRequestArgDict, self).tearDown()
@@ -114,7 +111,6 @@ class TestMergeDict(unittest2.TestCase):
 
     def setUp(self):
         super(TestMergeDict, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestMergeDict, self).tearDown()
@@ -200,7 +196,6 @@ class TestEncrypt(unittest2.TestCase):
 
     def setUp(self):
         super(TestEncrypt, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestEncrypt, self).tearDown()
@@ -211,7 +206,6 @@ class TestParseTimeInterval(unittest2.TestCase):
 
     def setUp(self):
         super(TestParseTimeInterval, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestParseTimeInterval, self).tearDown()
@@ -223,7 +217,6 @@ class TestLoadConfigs(unittest2.TestCase):
     def setUp(self):
         super(TestLoadConfigs, self).setUp()
         self.TEST_UTIL_HOME = os.path.dirname(os.path.realpath(__file__))
-        logsetting.init()
 
     def tearDown(self):
         super(TestLoadConfigs, self).tearDown()

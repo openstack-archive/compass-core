@@ -1,0 +1,26 @@
+---
+
+- name: restart cobblerd
+  service: name=cobblerd
+           state=restarted
+
+- name: restart httpd
+  service: name=httpd
+           state=restarted
+
+- name: restart dhcpd
+  service: name=dhcpd
+           state=restarted
+
+- name: restart named
+  service: name=named
+           state=restarted
+
+- name: cobbler sync
+  command: cobbler sync
+
+- name: reposync
+  command: cobbler reposync --only={{ item }}
+  with_items:
+    - centos_ppa_repo
+    - ubuntu_ppa_repo

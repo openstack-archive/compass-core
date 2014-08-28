@@ -1,0 +1,65 @@
+---
+compass_core_source: 'https://github.com/stackforge/compass-core'
+core_home: '/tmp/core'
+
+chef_server: 10.145.89.124
+cobbler_server: 10.145.89.123
+compass_server: 10.145.89.122
+
+compass_http_port: 80
+# cobbler_password: 
+name_servers: ['10.145.89.123']
+name_server_domains: ['ods.com']
+next_server: 10.145.89.123
+
+subnet: 10.145.88.0
+netmask: 255.255.254.0
+gateway: 10.145.88.1
+dhcp_ip_range: '10.145.89.200 10.145.89.250'
+
+# centos_arch
+# centos_version_major
+# centos_version_minor
+# centos_source
+# centos_iso
+
+# ubuntu_arch: x86_64
+# ubuntu_version_major: 12
+# ubuntu_version_minor: 04
+# ubuntu_pkg_arch: amd64
+# ubuntu_source
+# ubuntu_iso
+
+chef_el_rpm_url: "http://opscode-omnibus-packages.s3.amazonaws.com/el/"
+chef_client_el_rpm: chef-11.8.0-1.el
+chef_server_el_rpm: chef-server-11.0.8-1.el
+
+### For chef
+nginx_non_ssl_port: "8080"
+nginx_ssl_port: "443"
+enable_non_ssl: "true"
+
+
+tempest: "true"
+
+# For Compass
+# Password created by openssl, this will be prepared by outer wrapper of this config file
+compass_password: '$1$MoreSalt$FEotE0nGhisDYD.aNLyYD.'
+ntp_pool: {
+    'centos': '0.centos.pool.ntp.org',
+    'ubuntu':
+}
+compass_server_hostname: 'ansible-compass'
+
+
+# Mysql
+mysql_port: '3306'
+database_name: 'compass_db'
+
+# Compass web
+web_source: 'http://git.openstack.org/stackforge/compass-web'
+web_home: '/tmp/web'
+
+# Compass adapters
+adapters_source: 'http://git.openstack.org/stackforge/compass-adapters'
+adapters_home: '/tmp/adapters'

@@ -1,0 +1,11 @@
+# Repository Config
+#set $repo_data = $getVar("repo_data",[])
+#for $repo in $repo_data
+#if $repo.mirror_locally
+repo --name=${repo.name} --baseurl=http://$http_server/cobbler/repo_mirror/${repo.name}/
+#else
+repo --name=${repo.name} --baseurl=${repo.mirror}
+#end if
+#end for
+
+

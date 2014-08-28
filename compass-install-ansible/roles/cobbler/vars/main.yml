@@ -1,0 +1,21 @@
+---
+# Default Environment is Linux
+env: "linux"
+chef_el_rpm_url: "http://opscode-omnibus-packages.s3.amazonaws.com/el/"
+chef_client_el_rpm: chef-11.8.0-1.el
+
+
+centos_version_major: "6"
+centos_version_minor: "5"
+centos_arch: "x86_64"
+centos_source: "http://12.234.32.58/software/OS/centos/centos6.5"
+centos_iso: "CentOS-6.5-x86_64-minimal.iso"
+centos_name: "CentOS-6.5-x86_64"
+
+ubuntu_arch: x86_64
+ubuntu_version_major: "12"
+ubuntu_version_minor: "04"
+ubuntu_pkg_arch: amd64
+ubuntu_source: "http://12.234.32.58/software/OS/ubuntu"
+ubuntu_iso: "ubuntu-12.04-server-amd64.iso"
+ubuntu_name: "Ubuntu-12.04-x86_64"

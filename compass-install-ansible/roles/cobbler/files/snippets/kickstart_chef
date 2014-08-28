@@ -1,0 +1,12 @@
+mkdir -p /etc/chef
+
+## Generate chef rsyslog conf
+$SNIPPET('kickstart_chef_rsyslog.conf')
+
+## Generate validation.pem
+$SNIPPET('kickstart_chef-validator.pem')
+## Generate client.rb
+$SNIPPET('kickstart_client.rb')
+$SNIPPET('kickstart_chef_firstrun.sh')
+$SNIPPET('kickstart_chef_rerun.sh')
+$SNIPPET('kickstart_chef_init')

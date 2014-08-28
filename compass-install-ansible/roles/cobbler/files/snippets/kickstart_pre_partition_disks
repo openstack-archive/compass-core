@@ -1,0 +1,80 @@
+#set hostname=$getVar('hostname',None)
+#set partition = $getVar('partition', None)
+
+#if $hostname == None
+#set $vgname = "VolGroup00"
+#else
+#set $vgname = $hostname.split('.')[0]
+#end if
+
+set \$(list-harddrives)
+let disk_nums=\$#/2
+let disk_offset=0
+let found_disk_offset=0
+while [ \$disk_offset -lt \$disk_nums ];
+do
+#if $getVar('partitions_only','') != ""
+let found_disk=0
+    #for $partition_only in $partitions_only.split(',')
+if expr match "\$1" "$partition_only"; then
+    disks[found_disk_offset]=\$1
+    let found_disk=1
+fi
+    #end for
+if [ \$found_disk -gt 0 ]; then
+    let found_disk_offset=\$found_disk_offset+1
+fi
+#else
+    disks[found_disk_offset]=\$1
+    let found_disk_offset=\$found_disk_offset+1
+#end if
+let disk_offset=\$disk_offset+1
+shift 2
+done
+let disk_nums=\$found_disk_offset
+
+echo "clearpart --all --initlabel" > /tmp/part-include
+
+#if $getVar('keep_old_partitions', '0') != "0"
+    #if $getVar('partitions_only','') != ""
+echo "ignoredisk --only-use=$partitions_only" >> /tmp/part-include
+    #end if
+#end if
+
+echo "part /boot --fstype ext3 --size=100 --ondisk=\${disks[0]}  --asprimary" >> /tmp/part-include
+echo "part swap --recommended --maxsize=128000 --ondisk=\${disks[0]}" >> /tmp/part-include
+
+vggroup=''
+let disk_offset=0
+while [ \$disk_offset -lt \$disk_nums ];
+do
+let pv_id=\$disk_offset+1
+partname="pv.0\$pv_id"
+echo "part \$partname --size=1 --grow --ondisk=\${disks[\$disk_offset]}" >> /tmp/part-include
+vggroup="\$vggroup \$partname"
+let disk_offset=\$disk_offset+1;
+done
+
+echo "volgroup $vgname \$vggroup" >> /tmp/part-include
+
+echo "logvol / --fstype ext3 --vgname=$vgname --size=1 --grow --name=rootvol" >> /tmp/part-include
+
+#if $partition != None
+    #set vol_sizes = [part.strip() for part in $partition.split(';') if part.strip()]
+    #for vol_and_size in vol_sizes
+        #set vol, vol_size = $vol_and_size.split(' ', 1)
+        #set vol = $vol.strip()
+        #set vol_size = $vol_size.strip()
+        #if $vol.startswith('/')
+            #set volname = $vol[1:]
+            #if $vol_size.endswith('%'):
+                #set vol_percent = vol_size[:-1]
+echo "logvol $vol --fstype ext3 --vgname=$vgname --size=1 --grow --percent=$vol_percent --name=${volname}vol" >> /tmp/part-include
+            #else
+echo "logvol $vol --vgname=$vgname --fstype ext3 --size=$vol_size --name=${volname}vol" >> /tmp/part-include      
+            #end if
+        #else
+# $vol is not starts with / 
+        #end if
+    #end for
+#end if

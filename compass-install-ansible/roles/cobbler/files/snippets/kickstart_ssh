@@ -1,0 +1,24 @@
+mkdir -p /root/.ssh
+chmod 700 -R /root/.ssh
+#if $getVar("push_ssh_keys", "") != ""
+    #set $ssh_keys = $push_ssh_keys.split(',')
+    set $firstline = True
+    #for $ssh_key in $ssh_keys 
+        #if not $ssh_key
+            #continue
+        #end if
+        #set f = open($ssh_key)
+        #if $firstline
+cat << EOL > /root/.ssh/authorized_keys
+#echo $f.read()
+EOL
+        #else
+cat << EOL >> /root/.ssh/authorized_keys
+#echo $f.read()
+EOL
+        #end if
+        #silent $f.close()
+        #set $firstline = False
+    #end for
+chmod 600 /root/.ssh/authorized_keys
+#end if

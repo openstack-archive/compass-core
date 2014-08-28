@@ -1,0 +1,4 @@
+nginx['non_ssl_port'] = {{ nginx_non_ssl_port }}
+nginx['enable_non_ssl'] = {{ enable_non_ssl }}
+nginx['ssl_port'] = {{ nginx_ssl_port }}
+nginx['url'] = "https://#{node['fqdn']}"

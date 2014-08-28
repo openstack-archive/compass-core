@@ -1,0 +1,8 @@
+[compassnodes]
+ansible-compass ansible_ssh_host=10.145.89.122 ansible_ssh_user=root ansible_ssh_pass=root env=linux
+
+[cobblernodes]
+ansible-cobbler ansible_ssh_host=10.145.89.123 ansible_ssh_user=root ansible_ssh_pass=root env=linux
+
+[chefnodes]
+ansible-chef ansible_ssh_host=10.145.89.124 ansible_ssh_user=root ansible_ssh_pass=root env=linux

@@ -1,0 +1,24 @@
+sed -i 's/PermitRootLogin.*/PermitRootLogin yes/g' /target/etc/ssh/sshd_config; \
+mkdir -p /target/root/.ssh; \
+chmod 700 -R /target/root/.ssh; \
+#if $getVar("push_ssh_keys", "") != ""
+    #set $ssh_keys = $push_ssh_keys.split(',')
+    #set $firstline = True
+    #for $ssh_key in $ssh_keys
+        #if not $ssh_key
+            #continue
+        #end if
+        #set $f = open($ssh_keys)
+        #for $line in $f
+            #set $line = $line.rstrip('\n')
+            #if $firstline
+echo "$line" > /target/root/.ssh/authorized_keys; \
+            #else
+echo "$line" >> /target/root/.ssh/authorized_keys; \
+            #end if
+            #set $firstline = False
+        #end for
+        #silent $f.close()
+    #end for
+chmod 600 /target/root/.ssh/authorized_keys; \
+#end if

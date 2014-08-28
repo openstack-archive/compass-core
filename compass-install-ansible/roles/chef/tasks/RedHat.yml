@@ -1,0 +1,127 @@
+---
+- name: get chef server fact
+  command: rpm -qa |grep -q chef-server
+  register: is_installed
+
+- name: Download chef server if not already
+  get_url: url={{ chef_el_rpm_url }}{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/{{ chef_server_el_rpm }}{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm 
+           dest=/tmp/{{ chef_server_el_rpm }}.rpm
+  when: is_installed.stdout.find('chef-server') == -1
+
+- name: Install chef server
+  command: rpm -Uvh /tmp/{{ chef_server_el_rpm }}.rpm
+  when: is_installed.stdout.find('chef-server') == -1
+
+- name: Chef-server cleanse
+  command: chef-server-ctl cleanse
+  when: is_installed.stdout.find('chef-server') == -1
+
+- name: Create chef-server dir
+  file: path=/etc/chef-server
+        state=directory
+
+- name: Copy chef server config file
+  template: src=chef_server_rb.j2
+            dest=/etc/chef-server/chef-server.rb
+            owner=root
+            group=root
+            mode=0644
+            backup=yes
+  register: result
+
+- name: Reconfigure chef server
+  command: chef-server-ctl reconfigure
+  when: result|changed
+
+- name: Test chef server
+  command: chef-server-ctl test
+  when: result|changed
+
+- name: Create chef directory
+  file: path=/var/chef/cookbooks
+        state=directory
+
+- name: Install packages
+  yum: pkg={{ item }}
+       state=installed
+  with_items:
+      - git
+      - httpd
+      - ntp
+
+- name: Get adapters
+  git: repo={{ adapters_source }}
+       dest=/tmp/compass-adapters
+  register: result
+
+- name: Get cookbooks
+  command: cp -r /tmp/compass-adapters/chef/cookbooks/ /var/chef/
+
+- name: Get databags
+  command: cp -r /tmp/compass-adapters/chef/databags/ /var/chef/
+
+- name: Get roles
+  command: cp -r /tmp/compass-adapters/chef/roles/ /var/chef/
+
+- name: Is chef client installed
+  command: rpm -qa | grep chef | wc -l
+  register: chefs
+
+- name: Download chef client if not already
+  get_url: url={{ chef_el_rpm_url }}{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/{{ chef_client_el_rpm }}{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm
+           dest=/tmp/{{ chef_client_el_rpm }}.rpm
+  when: chefs.stdout.find('2') == -1
+
+- name: Install chef client
+  command: rpm -Uvh /tmp/{{ chef_client_el_rpm }}.rpm
+  when: chefs.stdout.find('2') == -1
+
+- name: Make chef client dir
+  file: path=~/.chef
+        state=directory
+
+- name: Copy knife script to remote
+  copy: src=configure_knife.sh
+        dest=/tmp/configure_knife.sh
+        owner=root
+        group=root
+        mode=755
+
+- name: Check if knife is already configured
+  command: ls ~/.chef/
+  register: result
+
+- name: Execute script to config knife
+  shell: /tmp/configure_knife.sh >> configure_knife.txt chdir=/tmp/
+  when: result.stdout.find('root') == -1
+
+- name: Copy knife config file to remote
+  template: src=knife_rb.j2
+            dest=~/.chef/knife.rb
+            owner=root
+            group=root
+            mode=644
+            backup=yes 
+
+- name: Upload cookbooks
+  command: knife cookbook upload --all -o /var/chef/cookbooks/
+
+- name: Copy upload_roles.sh to remote
+  copy: src=upload_roles.sh
+        dest=/tmp/upload_roles.sh
+        owner=root
+        group=root
+        mode=755
+
+- name: Upload roles
+  shell: /tmp/upload_roles.sh >> upload_roles.txt
+
+- name: Copy upload_databags.sh to remote
+  copy: src=upload_databags.sh
+        dest=/tmp/upload_databags.sh
+        owner=root
+        group=root
+        mode=755
+
+- name: Upload databags
+  shell: /tmp/upload_databags.sh >> upload_databags.txt

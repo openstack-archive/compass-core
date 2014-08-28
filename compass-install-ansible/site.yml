@@ -1,0 +1,16 @@
+---
+
+- hosts: cobblernodes
+  sudo: True
+  roles:
+    - { role: cobbler }
+
+- hosts: chefnodes
+  sudo: True
+  roles:
+    - { role: chef }
+
+- hosts: compassnodes
+  sudo: True
+  roles:
+    - { role: compass }

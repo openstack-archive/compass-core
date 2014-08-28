@@ -1,0 +1,9 @@
+---
+- include: RedHat.yml
+  when: env == 'linux' and ansible_os_family == 'RedHat'
+
+- include: Debian.yml
+  when: env == 'linux' and ansible_os_family == 'Debian'
+
+- include: docker.yml
+  when: env == 'docker'

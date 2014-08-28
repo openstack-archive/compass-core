@@ -1,0 +1,13 @@
+#if $str($getVar('anamon_enabled','')) == "1"
+wget -O /target/usr/local/sbin/anamon "http://$server:$http_port/cobbler/aux/anamon"; \
+## A self-destruct service to boot anamon
+echo "#!/bin/bash" > /target/etc/init.d/anamon.init; \
+echo "cd /var/log/installer" >> /target/etc/init.d/anamon.init; \
+echo "gunzip initial-status.gz" >> /target/etc/init.d/anamon.init; \
+echo "/usr/local/sbin/anamon --watchfile \"/var/log/installer/syslog /var/log/installer/hardware-summary /var/log/installer/initial-status /var/log/installer/status /var/log/messages /var/log/dmesg\" --name $name --server $server --port $http_port --exit" >> /target/etc/init.d/anamon.init; \
+echo "update-rc.d -f anamon remove" >> /target/etc/init.d/anamon.init; \
+echo "mv /etc/init.d/anamon.init /tmp/anamon.init" >> /target/etc/init.d/anamon.init; \
+chmod 755 /target/etc/init.d/anamon.init /target/usr/local/sbin/anamon; \
+chroot /target update-rc.d anamon.init defaults 95 95; \
+#end if
+

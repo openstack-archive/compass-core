@@ -1,0 +1,119 @@
+# Mostly based on the Ubuntu installation guide
+# https://help.ubuntu.com/12.04/installation-guide/
+
+## Figure out if we're kickstarting a system or a profile
+#if $getVar('system_name','') != ''
+#set $what = "system"
+#else
+#set $what = "profile"
+#end if
+
+# Preseeding only locale sets language, country and locale.
+d-i debian-installer/locale string en_US
+d-i debian-installer/country string US
+d-i debian-installer/language string en
+
+# Keyboard selection.
+# Disable automatic (interactive) keymap detection.
+d-i console-setup/ask_detect boolean false
+d-i console-setup/layoutcode string us
+d-i console-setup/modelcode string  SKIP
+d-i keyboard-configuration/variantcode string us
+d-i keyboard-configuration/layoutcode string us
+d-i keyboard-configuration/model    select  Generic 105-key (Intl) PC
+d-i console-keymaps-at/keymap   select  us
+d-i keyboard-configuration/xkb-keymap   select  us
+
+d-i preseed/early_command string \
+$SNIPPET('preseed_pre_anamon') echo "processed preseed_pre_anamon" >> /tmp/preseed.log; \
+$SNIPPET('preseed_pre_install_network_config') echo "processed preseed_pre_install_network_config" >> /tmp/preseed.log; \
+wget -O- \
+http://$http_server/cblr/svc/op/script/$what/$name/?script=preseed_early_default | /bin/sh -s
+
+d-i partman/early_command string \
+$SNIPPET('preseed_pre_partition_disks') echo "processed preseed_pre_partition_disks" >> /tmp/preseed.log; \
+wget -O- \
+http://$http_server/cblr/svc/op/script/$what/$name/?script=partman_early_default | /bin/sh -s
+
+$SNIPPET('preseed_network_config')
+$SNIPPET('preseed_partition_disks')
+
+# NTP/Time Setup
+#if $getVar('timezone', '') != ""
+d-i time/zone string $timezone
+#else
+d-i time/zone string US/Pacific
+#end if
+d-i clock-setup/utc boolean true
+d-i clock-setup/ntp boolean true
+d-i clock-setup/ntp-server  string ntp.ubuntu.com
+
+# Setup the installation source
+d-i mirror/country string manual
+d-i mirror/http/hostname string $http_server
+d-i mirror/http/directory string $install_source_directory
+d-i mirror/http/proxy string
+
+#set $os_v = $getVar('os_version','')
+#if $os_v and $os_v.lower()[0] > 'p'
+# Required at least for 12.10+
+d-i live-installer/net-image string http://$http_server/cobbler/ks_mirror/$distro_name/install/filesystem.squashfs
+#end if
+
+# root account and password
+d-i passwd/root-login boolean true
+d-i passwd/make-user boolean false
+#if $getVar('password', '') != ""
+d-i passwd/root-password-crypted password $password
+#else
+d-i passwd/root-password password root
+d-i passwd/root-password-again password root
+#end if
+
+$SNIPPET('preseed_apt_repo_config')
+
+# Individual additional packages to install
+# wget is REQUIRED otherwise quite a few things won't work
+# later in the build (like late-command scripts)
+d-i pkgsel/include string ntp ssh wget chef
+# Whether to upgrade packages after debootstrap.
+# Allowed values: none, safe-upgrade, full-upgrade
+d-i pkgsel/upgrade select none
+d-i popularity-contest/participate boolean false
+d-i lilo-installer/skip boolean true
+d-i grub-installer/only_debian boolean true
+
+# Use the following option to add additional boot parameters for the
+# installed system (if supported by the bootloader installer).
+# Note: options passed to the installer will be added automatically.
+d-i debian-installer/add-kernel-opts string $kernel_options_post
+d-i debian-installer/allow_unauthenticated string true
+
+# Avoid that last message about the install being complete.
+d-i finish-install/reboot_in_progress note
+
+# This will prevent the installer from ejecting the CD during the reboot,
+# which is useful in some situations.
+d-i cdrom-detect/eject boolean false
+
+# This command is run just before the install finishes, but when there is
+# still a usable /target directory. You can chroot to /target and use it
+# directly, or use the apt-install and in-target commands to easily install
+# packages and run commands in the target system.
+# d-i preseed/late_command string [command]
+d-i preseed/late_command string \
+$SNIPPET('preseed_post_install_network_config') echo "processed preseed_post_install_network_config" >> /tmp/preseed.log; \
+$SNIPPET('preseed_ssh') echo "processed preseed_ssh" >> /tmp/preseed.log; \
+$SNIPPET('preseed_ntp') echo "processed preseed_ntp" >> /tmp/preseed.log; \
+$SNIPPET('preseed_post_apt_repo_config') echo "processed preseed_post_apt_repo_config" >> /tmp/preseed.log; \
+#if $getVar('tool', '') != ''
+    #set $preseed_tool = "preseed_%s" % $tool
+$SNIPPET($preseed_tool) echo "processed $preseed_tool" >> /tmp/preseed.log; \
+#end if
+$SNIPPET('preseed_limits.conf') echo "processed preseed_limits.conf" >> /tmp/preseed.log; \
+$SNIPPET('preseed_sysctl.conf') echo "processed preseed_sysctl.conf" >> /tmp/preseed.log; \
+$SNIPPET('preseed_rsyslog.conf') echo "processed preseed_rsyslog.conf" >> /tmp/preseed.log; \
+$SNIPPET('preseed_post_anamon') echo "processed preseed_post_anamon" >> /tmp/preseed.log; \
+wget -O- \
+   http://$http_server/cblr/svc/op/script/$what/$name/?script=preseed_late_default | \
+   chroot /target /bin/sh -s

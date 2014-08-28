@@ -1,0 +1,13 @@
+---
+
+- name: restart squid
+  service: name=squid
+           state=restarted
+
+- name: restart mysqld
+  service: name=mysqld
+           state=restarted
+
+- name: restart redis
+  service: name=redis
+           state=restarted

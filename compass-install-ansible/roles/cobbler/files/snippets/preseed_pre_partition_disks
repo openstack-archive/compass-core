@@ -1,0 +1,136 @@
+#set hostname=$getVar('hostname',None)
+#set partition = $getVar('partition', None)
+#if $hostname == None
+#set $vgname = "VolGroup00"
+#else
+#set $vgname = $hostname.split('.')[0]
+#end if
+#if $getVar("system_name","") != ""
+first_found_disk=""; \
+disks_str=""; \
+found_disks_str=""; \
+for disk in \$(list-devices disk); do \
+    if [[ x"\$disk" == x"" ]]; then \
+        continue; \
+    fi; \
+#if $getVar('partitions_only','') != ""
+    let found_disk=0; \
+    #for $partition_only in $partitions_only.split(',')
+        #if not $partition_only
+            #continue
+        #end if
+    if expr match "\$disk" "$partition_only"; then \
+        let found_disk=1; \
+    fi; \
+    #end for
+#else
+    let found_disk=1; \
+#end if
+    if [ \$found_disk -gt 0 ]; then \
+        if [ -z \$found_disks_str ]; then \
+            found_disks_str="\$disk"; \
+            first_found_disk="\$disk"; \
+        else \
+            found_disks_str="\${found_disks_str} \$disk"; \
+        fi; \
+    fi; \
+    if [ -z \$disks_str ]; then \
+        disks_str="\$disk"; \
+    else \
+        disks_str="\${disks_str} \$disk"; \
+    fi; \
+done; \
+logger "partition disks: \${found_disks_str}"; \
+#if $getVar('keep_old_partitions', '0') != "0"
+remove_disks_str=\${found_disks_str}; \
+#else
+remove_disks_str=\${disks_str}; \
+#end if
+logger "remove disks \${remove_disks_str}"; \
+## vgremove -f $vgname; \
+## logger "vgremove $vgname"; \
+disk_partitions=\$(pvs --noheadings --rows | head -n1); \
+for disk_partition in \${disk_partitions}; do \
+    if [[ x"\$disk_partition" == x"" ]]; then \
+        continue; \
+    fi; \
+    vg=\$(pvs --noheadings --separator : \${disk_partition} | cut -d: -f2); \
+    remove_vg=""; \
+    for remove_disk in \${remove_disks_str}; do \
+        if [[ x"\$remove_disk" == x"" ]]; then \
+            continue; \
+        fi; \
+        if expr match "\${disk_partition}" "\${remove_disk}.*"; then \
+            remove_vg="\$vg"; \
+            logger "partition \${disk_partition} matches \${remove_disk}.*"; \
+            logger "set remove_vg to \$vg"; \
+        else \
+            logger "partition \${disk_partition} does not match \${remove_disk}.*"; \
+        fi; \
+    done; \
+    if [[ x"\$remove_vg" != x"" ]]; then \
+        vgremove -f \$remove_vg; \
+        logger "vgremove \${remove_vg} for \${disk_partition}"; \
+    else \
+        logger "\${disk_partition} is not in vgremove list"; \
+    fi; \
+done; \
+for remove_disk in \${remove_disks_str}; do \
+    if [[ x"\$remove_disk" == x"" ]]; then \
+        continue; \
+    fi; \
+    pvremove -ff -y \${remove_disk}*; \
+    logger "pvremove \${remove_disk}*"; \
+done; \
+remove_disks=\$(echo \${remove_disks_str} | sed -e 's/ /,/g'); \
+echo "d-i partman-auto/select_disks multiselect \${remove_disks}" >> /tmp/part-include; \
+echo "d-i partman-auto/disk string \${found_disks_str}" >> /tmp/part-include; \
+recipe="boot-root :: \
+100 100 100 ext3 \
+\\$primary{ } \\$bootable{ } method{ format } \
+format{ } use_filesystem{ } filesystem{ ext3 } \
+mountpoint{ /boot } device{ \$first_found_disk } \
+. \
+200% 200% 200% linux-swap \
+\\$primary{ } method{ swap } format{ } \
+device{ \$first_found_disk } \
+. \
+#if $partition != None
+    #set vol_sizes = [part.strip() for part in $partition.split(';') if part.strip()]
+    #for vol_and_size in vol_sizes
+        #set vol, vol_size = $vol_and_size.split(' ', 1)
+        #set vol = $vol.strip()
+        #set vol_size = $vol_size.strip()
+        #if $vol.startswith('/')
+            #set volname = $vol[1:]
+${vol_size} ${vol_size} ${vol_size} ext3 \
+\\$lvmok{ } method{ format } format{ } \
+use_filesystem{ } filesystem{ ext3 } \
+in_vg{ $vgname } lv_name{ ${volname}vol } \
+mountpoint{ $vol } \
+. \
+        #else
+            #continue
+        #end if
+    #end for
+#end if
+1 2 100% ext3 \
+\\$lvmok{ } method{ format } \
+format{ } use_filesystem{ } filesystem{ ext3 } \
+in_vg{ $vgname } lv_name{ rootvol } \
+mountpoint{ / } \
+. \
+"; \
+pv_offset=1; \
+for found_disk in \${found_disks_str}; do \
+    recipe="\$recipe \
+1 1 -1 ext3 \
+\\$defaultignore{ } \\$primary{ } device{ \${found_disk} } \
+method{ lvm } vg_name{ $vgname } \
+. \
+"; \
+let pv_offset=\${pv_offset}+1; \
+done; \
+echo "d-i partman-auto/expert_recipe string \$recipe" >> /tmp/part-include; \
+debconf-set-selections /tmp/part-include; \
+#end if

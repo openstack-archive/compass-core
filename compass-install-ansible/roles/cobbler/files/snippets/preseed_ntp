@@ -1,0 +1,16 @@
+#if $getVar('ntp_server', '') == ""
+    #set $ntp_server = '0.ubuntu.pool.ntp.org'
+#end if
+echo "driftfile /var/lib/ntp/ntp.drift" > /target/etc/ntp.conf; \
+echo "#statsdir /var/log/ntpstats/" >> /target/etc/ntp.conf; \
+echo "statistics loopstats peerstats clockstats" >> /target/etc/ntp.conf; \
+echo "filegen loopstats file loopstats type day enable" >> /target/etc/ntp.conf; \
+echo "filegen peerstats file peerstats type day enable" >> /target/etc/ntp.conf; \
+echo "filegen clockstats file clockstats type day enable" >> /target/etc/ntp.conf; \
+echo "server $ntp_server" >> /target/etc/ntp.conf; \
+echo "restrict -4 default kod notrap nomodify nopeer noquery" >> /target/etc/ntp.conf; \
+echo "restrict -6 default kod notrap nomodify nopeer noquery" >> /target/etc/ntp.conf; \
+echo "restrict 127.0.0.1" >> /target/etc/ntp.conf; \
+echo "restrict ::1" >> /target/etc/ntp.conf; \
+echo "server  127.127.1.0     # local clock" >> /target/etc/ntp.conf; \
+chroot /target update-rc.d ntp defaults 58 74; \

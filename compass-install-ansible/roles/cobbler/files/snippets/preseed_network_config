@@ -1,0 +1,23 @@
+#if $getVar("system_name","") != ""
+d-i netcfg/link_detection_timeout string 0
+d-i netcfg/dhcp_timeout string 0
+d-i netcfg/dhcpv6_timeout string 0
+d-i netcfg/enable boolean false
+d-i netcfg/disable_autoconfig boolean true
+d-i netcfg/use_autoconfig boolean false
+d-i netcfg/disable_dhcp boolean true
+d-i netcfg/dhcp_failed note
+d-i netcfg/dhcp_options select Configure network manually
+d-i hw-detect/load_firmware boolean true
+d-i netcfg/confirm_static boolean true
+    #if $hostname != ""
+d-i netcfg/get_hostname string $hostname
+d-i netcfg/hostname string $hostname
+    #end if
+    #if $gateway != ""
+d-i netcfg/get_gateway string $gateway
+    #end if
+    #if $len($name_servers) > 0
+d-i netcfg/get_nameservers string $name_servers[0]
+    #end if
+#end if

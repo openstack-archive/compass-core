@@ -1,0 +1,2 @@
+mysql_current_password: foobar
+tempest_url: 'http://git.openstack.org/openstack/tempest'

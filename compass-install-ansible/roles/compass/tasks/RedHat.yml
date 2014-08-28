@@ -1,0 +1,414 @@
+---
+- name: Create user compass
+  user: name=compass
+        shell=/bin/bash
+        generate_ssh_key=yes
+        password={{ compass_password }}
+  register: result
+
+- name: Add compass to sudoers
+  lineinfile: "dest=/etc/sudoers
+               state=present
+               regexp='^%compass'
+               line='%compass ALL=(ALL) NOPASSWD: ALL'"
+  when: result|changed
+
+- name: Install epel
+  yum: name=http://download.fedoraproject.org/pub/epel/{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/epel-release-6-8.noarch.rpm
+
+- name: Clean yum
+  command: yum clean all
+
+- name: Update yum
+  command: yum -y update
+
+- name: Install tempest pkgs
+  yum: pkg={{ item }}
+  with_items:
+      - virt-install
+      - libvirt
+      - qemu
+      - qemu-kvm
+      - libxml2-devel
+      - libffi-devel
+      - python-devel
+      - sshpass
+      - openssl-devel
+  when: '"{{ tempest }}" == true'
+
+- name: Install compass pkgs
+  yum: pkg={{ item }}
+  with_items:
+      - rsyslog
+      - logrotate
+      - ntp
+      - iproute
+      - openssh-clients
+      - python
+      - python-devel
+      - git
+      - wget
+      - syslinux
+      - amqp
+      - mod_wsgi
+      - httpd
+      - squid
+      - rsync
+      - yum-utils
+      - gcc
+      - net-snmp-utils
+      - net-snmp
+      - python-daemon
+      - unzip
+      - openssl
+      - openssl098e
+      - ca-certificates
+      - redis
+      - mysql
+      - mysql-server
+      - mysql-devel
+      - python-virtualenv
+      - ipcalc
+
+- name: Update pip
+  command: easy_install -U pip
+
+- name: Install virtualenv
+  command: pip install virtualenvwrapper
+
+- name: Enable rsync
+  command: chkconfig rsync on
+
+- name: Update /etc/hosts
+  template: src=hosts.j2
+            dest=/etc/hosts
+            owner=root
+            group=root
+            mode=0644
+            backup=yes
+
+- name: Update logrotate.d
+  copy: src=logrotate.d
+        dest=/etc/logrotate.d
+        owner=root
+        group=root
+        backup=yes
+
+- name: Update ntp conf
+  copy: src=ntp/ntp.conf
+        dest=/etc/ntp/ntp.conf
+        owner=root
+        group=root
+        mode=0644
+        backup=yes
+  register: result
+
+- name: Stop ntpd
+  service:
+      name=ntpd
+      state=stopped
+  when: result|changed
+
+- name: Correct time
+  command: ntpdate {{ ntp_pool['centos'] }}
+  when: result|changed
+
+- name: Restart mysqld
+  service: name=mysqld
+           state=restarted
+
+- name: Install mysql-python package
+  pip: name=mysql-python
+
+- name: set up mysql user
+  mysql_user: login_user=root
+              login_password=''
+              name=root
+              password=root
+              login_port={{ mysql_port }}
+              priv=*.*:ALL
+              state=present
+
+- name: set up mysql db
+  mysql_db: name={{ database_name }}
+            state=present
+  notify:
+      - restart mysqld
+
+- name: Download compass web
+  git: repo={{ web_source }}
+       dest={{ web_home }}
+
+- name: Download compass adapter
+  git: repo={{ adapters_source }}
+       dest={{ adapters_home }}
+
+- name: check if /tmp/tempest exists
+  command: ls /tmp
+  register: result
+
+- name: Clone tempest if it doesn't exist
+  git: repo={{ tempest_url }}
+       dest=/tmp/tempest
+  when: result.stdout.find('tempest') == -1 and {{ tempest }} == true
+
+- name: Patch newest change
+  git: repo={{ tempest_url }}
+       remote={{ tempest_url }}
+       dest=/tmp/tempest
+       update=yes
+  when: result.stdout.find('tempest') != -1 and {{ tempest }} == true
+
+- name: Copy script to remote
+  copy: src=run_tempest.sh
+        dest=/tmp/
+        mode=777
+  when: result.stdout.find('tmpest') != -1 and {{ tempest }} == true
+
+- name: Execute remote script
+  command: bash /tmp/run_tempest.sh
+  when: result.stdout.find('tempest') != -1 and {{ tempest }} == true
+
+- name: Source virtual env
+  shell: source `which virtualenvwrapper.sh` && lsvirtualenv
+  register: virtualenv
+
+- name: Make tempest in virtualenv if tempest
+  shell: source `which virtualenvwrapper.sh` && mkvirtualenv tempest
+  when: virtualenv.stdout.find('tempest') == -1 and {{ tempest }} == true
+
+- name: Pip -e
+  shell: chdir=/tmp/tempest source `which virtualenvwrapper.sh` && workon tempest pip install -e .
+  when: virtualenv.stdout.find('tempest') == -1 and {{ tempest }} == true
+
+- name: install sqlalchemy
+  shell: source `which virtualenvwrapper.sh` && workon tempest pip install sqlalchemy         
+  when: virtualenv.stdout.find('tempest') == -1 and {{ tempest }} == true
+
+- name: Check if compass-core is in virtualenv
+  shell: source `which virtualenvwrapper.sh` && lsvirtualenv
+  register: compass_virtualenv
+
+- name: If not, make it in virtualenv
+  shell: souce `which virtualenvwrapper.sh` && mkvirtualenv compass-core
+
+- name: Clone compass-core
+  git: repo={{ compass_core_source }}
+       dest={{ core_home }}
+       version=dev/experimental
+
+- name: pip install requirements
+  pip: requirements="{{ core_home }}"/requirements.txt
+       virtualenv=compass-core
+
+- name: pip install test-requirementss
+  pip: requirements="{{ core_home }}"/test-requirements.txt
+       virtualenv=compass-core
+
+- name: Copy ods-server.conf
+  copy: src=apache/ods-server.conf
+        dest=/etc/httpd/conf.d/ods-server.conf
+        mode=0644
+
+- name: Create compass dir
+  file: path=/var/www/compass
+        owner=root
+        group=root
+        mode=0777
+        state=directory
+
+
+- name: Copy compass.wsgi
+  copy: src=apache/compass.wsgi
+        dest=/var/www/compass/compass.wsgi
+        owner=root
+        group=root
+        mode=0777
+
+- name: create compass in etc
+  file: path=/etc/compass
+        owner=root
+        group=root
+        mode=0777
+        state=directory
+
+- name: Copy everything from conf to /etc
+  shell: cp -rf {{ core_home }}/conf/* /etc/compass/
+
+- name: Copy everything from bin to /etc
+  shell: cp -rf {{ core_home }}/service/* /etc/init.d/
+
+- name: Create compass dir under /opt
+  file: path=/opt/compass/bin
+        owner=root
+        group=root
+        mode=0777
+        state=directory
+
+- name: Copy py files in bin to /opt
+  shell: cp -rf {{ core_home }}/bin/*.py /opt/compass/bin/
+
+- name: Copy sh files in bin to /opt
+  shell: cp -rf {{ core_home }}/bin/*.sh /opt/compass/bin/
+
+- name: Copy compass dir in bin to /user/bin
+  shell: cp -rf {{ core_home }}/bin/compass /usr/bin/
+
+- name: Copy chef dir in bin to /opt
+  shell: cp -rf {{ core_home }}/bin/chef/* /opt/compass/bin
+
+- name: Create compass_web dir
+  file: path=/var/www/compass_web
+        owner=root
+        group=root
+        mode=0777
+        state=directory
+
+- name: Copy web public files to compass_web dir
+  shell: cp -rf {{ web_home }}/public/* /var/www/compass_web/
+
+- name: copy templates dir to /etc
+  shell: cp -rf {{ core_home }}/conf/templates /etc/compass/
+
+- name: Add apache user to the group of virtualenv user
+  shell: usermod -a -G `groups $USER|awk '{print$3}'` apache
+
+- name: Enable compass-progress-updated
+  service: name=compass-progress-updated
+           enabled=yes
+
+- name: Enable compass-celeryd
+  service: name=compass-celeryd
+           enabled=yes
+
+- name: Check if libcrypto.so exists
+  command: ls /usr/lib64/
+  register: libcrypto
+
+- name: Copy libcrypto.so.6 to libcrypto
+  shell: cp -rf /usr/lib64/libcrypto.so.6 /usr/lib64/libcrypto.so
+  when: libcrypto.stdout.find('libcrypto.so') != -1
+
+- name: Create compass db dir
+  file: path=/opt/compass/db
+        owner=root
+        group=root
+        mode=0777
+        state=directory
+
+- name: Create compass log dir
+  file: path=/var/log/compass
+        owner=root
+        group=root
+        mode=0777
+        state=directory
+
+- name: Run python setup.py
+  shell: chdir={{ core_home }} source `which virtualenvwrapper.sh` && workon compass-core && python setup.py install
+
+- name: Replace cobbler ip
+  lineinfile: dest=/etc/compass/setting
+              regexp=^COBBLER_INSTALLER_URL
+              line="COBBLER_INSTALLER_URL = 'http://{{ cobbler_server }}/cobbler_api'"
+
+- name: update cobbler ip in os_installer
+  lineinfile: dest=/etc/compass/os_installer/cobbler.conf
+              state=present
+              regexp='^(.*)cobbler_ip(.*)$'
+              line="    'cobbler_url'":" 'http://{{ cobbler_server }}/cobbler_api',"
+              backup=yes
+              backrefs=yes
+
+- name: Replace chef ip
+  lineinfile: dest=/etc/compass/setting
+              regexp=^CHEF_INSTALLER_URL
+              line="CHEF_INSTALLER_URL = 'https://{{ chef_server }}/'"
+
+- name: update cobbler ip in os_installer
+  lineinfile: dest=/etc/compass/package_installer/chef-icehouse.conf
+              state=present
+              regexp='^(.*)chef_url(.*)$'
+              line="    'chef_url'":" 'https://{{ chef_server }}',"
+              backup=yes
+              backrefs=yes
+
+- name: update chef ip in os_installer
+  lineinfile: dest=/etc/compass/package_installer/chef-icehouse.conf
+              state=present
+              regexp='^(.*)chef_url(.*)$'
+              line="    'chef_url'":" 'https://{{ chef_server }}',"
+              backup=yes
+              backrefs=yes
+
+- name: Get virtuelenv path
+  shell: source `which virtualenvwrapper.sh` && workon compass-core && echo $VIRTUAL_ENV
+  register: virtual_env
+
+- name: Update virtualenv to compass.wsgi
+  lineinfile: dest=/var/www/compass/compass.wsgi
+              state=present
+              regexp='^(.*)addsitedir(.*)$'
+              line="site.addsitedir('{{ virtual_env.stdout }}/lib/python2.6/site-packages')"
+              backup=yes
+              backrefs=yes
+
+- name: Update sys path in compass.wsgi
+  lineinfile: dest=/var/www/compass/compass.wsgi
+              state=present
+              regexp='^(.*)sys.path.append(.*)$'
+              line="sys.path.append('{{ virtual_env.stdout }}')"
+              backup=yes
+              backrefs=yes
+
+- name: Update progress daemon with virtual env
+  lineinfile: dest=/etc/init.d/compass-progress-updated
+              state=present
+              regexp='^(.*)PYTHON=(.*)$'
+              line="PYTHON={{ virtual_env.stdout }}/bin/python"
+              backup=yes
+              backrefs=yes
+
+- name: Update celeryd daemon with virtual env
+  lineinfile: dest=/etc/init.d/compass-celeryd
+              state=present
+              regexp='^(.*)CELERY=(.*)$'
+              line="CELERY={{ virtual_env.stdout }}/bin/celery"
+              backup=yes
+              backrefs=yes
+
+- name: Update os_metadata conf with compass_server
+  shell: sed -i "s/\$ipaddr/{{ compass_server }}/g" /etc/compass/os_metadata/general.conf
+
+- name: Update os_metadata conf with hostname
+  shell: sed -i "s/\$hostname/{{ ansible_hostname }}/g" /etc/compass/os_metadata/general.conf
+
+- name: Update os_metadata conf with gateway
+  shell: sed -i "s/\$gateway/{{ gateway }}/g" /etc/compass/os_metadata/general.conf
+
+- name: Update os_metadata conf with gateway
+  shell: sed -i "s/\$domain/{{ name_server_domains }}/g" /etc/compass/os_metadata/general.conf
+
+- name: Create redis log dir
+  file: path=/var/log/redis
+        state=directory
+        owner=redis
+        group=root
+
+- name: Create redis lib dir
+  file: path=/var/lib/redis
+        state=directory
+        owner=redis
+        group=root
+
+- name: Create redis run dir
+  file: path=/var/run/redis
+        state=directory
+        owner=redis
+        group=root
+
+- name: Restart redis
+  service: name=redis
+           state=restarted
+
+- name: Refresh
+  shell: source `which virtualenvwrapper.sh` && workon compass-core && /opt/compass/bin/refresh.sh

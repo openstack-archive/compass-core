@@ -1,0 +1,21 @@
+## A self-destruct service to boot chef client and register cron job
+#if $getVar('ntp_server', '') == ""
+    #set $ntp_server = '0.ubuntu.pool.ntp.org'
+#end if
+echo "#!/bin/bash" > /target/etc/init.d/chef; \
+echo "echo \"old date is: \`date\`\" 2>&1 > /tmp/ntp.log" >> /target/etc/init.d/chef; \
+echo "service ntp stop 2>&1 >> /tmp/ntp.log" >> /target/etc/init.d/chef; \
+echo "ntpdate $ntp_server 2>&1 >> /tmp/ntp.log" >> /target/etc/init.d/chef; \
+echo "service ntp start 2>&1 >> /tmp/ntp.log" >> /target/etc/init.d/chef; \
+echo "echo \"new date is: \`date\`\" 2>&1 >> /tmp/ntp.log" >> /target/etc/init.d/chef; \
+echo "rm -rf /var/lib/rsyslog/firstboot_log" >> /target/etc/init.d/chef; \
+echo "service rsyslog restart" >> /target/etc/init.d/chef; \
+echo "/etc/chef/firstrun.sh" >> /target/etc/init.d/chef; \
+echo "crontab -l  > /tmp/mycron" >> /target/etc/init.d/chef; \
+echo "echo \"*/30 * * * *  /etc/chef/rerun.sh\" >> /tmp/mycron" >> /target/etc/init.d/chef; \
+echo "crontab /tmp/mycron" >> /target/etc/init.d/chef; \
+echo "rm /tmp/mycron" >> /target/etc/init.d/chef; \
+echo "update-rc.d -f chef remove" >> /target/etc/init.d/chef; \
+echo "mv /etc/init.d/chef /tmp/chef" >> /target/etc/init.d/chef; \
+chmod +x /target/etc/init.d/chef; \
+chroot /target update-rc.d chef defaults 99 20; \

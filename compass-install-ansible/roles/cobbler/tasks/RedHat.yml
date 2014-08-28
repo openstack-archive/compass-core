@@ -1,0 +1,363 @@
+- name: Install epel
+  yum: name=http://download.fedoraproject.org/pub/epel/{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/epel-release-6-8.noarch.rpm  
+
+- name: Install atomic-release
+  yum: name=http://www6.atomicorp.com/channels/atomic/{{ ansible_distribution.lower() }}/{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/RPMS/atomic-release-1.0-19.el6.art.noarch.rpm
+
+- name: Update yum
+  command: yum -y update
+
+- name: Install cobbler packages
+  yum: pkg={{ item }} state=installed
+  with_items:
+    - cobbler
+    - cobbler-web
+    - createrepo
+    - mkisofs
+    - python-cheetah
+    - python-simplejson
+    - python-urlgrabber
+    - PyYAML
+    - Django
+    - cman
+    - debmirror
+    - pykickstart
+    - reprepro
+    - libselinux-python
+    - dhcp
+    - bind
+    - tftp-server
+    
+
+- name: Turn cobbler on
+  command: chkconfig cobblerd on
+  notify:
+    - restart cobblerd
+
+- name: Update httpd cobbler_web config
+  template: src=cobbler_web.j2
+            dest=/etc/httpd/conf.d/cobbler_web.conf
+            owner=root
+            group=root
+            mode=0644
+            backup=yes
+
+- name: update httpd cobbler config
+  template: src=cobbler.j2
+            dest=/etc/httpd/conf.d/cobbler.conf
+            owner=root
+            group=root
+            mode=0644
+
+- name: Update apache ssl config
+  template: src=ssl.j2
+            dest=/etc/httpd/conf.d/ssl.conf
+            owner=root
+            group=root
+            mode=0644
+            backup=yes
+
+- name: Update cobbler settings
+  template: src=settings.j2
+            dest=/etc/cobbler/settings
+            owner=root
+            group=root
+            mode=644
+            backup=yes
+  notify:
+    - restart cobblerd
+
+- name: Update dhcp template
+  template: src=dhcp_template.j2
+            dest=/etc/cobbler/dhcp.template
+            owner=root
+            group=root
+            mode=644
+  notify:
+    - cobbler sync
+    - restart dhcpd
+
+- name: Update named template
+  template: src=named_template.j2
+            dest=/etc/cobbler/named.template
+            owner=root
+            group=root
+            mode=644
+  notify:
+    - cobbler sync
+    - restart named 
+
+- name: Update tftpd template
+  template: src=tftpd_template.j2
+            dest=/etc/cobbler/tftpd.template
+            owner=root
+            group=root
+            mode=644
+  notify:
+    - cobbler sync
+
+- name: Update zone template
+  template: src=zone_template.j2
+            dest=/etc/cobbler/zone.template
+            owner=root
+            group=root
+            mode=644
+  notify:
+    - cobbler sync
+
+- name: Update cobbler modules.conf
+  template: src=modules_conf.j2
+            dest=/etc/cobbler/modules.conf
+            owner=root
+            group=root
+            mode=644
+  notify:
+    - restart cobblerd
+
+- name: Update snippet directory
+  file: path=/var/lib/cobbler/snippets
+        owner=root
+        group=root
+        mode=0777
+
+- name: Copy snippets to cobbler
+  copy: src=snippets/
+        dest=/var/lib/cobbler/snippets/
+        owner=root
+        group=root
+        mode=0666 
+
+- name: Copy kickstarts to cobbler
+  copy: src=kickstarts/
+        dest=/var/lib/cobbler/kickstarts/
+        owner=root
+        group=root
+
+- name: Copy triggers to cobbler
+  copy: src=triggers/sync/post/
+        dest=/var/lib/cobbler/triggers/sync/post/
+        owner=root
+        group=root
+        mode=0755
+
+- name: Change directory mode
+  file: path=/var/www/cblr_ks
+        state=directory
+        owner=root
+        group=root
+        mode=0755
+
+- name: Enable rsync in xinetd
+  replace: dest=/etc/xinetd.d/rsync
+           regexp='disable(.*)=(.*)yes(.*)$'
+           replace='disable\1=\2no'
+           backup=yes
+
+- name: Comment out dist in debmirror conf
+  replace: dest=/etc/debmirror.conf
+           regexp='^@dists='
+           replace='# @dist='
+           backup=yes
+
+- name: Comment out arches in debmirror conf
+  replace: dest=/etc/debmirror.conf
+           regexp='^@arches='
+           replace='# @arches='
+           backup=yes
+
+- name: Disable iptables
+  service: name=iptables
+           enabled=no
+
+- name: Disable ip6tables
+  service: name=ip6tables
+           enabled=no
+
+- name: Disable selinux
+  selinux: state=disabled
+
+- name: Restart httpd
+  service: name=httpd
+           state=restarted
+
+- name: Restart cobblerd 
+  service: name=cobblerd
+           state=restarted
+
+- name: Cobbler getloaders
+  command: cobbler get-loaders
+
+- name: Cobbler sync
+  command: cobbler sync
+
+- name: Restart xinetd
+  service: name=xinetd
+           state=restarted
+
+- name: Create centos repo dir
+  file: path=/var/lib/cobbler/repo_mirror/centos_ppa_repo
+        state=directory
+
+- name: Get repo list
+  command: cobbler repo list
+  register: repolist
+
+- name: Create repo if it does not exist
+  command: cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_ppa_repo --name=centos_ppa_repo --mirror-locally=Y --arch={{ centos_arch }}
+  when: repolist.stdout.find('centos_ppa_repo') == -1
+
+- name: Get ppa repo pkgs
+  command: ls /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+  register: pkgs
+
+- name: Download centos ppa packages
+  get_url: url=http://rpmfind.net/linux/centos/{{ centos_version_major }}/os/{{ centos_arch }}/Packages/{{ item }}
+           dest=/var/lib/cobbler/repo_mirror/centos_ppa_repo/
+
+  with_items:
+    - ntp-4.2.6p5-1.el{{ centos_version_major }}.centos.{{ centos_arch }}.rpm
+    - openssh-clients-5.3p1-94.el{{ centos_version_major }}.{{ centos_arch }}.rpm
+    - iproute-2.6.32-31.el{{ centos_version_major }}.{{ centos_arch }}.rpm
+    - wget-1.12-1.8.el{{ centos_version_major }}.{{ centos_arch }}.rpm
+    - ntpdate-4.2.6p5-1.el{{ centos_version_major }}.centos.{{ centos_arch }}.rpm
+  when: pkgs.stdout.find("{{ item }}") == -1
+
+- name: Download centos ppa rsyslog packages
+  get_url: url=http://rpms.adiscon.com/v7-stable/epel-{{ centos_version_major }}/{{ centos_arch }}/RPMS/{{ item }}
+           dest=/var/lib/cobbler/repo_mirror/centos_ppa_repo/
+
+  with_items:
+    - json-c-0.10-2.el{{ centos_version_major }}.{{ centos_arch }}.rpm
+    - libestr-0.1.9-1.el{{ centos_version_major }}.{{ centos_arch }}.rpm
+    - libgt-0.3.11-1.el{{ centos_version_major }}.{{ centos_arch }}.rpm
+    - liblogging-1.0.4-1.el{{ centos_version_major }}.{{ centos_arch }}.rpm
+    - rsyslog-7.6.3-1.el{{ centos_version_major }}.{{ centos_arch }}.rpm
+  when: pkgs.stdout.find("{{ item }}") == -1
+
+- name: get centos repos
+  command: ls /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+  register: centos_repos
+
+- name: Download Chef Client
+  get_url: url={{ chef_el_rpm_url }}{{ centos_version_major }}/{{ centos_arch }}/{{ chef_client_el_rpm }}{{ centos_version_major }}.{{ centos_arch }}.rpm
+           dest=/var/lib/cobbler/repo_mirror/centos_ppa_repo/
+  when: centos_repos.stdout.find('chef') == -1
+
+- name: Create centos repo
+  command: chdir=/var/lib/cobbler/repo_mirror createrepo centos_ppa_repo
+  notify:
+    - reposync 
+
+- name: Create ubuntu repo dir
+  file: path=/var/lib/cobbler/repo_mirror/ubuntu_ppa_repo
+        state=directory
+
+- name: Create ubuntu repo if it does not exist 
+  command: cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/ubuntu_ppa_repo --name=ubuntu_ppa_repo --mirror-locally=Y --arch={{ ubuntu_arch }} --apt-dists=ppa --apt-components=main
+  when: repolist.stdout.find('ubuntu_ppa_repo') == -1
+
+- name: Create ubuntu repo conf dir
+  file: path=/var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf
+        state=directory
+
+- name: Copy distributions to conf dir
+  template: src=distributions.j2
+            dest=/var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf/distributions
+            owner=root
+            group=root
+            mode=644 
+
+- name: Get ubuntu_ppa_repo
+  command: ls /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/
+  register: ubuntu_repos
+
+- name: Download chef client for ubuntu
+  get_url: url=http://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}/{{ ubuntu_arch }}/chef_11.8.0-1.ubuntu.{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}_{{ ubuntu_pkg_arch }}.deb
+           dest=/var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/
+  when: ubuntu_repos.stdout.find('chef') == -1
+
+- name: Create ubuntu repo
+  command: chdir=/var/lib/cobbler/repo_mirror find ubuntu_ppa_repo -name \*.deb -exec reprepro -Vb ubuntu_ppa_repo includedeb ppa {} \;
+  notify:
+    - reposync 
+
+- name: create cobbler distro dir
+  file: path=/var/lib/cobbler/iso
+        state=directory
+
+- name: get iso list
+  command: ls /var/lib/cobbler/iso
+  register: isos
+
+- name: download centos iso
+  get_url: url={{ centos_source }}/{{ centos_iso }}
+           dest=/var/lib/cobbler/iso/ 
+  when: isos.stdout.find('CentOS') == -1
+
+- name: download ubuntu iso
+  get_url: url={{ ubuntu_source }}/{{ ubuntu_iso }}
+           dest=/var/lib/cobbler/iso/
+  when: isos.stdout.find('ubuntu') == -1
+
+- name: get mount_table
+  command: mount
+  register: mount_table
+
+- name: Create mount point for centos
+  file: path=/mnt/CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }}
+        state=directory
+
+- name: Create mount point for ubuntu
+  file: path=/mnt/Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }}
+        state=directory
+
+### should really use ansible's mount module for mounting, it somehow generates 'block device' error
+- name: Mount centos
+  command: mount -o loop /var/lib/cobbler/iso/{{ centos_iso }} /mnt/CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} 
+  when: mount_table.stdout.find('CentOS') == -1
+
+- name: Mount ubuntu
+  command: mount -o loop /var/lib/cobbler/iso/{{ ubuntu_iso }} /mnt/Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }}
+  when: mount_table.stdout.find('Ubuntu') == -1
+
+- name: Get distros
+  command: cobbler distro list
+  register: distrolist
+
+- name: Import if centos distro does not exist
+  command: cobbler import --path=/mnt/CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} --name=CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} --arch={{ centos_arch }} --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
+  when: distrolist.stdout.find("CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }}") == -1
+
+- name: Edit centos distro if it exists
+  command: cobbler distro edit --name=CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} --arch={{ centos_arch }} --breed=redhat
+  when: distrolist.stdout.find("CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }}") != -1
+
+- name: Import if ubuntu distro does not exist 
+  command: cobbler import --path=/mnt/Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} --name=Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} --arch={{ ubuntu_arch }} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
+  when: distrolist.stdout.find("Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }}") == -1
+
+- name: Edit ubuntu distro if it exists
+  command: cobbler distro edit --name=Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} --arch={{ ubuntu_arch }} --breed=ubuntu
+  when: distrolist.stdout.find("Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }}") != -1
+
+## Do the same things for profiles
+
+- name: Get profiles
+  command: cobbler profile list
+  register: profilelist
+
+- name: Add centos profile if it does not exist
+  command: cobbler profile add --name=CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} --repo=centos_ppa_repo --distro=CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} --ksmeta="tree=http://{{ cobbler_server }}/cobbler/ks_mirror/CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} compass_server={{ compass_server }}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+  when: profilelist.stdout.find("CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }}") == -1
+
+- name: Edit centos profile if it exists
+  command: cobbler profile edit --name=CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} --repo=centos_ppa_repo --distro=CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} --ksmeta="tree=http://{{ cobbler_server }}/cobbler/ks_mirror/CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }} compass_server={{compass_server}}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+  when: profilelist.stdout.find("CentOS-{{ centos_version_major }}.{{ centos_version_minor }}-{{ centos_arch }}") != -1
+
+- name: Add ubuntu profile if it does not exist
+  command: cobbler profile add --name=Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} --repo=ubuntu_ppa_repo --distro=Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} --ksmeta="tree=http://{{ cobbler_server }}/cobbler/ks_mirror/Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} compass_server={{ compass_server }}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
+  when: profilelist.stdout.find("Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }}") == -1
+
+- name: Edit ubuntu profile if it exists
+  command: cobbler profile edit --name=Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} --repo=ubuntu_ppa_repo --distro=Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} --ksmeta="tree=http://{{ cobbler_server }}/cobbler/ks_mirror/Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }} compass_server={{ compass_server }}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
+  when: profilelist.stdout.find("Ubuntu-{{ ubuntu_version_major }}.{{ ubuntu_version_minor }}-{{ ubuntu_arch }}") != -1

@@ -1,0 +1,29 @@
+#if $getVar('proxy', '') != ''
+echo "Acquire::http::Proxy \"$proxy\";" > /target/etc/apt/apt.conf; \
+#end if
+#if $getVar('os_version', '') != ''
+echo "deb http://archive.ubuntu.com/ubuntu/ $os_version main restricted universe multiverse" > /target/etc/apt/sources.list; \
+echo "deb http://archive.ubuntu.com/ubuntu/ ${os_version}-security main restricted universe multiverse" >> /target/etc/apt/sources.list; \
+echo "deb http://archive.ubuntu.com/ubuntu/ ${os_version}-updates main restricted universe multiverse" >> /target/etc/apt/sources.list; \
+echo "deb http://archive.ubuntu.com/ubuntu/ ${os_version}-proposed main restricted universe multiverse" >> /target/etc/apt/sources.list; \
+echo "deb http://archive.ubuntu.com/ubuntu/ ${os_version}-backports main restricted universe multiverse" >> /target/etc/apt/sources.list; \
+#end if
+#set $repo_data = $getVar("repo_data",[])
+#for $repo in $repo_data
+    #for $dist in $repo.apt_dists
+        #set $comps = " ".join($repo.apt_components)
+        #if $repo.comment != ""
+echo "# ${repo.comment}" >> /target/etc/apt/sources.list; \
+        #end if
+        #if $repo.arch == "x86_64"
+            #set $rarch = "[arch=amd64]"
+        #else
+            #set $rarch = "[arch=%s]" % $repo.arch
+        #end if
+        #if $repo.mirror_locally
+echo "deb ${rarch} http://$http_server/cblr/repo_mirror/${repo.name} $dist $comps" >> /target/etc/apt/sources.list; \
+        #else
+echo "deb ${rarch} ${repo.mirror} $dist $comps" >> /target/etc/apt/sources.list; \
+        #end if
+    #end for
+#end for

@@ -1,0 +1,10 @@
+echo "127.0.0.1   $system_name localhost localhost.localdomain localhost4 localhost4.localdomain4" > /target/etc/hosts; \
+echo "::1         $system_name localhost localhost.localdomain localhost6 localhost6.localdomain6" >> /target/etc/hosts; \
+#for $iname, $idata in $interfaces.items()
+    #if $hostname and $idata["management"] and $idata["static"] and $idata.get("ip_address", "") != "" 
+echo "$idata["ip_address"] $hostname" >> /target/etc/hosts; \
+    #end if 
+#end for
+#import os
+#set $server_name = $os.uname[1]
+echo "$server $server_name" >> /target/etc/hosts; \

@@ -324,6 +324,26 @@ class StateMixin(TimestampMixin, HelperMixin):
         super(StateMixin, self).update()
 
 
+class LogHistoryMixin(TimestampMixin, HelperMixin):
+    position = Column(Integer, default=0)
+    partial_line = Column(Text, default='')
+    percentage = Column(Float, default=0.0)
+    message = Column(Text, default='')
+    severity = Column(
+        Enum('ERROR', 'WARNING', 'INFO'),
+        ColumnDefault('INFO')
+    )
+    line_matcher_name = Column(
+        String(80), default='start'
+    )
+
+    def validate(self):
+        if not self.filename:
+            raise exception.InvalidParameter(
+                'filename is not set in %s' % self.id
+            )
+
+
 class HostNetwork(BASE, TimestampMixin, HelperMixin):
     """Host network table."""
     __tablename__ = 'host_network'
@@ -399,6 +419,54 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         return dict_info
 
 
+class ClusterHostLogHistory(BASE, LogHistoryMixin):
+    """clusterhost installing log history for each file.
+    """
+    __tablename__ = 'clusterhost_log_history'
+
+    clusterhost_id = Column(
+        'id', Integer,
+        ForeignKey('clusterhost.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True
+    )
+    filename = Column(String(80), primary_key=True)
+    cluster_id = Column(
+        Integer,
+        ForeignKey('cluster.id')
+    )
+    host_id = Column(
+        Integer,
+        ForeignKey('host.id')
+    )
+
+    def __init__(self, clusterhost_id, filename, **kwargs):
+        self.clusterhost_id = clusterhost_id
+        self.filename = filename
+        super(ClusterHostLogHistory, self).__init__(**kwargs)
+
+    def initialize(self):
+        self.cluster_id = self.clusterhost.cluster_id
+        self.host_id = self.clusterhost.host_id
+        super(ClusterHostLogHistory, self).initialize()
+
+
+class HostLogHistory(BASE, LogHistoryMixin):
+    """host installing log history for each file.
+    """
+    __tablename__ = 'host_log_history'
+
+    id = Column(
+        Integer,
+        ForeignKey('host.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True)
+    filename = Column(String(80), primary_key=True)
+
+    def __init__(self, id, filename, **kwargs):
+        self.id = id
+        self.filename = filename
+        super(HostLogHistory, self).__init__(**kwargs)
+
+
 class ClusterHostState(BASE, StateMixin):
     """ClusterHost state table."""
     __tablename__ = 'clusterhost_state'
@@ -442,11 +510,18 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         Integer,
         ForeignKey('host.id', onupdate='CASCADE', ondelete='CASCADE')
     )
-    _roles = Column(JSONEncoded, default=[])
+    _roles = Column('roles', JSONEncoded, default=[])
     config_step = Column(String(80), default='')
     package_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
     deployed_package_config = Column(JSONEncoded, default={})
+
+    log_history = relationship(
+        ClusterHostLogHistory,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('clusterhost')
+    )
 
     __table_args__ = (
         UniqueConstraint('cluster_id', 'host_id', name='constraint'),
@@ -485,7 +560,11 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @patched_package_config.setter
     def patched_package_config(self, value):
-        self.package_config = util.merge_dict(dict(self.package_config), value)
+        package_config = util.merge_dict(dict(self.package_config), value)
+        if 'roles' in package_config:
+            self.patched_roles = package_config['roles']
+            del package_config['roles']
+        self.package_config = package_config
         self.config_validated = False
 
     @property
@@ -496,6 +575,9 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     def put_package_config(self, value):
         package_config = dict(self.package_config)
         package_config.update(value)
+        if 'roles' in package_config:
+            self.roles = package_config['roles']
+            del package_config['roles']
         self.package_config = package_config
         self.config_validated = False
 
@@ -717,6 +799,12 @@ class Host(BASE, TimestampMixin, HelperMixin):
         cascade='all, delete-orphan',
         backref=backref('host')
     )
+    log_history = relationship(
+        HostLogHistory,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('host')
+    )
 
     @hybrid_property
     def mac(self):
@@ -750,12 +838,11 @@ class Host(BASE, TimestampMixin, HelperMixin):
 
     def __init__(self, id, **kwargs):
         self.id = id
+        self.name = str(self.id)
         self.state = HostState()
         super(Host, self).__init__(**kwargs)
 
     def initialize(self):
-        if not self.name:
-            self.name = str(self.id)
         super(Host, self).initialize()
 
     def update(self):
@@ -1307,8 +1394,8 @@ class User(BASE, HelperMixin, TimestampMixin):
 class SwitchMachine(BASE, HelperMixin, TimestampMixin):
     """Switch Machine table."""
     __tablename__ = 'switch_machine'
-    id = Column(
-        Integer, primary_key=True
+    switch_machine_id = Column(
+        'id', Integer, primary_key=True
     )
     switch_id = Column(
         Integer,
@@ -1724,6 +1811,12 @@ class OperatingSystem(BASE, HelperMixin):
             dict_info.update(self.parent.metadata_dict())
         for metadata in self.root_metadatas:
             dict_info.update(metadata.to_dict())
+        dict_info.setdefault(
+            '_self', {
+                'name': 'root',
+                'field_type_data': 'dict',
+            }
+        )
         return dict_info
 
     @property
@@ -2054,6 +2147,12 @@ class Adapter(BASE, HelperMixin):
             dict_info.update(self.parent.metadata_dict())
         for metadata in self.root_metadatas:
             dict_info.update(metadata.to_dict())
+        dict_info.setdefault(
+            '_self', {
+                'name': 'root',
+                'field_type_data': 'dict',
+            }
+        )
         return dict_info
 
     @property
@@ -2241,50 +2340,3 @@ class Subnet(BASE, TimestampMixin, HelperMixin):
         if not self.name:
             self.name = self.subnet
         super(Subnet, self).initialize()
-
-
-class LogProgressingHistory(BASE, TimestampMixin, HelperMixin):
-    """host installing log history for each file.
-
-    :param id: int, identity as primary key.
-    :param pathname: str, the full path of the installing log file. unique.
-    :param position: int, the position of the log file it has processed.
-    :param partial_line: str, partial line of the log.
-    :param progressing: float, indicate the installing progress between 0 to 1.
-    :param message: str, str, the installing message.
-    :param severity: Enum, the installing message severity.
-                     ('ERROR', 'WARNING', 'INFO')
-    :param line_matcher_name: str, the line matcher name of the log processor.
-    """
-    __tablename__ = 'log_progressing_history'
-    id = Column(Integer, primary_key=True)
-
-    pathname = Column(String(80), unique=True)
-    position = Column(Integer, default=0)
-    partial_line = Column(Text, default='')
-    percentage = Column(Float, default=0.0)
-    message = Column(Text, default='')
-    severity = Column(
-        Enum('ERROR', 'WARNING', 'INFO'),
-        ColumnDefault('INFO')
-    )
-    line_matcher_name = Column(
-        String(80), default='start'
-    )
-
-    def __init__(self, pathname, **kwargs):
-        self.pathname = pathname
-        super(LogProgressingHistory, self).__init__(**kwargs)
-
-    def __repr__(self):
-        return (
-            'LogProgressingHistory[%r: position %r,'
-            'partial_line %r,percentage %r,message %r,'
-            'severity %r]'
-        ) % (
-            self.pathname, self.position,
-            self.partial_line,
-            self.percentage,
-            self.message,
-            self.severity
-        )

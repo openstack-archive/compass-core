@@ -79,12 +79,14 @@ RESP_ACTION_FIELDS = [
     'status', 'details'
 ]
 RESP_MACHINES_FIELDS = [
-    'id', 'switch_id', 'switch_ip', 'machine_id', 'port', 'vlans', 'mac',
+    'id', 'switch_id', 'switch_ip', 'machine_id', 'switch_machine_id',
+    'port', 'vlans', 'mac',
     'ipmi_credentials', 'tag', 'location',
     'created_at', 'updated_at'
 ]
 RESP_MACHINES_HOSTS_FIELDS = [
-    'id', 'switch_id', 'switch_ip', 'machine_id', 'port', 'vlans', 'mac',
+    'id', 'switch_id', 'switch_ip', 'machine_id', 'switch_machine_id',
+    'port', 'vlans', 'mac',
     'ipmi_credentials', 'tag', 'location',
     'name', 'os_name', 'clusters'
 ]

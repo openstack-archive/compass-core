@@ -42,7 +42,7 @@ class TestCobblerInstaller(unittest2.TestCase):
         super(TestCobblerInstaller, self).setUp()
         self.test_cobbler = self._get_cobbler_installer()
         self.expected_host_vars_dict = {
-            "host": {
+            "baseinfo": {
                 "mac": "00:0c:29:3e:60:e9",
                 "name": "server01.test",
                 "profile": "Ubuntu-12.04-x86_64",
@@ -64,7 +64,9 @@ class TestCobblerInstaller(unittest2.TestCase):
                         "is_promiscuous": False,
                         "subnet": "172.16.1.0/24"
                     }
-                },
+                }
+            },
+            "os_config": {
                 "partition": {
                     "/home": {
                         "vol_size": 50,
@@ -171,7 +173,7 @@ class TestCobblerInstaller(unittest2.TestCase):
         }
         host_id = 1
         self.test_cobbler.set_package_installer_config(package_config)
-        output = self.test_cobbler._get_system_config(
+        output = self.test_cobbler._generate_system_config(
             host_id, self.expected_host_vars_dict)
         self.maxDiff = None
         self.assertEqual(expected_system_config, output)
@@ -214,28 +216,6 @@ class TestCobblerInstaller(unittest2.TestCase):
             "hosts": {
                 1: {
                     "deployed_os_config": {
-                        "mac": "00:0c:29:3e:60:e9",
-                        "name": "server01.test",
-                        "hostname": "server01",
-                        "profile": "Ubuntu-12.04-x86_64",
-                        "reinstall_os": True,
-                        "dns": "server01.test.ods.com",
-                        "networks": {
-                            "vnet0": {
-                                "ip": "12.234.32.100",
-                                "netmask": "255.255.255.0",
-                                "is_mgmt": True,
-                                "is_promiscuous": False,
-                                "subnet": "12.234.32.0/24"
-                            },
-                            "vnet1": {
-                                "ip": "172.16.1.1",
-                                "netmask": "255.255.255.0",
-                                "is_mgmt": False,
-                                "is_promiscuous": False,
-                                "subnet": "172.16.1.0/24"
-                            }
-                        },
                         "language": "EN",
                         "timezone": "UTC",
                         "gateway": "10.145.88.1",
@@ -266,28 +246,6 @@ class TestCobblerInstaller(unittest2.TestCase):
                 },
                 2: {
                     "deployed_os_config": {
-                        "mac": "00:0c:29:3e:60:a1",
-                        "name": "server02.test",
-                        "hostname": "server02",
-                        "profile": "Ubuntu-12.04-x86_64",
-                        "reinstall_os": True,
-                        "dns": "server02.test.ods.com",
-                        "networks": {
-                            "eth0": {
-                                "ip": "12.234.32.101",
-                                "netmask": "255.255.255.0",
-                                "is_mgmt": True,
-                                "is_promiscuous": False,
-                                "subnet": "12.234.32.0/24"
-                            },
-                            "eth1": {
-                                "ip": "172.16.1.2",
-                                "netmask": "255.255.255.0",
-                                "is_mgmt": False,
-                                "is_promiscuous": False,
-                                "subnet": "172.16.1.0/24"
-                            }
-                        },
                         "language": "EN",
                         "timezone": "UTC",
                         "gateway": "12.234.32.1",

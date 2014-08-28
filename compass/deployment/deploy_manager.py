@@ -29,21 +29,28 @@ import logging
 class DeployManager(object):
     """Deploy manager module."""
     def __init__(self, adapter_info, cluster_info, hosts_info):
+        """Init deploy manager."""
+        self.os_installer = None
+        self.pk_installer = None
+
+        # Get OS installer
         os_installer_name = adapter_info[const.OS_INSTALLER][const.NAME]
-        pk_installer_name = adapter_info[const.PK_INSTALLER][const.NAME]
-
         os_hosts_info = self._get_hosts_for_os_installation(hosts_info)
-
         self.os_installer = DeployManager._get_installer(OSInstaller,
                                                          os_installer_name,
                                                          adapter_info,
                                                          cluster_info,
                                                          os_hosts_info)
-        self.pk_installer = DeployManager._get_installer(PKInstaller,
-                                                         pk_installer_name,
-                                                         adapter_info,
-                                                         cluster_info,
-                                                         hosts_info)
+
+        # Get package installer
+        pk_info = adapter_info.setdefault(const.PK_INSTALLER, {})
+        if pk_info:
+            pk_installer_name = pk_info[const.NAME]
+            self.pk_installer = DeployManager._get_installer(PKInstaller,
+                                                             pk_installer_name,
+                                                             adapter_info,
+                                                             cluster_info,
+                                                             hosts_info)
 
     @staticmethod
     def _get_installer(installer_type, name, adapter_info, cluster_info,
@@ -56,14 +63,15 @@ class DeployManager(object):
 
     def clean_progress(self):
         """Clean previous installation log and progress."""
-        # Clean DB
-        # db_api.cluster.clean_progress(self.cluster_id)
-        # db_api.cluster.clean_progress(self.cluster_id, self.host_id_list)
+        self.clean_os_installtion_progress()
+        self.clean_package_installation_progress()
 
+    def clean_os_installtion_progress(self):
         # OS installer cleans previous installing progress.
         if self.os_installer:
             self.os_installer.clean_progress()
 
+    def clean_package_installation_progress(self):
         # Package installer cleans previous installing progress.
         if self.pk_installer:
             self.pk_installer.clean_progress()
@@ -71,48 +79,73 @@ class DeployManager(object):
     def prepare_for_deploy(self):
         self.clean_progress()
 
-    def deploy(self):
-        """Deploy the cluster."""
-        deploy_config = {}
-        pk_instl_confs = {}
+    def deploy_os(self):
+        """Deploy OS to hosts which need to in the cluster. Return OS deployed
+           config.
+        """
+        if not self.os_installer:
+            return {}
+
+        pk_installer_config = {}
         if self.pk_installer:
             # generate target system config which will be installed by OS
             # installer right after OS installation is completed.
-            pk_instl_confs = self.pk_installer.generate_installer_config()
-            logging.debug('[DeployManager][deploy] pk_instl_confs is %s',
-                          pk_instl_confs)
+            pk_installer_config = self.pk_installer.generate_installer_config()
+            logging.debug('[DeployManager]package installer config is %s',
+                          pk_installer_config)
 
-        if self.os_installer:
-            logging.info('[DeployManager][deploy]get OS installer %s',
-                         self.os_installer)
-            # Send package installer config info to OS installer.
-            if pk_instl_confs:
-                self.os_installer.set_package_installer_config(pk_instl_confs)
+        # Send package installer config info to OS installer.
+        self.os_installer.set_package_installer_config(pk_installer_config)
 
-            # start to deploy OS
-            os_deploy_config = self.os_installer.deploy()
-            deploy_config = os_deploy_config
+        # start to deploy OS
+        os_deployed_config = self.os_installer.deploy()
+        return os_deployed_config
 
-        if self.pk_installer:
-            logging.info('DeployManager][deploy]get package installer %s',
-                         self.pk_installer)
+    def deploy_target_system(self):
+        """Deploy target system to all hosts in the cluster. Return package
+           deployed config.
+        """
+        if not self.pk_installer:
+            return {}
 
-            pk_deploy_config = self.pk_installer.deploy()
-            util.merge_dict(deploy_config, pk_deploy_config)
+        pk_deploy_config = self.pk_installer.deploy()
+        return pk_deploy_config
 
-        return deploy_config
+
+    def deploy(self):
+        """Deploy the cluster."""
+        deployed_config = self.deploy_os()
+        package_deployed_config = self.deploy_target_system()
+
+        util.merge_dict(deployed_config, package_deployed_config)
+
+        return deployed_config
+
+    def redeploy_os(self):
+        """Redeploy OS for this cluster without changing configurations."""
+        if not self.os_installer:
+            logging.info("Redeploy_os: No OS installer found!")
+            return
+
+        self.os_installer.redeploy()
+        logging.info("Start to redeploy OS for cluster.")
+
+    def redeploy_target_system(self):
+        """Redeploy target system for the cluster without changing config."""
+        if not self.pk_installer:
+            logging.info("Redeploy_target_system: No installer found!")
+
+        self.os_installer.redeploy()
+        logging.info("Start to redeploy target system.")
 
     def redeploy(self):
         """Redeploy the cluster without changing configurations."""
-        if self.os_installer:
-            self.os_installer.redeploy()
+        self.redeploy_os()
+        self.redeploy_target_system()
 
-        if self.pk_installer:
-            self.pk_installer.redeploy()
-
-    def remove_hosts(self):
-        """Remove hosts from both OS and package installlers server side."""
-        if self.os_installer:
+    def remove_hosts(self, package_only=False):
+        """Remove hosts from both OS and/or package installlers server side."""
+        if self.os_installer and not package_only:
             self.os_installer.delete_hosts()
 
         if self.pk_installer:

@@ -19,6 +19,7 @@ __author__ = "Grace Yu (grace.yu@huawei.com)"
 
 
 # General keywords
+BASEINFO = 'baseinfo'
 CLUSTER = 'cluster'
 HOST = 'host'
 HOSTS = 'hosts'

@@ -40,6 +40,7 @@ class CobblerInstaller(OSInstaller):
     SYS_TMPL = 'system.tmpl'
     SYS_TMPL_NAME = 'system.tmpl'
     PROFILE = 'profile'
+
     POWER_TYPE = 'power_type'
     POWER_ADDR = 'power_address'
     POWER_USER = 'power_user'
@@ -119,6 +120,7 @@ class CobblerInstaller(OSInstaller):
         host_ids = self.config_manager.get_host_id_list()
         if not host_ids:
             # No hosts need to install OS
+            logging.info("Cobbler: No host needs to install OS.")
             return {}
 
         os_version = self.config_manager.get_os_version()
@@ -138,18 +140,19 @@ class CobblerInstaller(OSInstaller):
             self.update_host_config_to_cobbler(host_id, hostname, vars_dict)
 
             # set host deploy config
-            temp = {}
-            temp.update(vars_dict[const.HOST])
-            host_config = {const.DEPLOYED_OS_CONFIG: temp}
+            host_config = {}
+            host_config[const.DEPLOYED_OS_CONFIG] = vars_dict[const.OS_CONFIG]
             hosts_deploy_config[host_id] = host_config
 
         # sync to cobbler and trigger installtion.
         self._sync()
 
+        cluster_config = global_vars_dict.setdefault(const.OS_CONFIG, {})
+
         return {
             const.CLUSTER: {
                 const.ID: self.config_manager.get_cluster_id(),
-                const.DEPLOYED_OS_CONFIG: global_vars_dict[const.CLUSTER]
+                const.DEPLOYED_OS_CONFIG: cluster_config
             },
             const.HOSTS: hosts_deploy_config
         }
@@ -157,7 +160,7 @@ class CobblerInstaller(OSInstaller):
     def clean_progress(self):
         """clean log files and config for hosts which to deploy."""
         clusterhost_list = self.config_manager.get_host_id_list()
-        log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[self.NAME]
+        log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[NAME]
 
         for host_id in clusterhost_list:
             hostname = self.config_manager.get_hostname(host_id)
@@ -166,10 +169,14 @@ class CobblerInstaller(OSInstaller):
     def redeploy(self):
         """redeploy hosts."""
         host_ids = self.config_manager.get_host_id_list()
+        if not host_ids:
+            logging.info("Cobbler: hostlist is None, no host is redeployed")
+            return
         for host_id in host_ids:
             hostname = self.config_manager.get_hostname(host_id)
-            sys_id = self._get_system_id(hostname)
+            sys_id = self._get_create_system(hostname)
             if sys_id:
+                # enable netboot for this host
                 self._netboot_enabled(sys_id)
 
         self._sync()
@@ -195,19 +202,20 @@ class CobblerInstaller(OSInstaller):
             logging.debug("Failed to sync cobbler server! Error: %s" % ex)
             raise ex
 
-    def _get_system_config(self, host_id, vars_dict):
+    def _generate_system_config(self, host_id, host_vars_dict):
         """Generate updated system config from the template.
 
-           :param vars_dict: dict of variables for the system template to
-                             generate system config dict.
+           :param host_vars_dict: dict of variables for the system template to
+                                  generate system config dict for each host.
         """
         os_version = self.config_manager.get_os_version()
 
-        system_tmpl_path = os.path.join(os.path.join(self.tmpl_dir,
-                                                     os_version),
-                                        self.SYS_TMPL_NAME)
-        system_config = self.get_config_from_template(system_tmpl_path,
-                                                      vars_dict)
+        tmpl_path = os.path.join(
+            os.path.join(self.tmpl_dir, os_version), self.SYS_TMPL_NAME
+        )
+        system_config = self.get_config_from_template(tmpl_path,
+                                                      host_vars_dict)
+
         # update package config info to cobbler ksmeta
         if self.pk_installer_config and host_id in self.pk_installer_config:
             pk_config = self.pk_installer_config[host_id]
@@ -226,7 +234,7 @@ class CobblerInstaller(OSInstaller):
         profile = result[0]
         return profile
 
-    def _get_system_id(self, hostname):
+    def _get_create_system(self, hostname):
         """get system reference id for the host."""
         sys_name = hostname
         sys_id = None
@@ -268,11 +276,11 @@ class CobblerInstaller(OSInstaller):
         log_dir = os.path.join(log_dir_prefix, system_name)
         shutil.rmtree(log_dir, True)
 
-    def update_host_config_to_cobbler(self, host_id, hostname, vars_dict):
+    def update_host_config_to_cobbler(self, host_id, hostname, host_vars_dict):
         """update host config and upload to cobbler server."""
-        sys_id = self._get_system_id(hostname)
+        sys_id = self._get_create_system(hostname)
 
-        system_config = self._get_system_config(host_id, vars_dict)
+        system_config = self._generate_system_config(host_id, host_vars_dict)
         logging.debug('%s system config to update: %s', host_id, system_config)
 
         self._update_system_config(sys_id, system_config)
@@ -301,36 +309,40 @@ class CobblerInstaller(OSInstaller):
         vars_dict = {}
         if global_vars_dict:
             # Set cluster template vars_dict from cluster os_config.
-            vars_dict.update(deepcopy(global_vars_dict[const.CLUSTER]))
+            vars_dict = deepcopy(global_vars_dict)
 
+        # Set hostname, MAC address and hostname, networks, dns and so on.
+        host_baseinfo = self.config_manager.get_host_baseinfo(host_id)
+        vars_dict[const.BASEINFO] = host_baseinfo
+
+        # Set profile
         if self.PROFILE in kwargs:
             profile = kwargs[self.PROFILE]
         else:
             os_version = self.config_manager.get_os_version()
             profile = self._get_profile_from_server(os_version)
-        vars_dict[self.PROFILE] = profile
 
-        # Set hostname, MAC address and hostname, networks, dns and so on.
-        host_baseinfo = self.config_manager.get_host_baseinfo(host_id)
-        util.merge_dict(vars_dict, host_baseinfo)
+        vars_dict[const.BASEINFO][self.PROFILE] = profile
 
-        os_config_metadata = self.config_manager.get_os_config_metadata()
-        host_os_config = self.config_manager.get_host_os_config(host_id)
+        metadata = self.config_manager.get_os_config_metadata()
+        os_config = self.config_manager.get_host_os_config(host_id)
 
         # Get template variables values from host os_config
-        host_vars_dict = self.get_tmpl_vars_from_metadata(os_config_metadata,
-                                                          host_os_config)
-        util.merge_dict(vars_dict, host_vars_dict)
-
-        return {const.HOST: vars_dict}
+        host_vars_dict = self.get_tmpl_vars_from_metadata(metadata, os_config)
+        util.merge_dict(
+            vars_dict.setdefault(const.OS_CONFIG, {}), host_vars_dict
+        )
+        return vars_dict
 
     def _get_cluster_tmpl_vars_dict(self):
-        os_config_metadata = self.config_manager.get_os_config_metadata()
-        cluster_os_config = self.config_manager.get_cluster_os_config()
+        metadata = self.config_manager.get_os_config_metadata()
+        os_config = self.config_manager.get_cluster_os_config()
 
-        vars_dict = self.get_tmpl_vars_from_metadata(os_config_metadata,
-                                                     cluster_os_config)
-        return {const.CLUSTER: vars_dict}
+        cluster_vas_dict = {}
+        cluster_vas_dict[const.OS_CONFIG] = \
+            self.get_tmpl_vars_from_metadata(metadata, os_config)
+
+        return cluster_vas_dict
 
     def _check_and_set_system_impi(self, host_id, sys_id):
         if not sys_id:
@@ -358,7 +370,7 @@ class CobblerInstaller(OSInstaller):
 
     def poweron(self, host_id):
         hostname = self.config_manager.get_hostname(host_id)
-        sys_id = self._get_system_id(hostname)
+        sys_id = self._get_create_system(hostname)
         if not self._check_and_set_system_impi(sys_id):
             return
 
@@ -367,7 +379,7 @@ class CobblerInstaller(OSInstaller):
 
     def poweroff(self, host_id):
         hostname = self.config_manager.get_hostname(host_id)
-        sys_id = self._get_system_id(hostname)
+        sys_id = self._get_create_system(hostname)
         if not self._check_and_set_system_impi(sys_id):
             return
 
@@ -376,7 +388,7 @@ class CobblerInstaller(OSInstaller):
 
     def reset(self, host_id):
         hostname = self.config_manager.get_hostname(host_id)
-        sys_id = self._get_system_id(hostname)
+        sys_id = self._get_create_system(hostname)
         if not self._check_and_set_system_impi(sys_id):
             return
 

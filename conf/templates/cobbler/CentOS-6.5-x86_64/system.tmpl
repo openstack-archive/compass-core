@@ -1,18 +1,18 @@
 {
-    "name": "$host.hostname",
-    "hostname": "$host.hostname",
-    "profile": "$host.profile",
-    "gateway": "$host.gateway",
+    "name": "$hostname",
+    "hostname": "$hostname",
+    "profile": "$profile",
+    "gateway": "$gateway",
     #import simplejson as json
-    #set nameservers = json.dumps($host.nameservers, encoding='utf-8')
+    #set nameservers = json.dumps($nameservers, encoding='utf-8')
     "name_servers": $nameservers,
-    #set search_path = ' '.join($host.search_path)
+    #set search_path = ' '.join($search_path)
     "name_servers_search": "$search_path",
-    "proxy": "$host.http_proxy",
+    "proxy": "$getVar('http_proxy', '')",
     "modify_interface":
-        #set networks = $host.networks
+        #set networks = $networks
         #set rekeyed = {}
-        #set promicnic = ""
+        #set promic_nic = ""
         #for $nic, $val in $networks.iteritems():
             #set ip_key = '-'.join(('ipaddress', $nic))
             #set netmask_key = '-'.join(('netmask', $nic))
@@ -24,13 +24,13 @@
             #set $rekeyed[$static_key] = True
 
             #if $val.is_promiscuous:
-                #set promicnic = $nic
+                #set promic_nic = $nic
             #end if
             #if $val.is_mgmt:
                 #set mac_key = '-'.join(('macaddress', $nic))
                 #set dns_key = '-'.join(('dns', $nic))
-                #set $rekeyed[$mac_key] = $host.mac
-                #set $rekeyed[$dns_key] = $host.dns
+                #set $rekeyed[$mac_key] = $mac
+                #set $rekeyed[$dns_key] = $dns
             #end if
         #end for
         #set nic_info = json.dumps($rekeyed, encoding='utf-8')
@@ -38,7 +38,7 @@
     ,
     "ksmeta":{
         #set partition_config = ''
-        #for k, v in $host.partition.iteritems():
+        #for k, v in $partition.iteritems():
             #set path = ''
             #if v['vol_percentage']:
                 #set $path = k + ' ' + str(v['vol_percentage']) + '%'
@@ -49,15 +49,15 @@
         #end for
         #set partition_config = partition_config[1:]
         #import crypt
-        #set $password = crypt.crypt($host.server_credentials.password, "az")
-        #set no_proxy = ','.join($host.no_proxy)
-        "username": "$host.server_credentials.username",
+        #set $password = crypt.crypt($server_credentials.password, "az")
+        #set no_proxy = ','.join($getVar('no_proxy', []))
+        "username": "$server_credentials.username",
         "password": "$password",
-        "promisc_nics": "$promicnic",
+        "promisc_nics": "$promic_nic",
         "partition": "$partition_config",
-        "https_proxy": "$host.https_proxy",
-        "ntp_server": "$host.ntp_server",
-        "timezone": "$host.timezone",
+        "https_proxy": "$getVar('https_proxy', '')",
+        "ntp_server": "$ntp_server",
+        "timezone": "$timezone",
         "ignore_proxy": "$no_proxy"
     }
 }

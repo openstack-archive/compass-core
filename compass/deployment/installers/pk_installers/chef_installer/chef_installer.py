@@ -62,9 +62,10 @@ class ChefInstaller(PKInstaller):
 
     @classmethod
     def get_tmpl_path(cls, adapter_name):
-        tmpl_path = os.path.join(os.path.join(compass_setting.TMPL_DIR,
-                                              'chef_installer'),
-                                 adapter_name)
+        tmpl_path = os.path.join(
+            os.path.join(compass_setting.TMPL_DIR, 'chef_installer'),
+            adapter_name
+        )
         return tmpl_path
 
     def __repr__(self):
@@ -91,7 +92,7 @@ class ChefInstaller(PKInstaller):
         """Generate environment name."""
         return "-".join((dist_sys_name, cluster_name))
 
-    def get_databag(self, databag_name):
+    def get_create_databag(self, databag_name):
         """Get databag object from chef server. Create the databag if it
            does not exist.
         """
@@ -104,7 +105,7 @@ class ChefInstaller(PKInstaller):
 
         return databag
 
-    def get_node(self, node_name, env_name):
+    def get_create_node(self, node_name, env_name=None):
         """Get chef node if existing, otherwise create one and set its
            environment.
 
@@ -131,8 +132,9 @@ class ChefInstaller(PKInstaller):
 
     def delete_node(self, host_id):
         fullname = self.config_manager.get_host_fullname(host_id)
-        node = self.get_node(fullname)
-        self._delete_node(node)
+        node = self.get_create_node(fullname)
+        if node:
+            self._delete_node(node)
 
     def _delete_node(self, node):
         """clean node attributes about target system."""
@@ -143,7 +145,7 @@ class ChefInstaller(PKInstaller):
         client_name = node_name
 
         # Clean log for this node first
-        log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[self.NAME]
+        log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[NAME]
         self._clean_log(log_dir_prefix, node_name)
 
         # Delete node and its client on chef server
@@ -152,11 +154,10 @@ class ChefInstaller(PKInstaller):
             client = chef.Client(client_name, api=self.chef_api)
             client.delete()
             logging.debug('delete node %s', node_name)
-            log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[self.NAME]
-            self._clean_log(log_dir_prefix, node_name)
         except Exception as error:
-            logging.debug(
-                'failed to delete node %s, error: %s', node_name, error)
+            logging.debug('failed to delete node %s, error: %s',
+                          node_name,
+                          error)
 
     def _add_roles(self, node, roles):
         """Add roles to the node.
@@ -179,14 +180,14 @@ class ChefInstaller(PKInstaller):
         node.save()
         logging.debug('Runlist for node %s is %s', node.name, node.run_list)
 
-    def _get_node_attributes(self, roles, vars_dict):
-        """Get node attributes from templates according to its roles. The
+    def _generate_node_attributes(self, roles, host_vars_dict):
+        """Generate node attributes from templates according to its roles. The
            templates are named by roles without '-'. Return the dictionary
            of attributes defined in the templates.
 
            :param list roles: The roles for this node, used to load the
                               specific template.
-           :param dict vars_dict: The dictionary used in cheetah searchList to
+           :param dict host_vars_dict: The dict used in cheetah searchList to
                                   render attributes from templates.
         """
         if not roles:
@@ -199,12 +200,13 @@ class ChefInstaller(PKInstaller):
             tmpl_name = '.'.join((role, 'tmpl'))
             node_tmpl = os.path.join(node_tmpl_dir, tmpl_name)
             util.merge_dict(
-                node_attr, self.get_config_from_template(node_tmpl, vars_dict)
+                node_attr,
+                self.get_config_from_template(node_tmpl, host_vars_dict)
             )
 
         return node_attr
 
-    def update_node(self, node, roles, vars_dict):
+    def update_node(self, node, roles, host_vars_dict):
         """Update node attributes to chef server."""
         if node is None:
             raise Exception("Node is None!")
@@ -217,23 +219,25 @@ class ChefInstaller(PKInstaller):
         self._add_roles(node, roles)
 
         # Update node attributes.
-        node_config = self._get_node_attributes(roles, vars_dict)
+        node_config = self._generate_node_attributes(roles, host_vars_dict)
+        availablel_attrs = ['default', 'normal', 'override']
         for attr in node_config:
-            node.attributes[attr] = node_config[attr]
+            if attr in available_attrs:
+                # print node_config[attr]
+                setattr(node, attr, node_config[attr])
 
         node.save()
 
-    def _get_env_attributes(self, vars_dict):
+    def _generate_env_attributes(self, global_vars_dict):
         """Get environment attributes from env templates."""
 
-        env_tmpl_fname = self.config_manager.get_cluster_flavor_template()
+        tmpl_name = self.config_manager.get_cluster_flavor_template()
         env_tmpl_path = os.path.join(
-            os.path.join(self.tmpl_dir, self.ENV_TMPL_DIR), env_tmpl_fname
+            os.path.join(self.tmpl_dir, self.ENV_TMPL_DIR), tmpl_name
         )
-        env_attri = self.get_config_from_template(env_tmpl_path, vars_dict)
-        return env_attri
+        return self.get_config_from_template(env_tmpl_path, global_vars_dict)
 
-    def get_environment(self, env_name):
+    def get_create_environment(self, env_name):
         import chef
         env = chef.Environment(env_name, api=self.chef_api)
         env.save()
@@ -245,7 +249,7 @@ class ChefInstaller(PKInstaller):
                 setattr(env, attr, env_attrs[attr])
         env.save()
 
-    def update_environment(self, env_name, vars_dict):
+    def update_environment(self, env_name, global_vars_dict):
         """Generate environment attributes based on the template file and
            upload it to chef server.
 
@@ -253,17 +257,14 @@ class ChefInstaller(PKInstaller):
            :param dict vars_dict: The dictionary used in cheetah searchList to
                                   render attributes from templates.
         """
-        env_config = self._get_env_attributes(vars_dict)
-        env = self.get_environment(env_name)
+        env_config = self._generate_env_attributes(global_vars_dict)
+        env = self.get_create_environment(env_name)
         self._update_env(env, env_config)
 
-    def _get_databagitem_attributes(self, tmpl_dir, vars_dict):
-        databagitem_attrs = self.get_config_from_template(tmpl_dir,
-                                                          vars_dict)
+    def _generate_databagitem_attributes(self, tmpl_dir, vars_dict):
+        return self.get_config_from_template(tmpl_dir, vars_dict)
 
-        return databagitem_attrs
-
-    def update_databags(self, vars_dict):
+    def update_databags(self, global_vars_dict):
         """Update databag item attributes.
 
            :param dict vars_dict: The dictionary used to get attributes from
@@ -277,14 +278,15 @@ class ChefInstaller(PKInstaller):
         databags_dir = os.path.join(self.tmpl_dir, self.DATABAG_TMPL_DIR)
         for databag_name in databag_names:
             databag_tmpl = os.path.join(databags_dir, databag_name)
-            databagitem_attrs = self._get_databagitem_attributes(databag_tmpl,
-                                                                 vars_dict)
+            databagitem_attrs = self._generate_databagitem_attributes(
+                databag_tmpl, global_vars_dict
+            )
             if not databagitem_attrs:
                 logging.info("Databag template not found or vars_dict is None")
                 logging.info("databag template is %s", databag_tmpl)
                 continue
 
-            databag = self.get_databag(databag_name)
+            databag = self.get_create_databag(databag_name)
             for item, item_values in databagitem_attrs.iteritems():
                 databagitem = chef.DataBagItem(databag, item, self.chef_api)
                 for key, value in item_values.iteritems():
@@ -292,52 +294,75 @@ class ChefInstaller(PKInstaller):
                 databagitem.save()
 
     def _get_host_tmpl_vars(self, host_id, global_vars_dict):
-        """Get templates variables dictionary for cheetah searchList based
+        """Generate templates variables dictionary for cheetah searchList based
            on host package config.
 
            :param int host_id: The host ID.
            :param dict global_vars_dict: The vars_dict got from cluster level
                                          package_config.
-        """
-        vars_dict = {}
-        if global_vars_dict:
-            temp = global_vars_dict[const.CLUSTER][const.DEPLOYED_PK_CONFIG]
-            vars_dict[const.DEPLOYED_PK_CONFIG] = deepcopy(temp)
 
+           The output format is the same as cluster_vars_dict.
+        """
+        host_vars_dict = {}
+        if global_vars_dict:
+            host_vars_dict = deepcopy(global_vars_dict)
+
+        # Update host basic info
         host_baseinfo = self.config_manager.get_host_baseinfo(host_id)
-        util.merge_dict(vars_dict, host_baseinfo)
+        util.merge_dict(
+            host_vars_dict.setdefault(const.BASEINFO, {}), host_baseinfo
+        )
 
         pk_config = self.config_manager.get_host_package_config(host_id)
         if pk_config:
             # Get host template variables and merge to vars_dict
             metadata = self.config_manager.get_pk_config_meatadata()
-            host_dict = self.get_tmpl_vars_from_metadata(metadata, pk_config)
-            #util.merge_dict(vars_dict[const.DEPLOYED_PK_CONFIG], host_dict)
-            vars_dict[const.DEPLOYED_PK_CONFIG].update(host_dict)
+            meta_dict = self.get_tmpl_vars_from_metadata(metadata, pk_config)
+            util.merge_dict(
+                host_vars_dict.setdefault(const.PK_CONFIG, {}), meta_dict
+            )
 
-        # Set role_mapping for host
+        # Override role_mapping for host if host role_mapping exists
         mapping = self.config_manager.get_host_roles_mapping(host_id)
-        vars_dict[const.DEPLOYED_PK_CONFIG][const.ROLES_MAPPING] = mapping
+        if mapping:
+            host_vars_dict[const.ROLES_MAPPING] = mapping
 
-        return {const.HOST: vars_dict}
+        return host_vars_dict
 
     def _get_cluster_tmpl_vars(self):
-        vars_dict = {}
+        """Generate template variables dict based on cluster level config.
+           The vars_dict will be:
+           {
+               "baseinfo": {
+                   "id":1,
+                   "name": "cluster01",
+                   ...
+               },
+               "package_config": {
+                   .... //mapped from original package config based on metadata
+               },
+               "role_mapping": {
+                   ....
+               }
+           }
+        """
+        cluster_vars_dict = {}
         # set cluster basic information to vars_dict
         cluster_baseinfo = self.config_manager.get_cluster_baseinfo()
-        util.merge_dict(vars_dict, cluster_baseinfo)
+        cluster_vars_dict[const.BASEINFO] = cluster_baseinfo
 
         # get and set template variables from cluster package config.
         pk_metadata = self.config_manager.get_pk_config_meatadata()
         pk_config = self.config_manager.get_cluster_package_config()
+
         meta_dict = self.get_tmpl_vars_from_metadata(pk_metadata, pk_config)
-        vars_dict[const.DEPLOYED_PK_CONFIG] = meta_dict
+        cluster_vars_dict[const.PK_CONFIG] = meta_dict
 
         # get and set roles_mapping to vars_dict
         mapping = self.config_manager.get_cluster_roles_mapping()
-        vars_dict[const.DEPLOYED_PK_CONFIG][const.ROLES_MAPPING] = mapping
+        cluster_vars_dict[const.ROLES_MAPPING] = mapping
 
-        return {const.CLUSTER: vars_dict}
+        return cluster_vars_dict
 
     def deploy(self):
         """Start to deploy a distributed system. Return both cluster and hosts
@@ -359,6 +384,10 @@ class ChefInstaller(PKInstaller):
                }
            }
         """
+        host_list = self.config_manager.get_host_id_list()
+        if not host_list:
+            return {}
+
         adapter_name = self.config_manager.get_adapter_name()
         cluster_name = self.config_manager.get_clustername()
         env_name = self.get_env_name(adapter_name, cluster_name)
@@ -371,34 +400,41 @@ class ChefInstaller(PKInstaller):
         # Update Databag item
         self.update_databags(global_vars_dict)
 
-        host_list = self.config_manager.get_host_id_list()
         hosts_deployed_configs = {}
 
         for host_id in host_list:
             node_name = self.config_manager.get_host_fullname(host_id)
             roles = self.config_manager.get_host_roles(host_id)
 
-            node = self.get_node(node_name, env_name)
+            node = self.get_create_node(node_name, env_name)
             vars_dict = self._get_host_tmpl_vars(host_id, global_vars_dict)
             self.update_node(node, roles, vars_dict)
 
             # set each host deployed config
-            tmp = {}
             host_config = {}
-            tmp.update(vars_dict[const.HOST][const.DEPLOYED_PK_CONFIG])
+            temp = vars_dict.setdefault(const.PK_CONFIG, {})
+            temp[const.ROLES_MAPPING] = vars_dict.setdefault(
+                const.ROLES_MAPPING, {}
+            )
             host_config = {
-                host_id: {const.DEPLOYED_PK_CONFIG: tmp}
+                host_id: {const.DEPLOYED_PK_CONFIG: temp}
             }
             hosts_deployed_configs.update(host_config)
 
         # set cluster deployed config
-        cl_config = {}
-        cl_config.update(global_vars_dict)
+        cluster_config = {}
+        cluster_config = global_vars_dict.setdefault(const.PK_CONFIG, {})
+        cluster_config[const.ROLES_MAPPING] = global_vars_dict.setdefault(
+            const.ROLES_MAPPING, {}
+        )
 
-        output = {}
-        output.update(cl_config)
-        output.update({const.HOSTS: hosts_deployed_configs})
-        return output
+        return {
+            const.CLUSTER: {
+                const.ID: self.config_manager.get_cluster_id(),
+                const.DEPLOYED_PK_CONFIG: cluster_config
+            },
+            const.HOSTS: hosts_deployed_configs
+        }
 
     def generate_installer_config(self):
         """Render chef config file (client.rb) by OS installing right after

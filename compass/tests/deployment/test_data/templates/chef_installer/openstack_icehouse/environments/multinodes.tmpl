@@ -1,6 +1,4 @@
-#set config = $cluster.deployed_package_config
-#set mappings = $config.roles_mapping
-#set credentials = $config.service_credentials
+#set credentials = $getVar('service_credentials', {})
 {
   "name": "testing",
   "description": "Environment",
@@ -16,22 +14,22 @@
             "use": false
           },
           "libvirt": {
-            "bind_interface": "$mappings.os_compute.management.interface"
+            "bind_interface": "$os_compute.management.interface"
           },
           "novnc_proxy": {
-            "bind_interface": "$mappings.os_controller.management.interface"
+            "bind_interface": "$os_controller.management.interface"
           },
           "xvpvnc_proxy": {
             "bind_interface": "eth0"
           }
       },
       "db": {
-        "bind_interface": "$mappings.os_controller.management.interface",
+        "bind_interface": "$os_controller.management.interface",
         "compute": {
-          "host": "$mappings.os_controller.management.ip"
+          "host": "$os_controller.management.ip"
         },
         "identity": {
-          "host": "$mappings.os_controller.management.ip"
+          "host": "$os_controller.management.ip"
         }
       },
       "mq": {

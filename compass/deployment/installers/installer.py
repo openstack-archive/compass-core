@@ -95,7 +95,8 @@ class BaseInstaller(object):
             return (True, metadata[key])
 
         temp = deepcopy(metadata)
-        del temp['_self']
+        if '_self' in temp:
+            del temp['_self']
         meta_key = temp.keys()[0]
         if meta_key.startswith("$"):
             return (False, metadata[meta_key])
@@ -113,8 +114,8 @@ class BaseInstaller(object):
                 else:
                     new_output = output
 
-                self._get_tmpl_vars_helper(sub_meta, config_value,
-                                           new_output)
+                self._get_tmpl_vars_helper(sub_meta, config_value, new_output)
+
             elif mapping_to:
                 output[mapping_to] = config_value
 
@@ -125,14 +126,22 @@ class BaseInstaller(object):
             logging.debug("vars_dict is %s", vars_dict)
             return {}
 
-        tmpl = Template(file=tmpl_dir, searchList=[vars_dict])
+        searchList = []
+        copy_vars_dict = deepcopy(vars_dict)
+        for key, value in vars_dict.iteritems():
+            if isinstance(value, dict):
+                temp = copy_vars_dict[key]
+                del copy_vars_dict[key]
+                searchList.append(temp)
+        searchList.append(copy_vars_dict)
+
+        tmpl = Template(file=tmpl_dir, searchList=searchList)
         config = json.loads(tmpl.respond(), encoding='utf-8')
         config = json.loads(json.dumps(config), encoding='utf-8')
         return config
 
     @classmethod
     def get_installer(cls, name, path, adapter_info, cluster_info, hosts_info):
-        installer = None
         try:
             mod_file, path, descr = imp.find_module(name, [path])
             if mod_file:
@@ -145,7 +154,7 @@ class BaseInstaller(object):
             logging.error('No such module found: %s', name)
             logging.exception(exc)
 
-        return installer
+        return None
 
 
 class OSInstaller(BaseInstaller):
@@ -162,6 +171,10 @@ class OSInstaller(BaseInstaller):
 
     @classmethod
     def get_installer(cls, name, adapter_info, cluster_info, hosts_info):
+        if name is None:
+            logging.info("Installer name is None! No OS installer loaded!")
+            return None
+
         path = os.path.join(cls.INSTALLER_BASE_DIR, name)
         installer = super(OSInstaller, cls).get_installer(name, path,
                                                           adapter_info,
@@ -211,6 +224,10 @@ class PKInstaller(BaseInstaller):
 
     @classmethod
     def get_installer(cls, name, adapter_info, cluster_info, hosts_info):
+        if name is None:
+            logging.info("Install name is None. No package installer loaded!")
+            return None
+
         path = os.path.join(cls.INSTALLER_BASE_DIR, name)
         installer = super(PKInstaller, cls).get_installer(name, path,
                                                           adapter_info,

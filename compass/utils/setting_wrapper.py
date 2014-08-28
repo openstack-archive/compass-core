@@ -26,7 +26,10 @@ import os.path
 # default setting
 CONFIG_DIR = '/etc/compass'
 SQLALCHEMY_DATABASE_URI = 'sqlite://'
-INSTALLATION_LOGDIR = ''
+INSTALLATION_LOGDIR = {
+    'CobblerInstaller': '/var/log/cobbler/anamon',
+    'ChefInstaller': '/var/log/chef'
+}
 DEFAULT_LOGLEVEL = 'debug'
 DEFAULT_LOGDIR = '/tmp'
 DEFAULT_LOGINTERVAL = 1

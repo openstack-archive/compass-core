@@ -55,9 +55,10 @@ class TestChefInstaller(unittest2.TestCase):
                                            hosts_info)
 
         ChefInstaller.get_tmpl_path = Mock()
-        test_tmpl_dir = os.path.join(os.path.join(config_data.test_tmpl_dir,
-                                                  'chef_installer'),
-                                     'openstack_icehouse')
+        test_tmpl_dir = os.path.join(
+            os.path.join(config_data.test_tmpl_dir, 'chef_installer'),
+            'openstack_icehouse'
+        )
         ChefInstaller.get_tmpl_path.return_value = test_tmpl_dir
 
         ChefInstaller._get_chef_api = Mock()
@@ -82,7 +83,8 @@ class TestChefInstaller(unittest2.TestCase):
                 }
             }
         }
-        output = self.test_chef._get_node_attributes(['os-compute'], vars_dict)
+        output = self.test_chef._generate_node_attributes(['os-compute'],
+                                                          vars_dict)
         self.maxDiff = None
         self.assertDictEqual(expected_node_attr, output)
 
@@ -131,29 +133,27 @@ class TestChefInstaller(unittest2.TestCase):
             }
         }
         vars_dict = self.test_chef._get_cluster_tmpl_vars()
-        output = self.test_chef._get_env_attributes(vars_dict)
+        output = self.test_chef._generate_env_attributes(vars_dict)
         self.maxDiff = None
         self.assertDictEqual(expected_env, output)
 
     def test_get_databagitem_attributes(self):
         vars_dict = {
-            "cluster": {
-                "deployed_package_config": {
-                    "service_credentials": {
-                        "nova": {
-                            "username": "nova",
-                            "password": "compute"
-                        }
+            "package_config": {
+                "service_credentials": {
+                    "nova": {
+                        "username": "nova",
+                        "password": "compute"
+                    }
+                },
+                "users_credentials": {
+                    "ksadmin": {
+                        "username": "ksadmin",
+                        "password": "ksadmin"
                     },
-                    "users_credentials": {
-                        "ksadmin": {
-                            "username": "ksadmin",
-                            "password": "ksadmin"
-                        },
-                        "demo": {
-                            "username": "demo",
-                            "password": "demo"
-                        }
+                    "demo": {
+                        "username": "demo",
+                        "password": "demo"
                     }
                 }
             }
@@ -186,8 +186,8 @@ class TestChefInstaller(unittest2.TestCase):
         databags = self.test_chef.get_chef_databag_names()
         for bag in databags:
             tmpl_path = os.path.join(databag_dir, '.'.join((bag, 'tmpl')))
-            output = self.test_chef._get_databagitem_attributes(tmpl_path,
-                                                                vars_dict)
+            output = self.test_chef._generate_databagitem_attributes(tmpl_path,
+                                                                     vars_dict)
             self.maxDiff = None
             self.assertDictEqual(expected_output[bag], output)
 
@@ -205,8 +205,6 @@ class TestChefInstaller(unittest2.TestCase):
         expected_output = {
             "cluster": {
                 "id": 1,
-                "name": "test",
-                "os_name": "Ubuntu-12.04-x86_64",
                 "deployed_package_config": {
                     "service_credentials": {
                         "mq": {
@@ -409,7 +407,7 @@ class TestChefInstaller(unittest2.TestCase):
         }
         self.test_chef.update_environment = Mock()
         self.test_chef.update_databags = Mock()
-        self.test_chef.get_node = Mock()
+        self.test_chef.get_create_node = Mock()
         self.test_chef.update_node = Mock()
 
         output = self.test_chef.deploy()

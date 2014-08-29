@@ -73,7 +73,7 @@ class TestChefInstaller(unittest2.TestCase):
         cluster_dict = self.test_chef._get_cluster_tmpl_vars()
         vars_dict = self.test_chef._get_host_tmpl_vars(2, cluster_dict)
         expected_node_attr = {
-            "override_attributes": {
+            "override": {
                 "openstack": {
                     "endpoints": {
                         "compute-vnc-bind": {
@@ -408,7 +408,7 @@ class TestChefInstaller(unittest2.TestCase):
         self.test_chef.update_environment = Mock()
         self.test_chef.update_databags = Mock()
         self.test_chef.get_create_node = Mock()
-        self.test_chef.update_node = Mock()
+        self.test_chef.add_roles = Mock()
 
         output = self.test_chef.deploy()
         self.maxDiff = None

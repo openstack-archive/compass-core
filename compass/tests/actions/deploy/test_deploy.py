@@ -96,8 +96,10 @@ class TestDeployAction(unittest2.TestCase):
                     "url": "http://127.0.0.1"
                 }
             },
-            "os_config": {},
-            "package_config": {}
+            "metadata": {
+                "os_config": {},
+                "package_config": {}
+            }
         }
         output = deploy.ActionHelper.get_adapter_info(1, 1, None)
         self.maxDiff = None

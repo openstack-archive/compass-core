@@ -130,7 +130,7 @@ class TestCobblerInstaller(unittest2.TestCase):
         self.maxDiff = None
         self.assertDictEqual(self.expected_host_vars_dict, output)
 
-    def test_get_system_config(self):
+    def test_generate_system_config(self):
         expected_system_config = {
             "name": "server01.test",
             "hostname": "server01",
@@ -279,3 +279,15 @@ class TestCobblerInstaller(unittest2.TestCase):
         output = self.test_cobbler.deploy()
         self.maxDiff = None
         self.assertDictEqual(expected_output, output)
+
+    def test_check_and_set_system_impi(self):
+        self.test_cobbler._update_system_config = Mock()
+        self.test_cobbler.dump_system_info = Mock()
+        self.test_cobbler.dump_system_info.return_value = {
+            'power_type': 'ipmilan',
+            'power_address': '',
+            'power_user': '',
+            'power_pass': ''
+        }
+        output = self.test_cobbler._check_and_set_system_impi(3, "test_sys_id")
+        self.assertTrue(output)

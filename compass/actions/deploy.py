@@ -154,7 +154,7 @@ class ActionHelper(object):
         """
         adapter_info = adapter_db.get_adapter(user, adapter_id)
         metadata = cluster_db.get_cluster_metadata(user, cluster_id)
-        adapter_info.update(metadata)
+        adapter_info.update({const.METADATA: metadata})
 
         for flavor_info in adapter_info[const.FLAVORS]:
             roles = flavor_info[const.ROLES]

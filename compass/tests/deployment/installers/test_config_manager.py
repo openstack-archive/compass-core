@@ -20,6 +20,7 @@ import unittest2
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 from compass.deployment.installers.config_manager import BaseConfigManager
+from compass.deployment.utils import constants as const
 from compass.tests.deployment.test_data import config_data
 from compass.utils import setting_wrapper as compass_setting
 reload(compass_setting)
@@ -29,16 +30,36 @@ class TestConfigManager(unittest2.TestCase):
     """Test ConfigManager methods."""
     def setUp(self):
         super(TestConfigManager, self).setUp()
-        adapter_test_info = config_data.adapter_test_config
-        cluster_test_info = config_data.cluster_test_config
-        hosts_test_info = config_data.hosts_test_config
-        self.test_config_manager = BaseConfigManager(adapter_test_info,
-                                                     cluster_test_info,
-                                                     hosts_test_info)
+        self.adapter_test_info = config_data.adapter_test_config
+        self.cluster_test_info = config_data.cluster_test_config
+        self.hosts_test_info = config_data.hosts_test_config
+        self.test_config_manager = BaseConfigManager(self.adapter_test_info,
+                                                     self.cluster_test_info,
+                                                     self.hosts_test_info)
 
     def tearDown(self):
         super(TestConfigManager, self).tearDown()
         del self.test_config_manager
+
+    def test_get_cluster_baseinfo(self):
+        expected_output = {
+            "id": 1,
+            "name": "test",
+            "os_name": "Ubuntu-12.04-x86_64"
+        }
+        output = self.test_config_manager.get_cluster_baseinfo()
+        self.maxDiff = None
+        self.assertDictEqual(expected_output, output)
+
+    def test_get_host_id_list(self):
+        expected_output = [1, 2, 3]
+        output = self.test_config_manager.get_host_id_list()
+        self.assertEqual(expected_output, output)
+
+    def test_get_cluster_flavor_info(self):
+        expected_output = self.cluster_test_info[const.FLAVOR]
+        output = self.test_config_manager.get_cluster_flavor_info()
+        self.assertDictEqual(expected_output, output)
 
     def test_get_cluster_roles_mapping(self):
         expected_output = {

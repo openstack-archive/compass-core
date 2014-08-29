@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import datetime
 import os
 import unittest2
 
@@ -27,8 +27,6 @@ reload(setting)
 from compass.utils import flags
 from compass.utils import logsetting
 from compass.utils import util
-
-import datetime
 
 
 class TestParseDatetime(unittest2.TestCase):
@@ -311,6 +309,7 @@ class TestLoadConfigs(unittest2.TestCase):
         err_dir = 'non-exist/dir'
         loaded = util.load_configs(err_dir)
         self.assertEqual([], loaded)
+
 
 if __name__ == '__main__':
     flags.init()

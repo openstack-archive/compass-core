@@ -483,10 +483,10 @@ def add_clusterhost_internal(
                 host_by_name = utils.get_db_object(
                     session, models.Host, False, name=hostname
                 )
-                if host_by_name:
+                if host_by_name and host_by_name.id != host.id:
                     raise exception.InvalidParameter(
                         'host name %s exists in host %s' % (
-                            hostname, host_by_name
+                            hostname, host_by_name.to_dict()
                         )
                     )
             utils.update_db_object(
@@ -501,10 +501,10 @@ def add_clusterhost_internal(
             host = utils.get_db_object(
                 session, models.Host, False, name=hostname
             )
-            if host:
+            if host and host.machine_id != machine_id:
                 raise exception.InvalidParameter(
                     'host name %s exists in host %s' % (
-                        hostname, host
+                        hostname, host.to_dict()
                     )
                 )
         host = utils.add_db_object(

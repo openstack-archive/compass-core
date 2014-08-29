@@ -52,6 +52,9 @@ LOGLEVEL_MAPPING = {
     'critical': logging.CRITICAL,
 }
 
+# disable logging when logsetting.init not called
+logging.getLogger().setLevel(logging.CRITICAL)
+
 
 def init():
     """Init loggsetting. It should be called after flags.init."""

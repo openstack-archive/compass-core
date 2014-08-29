@@ -23,7 +23,7 @@ import time
 # from compass.apiclient.restful import Client
 from restful import Client
 
-COMPASS_SERVER_URL = 'http://10.145.89.120/api'
+COMPASS_SERVER_URL = 'http://10.145.89.100/api'
 COMPASS_LOGIN_EMAIL = 'admin@huawei.com'
 COMPASS_LOGIN_PASSWORD = 'admin'
 SWITCH_IP = '172.29.8.40'
@@ -77,18 +77,19 @@ HOST_OS = 'CentOS-6.5-x86_64'
 
 LANGUAGE = 'EN'
 TIMEZONE = 'GMT -7:00'
-HTTPS_PROXY = 'https://10.145.88.211:3128'
+HTTPS_PROXY = 'https://10.145.89.100:3128'
 NO_PROXY = ['127.0.0.1']
-DNS_SERVER = '10.145.88.211'
+DNS_SERVER = '10.145.89.100'
 DOMAIN = 'ods.com'
 
 PRESET_VALUES = {
-    'NAMESERVERS': ['10.145.88.211'],
-    'NTP_SERVER': '10.145.88.211',
-    'GATEWAY': '10.145.88.211',
-    'PROXY': 'http://10.145.88.211:3128',
-    'ROLES_LIST': ['allinone'],
-    'MACHINES_TO_ADD': ['00:0c:29:05:bd:eb'],
+    'NAMESERVERS': ['10.145.89.100'],
+    'NTP_SERVER': '10.145.89.100',
+    'GATEWAY': '10.145.88.1',
+    'PROXY': 'http://10.145.89.100:3128',
+    'FLAVOR': 'allinone',
+    'ROLES_LIST': ['allinone-compute'],
+    'MACHINES_TO_ADD': ['00:0c:29:a7:ea:4b'],
     'BUILD_TIMEOUT': 60
 }
 for v in PRESET_VALUES:
@@ -194,7 +195,6 @@ for supported_os in supported_oses:
 print '===================================='
 print 'use %s as host os, the os_id is %s' % (os_name, os_id)
 
-"""
 # get flavor_id
 flavor_id = None
 flavors = adapter['flavors']
@@ -202,28 +202,27 @@ print '=============================='
 print 'all flavors are: %s' % flavors
 
 for flavor in flavors:
-    if flavor['name'] == PRESET_VALUES['ROLES_LIST']:
+    if flavor['name'] == PRESET_VALUES['FLAVOR']:
         flavor_id = flavor['id']
         break
 
 print '===================================='
-print 'cluster info: adapter_id: %s, os_id: %s, flavor_id: %s' %
-    (adapter_id, os_id, flavor_id)
-"""
+print 'cluster info: adapter_id: %s, os_id: %s, flavor_id: %s' % (
+    adapter_id, os_id, flavor_id)
 
 # add a cluster
 status, response = client.add_cluster(
     CLUSTER_NAME,
     adapter_id,
     os_id,
-    #flavor_id
+    flavor_id
 )
+print 'add cluster %s status %s: %s' % (CLUSTER_NAME, status, response)
 if status < 400:
-    print 'add cluster %s: %s' % (CLUSTER_NAME, response)
     cluster = response
 else:
     status, response = client.list_clusters(name=CLUSTER_NAME)
-    print response
+    print 'list clusters status %s: %s' % (status, response)
     cluster = response[0]
     print 'cluster already exists, fetching it'
 cluster_id = cluster['id']
@@ -383,10 +382,12 @@ print '======================================='
 print 'cluster %s has been updated to: %s' % (cluster_id, response)
 
 # Review and deploy
-status, response = client.review_cluster(cluster_id)
+status, response = client.review_cluster(
+    cluster_id, review={'hosts': [host_id]})
 print '======================================='
-print 'reviewing cluster: %s' % response
+print 'reviewing cluster status %s: %s' % (status, response)
 
-status, response = client.deploy_cluster(cluster_id)
+status, response = client.deploy_cluster(
+    cluster_id, deploy={'hosts': [host_id]})
 print '======================================='
-print 'deploy cluster %s' % response
+print 'deploy cluster status %s: %s' % (status, response)

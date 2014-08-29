@@ -17,14 +17,15 @@ import logging
 import os
 import unittest2
 
+
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
-from base import BaseTest
 from compass.utils import setting_wrapper as setting
 reload(setting)
 
 
+from base import BaseTest
 from compass.db.api import database
 from compass.db.api import user as user_api
 from compass.db.api import user_log

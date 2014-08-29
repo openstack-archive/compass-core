@@ -180,8 +180,8 @@ class TestModelFilter(unittest2.TestCase):
             49,
             id=49
         )
-        print 'expected: %s' % expected
-        print 'ret: %s' % ret
+        logging.debug('expected: %s', expected)
+        logging.debug('ret: %s', ret)
         self.assertTrue(
             all(item in ret[0].items() for item in expected.items())
         )

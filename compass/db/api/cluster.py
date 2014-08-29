@@ -486,7 +486,7 @@ def add_clusterhost_internal(
                 if host_by_name:
                     raise exception.InvalidParameter(
                         'host name %s exists in host %s' % (
-                            hostname, host_by_name
+                            hostname, host_by_name.to_dict()
                         )
                     )
             utils.update_db_object(
@@ -504,7 +504,7 @@ def add_clusterhost_internal(
             if host:
                 raise exception.InvalidParameter(
                     'host name %s exists in host %s' % (
-                        hostname, host
+                        hostname, host.to_dict()
                     )
                 )
         host = utils.add_db_object(

@@ -1088,8 +1088,12 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         adapter = self.adapter
         if adapter:
             self.adapter_name = adapter.name
-            self.distributed_system = adapter.adapter_distributed_system
-            self.distributed_system_name = self.distributed_system.name
+            distributed_system = adapter.adapter_distributed_system
+            self.distributed_system = distributed_system
+            if distributed_system:
+                self.distributed_system_name = distributed_system.name
+            else:
+                self.distributed_system_name = None
             flavor = self.flavor
             if flavor:
                 self.flavor_name = flavor.name

@@ -555,12 +555,12 @@ class Client(object):
         return self._get('/clusters/%s' % cluster_id)
 
     def add_cluster(self, name, adapter_id, os_id,
-                    flavor_id=None, raw_data=None):
+                    flavor_id, raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
         else:
-            #data['flavor_id'] = flavor_id
+            data['flavor_id'] = flavor_id
             data['name'] = name
             data['adapter_id'] = adapter_id
             data['os_id'] = os_id
@@ -569,7 +569,7 @@ class Client(object):
 
     def update_cluster(self, cluster_id, name=None,
                        reinstall_distributed_system=None,
-                       flavor=None, raw_data=None):
+                       raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
@@ -581,10 +581,6 @@ class Client(object):
                 data['reinstall_distributed_system'] = (
                     reinstall_distributed_system
                 )
-
-            if flavor:
-                data['flavor'] = flavor
-
         return self._put('/clusters/%s' % cluster_id, data=data)
 
     def delete_cluster(self, cluster_id):
@@ -654,16 +650,12 @@ class Client(object):
     def review_cluster(self, cluster_id, review={}):
         data = {}
         data['review'] = review
-
         return self._post('/clusters/%s/action' % cluster_id, data=data)
 
     def deploy_cluster(self, cluster_id, deploy={}):
         data = {}
-        if deploy:
-            data['deploy'] = deploy
-
+        data['deploy'] = deploy
         return self._post('/clusters/%s/action' % cluster_id, data=data)
-    ## end
 
     def get_cluster_state(self, cluster_id):
         return self._get('/clusters/%s/state' % cluster_id)

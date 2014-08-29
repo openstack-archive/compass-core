@@ -274,7 +274,7 @@ def _update_host(session, updater, host_id, **kwargs):
         if host_by_name and host_by_name.id != host.id:
             raise exception.InvalidParameter(
                 'hostname %s is already exists in host %s' % (
-                    hostname, host_by_name
+                    hostname, host_by_name.to_dict()
                 )
             )
     return utils.update_db_object(session, host, **kwargs)
@@ -517,7 +517,7 @@ def get_hostnetwork(session, getter, host_network_id, **kwargs):
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 def _add_host_network(
     session, creator, host_id, exception_when_existing=True,
-    interface=None, ip=None, **kwargs
+    interface=None, ip=None, subnet_id=None, **kwargs
 ):
     host = utils.get_db_object(
         session, models.Host, id=host_id
@@ -527,10 +527,15 @@ def _add_host_network(
         session, models.HostNetwork, False,
         ip_int=ip_int
     )
-    if host_network:
+    if (
+        host_network and not (
+            host_network.host_id == host_id and
+            host_network.interface == interface
+        )
+    ):
         raise exception.InvalidParameter(
             'ip %s exists in host network %s' % (
-                ip, host_network
+                ip, host_network.to_dict()
             )
         )
     is_host_editable(session, host, creator)
@@ -595,6 +600,30 @@ def add_host_networks(
     }
 
 
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_NETWORK
+)
+@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
+def _update_host_network(
+    session, updater, host_network, **kwargs
+):
+    if 'ip' in kwargs:
+        ip = kwargs['ip']
+        ip_int = long(netaddr.IPAddress(ip))
+        host_network_by_ip = utils.get_db_object(
+            session, models.HostNetwork, False,
+            ip_int=ip_int
+        )
+        if host_network_by_ip and host_network_by_ip.id != host_network.id:
+            raise exception.InvalidParameter(
+                'ip %s exist in host network %s' % (
+                    ip, host_network_by_ip.to_dict()
+                )
+            )
+    is_host_editable(session, host_network.host, updater)
+    return utils.update_db_object(session, host_network, **kwargs)
+
+
 @utils.supported_filters(
     optional_support_keys=UPDATED_NETWORK_FIELDS,
     ignore_support_keys=IGNORED_NETWORK_FIELDS
@@ -603,10 +632,6 @@ def add_host_networks(
     ip=utils.check_ip
 )
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_ADD_HOST_NETWORK
-)
-@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 def update_host_network(
     session, updater, host_id, host_network_id, **kwargs
 ):
@@ -621,26 +646,9 @@ def update_host_network(
                 host_id, host_network_id
             )
         )
-    if 'ip' in kwargs:
-        ip = kwargs['ip']
-        ip_int = long(netaddr.IPAddress(ip))
-        host_network_by_ip = utils.get_db_object(
-            session, models.HostNetwork, False,
-            ip_int=ip_int
-        )
-        if host_network_by_ip and host_network_by_ip.id != host_network.id:
-            raise exception.InvalidParameter(
-                'ip %s exist in host network %s' % (
-                    ip, host_network_by_ip
-                )
-            )
-    if host_network:
-        raise exception.InvalidParameter(
-            'ip %s exists in database' % ip
-        )
-
-    is_host_editable(session, host_network.host, updater)
-    return utils.update_db_object(session, host_network, **kwargs)
+    return _update_host_network(
+        session, updater, host_network, **kwargs
+    )
 
 
 @utils.supported_filters(
@@ -651,17 +659,14 @@ def update_host_network(
     ip=utils.check_ip
 )
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_ADD_HOST_NETWORK
-)
-@utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 def update_hostnetwork(session, updater, host_network_id, **kwargs):
     """Update a host network."""
     host_network = utils.get_db_object(
         session, models.HostNetwork, id=host_network_id
     )
-    is_host_editable(session, host_network.host, updater)
-    return utils.update_db_object(session, host_network, **kwargs)
+    return _update_host_network(
+        session, updater, host_network, **kwargs
+    )
 
 
 @utils.supported_filters([])

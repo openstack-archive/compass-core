@@ -61,7 +61,6 @@ class TestGetSubnet(BaseTest):
 
     def setUp(self):
         super(TestGetSubnet, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetSubnet, self).tearDown()
@@ -93,7 +92,6 @@ class TestAddSubnet(BaseTest):
 
     def setUp(self):
         super(TestAddSubnet, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestAddSubnet, self).tearDown()
@@ -117,7 +115,6 @@ class TestUpdateSubnet(BaseTest):
 
     def setUp(self):
         super(TestUpdateSubnet, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdateSubnet, self).tearDown()
@@ -154,7 +151,6 @@ class TestDelSubnet(BaseTest):
 
     def setUp(self):
         super(TestDelSubnet, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestDelSubnet, self).tearDown()
@@ -184,5 +180,4 @@ class TestDelSubnet(BaseTest):
 
 if __name__ == '__main__':
     flags.init()
-    logsetting.init()
     unittest2.main()

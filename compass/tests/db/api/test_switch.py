@@ -39,7 +39,6 @@ class TestGetSwitch(BaseTest):
 
     def setUp(self):
         super(TestGetSwitch, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetSwitch, self).tearDown()
@@ -57,7 +56,6 @@ class TestAddSwitch(BaseTest):
 
     def setUp(self):
         super(TestAddSwitch, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestAddSwitch, self).tearDown()
@@ -76,7 +74,6 @@ class TestListSwitches(BaseTest):
 
     def setUp(self):
         super(TestListSwitches, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListSwitches, self).tearDown()
@@ -122,7 +119,6 @@ class TestDelSwitch(BaseTest):
 
     def setUp(self):
         super(TestDelSwitch, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestDelSwitch, self).tearDown()
@@ -143,7 +139,6 @@ class TestUpdateSwitch(BaseTest):
 
     def setUp(self):
         super(TestUpdateSwitch, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdateSwitch, self).tearDown()
@@ -167,7 +162,6 @@ class TestPatchSwitch(BaseTest):
 
     def setUp(self):
         super(TestPatchSwitch, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestPatchSwitch, self).tearDown()
@@ -199,7 +193,6 @@ class TestListSwitchFilters(BaseTest):
 
     def setUp(self):
         super(TestListSwitchFilters, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListSwitchFilters, self).tearDown()
@@ -216,7 +209,6 @@ class TestGetSwitchFilters(BaseTest):
 
     def setUp(self):
         super(TestGetSwitchFilters, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetSwitchFilters, self).tearDown()
@@ -234,7 +226,6 @@ class TestUpdateSwitchFilters(BaseTest):
 
     def setUp(self):
         super(TestUpdateSwitchFilters, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdateSwitchFilters, self).tearDown()
@@ -269,7 +260,6 @@ class TestPatchSwitchFilter(BaseTest):
 
     def setUp(self):
         super(TestPatchSwitchFilter, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestPatchSwitchFilter, self).tearDown()
@@ -303,7 +293,6 @@ class TestAddSwitchMachine(BaseTest):
 
     def setUp(self):
         super(TestAddSwitchMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestAddSwitchMachine, self).tearDown()
@@ -324,7 +313,6 @@ class TestListSwitchMachines(BaseTest):
 
     def setUp(self):
         super(TestListSwitchMachines, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListSwitchMachines, self).tearDown()
@@ -352,7 +340,6 @@ class TestListSwitchmachines(BaseTest):
 
     def setUp(self):
         super(TestListSwitchmachines, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListSwitchmachines, self).tearDown()
@@ -414,7 +401,6 @@ class TestListSwitchMachinesHosts(BaseTest):
 
     def setUp(self):
         super(TestListSwitchMachinesHosts, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListSwitchMachinesHosts, self).tearDown()
@@ -442,7 +428,6 @@ class TestListSwitchmachinesHosts(BaseTest):
 
     def setUp(self):
         super(TestListSwitchmachinesHosts, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestListSwitchmachinesHosts, self).tearDown()
@@ -504,7 +489,6 @@ class TestGetSwitchMachine(BaseTest):
 
     def setUp(self):
         super(TestGetSwitchMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetSwitchMachine, self).tearDown()
@@ -533,7 +517,6 @@ class TestGetSwitchmachine(BaseTest):
 
     def setUp(self):
         super(TestGetSwitchmachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestGetSwitchmachine, self).tearDown()
@@ -557,7 +540,6 @@ class TestUpdateSwitchMachine(BaseTest):
 
     def setUp(self):
         super(TestUpdateSwitchMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdateSwitchMachine, self).tearDown()
@@ -590,7 +572,6 @@ class TestUpdateSwitchmachine(BaseTest):
 
     def setUp(self):
         super(TestUpdateSwitchmachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdateSwitchmachine, self).tearDown()
@@ -622,7 +603,6 @@ class TestPatchSwitchMachine(BaseTest):
 
     def setUp(self):
         super(TestPatchSwitchMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestPatchSwitchMachine, self).tearDown()
@@ -658,7 +638,6 @@ class TestPatchSwitchmachine(BaseTest):
 
     def setUp(self):
         super(TestPatchSwitchmachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestPatchSwitchmachine, self).tearDown()
@@ -691,7 +670,6 @@ class TestDelSwitchMachine(BaseTest):
 
     def setUp(self):
         super(TestDelSwitchMachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestDelSwitchMachine, self).tearDown()
@@ -720,7 +698,6 @@ class TestDelSwitchmachine(BaseTest):
 
     def setUp(self):
         super(TestDelSwitchmachine, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestDelSwitchmachine, self).tearDown()
@@ -747,7 +724,6 @@ class TestUpdateSwitchMachines(BaseTest):
 
     def setUp(self):
         super(TestUpdateSwitchMachines, self).setUp()
-        logsetting.init()
 
     def tearDown(self):
         super(TestUpdateSwitchMachines, self).tearDown()

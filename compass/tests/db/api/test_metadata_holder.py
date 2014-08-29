@@ -18,6 +18,14 @@ import logging
 import os
 import unittest2
 
+
+os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
+from compass.utils import setting_wrapper as setting
+reload(setting)
+
+
 from base import BaseTest
 from compass.db.api import adapter_holder as adapter
 from compass.db.api import database
@@ -26,10 +34,6 @@ from compass.db.api import user as user_api
 from compass.db import exception
 from compass.utils import flags
 from compass.utils import logsetting
-from compass.utils import setting_wrapper as setting
-
-
-os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
 class TestGetPackageMetadata(BaseTest):

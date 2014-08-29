@@ -101,26 +101,27 @@ class TestChefInstaller(unittest2.TestCase):
         env_name = self.test_chef.get_env_name(self.dist_sys_name,
                                                cluster_name)
 
-        test_node = self.test_chef.get_node(node_name, env_name)
+        test_node = self.test_chef.get_create_node(node_name, env_name)
         self.assertIsNotNone(test_node)
         self._register(test_node)
 
         cluster_dict = self.test_chef._get_cluster_tmpl_vars()
         vars_dict = self.test_chef._get_host_tmpl_vars(host_id, cluster_dict)
 
-        self.test_chef.update_node(test_node, roles, vars_dict)
+        self.test_chef.update_node_attributes_by_roles(
+            test_node, roles, vars_dict
+        )
+        self.test_chef.add_roles(test_node, roles)
 
         result_node = chef.Node(node_name, self.chef_test_api)
 
         self.assertListEqual(result_node.run_list, ['role[os-compute]'])
         self.assertEqual(result_node.chef_environment, env_name)
         expected_node_attr = {
-            "override_attributes": {
-                "openstack": {
-                    "endpoints": {
-                        "compute-vnc-bind": {
-                            "host": "12.234.32.101"
-                        }
+            "openstack": {
+                "endpoints": {
+                    "compute-vnc-bind": {
+                        "host": "12.234.32.101"
                     }
                 }
             }
@@ -135,8 +136,8 @@ class TestChefInstaller(unittest2.TestCase):
         env_name = self.test_chef.get_env_name(self.dist_sys_name,
                                                cluster_name)
         vars_dict = self.test_chef._get_cluster_tmpl_vars()
-        env_attrs = self.test_chef._get_env_attributes(vars_dict)
-        test_env = self.test_chef.get_environment(env_name)
+        env_attrs = self.test_chef._generate_env_attributes(vars_dict)
+        test_env = self.test_chef.get_create_environment(env_name)
         self.assertIsNotNone(test_env)
         self._register(test_env)
 
@@ -254,7 +255,7 @@ class TestChefInstaller(unittest2.TestCase):
         self._register(test_node)
 
         input_roles = ['test_role_1', 'test_role_2', 'test_role_a']
-        self.test_chef._add_roles(test_node, input_roles)
+        self.test_chef.add_roles(test_node, input_roles)
 
         expected_roles = [('role[%s]' % role) for role in input_roles]
         self.assertSetEqual(set(expected_roles), set(test_node.run_list))

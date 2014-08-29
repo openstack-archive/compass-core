@@ -350,6 +350,11 @@ hosts_test_config = {
                 "subnet": "10.0.0.0/24"
             }
         },
+        "ipmi_credentials": {
+            "ip": "172.16.100.104",
+            "username": "admin",
+            "password": "admin"
+        },
         "os_config": {
             "general": {
                 "language": "EN",

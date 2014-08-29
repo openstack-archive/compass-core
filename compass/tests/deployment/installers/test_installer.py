@@ -42,8 +42,9 @@ class TestBaseInstaller(unittest2.TestCase):
             config = case["config"]
             expected_output = case["expected_output"]
 
-            output = self.test_installer.get_tmpl_vars_from_metadata(metadata,
-                                                                     config)
+            output = self.test_installer.get_tmpl_vars_from_metadata(
+                metadata, config
+            )
 
             self.maxDiff = None
             self.assertDictEqual(expected_output, output)

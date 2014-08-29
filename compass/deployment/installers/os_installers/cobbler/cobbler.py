@@ -202,6 +202,15 @@ class CobblerInstaller(OSInstaller):
             logging.debug("Failed to sync cobbler server! Error: %s" % ex)
             raise ex
 
+    def dump_system_info(self, host_id):
+
+        hostname = self.config_manager.get_hostname(host_id)
+        if self.remote is None or not hostname:
+            logging.info("[dump_system_info]Remote or hostname is None.")
+            return {}
+
+        return self.remote.get_system_as_rendered(hostname)
+
     def _generate_system_config(self, host_id, host_vars_dict):
         """Generate updated system config from the template.
 
@@ -349,9 +358,9 @@ class CobblerInstaller(OSInstaller):
             logging.info("System is None!")
             return False
 
-        hostname = self.config_manager.get_hostname(host_id)
-        system = self.remote.get_system_as_rendered(hostname)
+        system = self.dump_system_info(host_id)
         if system[self.POWER_TYPE] != 'ipmilan' or not system[self.POWER_USER]:
+            # Set sytem power type to ipmilan if needs and set IPMI info
             ipmi_info = self.config_manager.get_host_ipmi_info(host_id)
             if not ipmi_info:
                 logging.info('No IPMI information found! Failed power on.')

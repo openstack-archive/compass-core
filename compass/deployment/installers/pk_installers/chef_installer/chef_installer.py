@@ -159,7 +159,7 @@ class ChefInstaller(PKInstaller):
                           node_name,
                           error)
 
-    def _add_roles(self, node, roles):
+    def add_roles(self, node, roles):
         """Add roles to the node.
            :param object node: The node object.
            :param list roles: The list of roles for this node.
@@ -206,7 +206,7 @@ class ChefInstaller(PKInstaller):
 
         return node_attr
 
-    def update_node(self, node, roles, host_vars_dict):
+    def update_node_attributes_by_roles(self, node, roles, host_vars_dict):
         """Update node attributes to chef server."""
         if node is None:
             raise Exception("Node is None!")
@@ -215,16 +215,14 @@ class ChefInstaller(PKInstaller):
             logging.info("The list of roles is None.")
             return
 
-        # Add roles to node Rolelist on chef server.
-        self._add_roles(node, roles)
-
         # Update node attributes.
         node_config = self._generate_node_attributes(roles, host_vars_dict)
         available_attrs = ['default', 'normal', 'override']
         for attr in node_config:
             if attr in available_attrs:
-                # print node_config[attr]
-                setattr(node, attr, node_config[attr])
+                node_attributes = getattr(node, attr).to_dict()
+                util.merge_dict(node_attributes, node_config[attr])
+                setattr(node, attr, node_attributes)
 
         node.save()
 
@@ -407,8 +405,8 @@ class ChefInstaller(PKInstaller):
             roles = self.config_manager.get_host_roles(host_id)
 
             node = self.get_create_node(node_name, env_name)
+            self.add_roles(node, roles)
             vars_dict = self._get_host_tmpl_vars(host_id, global_vars_dict)
-            self.update_node(node, roles, vars_dict)
 
             # set each host deployed config
             host_config = {}

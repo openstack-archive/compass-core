@@ -81,6 +81,7 @@ class BaseInstaller(object):
                 mapping_to = metadata['_self']['mapping_to']
             except Exception:
                 mapping_to = None
+
         return mapping_to
 
     def _get_submeta_by_key(self, metadata, key):
@@ -138,6 +139,7 @@ class BaseInstaller(object):
         tmpl = Template(file=tmpl_dir, searchList=searchList)
         config = json.loads(tmpl.respond(), encoding='utf-8')
         config = json.loads(json.dumps(config), encoding='utf-8')
+
         return config
 
     @classmethod

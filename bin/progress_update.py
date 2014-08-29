@@ -20,6 +20,7 @@ import lockfile
 import logging
 
 from compass.actions import update_progress
+from compass.db.api import database
 from compass.tasks.client import celery
 from compass.utils import daemonize
 from compass.utils import flags
@@ -28,11 +29,6 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-flags.add('clusters',
-          help=(
-              'clusters to clean, the format is as '
-              'clusterid:hostname1,hostname2,...;...'),
-          default='')
 flags.add_bool('async',
                help='run in async mode',
                default=True)
@@ -41,27 +37,25 @@ flags.add('run_interval',
           default=setting.PROGRESS_UPDATE_INTERVAL)
 
 
-def progress_update(cluster_hosts):
+def progress_update():
     """entry function."""
     if flags.OPTIONS.async:
-        celery.send_task('compass.tasks.update_progress', (cluster_hosts,))
+        celery.send_task('compass.tasks.update_progress')
     else:
         try:
-            update_progress.update_progress(cluster_hosts)
+            update_progress.update_progress()
         except Exception as error:
-            logging.error('failed to update progress for cluster_hosts: %s',
-                          cluster_hosts)
+            logging.error('failed to update progress')
             logging.exception(error)
 
 
 if __name__ == '__main__':
     flags.init()
     logsetting.init()
+    database.init()
     logging.info('run progress update')
     daemonize.daemonize(
-        functools.partial(
-            progress_update,
-            util.get_clusters_from_str(flags.OPTIONS.clusters)),
+        progress_update,
         flags.OPTIONS.run_interval,
         pidfile=lockfile.FileLock('/var/run/progress_update.pid'),
         stderr=open('/tmp/progress_update_err.log', 'w+'),

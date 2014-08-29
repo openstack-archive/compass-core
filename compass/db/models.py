@@ -481,6 +481,7 @@ class ClusterHostState(BASE, StateMixin):
     )
 
     def update(self):
+        super(ClusterHostState, self).update()
         host_state = self.clusterhost.host.state
         if self.state == 'INITIALIZED':
             if host_state.state in ['UNINITIALIZED']:
@@ -494,7 +495,6 @@ class ClusterHostState(BASE, StateMixin):
             if host_state.state != 'SUCCESSFUL':
                 host_state.state = 'SUCCESSFUL'
                 host_state.update()
-        super(ClusterHostState, self).update()
 
 
 class ClusterHost(BASE, TimestampMixin, HelperMixin):
@@ -689,13 +689,27 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     def state_dict(self):
         cluster = self.cluster
         host = self.host
+        host_state = host.state_dict()
+        if not cluster.distributed_system:
+            return host_state
+        clusterhost_state = self.state.to_dict()
+        if clusterhost_state['state'] in ['ERROR', 'SUCCESSFUL']:
+            return clusterhost_state
         if (
-            not cluster.distributed_system or
-            host.state.state != 'SUCCESSFUL'
+            clusterhost_state['state'] in 'INSTALLING' and
+            clusterhost_state['percentage'] > 0
         ):
-            return host.state_dict()
-        else:
-            return self.state.to_dict()
+            clusterhost_state['percentage'] = min(
+                1.0, (
+                    0.5 + clusterhost_state['percentage'] / 2
+                )
+            )
+            return clusterhost_state
+
+        host_state['percentage'] = host_state['percentage'] / 2
+        if host_state['state'] == 'SUCCESSFUL':
+            host_state['state'] = 'INSTALLING'
+        return host_state
 
     def to_dict(self):
         dict_info = self.host.to_dict()
@@ -729,6 +743,7 @@ class HostState(BASE, StateMixin):
     )
 
     def update(self):
+        super(HostState, self).update()
         host = self.host
         if self.state == 'INSTALLING':
             host.reinstall_os = False
@@ -752,7 +767,6 @@ class HostState(BASE, StateMixin):
                 ]:
                     clusterhost.state = 'INITIALIZED'
                     clusterhost.state.update()
-        super(HostState, self).update()
 
 
 class Host(BASE, TimestampMixin, HelperMixin):
@@ -955,7 +969,7 @@ class ClusterState(BASE, StateMixin):
         cluster = self.cluster
         clusterhosts = cluster.clusterhosts
         self.total_hosts = len(clusterhosts)
-        if self.state in ['UNINITIALIZED', 'INITIALIZED']:
+        if self.state in ['UNINITIALIZED', 'INITIALIZED', 'INSTALLING']:
             self.installing_hosts = 0
             self.failed_hosts = 0
             self.completed_hosts = 0
@@ -981,16 +995,19 @@ class ClusterState(BASE, StateMixin):
                     elif clusterhost_state == 'SUCCESSFUL':
                         self.completed_hosts += 1
             if self.total_hosts:
-                self.percentage = (
-                    float(self.completed_hosts)
-                    /
-                    float(self.total_hosts)
-                )
+                if self.completed_hosts == self.total_hosts:
+                    self.percentage = 1.0
+                else:
+                    self.percentage = (
+                        float(self.completed_hosts)
+                        /
+                        float(self.total_hosts)
+                    )
             self.message = (
                 'total %s, installing %s, completed: %s, error %s'
             ) % (
-                self.total_hosts, self.completed_hosts,
-                self.installing_hosts, self.failed_hosts
+                self.total_hosts, self.installing_hosts,
+                self.completed_hosts, self.failed_hosts
             )
             if self.failed_hosts:
                 self.severity = 'ERROR'

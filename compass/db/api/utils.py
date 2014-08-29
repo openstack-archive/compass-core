@@ -265,9 +265,6 @@ def supported_filters(
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **filters):
-            logging.info('support_keys: %s', support_keys)
-            logging.info('optional_support_keys: %s', optional_support_keys)
-            logging.info('ignore_support_keys: %s', ignore_support_keys)
             must_support_keys = set(support_keys)
             all_support_keys = must_support_keys | set(optional_support_keys)
             filter_keys = set(filters)
@@ -653,6 +650,6 @@ def check_switch_credentials(credentials):
             )
         else:
             logging.debug(
-                'function %s is not defined in %s',
-                key_check_func_name, this_module
+                'function %s is not defined',
+                key_check_func_name
             )

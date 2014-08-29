@@ -14,6 +14,7 @@
 
 """Module to deploy a given cluster
 """
+import logging
 
 from compass.actions import util
 from compass.db.api import adapter_holder as adapter_db
@@ -154,7 +155,10 @@ class ActionHelper(object):
         """
         adapter_info = adapter_db.get_adapter(user, adapter_id)
         metadata = cluster_db.get_cluster_metadata(user, cluster_id)
-        adapter_info.update(metadata)
+        logging.debug('got metadata from cluster %s: %s',
+                      cluster_id, metadata)
+        adapter_info.update({'metadata': metadata})
+        logging.debug('got updated adapter info: %s', adapter_info)
 
         for flavor_info in adapter_info[const.FLAVORS]:
             roles = flavor_info[const.ROLES]
@@ -271,7 +275,11 @@ class ActionHelper(object):
         cluster_config = deployed_config[const.CLUSTER]
         cluster_id = cluster_config[const.ID]
         del cluster_config[const.ID]
-
+        if 'os_name' in cluster_config:
+            del cluster_config['os_name']
+        if 'name' in cluster_config:
+            del cluster_config['name']
+        logging.debug('cluster config: %s', cluster_config)
         cluster_db.update_cluster_deployed_config(user, cluster_id,
                                                   **cluster_config)
 

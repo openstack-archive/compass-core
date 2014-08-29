@@ -21,28 +21,6 @@ from abc import ABCMeta
 from compass.utils import util
 
 
-class Progress(object):
-    """Progress object to store installing progress and message."""
-
-    def __init__(self, progress, message, severity):
-        """Constructor
-
-        :param progress: installing progress between 0 to 1.
-        :param message: installing message.
-        :param severity: installing message severity.
-        """
-        self.progress = progress
-        self.message = message
-        self.severity = severity
-
-    def __repr__(self):
-        return '%s[progress:%s, message:%s, severity:%s]' % (
-            self.__class__.__name__,
-            self.progress,
-            self.message,
-            self.severity)
-
-
 class ProgressCalculator(object):
     """base class to generate progress."""
 
@@ -51,7 +29,7 @@ class ProgressCalculator(object):
     @classmethod
     def update_progress(
         cls, progress_data, message,
-        severity, progress
+        severity, log_history
     ):
         """Update progress with the given progress_data, message and severity.
 
@@ -65,24 +43,22 @@ class ProgressCalculator(object):
         # is greater than the stored progress or the progress
         # to update is the same but the message is different.
         if (
-            progress_data > progress.progress or (
-                progress_data == progress.progress and
-                message != progress.message
+            progress_data > log_history['percentage'] or (
+                progress_data == log_history['percentage'] and
+                message != log_history['message']
             )
         ):
-            progress.progress = progress_data
+            log_history['percentage'] = progress_data
             if message:
-                progress.message = message
-
+                log_history['message'] = message
             if severity:
-                progress.severity = severity
-
-            logging.debug('update progress to %s', progress)
+                log_history['severity'] = severity
+            logging.debug('update progress to %s', log_history)
         else:
             logging.info('ignore update progress %s to %s',
-                         progress_data, progress)
+                         progress_data, log_history)
 
-    def update(self, message, severity, progress):
+    def update(self, message, severity, log_history):
         """vritual method to update progress by message and severity.
 
         :param message: installing message.
@@ -125,17 +101,17 @@ class IncrementalProgress(ProgressCalculator):
             self.incremental_progress_
         )
 
-    def update(self, message, severity, progress):
+    def update(self, message, severity, log_history):
         """update progress from message and severity."""
         progress_data = max(
             self.min_progress_,
             min(
                 self.max_progress_,
-                progress.progress + self.incremental_progress_
+                log_history['percentage'] + self.incremental_progress_
             )
         )
         self.update_progress(progress_data,
-                             message, severity, progress)
+                             message, severity, log_history)
 
 
 class RelativeProgress(ProgressCalculator):
@@ -153,19 +129,19 @@ class RelativeProgress(ProgressCalculator):
     def __str__(self):
         return '%s[%s]' % (self.__class__.__name__, self.progress_)
 
-    def update(self, message, severity, progress):
+    def update(self, message, severity, log_history):
         """update progress from message and severity."""
         self.update_progress(
-            self.progress_, message, severity, progress)
+            self.progress_, message, severity, log_history)
 
 
 class SameProgress(ProgressCalculator):
     """class to update message and severity for  progress."""
 
-    def update(self, message, severity, progress):
+    def update(self, message, severity, log_history):
         """update progress from the message and severity."""
-        self.update_progress(progress.progress, message,
-                             severity, progress)
+        self.update_progress(log_history['percentage'], message,
+                             severity, log_history)
 
 
 class LineMatcher(object):
@@ -201,7 +177,7 @@ class LineMatcher(object):
             self.__class__.__name__, self.regex_.pattern,
             self.message_template_, self.severity_)
 
-    def update_progress(self, line, progress):
+    def update_progress(self, line, log_history):
         """Update progress by the line.
 
         :param line: one line in log file to indicate the installing progress.
@@ -209,7 +185,7 @@ class LineMatcher(object):
               The line may be partial if the latest line of the log file is
               not the whole line. But the whole line may be resent
               in the next run.
-        :praam progress: the :class:`Progress` instance to update.
+        :param progress: the :class:`Progress` instance to update.
         """
         mat = self.regex_.search(line)
         if not mat:
@@ -224,7 +200,7 @@ class LineMatcher(object):
                           self.message_template_, mat.groupdict(), self)
             raise error
 
-        self.progress_.update(message, self.severity_, progress)
+        self.progress_.update(message, self.severity_, log_history)
         return (
             self.match_sameline_,
             self.match_nextline_)

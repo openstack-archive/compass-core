@@ -28,8 +28,10 @@ CONFIG_DIR = '/etc/compass'
 SQLALCHEMY_DATABASE_URI = 'sqlite://'
 INSTALLATION_LOGDIR = {
     'CobblerInstaller': '/var/log/cobbler/anamon',
-    'ChefInstaller': '/var/log/chef'
+    'ChefInstaller': '/var/log/cobbler/anamon'
 }
+CLUSTERHOST_INATALLATION_LOGDIR_NAME = 'hostname'
+HOST_INSTALLATION_LOGDIR_NAME = 'hostname'
 DEFAULT_LOGLEVEL = 'debug'
 DEFAULT_LOGDIR = '/tmp'
 DEFAULT_LOGINTERVAL = 1

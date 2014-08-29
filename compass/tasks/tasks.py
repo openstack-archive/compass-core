@@ -104,9 +104,6 @@ def reinstall_cluster(installer_email, cluster_id, clusterhost_ids):
 @celery.task(name='compass.tasks.poweron_host')
 def poweron_host(host_id):
     """Deploy the given cluster.
-
-    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
-    :type cluster_hosts: dict of int to list of int
     """
     pass
 
@@ -114,9 +111,6 @@ def poweron_host(host_id):
 @celery.task(name='compass.tasks.poweroff_host')
 def poweroff_host(host_id):
     """Deploy the given cluster.
-
-    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
-    :type cluster_hosts: dict of int to list of int
     """
     pass
 
@@ -124,9 +118,6 @@ def poweroff_host(host_id):
 @celery.task(name='compass.tasks.reset_host')
 def reset_host(host_id):
     """Deploy the given cluster.
-
-    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
-    :type cluster_hosts: dict of int to list of int
     """
     pass
 
@@ -134,9 +125,6 @@ def reset_host(host_id):
 @celery.task(name='compass.tasks.poweron_machine')
 def poweron_machine(machine_id):
     """Deploy the given cluster.
-
-    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
-    :type cluster_hosts: dict of int to list of int
     """
     pass
 
@@ -144,9 +132,6 @@ def poweron_machine(machine_id):
 @celery.task(name='compass.tasks.poweroff_machine')
 def poweroff_machine(machine_id):
     """Deploy the given cluster.
-
-    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
-    :type cluster_hosts: dict of int to list of int
     """
     pass
 
@@ -154,22 +139,16 @@ def poweroff_machine(machine_id):
 @celery.task(name='compass.tasks.reset_machine')
 def reset_machine(machine_id):
     """Deploy the given cluster.
-
-    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
-    :type cluster_hosts: dict of int to list of int
     """
     pass
 
 
 @celery.task(name='compass.tasks.update_progress')
-def update_clusters_progress(cluster_hosts):
+def update_clusters_progress():
     """Calculate the installing progress of the given cluster.
-
-    :param cluster_hosts: the cluster and hosts of each cluster to update.
-    :type cluster_hosts: dict of int to list of int
     """
-    logging.info('update_clusters_progress: %s', cluster_hosts)
+    logging.info('update_clusters_progress')
     try:
-        update_progress.update_progress(cluster_hosts)
+        update_progress.update_progress()
     except Exception as error:
         logging.exception(error)

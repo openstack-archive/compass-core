@@ -22,6 +22,9 @@ class DatabaseException(Exception):
         self.traceback = traceback.format_exc()
         self.status_code = 400
 
+    def to_dict(self):
+        return {'message': str(self)}
+
 
 class RecordNotExists(DatabaseException):
     """Define the exception for referring non-existing object in DB."""
@@ -82,3 +85,26 @@ class InvalidResponse(DatabaseException):
     def __init__(self, message):
         super(InvalidResponse, self).__init__(message)
         self.status_code = 400
+
+
+class MultiDatabaseException(DatabaseException):
+    """Define the exception composites with multi exceptions."""
+    def __init__(self, exceptions):
+        super(MultiDatabaseException, self).__init__('multi exceptions')
+        self.exceptions = exceptions
+        self.status_code = 400
+
+    @property
+    def traceback(self):
+        tracebacks = []
+        for exception in self.exceptions:
+            tracebacks.append(exception.trackback)
+
+    def to_dict(self):
+        dict_info = super(MultiDatabaseException, self).to_dict()
+        dict_info.update({
+            'exceptions': [
+                exception.to_dict() for exception in self.exceptions
+            ]
+        })
+        return dict_info

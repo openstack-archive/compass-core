@@ -27,6 +27,9 @@ class HTTPException(Exception):
         self.traceback = traceback.format_exc()
         self.status_code = status_code
 
+    def to_dict(self):
+        return {'message': str(self)}
+
 
 class ItemNotFound(HTTPException):
     """Define the exception for referring non-existing object."""
@@ -78,8 +81,11 @@ class ConflictObject(HTTPException):
 
 @app.errorhandler(Exception)
 def handle_exception(error):
-    response = {'message': str(error)}
-    if hasattr(error, 'traceback'):
+    if hasattr(error, 'to_dict'):
+        response = error.to_dict()
+    else:
+        response = {'message': str(error)}
+    if app.debug and hasattr(error, 'traceback'):
         response['traceback'] = error.traceback
 
     status_code = 400

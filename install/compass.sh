@@ -47,6 +47,7 @@ sudo sed -i "/COBBLER_INSTALLER_URL/c\COBBLER_INSTALLER_URL = 'http:\/\/$ipaddr/
 sudo sed -i "s/\$cobbler_ip/$ipaddr/g" /etc/compass/os_installer/cobbler.conf
 sudo sed -i "/CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
 sudo sed -i "s/\$chef_ip/$ipaddr/g" /etc/compass/package_installer/chef-icehouse.conf
+sudo sed -i "s/\$chef_hostname/$HOSTNAME/g" /etc/compass/package_installer/chef-icehouse.conf
 sudo sed -i "s/\$compass_ip/$ipaddr/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
 sudo sed -i "s/\$compass_testmode/$TESTMODE/g" /etc/compass/global_config

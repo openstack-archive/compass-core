@@ -7,7 +7,7 @@ DATABASE_NAME = 'db'
 SQLALCHEMY_DATABASE_URI = '%s://%s:%s@%s/%s' % (DATABASE_TYPE, DATABASE_USER, DATABASE_PASSWORD, DATABASE_SERVER, DATABASE_NAME)
 INSTALLATION_LOGDIR = {
     'CobblerInstaller': '/var/log/cobbler/anamon',
-    'ChefInstaller': '/var/log/chef'
+    'ChefInstaller': '/var/log/cobbler/anamon'
 }
 DEFAULT_LOGLEVEL = 'debug'
 DEFAULT_LOGDIR = '/var/log/compass'

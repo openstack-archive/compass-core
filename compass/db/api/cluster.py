@@ -82,12 +82,12 @@ RESP_CLUSTERHOST_DEPLOYED_CONFIG_FIELDS = [
     'updated_at'
 ]
 RESP_STATE_FIELDS = [
-    'id', 'state', 'percentage', 'message',
+    'id', 'state', 'percentage', 'message', 'severity'
     'status',
     'created_at', 'updated_at'
 ]
 RESP_CLUSTERHOST_STATE_FIELDS = [
-    'id', 'state', 'percentage', 'message',
+    'id', 'state', 'percentage', 'message', 'severity',
     'created_at', 'updated_at'
 ]
 RESP_REVIEW_FIELDS = [
@@ -125,10 +125,23 @@ UPDATED_CLUSTERHOST_DEPLOYED_CONFIG_FIELDS = [
     'deployed_package_config'
 ]
 UPDATED_CLUSTERHOST_STATE_FIELDS = [
-    'state', 'percentage', 'message'
+    'state', 'percentage', 'message', 'severity'
 ]
 UPDATED_CLUSTER_STATE_FIELDS = [
     'state'
+]
+RESP_CLUSTERHOST_LOG_FIELDS = [
+    'clusterhost_id', 'id', 'host_id', 'cluster_id',
+    'filename', 'position', 'partial_line',
+    'percentage',
+    'message', 'severity', 'line_matcher_name'
+]
+ADDED_CLUSTERHOST_LOG_FIELDS = [
+    'filename'
+]
+UPDATED_CLUSTERHOST_LOG_FIELDS = [
+    'position', 'partial_line', 'percentage',
+    'message', 'severity', 'line_matcher_name'
 ]
 
 
@@ -465,6 +478,17 @@ def add_clusterhost_internal(
             reinstall_os_set=kwargs.get('reinstall_os', False),
             exception_when_not_editable=False
         ):
+            if 'name' in host_dict:
+                hostname = host_dict['name']
+                host_by_name = utils.get_db_object(
+                    session, models.Host, False, name=hostname
+                )
+                if host_by_name:
+                    raise exception.InvalidParameter(
+                        'host name %s exists in host %s' % (
+                            hostname, host_by_name
+                        )
+                    )
             utils.update_db_object(
                 session, host,
                 **host_dict
@@ -472,6 +496,17 @@ def add_clusterhost_internal(
         else:
             logging.info('host %s is not editable', host.name)
     else:
+        if 'name' in host_dict:
+            hostname = host_dict['name']
+            host = utils.get_db_object(
+                session, models.Host, False, name=hostname
+            )
+            if host:
+                raise exception.InvalidParameter(
+                    'host name %s exists in host %s' % (
+                        hostname, host
+                    )
+                )
         host = utils.add_db_object(
             session, models.Host, False, machine_id,
             os=cluster.os,
@@ -1290,6 +1325,26 @@ def get_cluster_host_state(
     permission.PERMISSION_GET_CLUSTERHOST_STATE
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
+def get_cluster_host_self_state(
+    session, getter, cluster_id, host_id, **kwargs
+):
+    """Get clusterhost state info."""
+    clusterhost = utils.get_db_object(
+        session, models.ClusterHost,
+        cluster_id=cluster_id, host_id=host_id
+    )
+    return utils.get_db_object(
+        session, models.ClusterHostState,
+        id=clusterhost.clusterhost_id
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_GET_CLUSTERHOST_STATE
+)
+@utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
 def get_clusterhost_state(
     session, getter, clusterhost_id, **kwargs
 ):
@@ -1297,6 +1352,21 @@ def get_clusterhost_state(
     return utils.get_db_object(
         session, models.ClusterHost, id=clusterhost_id
     ).state_dict()
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_GET_CLUSTERHOST_STATE
+)
+@utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
+def get_clusterhost_self_state(
+    session, getter, clusterhost_id, **kwargs
+):
+    """Get clusterhost state info."""
+    return utils.get_db_object(
+        session, models.ClusterHostState, id=clusterhost_id
+    )
 
 
 @utils.supported_filters(
@@ -1355,3 +1425,122 @@ def update_cluster_state(
     )
     utils.update_db_object(session, cluster.state, **kwargs)
     return cluster.state_dict()
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
+def get_cluster_host_log_histories(
+    session, getter, cluster_id, host_id, **kwargs
+):
+    """Get clusterhost log history."""
+    return utils.list_db_objects(
+        session, models.ClusterHostLogHistory,
+        cluster_id=cluster_id, host_id=host_id
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
+def get_clusterhost_log_histories(session, getter, clusterhost_id, **kwargs):
+    """Get clusterhost log history."""
+    return utils.list_db_objects(
+        session, models.ClusterHostLogHistory, clusterhost_id=clusterhost_id
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
+def get_cluster_host_log_history(
+    session, getter, cluster_id, host_id, filename, **kwargs
+):
+    """Get clusterhost log history."""
+    return utils.get_db_object(
+        session, models.ClusterHostLogHistory,
+        cluster_id=cluster_id, host_id=host_id, filename=filename
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
+def get_clusterhost_log_history(
+    session, getter, clusterhost_id, filename, **kwargs
+):
+    """Get host log history."""
+    return utils.get_db_object(
+        session, models.ClusterHostLogHistory,
+        clusterhost_id=clusterhost_id, filename=filename
+    )
+
+
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+)
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
+def update_host_log_history(
+    session, updater, cluster_id, host_id, filename, **kwargs
+):
+    """Update a host log history."""
+    cluster_host_log_history = utils.get_db_object(
+        session, models.ClusterHostLogHistory,
+        cluster_id=cluster_id, host_id=host_id, filename=filename
+    )
+    return utils.update_db_object(session, cluster_host_log_history, **kwargs)
+
+
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+)
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
+def update_clusterhost_log_history(
+    session, updater, clusterhost_id, filename, **kwargs
+):
+    """Update a host log history."""
+    clusterhost_log_history = utils.get_db_object(
+        session, models.ClusterHostLogHistory,
+        clusterhost_id=clusterhost_id, filename=filename
+    )
+    return utils.update_db_object(session, clusterhost_log_history, **kwargs)
+
+
+@utils.supported_filters(
+    ADDED_CLUSTERHOST_LOG_FIELDS,
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+)
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
+def add_clusterhost_log_history(
+    session, creator, clusterhost_id, exception_when_existing=False,
+    filename=None, **kwargs
+):
+    """add a host log history."""
+    return utils.add_db_object(
+        session, models.ClusterHostLogHistory, exception_when_existing,
+        clusterhost_id, filename, **kwargs
+    )
+
+
+@utils.supported_filters(
+    ADDED_CLUSTERHOST_LOG_FIELDS,
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+)
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
+def add_cluster_host_log_history(
+    session, creator, cluster_id, host_id, exception_when_existing=False,
+    filename=None, **kwargs
+):
+    """add a host log history."""
+    clusterhost = utils.get_db_object(
+        session, models.ClusterHost,
+        cluster_id=cluster_id, host_id=host_id
+    )
+    return utils.add_db_object(
+        session, models.ClusterHostLogHistory, exception_when_existing,
+        clusterhost.clusterhost_id, filename, **kwargs
+    )

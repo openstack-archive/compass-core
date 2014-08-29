@@ -563,12 +563,12 @@ class TestUpdateDbObject(unittest2.TestCase):
                 db_obj = utils.get_db_object(
                     session,
                     models.Permission,
-                    id=1
+                    id=1000
                 )
-                utils.updated_db_object(
+                utils.update_db_object(
                     session,
                     db_obj,
-                    dummy='dummy'
+                    name='dummy'
                 )
 
 

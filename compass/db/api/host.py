@@ -83,10 +83,21 @@ IGNORED_NETWORK_FIELDS = [
     'interface'
 ]
 RESP_STATE_FIELDS = [
-    'id', 'state', 'percentage', 'message'
+    'id', 'state', 'percentage', 'message', 'severity'
 ]
 UPDATED_STATE_FIELDS = [
-    'state', 'percentage', 'message'
+    'state', 'percentage', 'message', 'severity'
+]
+RESP_LOG_FIELDS = [
+    'id', 'filename', 'position', 'partial_line', 'percentage',
+    'message', 'severity', 'line_matcher_name'
+]
+ADDED_LOG_FIELDS = [
+    'filename'
+]
+UPDATED_LOG_FIELDS = [
+    'position', 'partial_line', 'percentage',
+    'message', 'severity', 'line_matcher_name'
 ]
 
 
@@ -255,6 +266,17 @@ def _update_host(session, updater, host_id, **kwargs):
         session, host, updater,
         reinstall_os_set=kwargs.get('reinstall_os', False)
     )
+    if 'name' in kwargs:
+        hostname = kwargs['name']
+        host_by_name = utils.get_db_object(
+            session, models.Host, False, name=hostname
+        )
+        if host_by_name and host_by_name.id != host.id:
+            raise exception.InvalidParameter(
+                'hostname %s is already exists in host %s' % (
+                    hostname, host_by_name
+                )
+            )
     return utils.update_db_object(session, host, **kwargs)
 
 
@@ -500,7 +522,6 @@ def _add_host_network(
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
-    is_host_editable(session, host, creator)
     ip_int = long(netaddr.IPAddress(ip))
     host_network = utils.get_db_object(
         session, models.HostNetwork, False,
@@ -508,8 +529,11 @@ def _add_host_network(
     )
     if host_network:
         raise exception.InvalidParameter(
-            'ip %s exists in database' % ip
+            'ip %s exists in host network %s' % (
+                ip, host_network
+            )
         )
+    is_host_editable(session, host, creator)
     return utils.add_db_object(
         session, models.HostNetwork,
         exception_when_existing,
@@ -597,6 +621,24 @@ def update_host_network(
                 host_id, host_network_id
             )
         )
+    if 'ip' in kwargs:
+        ip = kwargs['ip']
+        ip_int = long(netaddr.IPAddress(ip))
+        host_network_by_ip = utils.get_db_object(
+            session, models.HostNetwork, False,
+            ip_int=ip_int
+        )
+        if host_network_by_ip and host_network_by_ip.id != host_network.id:
+            raise exception.InvalidParameter(
+                'ip %s exist in host network %s' % (
+                    ip, host_network_by_ip
+                )
+            )
+    if host_network:
+        raise exception.InvalidParameter(
+            'ip %s exists in database' % ip
+        )
+
     is_host_editable(session, host_network.host, updater)
     return utils.update_db_object(session, host_network, **kwargs)
 
@@ -685,6 +727,53 @@ def update_host_state(session, updater, host_id, **kwargs):
     )
     utils.update_db_object(session, host.state, **kwargs)
     return host.state_dict()
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_LOG_FIELDS)
+def get_host_log_histories(session, getter, host_id, **kwargs):
+    """Get host log history."""
+    return utils.list_db_objects(
+        session, models.HostLogHistory, id=host_id
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_LOG_FIELDS)
+def get_host_log_history(session, getter, host_id, filename, **kwargs):
+    """Get host log history."""
+    return utils.get_db_object(
+        session, models.HostLogHistory, id=host_id, filename=filename
+    )
+
+
+@utils.supported_filters(optional_support_keys=UPDATED_LOG_FIELDS)
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_LOG_FIELDS)
+def update_host_log_history(session, updater, host_id, filename, **kwargs):
+    """Update a host log history."""
+    host_log_history = utils.get_db_object(
+        session, models.HostLogHistory, id=host_id, filename=filename
+    )
+    return utils.update_db_object(session, host_log_history, **kwargs)
+
+
+@utils.supported_filters(
+    ADDED_LOG_FIELDS,
+    optional_support_keys=UPDATED_LOG_FIELDS)
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_LOG_FIELDS)
+def add_host_log_history(
+    session, creator, host_id, exception_when_existing=False,
+    filename=None, **kwargs
+):
+    """add a host log history."""
+    return utils.add_db_object(
+        session, models.HostLogHistory, exception_when_existing,
+        host_id, filename, **kwargs
+    )
 
 
 @utils.supported_filters(optional_support_keys=['poweron'])

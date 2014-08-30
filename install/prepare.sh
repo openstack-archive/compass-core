@@ -50,6 +50,7 @@ copy2dir()
                 echo "git clone $repo $destdir suceeded"
             fi
             cd $destdir
+	    git checkout $git_branch
             git reset --hard remotes/origin/$git_branch
         fi
         if [[ ! -z $ZUUL_REF || ! -z $GERRIT_REFSPEC ]]; then

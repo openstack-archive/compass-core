@@ -651,12 +651,12 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     def roles(self):
         role_names = list(self._roles)
         if not role_names:
-            return None
+            return []
         flavor = self.cluster.flavor
         if not flavor:
-            return None
+            return []
         roles = []
-        for flavor_role in flavor.flavor_roles:
+        for flavor_role in flavor.ordered_flavor_roles:
             role = flavor_role.role
             if role.name in role_names:
                 roles.append(role)
@@ -664,7 +664,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @roles.setter
     def roles(self, value):
-        self._roles = value
+        self._roles = list(value)
         self.config_validated = False
 
     @property
@@ -725,10 +725,9 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
             'state': state_dict['state']
         })
         roles = self.roles
-        if roles:
-            dict_info['roles'] = [
-                role.to_dict() for role in roles
-            ]
+        dict_info['roles'] = [
+            role.to_dict() for role in roles
+        ]
         return dict_info
 
 
@@ -1832,12 +1831,6 @@ class OperatingSystem(BASE, HelperMixin):
             dict_info.update(self.parent.metadata_dict())
         for metadata in self.root_metadatas:
             dict_info.update(metadata.to_dict())
-        dict_info.setdefault(
-            '_self', {
-                'name': 'root',
-                'field_type_data': 'dict',
-            }
-        )
         return dict_info
 
     @property
@@ -1911,6 +1904,7 @@ class AdapterFlavor(BASE, HelperMixin):
     name = Column(String(80), unique=True)
     display_name = Column(String(80))
     template = Column(String(80))
+    _ordered_flavor_roles = Column(JSONEncoded, default=[])
 
     flavor_roles = relationship(
         AdapterFlavorRole,
@@ -1926,6 +1920,32 @@ class AdapterFlavor(BASE, HelperMixin):
     __table_args__ = (
         UniqueConstraint('name', 'adapter_id', name='constraint'),
     )
+
+    @property
+    def ordered_flavor_roles(self):
+        flavor_roles = dict([
+            (flavor_role.role.name, flavor_role)
+            for flavor_role in self.flavor_roles
+        ])
+        ordered_flavor_roles = []
+        for flavor_role in list(self._ordered_flavor_roles):
+            if flavor_role in flavor_roles:
+                ordered_flavor_roles.append(flavor_roles[flavor_role])
+        return ordered_flavor_roles
+
+    @ordered_flavor_roles.setter
+    def ordered_flavor_roles(self, value):
+        self._ordered_flavor_roles = list(value)
+
+    @property
+    def patched_ordered_flavor_roles(self):
+        return self.ordered_flavor_roles
+
+    @patched_ordered_flavor_roles.setter
+    def patched_ordered_flavor_roles(self, value):
+        ordered_flavor_roles = list(self._ordered_flavor_roles)
+        ordered_flavor_roles.extend(value)
+        self._ordered_flavor_roles = ordered_flavor_roles
 
     def __init__(self, name, adapter_id, **kwargs):
         self.name = name
@@ -1947,7 +1967,8 @@ class AdapterFlavor(BASE, HelperMixin):
     def to_dict(self):
         dict_info = super(AdapterFlavor, self).to_dict()
         dict_info['roles'] = [
-            flavor_role.to_dict() for flavor_role in self.flavor_roles
+            flavor_role.to_dict()
+            for flavor_role in self.ordered_flavor_roles
         ]
         return dict_info
 
@@ -1960,7 +1981,7 @@ class AdapterRole(BASE, HelperMixin):
     name = Column(String(80))
     display_name = Column(String(80))
     description = Column(Text)
-    optional = Column(Boolean)
+    optional = Column(Boolean, default=False)
     adapter_id = Column(
         Integer,
         ForeignKey(
@@ -2168,12 +2189,6 @@ class Adapter(BASE, HelperMixin):
             dict_info.update(self.parent.metadata_dict())
         for metadata in self.root_metadatas:
             dict_info.update(metadata.to_dict())
-        dict_info.setdefault(
-            '_self', {
-                'name': 'root',
-                'field_type_data': 'dict',
-            }
-        )
         return dict_info
 
     @property

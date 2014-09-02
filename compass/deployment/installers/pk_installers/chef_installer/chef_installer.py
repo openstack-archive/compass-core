@@ -233,6 +233,7 @@ class ChefInstaller(PKInstaller):
         env_tmpl_path = os.path.join(
             os.path.join(self.tmpl_dir, self.ENV_TMPL_DIR), tmpl_name
         )
+        logging.debug("generating env from template %s", env_tmpl_path)
         return self.get_config_from_template(env_tmpl_path, global_vars_dict)
 
     def get_create_environment(self, env_name):
@@ -241,13 +242,20 @@ class ChefInstaller(PKInstaller):
         env.save()
         return env
 
-    def _update_env(self, env, env_attrs):
-        for attr in env_attrs:
-            if attr in env.attributes:
-                setattr(env, attr, env_attrs[attr])
+    def _update_environment(self, env, env_attrs):
+        # By default, pychef provides these attribute keys:
+        # 'description', 'cookbook_versions', 'default_attributes',
+        # 'override_attributes'
+        for name, value in env_attrs.iteritems():
+            if name in env.attributes:
+                logging.debug("Updating env with attr %s", name)
+                setattr(env, name, value)
+            else:
+                logging.info("Ignoring attr %s for env", name)
+
         env.save()
 
-    def update_environment(self, env_name, global_vars_dict):
+    def upload_environment(self, env_name, global_vars_dict):
         """Generate environment attributes based on the template file and
            upload it to chef server.
 
@@ -257,7 +265,7 @@ class ChefInstaller(PKInstaller):
         """
         env_config = self._generate_env_attributes(global_vars_dict)
         env = self.get_create_environment(env_name)
-        self._update_env(env, env_config)
+        self._update_environment(env, env_config)
 
     def _generate_databagitem_attributes(self, tmpl_dir, vars_dict):
         return self.get_config_from_template(tmpl_dir, vars_dict)
@@ -275,13 +283,14 @@ class ChefInstaller(PKInstaller):
         import chef
         databags_dir = os.path.join(self.tmpl_dir, self.DATABAG_TMPL_DIR)
         for databag_name in databag_names:
-            databag_tmpl = os.path.join(databags_dir, databag_name)
+            tmpl_filename = databag_name + ".tmpl"
+            databag_tmpl_filepath = os.path.join(databags_dir, tmpl_filename)
             databagitem_attrs = self._generate_databagitem_attributes(
-                databag_tmpl, global_vars_dict
+                databag_tmpl_filepath, global_vars_dict
             )
             if not databagitem_attrs:
                 logging.info("Databag template not found or vars_dict is None")
-                logging.info("databag template is %s", databag_tmpl)
+                logging.info("databag template is %s", databag_tmpl_filepath)
                 continue
 
             databag = self.get_create_databag(databag_name)
@@ -392,11 +401,12 @@ class ChefInstaller(PKInstaller):
 
         global_vars_dict = self._get_cluster_tmpl_vars()
 
-        # Update environment
-        self.update_environment(env_name, global_vars_dict)
+        # Upload environment to chef server
+        self.upload_environment(env_name, global_vars_dict)
 
         # Update Databag item
-        self.update_databags(global_vars_dict)
+        # TODO(grace): Fix the databag template rendering.
+        # self.update_databags(global_vars_dict)
 
         hosts_deployed_configs = {}
 

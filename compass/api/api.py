@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Define all the RestfulAPI entry points."""
+
 import datetime
 import functools
 import logging
@@ -21,16 +22,11 @@ import netaddr
 import requests
 import simplejson as json
 
-from flask import flash
-from flask import redirect
-from flask import request
-from flask import session as app_session
-from flask import url_for
-
 from flask.ext.login import current_user
 from flask.ext.login import login_required
 from flask.ext.login import login_user
 from flask.ext.login import logout_user
+from flask import request
 
 from compass.api import app
 from compass.api import auth_handler

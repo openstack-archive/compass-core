@@ -405,7 +405,7 @@ class TestChefInstaller(unittest2.TestCase):
                 }
             }
         }
-        self.test_chef.update_environment = Mock()
+        self.test_chef.upload_environment = Mock()
         self.test_chef.update_databags = Mock()
         self.test_chef.get_create_node = Mock()
         self.test_chef.add_roles = Mock()

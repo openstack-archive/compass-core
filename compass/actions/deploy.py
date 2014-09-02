@@ -22,6 +22,7 @@ from compass.db.api import machine as machine_db
 from compass.db.api import user as user_db
 from compass.deployment.deploy_manager import DeployManager
 from compass.deployment.utils import constants as const
+import logging
 
 
 def deploy(cluster_id, hosts_id_list, username=None):
@@ -49,8 +50,10 @@ def deploy(cluster_id, hosts_id_list, username=None):
 
         deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
         #deploy_manager.prepare_for_deploy()
-        deployed_config = deploy_manager.deploy()
+        logging.debug('Created deploy manager with %s %s %s'
+                      % (adapter_info, cluster_info, hosts_info))
 
+        deployed_config = deploy_manager.deploy()
         ActionHelper.save_deployed_config(deployed_config, user)
         ActionHelper.update_state(cluster_id, hosts_id_list, user)
 
@@ -237,6 +240,7 @@ class ActionHelper(object):
         hosts_info = {}
         for host_id in hosts_id_list:
             info = cluster_db.get_cluster_host(user, cluster_id, host_id)
+            logging.debug("checking on info %r %r" % (host_id, info))
             info[const.ROLES] = ActionHelper._get_role_names(info[const.ROLES])
 
             config = cluster_db.get_cluster_host_config(user,

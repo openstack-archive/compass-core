@@ -61,6 +61,15 @@ class DeployManager(object):
 
         return installer
 
+    def deploy(self):
+        """Deploy the cluster."""
+        deployed_config = self.deploy_os()
+        package_deployed_config = self.deploy_target_system()
+
+        util.merge_dict(deployed_config, package_deployed_config)
+
+        return deployed_config
+
     def clean_progress(self):
         """Clean previous installation log and progress."""
         self.clean_os_installtion_progress()
@@ -108,15 +117,6 @@ class DeployManager(object):
             return {}
 
         return self.pk_installer.deploy()
-
-    def deploy(self):
-        """Deploy the cluster."""
-        deployed_config = self.deploy_os()
-        package_deployed_config = self.deploy_target_system()
-
-        util.merge_dict(deployed_config, package_deployed_config)
-
-        return deployed_config
 
     def redeploy_os(self):
         """Redeploy OS for this cluster without changing configurations."""

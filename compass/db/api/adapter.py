@@ -168,6 +168,10 @@ def add_flavors_internal(session):
                     session, models.AdapterFlavorRole,
                     False, flavor.id, role.id
                 )
+                utils.update_db_object(
+                    session, flavor,
+                    patched_ordered_flavor_roles=[role_name]
+                )
 
 
 def get_adapters_internal(session):

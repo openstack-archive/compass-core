@@ -1157,6 +1157,36 @@ def update_cluster_hosts(
     }
 
 
+def validate_clusterhost(session, clusterhost):
+    roles = clusterhost.roles
+    if not roles:
+        raise exception.InvalidParameter(
+            'empty roles for clusterhost %s' % clusterhost.name
+        )
+
+
+def validate_cluster(session, cluster):
+    cluster_roles = [
+        flavor_role.role
+        for flavor_role in cluster.flavor.flavor_roles
+    ]
+    necessary_roles = set([
+        role.name for role in cluster_roles if not role.optional
+    ])
+    clusterhost_roles = set([])
+    for clusterhost in cluster.clusterhosts:
+        roles = clusterhost.roles
+        for role in roles:
+            clusterhost_roles.add(role.name)
+    missing_roles = necessary_roles - clusterhost_roles
+    if missing_roles:
+        raise exception.InvalidParameter(
+            'some roles %s are not assigned to any host in cluster %s' % (
+                list(missing_roles), cluster.name
+            )
+        )
+
+
 @utils.supported_filters(optional_support_keys=['review'])
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -1221,7 +1251,9 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
                 deployed_package_config,
                 cluster.adapter_id, True
             )
+            validate_clusterhost(session, clusterhost)
             utils.update_db_object(session, clusterhost, config_validated=True)
+    validate_cluster(session, cluster)
     utils.update_db_object(session, cluster, config_validated=True)
     return {
         'cluster': cluster,

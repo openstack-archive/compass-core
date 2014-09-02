@@ -121,10 +121,11 @@ class BaseInstaller(object):
                 output[mapping_to] = config_value
 
     def get_config_from_template(self, tmpl_dir, vars_dict):
+        logging.debug("template path is %s", tmpl_dir)
+        logging.debug("vars_dict is %s", vars_dict)
+
         if not os.path.exists(tmpl_dir) or not vars_dict:
             logging.info("Template dir or vars_dict is None!")
-            logging.debug("template dir is %s", tmpl_dir)
-            logging.debug("vars_dict is %s", vars_dict)
             return {}
 
         searchList = []
@@ -140,6 +141,7 @@ class BaseInstaller(object):
         config = json.loads(tmpl.respond(), encoding='utf-8')
         config = json.loads(json.dumps(config), encoding='utf-8')
 
+        logging.debug("get_config_from_template resulting %s", config)
         return config
 
     @classmethod

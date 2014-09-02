@@ -16,7 +16,7 @@
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
-import copy
+
 import crypt
 import datetime
 import logging

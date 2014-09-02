@@ -13,14 +13,13 @@
 # limitations under the License.
 
 """Utils for database usage."""
-import copy
+
 import functools
 import inspect
 import logging
 import netaddr
 import re
 
-from sqlalchemy import and_
 from sqlalchemy import or_
 
 from compass.db import exception
@@ -55,9 +54,8 @@ def _one_item_list_condition_func(col_attr, value, condition_func):
 
 
 def _model_filter_by_condition(
-    query, col_attr, value, condition_func,
-    list_condition_func=_default_list_condition_func
-):
+        query, col_attr, value, condition_func,
+        list_condition_func=_default_list_condition_func):
     if isinstance(value, list):
         condition = list_condition_func(
             col_attr, value, condition_func

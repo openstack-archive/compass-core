@@ -82,7 +82,7 @@ RESP_CLUSTERHOST_DEPLOYED_CONFIG_FIELDS = [
     'updated_at'
 ]
 RESP_STATE_FIELDS = [
-    'id', 'state', 'percentage', 'message', 'severity'
+    'id', 'state', 'percentage', 'message', 'severity',
     'status',
     'created_at', 'updated_at'
 ]

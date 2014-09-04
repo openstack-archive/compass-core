@@ -287,7 +287,7 @@ hosts_test_config = {
         "mac": "00:0c:29:3e:60:a1",
         "name": "server02.test",
         "hostname": "server02",
-        "roles": ["os-compute"],
+        "roles": ["os-compute-worker"],
         "networks": {
             "eth0": {
                 "ip": "12.234.32.101",
@@ -326,7 +326,7 @@ hosts_test_config = {
         "mac": "00:0c:29:3e:60:a2",
         "name": "server03.test",
         "hostname": "server03",
-        "roles": ["os-network", "os-compute"],
+        "roles": ["os-network", "os-compute-worker"],
         "networks": {
             "eth0": {
                 "ip": "12.234.32.103",

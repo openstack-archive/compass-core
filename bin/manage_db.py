@@ -15,9 +15,16 @@
 # limitations under the License.
 
 """utility binary to manage database."""
+import site
 import os
 import os.path
 import sys
+
+activate_this='$PythonHome/bin/activate_this.py'
+execfile(activate_this, dict(__file__=activate_this))
+site.addsitedir('$PythonHome/lib/python2.6/site-packages')
+sys.path.append('$PythonHome')
+os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg'
 
 from flask.ext.script import Manager
 

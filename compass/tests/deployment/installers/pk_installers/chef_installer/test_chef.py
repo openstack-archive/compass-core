@@ -63,6 +63,10 @@ class TestChefInstaller(unittest2.TestCase):
 
         ChefInstaller._get_chef_api = Mock()
         ChefInstaller._get_chef_api.return_value = 'mock_server'
+        ChefInstaller.get_all_roles = Mock()
+        ChefInstaller.get_all_roles.return_value = []
+        ChefInstaller.validate_roles = Mock()
+        ChefInstaller.validate_roles.return_value = True
         chef_installer = ChefInstaller(config_manager)
         return chef_installer
 
@@ -83,8 +87,9 @@ class TestChefInstaller(unittest2.TestCase):
                 }
             }
         }
-        output = self.test_chef._generate_node_attributes(['os-compute'],
-                                                          vars_dict)
+        output = self.test_chef._generate_node_attributes(
+            ['os-compute-worker'], vars_dict
+        )
         self.maxDiff = None
         self.assertDictEqual(expected_node_attr, output)
 
@@ -97,8 +102,6 @@ class TestChefInstaller(unittest2.TestCase):
             "json_class": "Chef::Environment",
             "chef_type": "environment",
             "default_attributes": {
-            },
-            "override_attributes": {
                 "compute": {
                     "syslog": {
                         "use": False
@@ -111,6 +114,11 @@ class TestChefInstaller(unittest2.TestCase):
                     },
                     "xvpvnc_proxy": {
                         "bind_interface": "eth0"
+                    }
+                },
+                "network": {
+                    "l3": {
+                        "external_network_bridge_interface": "eth2"
                     }
                 },
                 "db": {
@@ -231,7 +239,7 @@ class TestChefInstaller(unittest2.TestCase):
                                 "subnet": "172.16.1.0/24"
                             }
                         },
-                        "os_compute": {
+                        "os_compute_worker": {
                             "management": {
                                 "interface": "eth0",
                                 "ip": "12.234.32.101",
@@ -312,7 +320,7 @@ class TestChefInstaller(unittest2.TestCase):
                 2: {
                     "deployed_package_config": {
                         "roles_mapping": {
-                            "os_compute": {
+                            "os_compute_worker": {
                                 "management": {
                                     "interface": "eth0",
                                     "ip": "12.234.32.101",
@@ -368,7 +376,7 @@ class TestChefInstaller(unittest2.TestCase):
                                     "subnet": "10.0.0.0/24"
                                 }
                             },
-                            "os_compute": {
+                            "os_compute_worker": {
                                 "management": {
                                     "interface": "eth0",
                                     "ip": "12.234.32.103",

@@ -1,1 +1,0 @@
-CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper celeryd

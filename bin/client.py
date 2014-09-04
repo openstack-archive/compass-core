@@ -16,9 +16,18 @@
 
 """binary to deploy a cluster by compass client api."""
 import logging
+import os
 import re
 import requests
+import site
+import sys
 import time
+
+activate_this = '$PythonHome/bin/activate_this.py'
+execfile(activate_this, dict(__file__=activate_this))
+site.addsitedir('$PythonHome/lib/python2.6/site-packages')
+sys.path.append('$PythonHome')
+os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg'
 
 from compass.apiclient.restful import Client
 from compass.utils import flags

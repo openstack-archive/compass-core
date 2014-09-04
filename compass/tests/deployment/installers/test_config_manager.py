@@ -81,7 +81,7 @@ class TestConfigManager(unittest2.TestCase):
                     "subnet": "172.16.1.0/24"
                 }
             },
-            "os_compute": {
+            "os_compute_worker": {
                 "management": {
                     "interface": "eth0",
                     "ip": "12.234.32.101",
@@ -130,6 +130,12 @@ class TestConfigManager(unittest2.TestCase):
         output = self.test_config_manager.get_cluster_roles_mapping()
         self.assertEqual(expected_output, output)
 
+    def test_get_all_hosts_roles(self):
+        expected_output = ['os-compute-worker', 'os-network', 'os-controller']
+        output = self.test_config_manager.get_all_hosts_roles()
+        self.assertEqual(len(expected_output), len(output))
+        self.assertEqual(sorted(expected_output), sorted(output))
+
     def test_get_host_role_mapping(self):
         expected_output = {
             "os_network": {
@@ -158,7 +164,7 @@ class TestConfigManager(unittest2.TestCase):
                     "subnet": "10.0.0.0/24"
                 }
             },
-            "os_compute": {
+            "os_compute_worker": {
                 "management": {
                     "interface": "eth0",
                     "ip": "12.234.32.103",

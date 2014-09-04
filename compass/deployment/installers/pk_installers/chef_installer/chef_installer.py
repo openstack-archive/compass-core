@@ -58,6 +58,7 @@ class ChefInstaller(PKInstaller):
         key, client = self.get_chef_credentials(installer_settings)
 
         self.chef_api = self._get_chef_api(key, client)
+        self.all_chef_roles = self.get_all_roles()
         logging.debug('%s instance created', self)
 
     @classmethod
@@ -87,6 +88,15 @@ class ChefInstaller(PKInstaller):
             raise Exception(err_msg)
 
         return chef_api
+
+    def get_all_roles(self):
+        import chef
+        if not self.chef_api:
+            logging.info("chefAPI is None! Cannot retrieve roles from server.")
+            return None
+
+        roles_objs = chef.Role.list(self.chef_api)
+        return [name for name in roles_objs.items()]
 
     def get_env_name(self, dist_sys_name, cluster_name):
         """Generate environment name."""
@@ -173,6 +183,9 @@ class ChefInstaller(PKInstaller):
 
         run_list = node.run_list
         for role in roles:
+            if role not in self.all_chef_roles:
+                raise Exception("Cannot find role '%s' on chef server!")
+
             node_role = 'role[%s]' % role
             if node_role not in run_list:
                 node.run_list.append(node_role)
@@ -371,6 +384,15 @@ class ChefInstaller(PKInstaller):
 
         return cluster_vars_dict
 
+    def validate_roles(self, hosts_id_list):
+        hosts_roles = self.config_manager.get_all_hosts_roles(hosts_id_list)
+        for role in hosts_roles:
+            if role not in self.all_chef_roles:
+                logging.error("Role: %s cannot be found on chef server!",
+                              role)
+                return False
+        return True
+
     def deploy(self):
         """Start to deploy a distributed system. Return both cluster and hosts
            deployed configs. The return format:
@@ -394,6 +416,9 @@ class ChefInstaller(PKInstaller):
         host_list = self.config_manager.get_host_id_list()
         if not host_list:
             return {}
+
+        if self.validate_roles(host_list) is False:
+            raise Exception("Some role cannot be found in chef server!")
 
         adapter_name = self.config_manager.get_adapter_name()
         cluster_name = self.config_manager.get_clustername()

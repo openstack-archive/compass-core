@@ -18,6 +18,15 @@
 import functools
 import lockfile
 import logging
+import os
+import site
+import sys
+
+activate_this = '$PythonHome/bin/activate_this.py'
+execfile(activate_this, dict(__file__=activate_this))
+site.addsitedir('$PythonHome/lib/python2.6/site-packages')
+sys.path.append('$PythonHome')
+os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg'
 
 from compass.actions import update_progress
 from compass.db.api import database
@@ -32,7 +41,7 @@ from compass.utils import util
 flags.add_bool('async',
                help='run in async mode',
                default=True)
-flags.add('run_interval',
+flags.add('run_interval', type='int',
           help='run interval in seconds',
           default=setting.PROGRESS_UPDATE_INTERVAL)
 

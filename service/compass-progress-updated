@@ -48,7 +48,6 @@ start() {
         RETVAL=$?
     fi
     echo
-    return $RETVAL
 }
 
 stop() {
@@ -80,11 +79,13 @@ case "$1" in
         if [ -f $SUSE ]; then
             checkproc -v -p /var/run/progress_update.pid progress_updated
             rc_status -v
+            RETVAL=$?
         elif [ -f $DEBIAN ]; then
             status_of_proc -p /var/run/progress_update.pid progress_updated
+            RETVAL=$?
         else
             status -p /var/run/progress_update.pid progress_updated
-            echo
+            RETVAL=$?
         fi
         ;;
     *)

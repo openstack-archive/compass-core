@@ -253,6 +253,18 @@ class BaseConfigManager(object):
     def get_host_roles(self, host_id):
         return self.__get_host_item(host_id, const.ROLES, [])
 
+    def get_all_hosts_roles(self, hosts_id_list=None):
+        roles = []
+        hosts_id_list = hosts_id_list
+        if hosts_id_list is None:
+            hosts_id_list = self.get_host_id_list()
+
+        for host_id in hosts_id_list:
+            host_roles = self.get_host_roles(host_id)
+            roles.extend([role for role in host_roles if role not in roles])
+
+        return roles
+
     def get_host_roles_mapping(self, host_id):
         roles_mapping = {}
         deployed_pk_config = self.get_host_package_config(host_id)

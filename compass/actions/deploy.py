@@ -241,7 +241,13 @@ class ActionHelper(object):
         for host_id in hosts_id_list:
             info = cluster_db.get_cluster_host(user, cluster_id, host_id)
             logging.debug("checking on info %r %r" % (host_id, info))
+
             info[const.ROLES] = ActionHelper._get_role_names(info[const.ROLES])
+            roles_info = info.setdefault(const.ROLES, [])
+            if not roles_info:
+                raise Exception("Host(id=%d) haven't set any roles!" % host_id)
+
+            info[const.ROLES] = ActionHelper._get_role_names(roles_info)
 
             config = cluster_db.get_cluster_host_config(user,
                                                         cluster_id,

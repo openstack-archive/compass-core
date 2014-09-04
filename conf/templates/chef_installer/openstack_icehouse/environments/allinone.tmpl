@@ -1,4 +1,6 @@
 #set credentials = $service_credentials
+
+## allinone compute management IP/interface
 #set allinone_compute_mgmt_nic = $allinone_compute.management.interface
 #set allinone_compute_mgmt_ip = $allinone_compute.management.ip
 {
@@ -275,18 +277,27 @@
                 "admin"
               ]
             }
+          },
+          "demo": {
+            "password": "demo",
+            "default_tenant": "demo",
+            "roles": {
+              "member": [
+                "demo"
+              ]
+            }
           }
         }
       },
       "image": {
         "api": {
-          "bind_interface": "eth0"
+          "bind_interface": "$allinone_compute_mgmt_nic"
         },
         "debug": true,
         "identity_service_chef_role": "os-identity",
         "rabbit_server_chef_role": "os-ops-messaging",
         "registry": {
-          "bind_interface": "eth0"
+          "bind_interface": "$allinone_compute_mgmt_nic"
         },
         "syslog": {
           "use": false
@@ -299,7 +310,7 @@
         ]
       },
       "memcached_servers": [
-        "$allinone_compute_mgmt_nic:11211"
+        "$allinone_compute_mgmt_ip:11211"
       ],
       "mq": {
         "user": "$credentials.rabbitmq.username",

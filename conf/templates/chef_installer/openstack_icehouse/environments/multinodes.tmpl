@@ -1,4 +1,69 @@
-#set controller_mgmt_ip = $os_controller.management.ip
+#set controller_role = $get_role('os_compute_controller', $getVar('os_controller', None))
+
+## Contoller node management IP/interface
+#set controller_ip = $controller_role.management.ip
+#set controller_nic = $controller_role.management.interface
+
+## Compute node management IP/interface
+#set compute_role = $getVar('os_compute_worker', None)
+#set compute_nic = $compute_role.management.interface
+
+## Network server/worker node IP/interface
+#set network = $getVar('os_network', None)
+#set network_server_role = $get_role('os_network_server', [$network, $controller_role])
+#set network_worker_role = $get_role('os_network_worker', [$network, $compute_role])
+
+#set network_server_ip = $network_server_role.management.ip
+#set network_server_nic = $network_server_role.management.interface
+
+## Network worker node management IP/interface
+#set network_worker_ip = $network_worker_role.management.ip
+#set network_worker_nic = $network_worker_role.management.interface
+#set network_worker_public_nic = $network_worker_role.public.interface
+
+## Database node management IP
+#set db_role = $get_role('os_ops_database', $controller_role)
+#set db_ip = $db_role.management.ip
+
+## Message queue node management IP/interface
+#set msg_queue_role = $get_role('os_ops_messaging', $controller_role)
+#set msg_queue_ip = $msg_queue_role.management.ip
+
+## Identity (keystone) node IP/interface
+#set identity_role = $get_role('os_identity', $controller_role)
+#set identity_ip = $identity_role.management.ip
+#set identity_nic = $identity_role.management.interface
+
+## Glance node management IP/interface
+#set glance_role = $get_role('os_image', $controller_role)
+#set glance_ip = $glance_role.management.ip
+#set glance_nic = $glance_role.management.interface
+
+## Cinder node management IP/interface
+#set cinder_role = $get_role('os_block_storage_controller', $controller_role)
+#set cinder_controller_ip = $cinder_role.management.ip
+#set cinder_controller_nic = $cinder_role.management.interface
+
+## Dashboard node management IP/interface
+#set dash_role = $get_role('os_dashboard', $controller_role)
+#set dash_ip = $dash_role.management.ip
+
+#def get_role($role_name, $default_roles=None)
+    #set target_role = $getVar($role_name, None)
+    #if $target_role is None and $default_roles is not None
+        #if isinstance($default_roles, list)
+            #for $role in $default_roles
+                #if $role is not None
+                    #set target_role = $role
+                    #break
+                #end if
+            #end for
+        #else
+            #set target_role = $default_roles
+        #end if
+    #end if
+    #return $target_role
+#end def
 {
   "name": "testing",
   "description": "Environment used in testing the upstream cookbooks and reference Chef repository",
@@ -31,18 +96,17 @@
         "use_ssl": "false"
       },
       "compute": {
-        #set compute_mgmt_nic = $os_compute_worker.management.interface
         "syslog": {
           "use": false
         },
         "libvirt": {
-          "bind_interface": "$compute_mgmt_nic"
+          "bind_interface": "$compute_nic"
         },
         "novnc_proxy": {
-          "bind_interface": "$compute_mgmt_nic"
+          "bind_interface": "$compute_nic"
         },
         "xvpvnc_proxy": {
-          "bind_interface": "$compute_mgmt_nic"
+          "bind_interface": "$compute_nic"
         },
         "ratelimit": {
           "api": {
@@ -74,96 +138,81 @@
           "tunnel_id_ranges": "1:1000"
         },
         "l3": {
-            "external_network_bridge_interface": "$os_compute_worker.public.interface"
+            "external_network_bridge_interface": "$network_worker_public_nic"
         }
       },
       "db": {
-        "bind_interface": "$os_controller.management.interface",
-        #set db_role = $getVar('os_ops_database', None)
-        #set db_mgmt_ip = $os_controller.management.ip
-        #if db_role is not None:
-            #set db_mgmt_ip = $db_role.management.ip
-        #end if
+        "bind_interface": "$controller_ip",
         "compute": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         },
         "identity": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         },
         "image": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         },
         "network": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         },
         "volume": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         },
         "dashboard": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         },
         "telemetry": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         },
         "orchestration": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         }
       },
       "developer_mode": true,
       "endpoints": {
         "db": {
-          "host": "$db_mgmt_ip"
+          "host": "$db_ip"
         },
         "mq": {
-          #set msg_queue_ip = controller_mgmt_ip
-          #if $getVar('os_ops_messaging', None) is not None:
-              #set msg_queue_ip = $os_ops_messaging.management.ip
-          #end if
           "host": "$msg_queue_ip"
         },
         "compute-api": {
-          "host": "$controller_mgmt_ip",
+          "host": "$controller_ip",
           "scheme": "http",
           "port": "8774",
           "path": "/v2/%(tenant_id)s"
         },
         "compute-api-bind": {
-          "bind_interface": "$os_controller.management.interface"
+          "bind_interface": "$controller_nic"
         },
         "compute-ec2-admin": {
-          "host": "$controller_mgmt_ip",
+          "host": "$controller_ip",
           "scheme": "http",
           "port": "8773",
           "path": "/services/Admin"
         },
         "compute-ec2-api": {
-          "host": "$controller_mgmt_ip",
+          "host": "$controller_ip",
           "scheme": "http",
           "port": "8773",
           "path": "/services/Cloud"
         },
         "compute-novnc": {
-          "host": "$controller_mgmt_ip",
+          "host": "$controller_ip",
           "scheme": "http",
           "port": "6080",
           "path": "/vnc_auto.html"
         },
         "compute-novnc-bind": {
-          "bind_interface": "$os_controller.management.interface"
+          "bind_interface": "$controller_nic"
         },
         "compute-vnc-bind": {
-          "bind_interface" : "$os_compute_worker.management.interface" 
+          "bind_interface" : "$compute_nic"
         },
         "vnc_bind": {
-          "bind_interface": "$os_controller.management.interface"
+          "bind_interface": "$controller_nic"
         },
         "image-api": {
-          #set glance_ip = controller_mgmt_ip
-          #set glance_nic = $os_controller.management.interface
-          #if $getVar('os_image', None) is not None:
-              #set glance_ip = $os_image.management.ip
-              #set glance_nic = $os_image.management.interface
-          #end if
           "host": "$glance_ip",
           "scheme": "http",
           "port": "9292",
@@ -182,55 +231,55 @@
           "bind_interface": "$glance_nic"
         },
         "identity-bind": {
-          "bind_interface": "$os_controller.management.interface"
+          "bind_interface": "$identity_nic"
         },
         "identity-api": {
-          "host": "$controller_mgmt_ip",
+          "host": "$identity_ip",
           "scheme": "http",
           "port": "5000",
           "path": "/v2.0"
         },
         "identity-admin": {
-          "host": "$controller_mgmt_ip",
+          "host": "$identity_ip",
           "scheme": "http",
           "port": "35357",
           "path": "/v2.0"
         },
         "block-storage-api": {
-          "host": "$controller_mgmt_ip",
+          "host": "$cinder_controller_ip",
           "scheme": "http",
           "port": "8776",
           "path": "/v1/%(tenant_id)s"
         },
         "block-storage-api-bind": {
-          "bind_interface": "$os_controller.management.interface"
+          "bind_interface": "$cinder_controller_nic"
         },
         "telemetry-api": {
-          "host": "$controller_mgmt_ip",
+          "host": "$controller_ip",
           "scheme": "http",
           "port": "8777",
           "path": "/v1"
         },
         "network-api": {
-          "host": "$controller_mgmt_ip",
+          "host": "$network_server_ip",
           "scheme": "http",
           "port": "9696",
           "path": ""
         },
         "network-api-bind": {
-          "bind_interface": "$os_controller.management.interface"
+          "bind_interface": "$network_server_nic"
         },
         "network-openvswitch": {
-          "bind_interface": "$os_controller.management.interface"
+          "bind_interface": "$network_server_nic"
         },
         "orchestration-api": {
-          "host": "$controller_mgmt_ip",
+          "host": "$controller_ip",
           "scheme": "http",
           "port": "8004",
           "path": "/v1/%(tenant_id)s"
         },
         "orchestration-api-cfn": {
-          "host": "$controller_mgmt_ip",
+          "host": "$controller_ip",
           "scheme": "http",
           "port": "8000",
           "path": "/v1"
@@ -238,7 +287,7 @@
       },
       "identity": {
         "admin_user": "admin",
-        "bind_interface": "$os_controller.management.interface",
+        "bind_interface": "$identity_nic",
         "catalog": {
           "backend": "sql"
         },
@@ -252,7 +301,8 @@
         },
         "tenants": [
           "admin",
-          "service"
+          "service",
+          "demo"
         ],
         "token": {
           "backend": "sql"
@@ -264,6 +314,15 @@
             "roles": {
               "admin": [
                 "admin"
+              ]
+            }
+          },
+          "demo": {
+            "password": "demo",
+            "default_tenant": "demo",
+            "roles": {
+              "member": [
+                "demo"
               ]
             }
           }
@@ -288,7 +347,7 @@
         ]
       },
       "memcached_servers": [
-        "$controller_mgmt_ip:11211"
+        "$identity_ip:11211"
       ],
       "mq": {
         "user": "guest",

@@ -16,9 +16,18 @@
 
 """binary to deploy a cluster by compass client api."""
 import logging
+import os
 import re
 import requests
+import site
+import sys
 import time
+
+activate_this = '$PythonHome/bin/activate_this.py'
+execfile(activate_this, dict(__file__=activate_this))
+site.addsitedir('$PythonHome/lib/python2.6/site-packages')
+sys.path.append('$PythonHome')
+os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg'
 
 from compass.apiclient.restful import Client
 from compass.utils import flags
@@ -28,6 +37,12 @@ from compass.utils import logsetting
 flags.add('compass_server',
           help='compass server url',
           default='http://127.0.0.1/api')
+flags.add('compass_user_email',
+          help='compass user email',
+          default='admin@huawei.com')
+flags.add('compass_user_password',
+          help='compass user password',
+          default='admin')
 flags.add('switch_ips',
           help='comma seperated switch ips',
           default='')
@@ -52,6 +67,9 @@ flags.add('adapter_os_name',
 flags.add('adapter_target_system',
           help='adapter target system name',
           default='openstack')
+flags.add('adapter_flavor',
+          help='adapter flavor name',
+          default='allinone')
 flags.add('cluster_name',
           help='cluster name',
           default='cluster1')
@@ -101,9 +119,28 @@ def _get_client():
     return Client(flags.OPTIONS.compass_server)
 
 
+def _login(client):
+    """get apiclient token."""
+    status, token = client.login(
+        flags.OPTIONS.compass_user_email,
+        flags.OPTIONS.compass_user_password
+    )
+    logging.info(
+        'login status: %s, token: %s',
+        status, token
+    )
+    if status >= 400:
+        raise Exception(
+            'failed to login %s with user %s',
+            flags.OPTIONS.compass_server,
+            flags.OPTIONS.compass_user_email
+        )
+    return token
+
+
 def _get_machines(client):
     """get machines connected to the switch."""
-    status, resp = client.get_machines()
+    status, resp = client.list_machines()
     logging.info(
         'get all machines status: %s, resp: %s', status, resp)
     if status >= 400:
@@ -116,7 +153,7 @@ def _get_machines(client):
     ])
     logging.info('machines to add: %s', list(machines_to_add))
     machines = {}
-    for machine in resp['machines']:
+    for machine in resp:
         mac = machine['mac']
         if mac in machines_to_add:
             machines[machine['id']] = mac
@@ -134,14 +171,14 @@ def _get_machines(client):
 
 def _poll_switches(client):
     """get all switches."""
-    status, resp = client.get_switches()
+    status, resp = client.list_switches()
     logging.info('get all switches status: %s resp: %s', status, resp)
     if status >= 400:
         msg = 'failed to get switches'
         raise Exception(msg)
 
     all_switches = {}
-    for switch in resp['switches']:
+    for switch in resp:
         all_switches[switch['ip']] = switch
 
     # add a switch.
@@ -163,7 +200,7 @@ def _poll_switches(client):
                 msg = 'failed to add switch %s' % switch_ip
                 raise Exception(msg)
 
-            all_switches[switch_ip] = resp['switch']
+            all_switches[switch_ip] = resp
         else:
             logging.info('switch %s is already added', switch_ip)
 
@@ -185,7 +222,7 @@ def _poll_switches(client):
                 msg = 'failed to get switch %s' % switch_ip
                 raise Exception(msg)
 
-            switch = resp['switch']
+            switch = resp
             all_switches[switch_ip] = switch
 
             if switch['state'] == 'notsupported':
@@ -202,8 +239,7 @@ def _poll_switches(client):
 
         if remain_retries > 0:
             for switch_ip, switch in all_switches.items():
-                status, resp = client.update_switch(
-                    switch_id, switch_ip, **switch_credential)
+                status, resp = client.poll_switch(switch['id'])
                 if status >= 400:
                     msg = 'failed to update switch %s' % switch_ip
                     raise Exception(msg)
@@ -216,51 +252,85 @@ def _poll_switches(client):
 
 def _get_adapter(client):
     """get adapter."""
-    status, resp = client.get_adapters()
-    logging.info('get all adapters status: %s, resp: %s', status, resp)
+    status, resp = client.list_adapters()
+    logging.info(
+        'get all adapters status: %s, resp: %s',
+        status, resp
+    )
     if status >= 400:
         msg = 'failed to get adapters'
         raise Exception(msg)
 
     os_name_pattern = flags.OPTIONS.adapter_os_name
     os_name_re = re.compile(os_name_pattern)
-    target_system = flags.OPTIONS.adapter_target_system
+    target_system_pattern = flags.OPTIONS.adapter_target_system
+    target_system_re = re.compile(target_system_pattern)
+    flavor_name_pattern = flags.OPTIONS.adapter_flavor
+    flavor_re = re.compile(flavor_name_pattern)
     adapter_id = None
-    for adapter in resp['adapters']:
-        if (
-            os_name_re.match(adapter['os']) and
-            target_system == adapter['target_system']
-        ):
+    os_id = None
+    flavor_id = None
+    adapter = None
+    for item in resp:
+        if target_system_re.match(item['distributed_system_name']):
+            adapter = item
             adapter_id = adapter['id']
+            break
 
     if not adapter_id:
-        msg = 'no adapter found for %s and %s' % (
-            os_name_pattern, target_system)
+        msg = 'no adapter found for %s' % target_system_pattern
+        raise Exception(msg)
+
+    for supported_os in adapter['supported_oses']:
+        if os_name_re.match(supported_os['name']):
+            os_id = supported_os['os_id']
+            break
+
+    if not os_id:
+        msg = 'no os found for %s' % os_name_pattern
+        raise Exception(msg)
+
+    for flavor in adapter['flavors']:
+        if flavor_re.match(flavor['name']):
+            flavor_id = flavor['id']
+            break
+
+    if not flavor_id:
+        msg = 'no flavor found for %s' % flavor_name_pattern
         raise Exception(msg)
 
     logging.info('adpater for deploying a cluster: %s', adapter_id)
-    return adapter_id
+    return (adapter_id, os_id, flavor_id)
 
 
-def _add_cluster(client, adapter_id, machines):
+def _add_subnet(client):
+    pass
+
+
+def _add_cluster(client, adapter_id, os_id, flavor_id, machines):
     """add a cluster."""
     cluster_name = flags.OPTIONS.cluster_name
     status, resp = client.add_cluster(
-        cluster_name=cluster_name, adapter_id=adapter_id)
+        cluster_name, adapter_id,
+        os_id, flavor_id)
     logging.info('add cluster %s status: %s, resp: %s',
                  cluster_name, status, resp)
     if status >= 400:
-        msg = 'failed to add cluster %s with adapter %s' % (
-            cluster_name, adapter_id)
+        msg = 'failed to add cluster %s with adapter %s os %s flavor %s' % (
+            cluster_name, adapter_id, os_id, flavor_id)
         raise Exception(msg)
 
-    cluster = resp['cluster']
+    cluster = resp
     cluster_id = cluster['id']
-
+    machines_dict = []
+    for machine_id in machines:
+        machines_dict.append({
+            'machine_id': machine_id
+        })
     # add hosts to the cluster.
-    status, resp = client.add_hosts(
-        cluster_id=cluster_id,
-        machine_ids=machines.keys())
+    status, resp = client.add_hosts_to_cluster(
+        cluster_id,
+        machines_dict)
     logging.info('add hosts to cluster %s status: %s, resp: %s',
                  cluster_id, status, resp)
     if status >= 400:
@@ -573,13 +643,14 @@ def main():
     flags.init()
     logsetting.init()
     client = _get_client()
+    _login(client)
     if flags.OPTIONS.poll_switches:
         machines = _poll_switches(client)
     else:
         machines = _get_machines(client)
-
-    adapter_id = _get_adapter(client)
-    cluster_hosts = _add_cluster(client, adapter_id, machines)
+    adapter_id, os_id, flavor_id = _get_adapter(client)
+    cluster_hosts = _add_cluster(
+        client, adapter_id, os_id, flavor_id, machines)
     _set_cluster_security(client, cluster_hosts)
     _set_cluster_networking(client, cluster_hosts)
     _set_cluster_partition(client, cluster_hosts)

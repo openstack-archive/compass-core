@@ -1,0 +1,43 @@
+#!/bin/sh
+
+RETVAL_CELERY=0
+RETVAL_PROGRESS_UPDATE=0
+start() {
+    service compass-celeryd start
+    RETVAL_CELERY=$?
+    service compass-progress-updated start
+    RETVAL_PROGRESS_UPDATE=$?
+}
+
+stop() {
+    service compass-celeryd stop
+    RETVAL_CELERY=$?
+    service compass-progress-updated stop
+    RETVAL_PROGRESS_UPDATE=$?
+}
+
+restart() {
+   stop
+   start
+}
+case "$1" in
+    start|stop|restart)
+        $1
+        ;;
+    status)
+        service compass-celeryd status
+        RETVAL_CELERY=$?
+        service compass-progress-updated status
+        RETVAL_PROGRESS_UPDATE=$?
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
+if [[ "$RETVAL_CELERY" != "0" ]]; then
+    exit $RETVAL_CELERY
+fi
+if [[ "$RETVAL_PROGRESS_UPDATE" != "0" ]]; then
+    exit $RETVAL_PROGRESS_UPDATE
+fi

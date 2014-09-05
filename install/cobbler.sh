@@ -77,6 +77,7 @@ sudo cp -rn /etc/cobbler/zone.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/zone.template
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/zone.template /etc/cobbler/zone.template
 sudo sed -i "s/\$hostname IN A \$ipaddr/$HOSTNAME IN A $ipaddr/g" /etc/cobbler/zone.template
+sudo sed -i "s/metrics IN A \$ipaddr/metrics IN A $ipaddr/g" /etc/cobbler/zone.template
 sudo chmod 644 /etc/cobbler/zone.template
 
 # update modules.conf

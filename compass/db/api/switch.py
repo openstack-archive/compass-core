@@ -607,7 +607,7 @@ def get_switchmachine(
     """get field dict of a switch machine."""
     return utils.get_db_object(
         session, models.SwitchMachine,
-        exception_when_missing, id=switch_machine_id
+        exception_when_missing, switch_machine_id=switch_machine_id
     )
 
 
@@ -661,7 +661,7 @@ def update_switchmachine(session, updater, switch_machine_id, **kwargs):
     """Update switch machine."""
     switch_machine = utils.get_db_object(
         session, models.SwitchMachine,
-        id=switch_machine_id
+        switch_machine_id=switch_machine_id
     )
     return update_switch_machine_internal(
         session, switch_machine,
@@ -711,7 +711,7 @@ def patch_switchmachine(session, updater, switch_machine_id, **kwargs):
     """Patch switch machine."""
     switch_machine = utils.get_db_object(
         session, models.SwitchMachine,
-        id=switch_machine_id
+        switch_machine_id=switch_machine_id
     )
     return update_switch_machine_internal(
         session, switch_machine,
@@ -744,7 +744,7 @@ def del_switchmachine(session, deleter, switch_machine_id, **kwargs):
     """Delete switch machines."""
     switch_machine = utils.get_db_object(
         session, models.SwitchMachine,
-        id=switch_machine_id
+        switch_machine_id=switch_machine_id
     )
     return utils.del_db_object(session, switch_machine)
 

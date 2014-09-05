@@ -1350,7 +1350,8 @@ def get_clusterhost_state(
 ):
     """Get clusterhost state info."""
     return utils.get_db_object(
-        session, models.ClusterHost, id=clusterhost_id
+        session, models.ClusterHost,
+        clusterhost_id=clusterhost_id
     ).state_dict()
 
 
@@ -1365,8 +1366,9 @@ def get_clusterhost_self_state(
 ):
     """Get clusterhost state info."""
     return utils.get_db_object(
-        session, models.ClusterHostState, id=clusterhost_id
-    )
+        session, models.ClusterHost,
+        clusterhost_id=clusterhost_id
+    ).state
 
 
 @utils.supported_filters(
@@ -1402,7 +1404,8 @@ def update_clusterhost_state(
 ):
     """Update a clusterhost state."""
     clusterhost = utils.get_db_object(
-        session, models.ClusterHost, id=clusterhost_id
+        session, models.ClusterHost,
+        clusterhost_id=clusterhost_id
     )
     utils.update_db_object(session, clusterhost.state, **kwargs)
     return clusterhost.state_dict()
@@ -1481,12 +1484,12 @@ def get_clusterhost_log_history(
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
-def update_host_log_history(
+def update_cluster_host_log_history(
     session, updater, cluster_id, host_id, filename, **kwargs
 ):
     """Update a host log history."""
     cluster_host_log_history = utils.get_db_object(
-        session, models.ClusterHostLogHistory,
+        session, models.HostLogHistory,
         cluster_id=cluster_id, host_id=host_id, filename=filename
     )
     return utils.update_db_object(session, cluster_host_log_history, **kwargs)

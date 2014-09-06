@@ -251,7 +251,7 @@ def validate_host(session, host):
             mgmt_interface_set = True
     if not mgmt_interface_set:
         raise exception.InvalidParameter(
-            'host has no mgmt interface' % host.name
+            'host %s has no mgmt interface' % host.name
         )
 
 

@@ -235,6 +235,10 @@ def is_host_editable(
 
 
 def validate_host(session, host):
+    if not host.host_networks:
+        raise exception.InvalidParameter(
+            '%s does not have any network' % host.name
+        )
     mgmt_interface_set = False
     for host_network in host.host_networks:
         if host_network.is_mgmt:

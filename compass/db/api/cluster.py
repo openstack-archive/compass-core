@@ -1166,6 +1166,10 @@ def validate_clusterhost(session, clusterhost):
 
 
 def validate_cluster(session, cluster):
+    if not cluster.clusterhosts:
+        raise exception.InvalidParameter(
+            '%s does not have any hosts' % cluster.name
+        )
     cluster_roles = [
         flavor_role.role
         for flavor_role in cluster.flavor.flavor_roles

@@ -162,6 +162,20 @@ def _wrap_response(func, response_code):
     return wrapped_func
 
 
+def _reformat_host(host):
+    if isinstance(host, list):
+        return [_reformat_host(item) for item in host]
+    else:
+        if 'networks' in host:
+            networks = host['networks']
+            network_mapping = {}
+            for network in networks:
+                if 'interface' in network:
+                    network_mapping[network['interface']] = network
+            host['networks'] = network_mapping
+        return host
+
+
 def _login(use_cookie):
     """User login helper function."""
     data = _get_request_data()
@@ -1434,9 +1448,9 @@ def list_cluster_hosts(cluster_id):
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        cluster_api.list_cluster_hosts(
+        _reformat_host(cluster_api.list_cluster_hosts(
             current_user, cluster_id, **data
-        )
+        ))
     )
 
 
@@ -1448,9 +1462,9 @@ def list_clusterhosts():
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        cluster_api.list_clusterhosts(
+        _reformat_host(cluster_api.list_clusterhosts(
             current_user, **data
-        )
+        ))
     )
 
 
@@ -1462,9 +1476,9 @@ def show_cluster_host(cluster_id, host_id):
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        cluster_api.get_cluster_host(
+        _reformat_host(cluster_api.get_cluster_host(
             current_user, cluster_id, host_id, **data
-        )
+        ))
     )
 
 
@@ -1476,9 +1490,9 @@ def show_clusterhost(clusterhost_id):
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        cluster_api.get_clusterhost(
+        _reformat_host(cluster_api.get_clusterhost(
             current_user, clusterhost_id, **data
-        )
+        ))
     )
 
 
@@ -1790,9 +1804,9 @@ def list_hosts():
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        host_api.list_hosts(
+        _reformat_host(host_api.list_hosts(
             current_user, **data
-        )
+        ))
     )
 
 
@@ -1804,9 +1818,9 @@ def show_host(host_id):
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        host_api.get_host(
+        _reformat_host(host_api.get_host(
             current_user, host_id, **data
-        )
+        ))
     )
 
 
@@ -1822,9 +1836,9 @@ def list_machines_or_hosts():
     _filter_general(data, 'os_name')
     return utils.make_json_response(
         200,
-        host_api.list_machines_or_hosts(
+        _reformat_host(host_api.list_machines_or_hosts(
             current_user, **data
-        )
+        ))
     )
 
 
@@ -1836,9 +1850,9 @@ def show_machine_or_host(host_id):
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        host_api.get_machine_or_host(
+        _reformat_host(host_api.get_machine_or_host(
             current_user, host_id, **data
-        )
+        ))
     )
 
 

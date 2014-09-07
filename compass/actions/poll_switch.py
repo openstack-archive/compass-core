@@ -120,7 +120,7 @@ def poll_switch(
     """
     poller = user_api.get_user_object(poller_email)
     ip_int = long(netaddr.IPAddress(ip_addr))
-    with util.lock('poll switch %s' % ip_addr) as lock:
+    with util.lock('poll switch %s' % ip_addr, timeout=120) as lock:
         if not lock:
             raise Exception(
                 'failed to acquire lock to poll switch %s' % ip_addr

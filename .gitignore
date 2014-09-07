@@ -6,6 +6,9 @@
 # C extensions
 *.so
 
+# log extensions
+*.log
+
 # Packages
 *.egg
 *.egg-info

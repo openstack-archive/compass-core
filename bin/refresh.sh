@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+service mysqld restart
 /opt/compass/bin/manage_db.py createdb
 service httpd restart
 service rsyslog restart

@@ -16,6 +16,7 @@ sudo cp -rf $COMPASSDIR/bin/*.sh /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/compassd /usr/bin/
 sudo cp -rf $COMPASSDIR/bin/compass /usr/bin/
 sudo cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
+sudo cp -rf $COMPASSDIR/bin/cobbler/* /opt/compass/bin/
 sudo cp -rf $WEB_HOME/public/* /var/www/compass_web/
 sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
 sudo cp -rf $COMPASSDIR/templates /etc/compass/
@@ -49,15 +50,13 @@ sudo sed -i "s/\$cobbler_ip/$ipaddr/g" /etc/compass/os_installer/cobbler.conf
 sudo sed -i "/CHEF_INSTALLER_URL/c\CHEF_INSTALLER_URL = 'https:\/\/$ipaddr/'" /etc/compass/setting
 sudo sed -i "s/\$chef_ip/$ipaddr/g" /etc/compass/package_installer/chef-icehouse.conf
 sudo sed -i "s/\$chef_hostname/$HOSTNAME/g" /etc/compass/package_installer/chef-icehouse.conf
-sudo sed -i "s/\$compass_ip/$ipaddr/g" /etc/compass/global_config
-sudo sed -i "s/\$compass_hostname/$HOSTNAME/g" /etc/compass/global_config
-sudo sed -i "s/\$compass_testmode/$TESTMODE/g" /etc/compass/global_config
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /var/www/compass/compass.wsgi
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /usr/bin/compass
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/poll_switch.py
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/progress_update.py
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/manage_db.py
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/client.py
+sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/clean_installation_logs.py
 sudo sed -e 's|$Python|'$VIRTUAL_ENV/bin/python'|' -i /etc/init.d/compass-progress-updated
 sudo sed -e 's|$CeleryPath|'$VIRTUAL_ENV/bin/celery'|' -i /etc/init.d/compass-celeryd
 sudo sed -i "s/\$ipaddr/$ipaddr/g" /etc/compass/os_metadata/general.conf

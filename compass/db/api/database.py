@@ -66,7 +66,6 @@ def session():
        .. note::
        To operate database, it should be called in database session.
     """
-    import traceback
     if hasattr(SESSION_HOLDER, 'session'):
         logging.error('we are already in session')
         raise exception.DatabaseException('session already exist')

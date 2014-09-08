@@ -246,6 +246,10 @@ class ChefInstaller(PKInstaller):
         env_tmpl_path = os.path.join(
             os.path.join(self.tmpl_dir, self.ENV_TMPL_DIR), tmpl_name
         )
+        if not os.path.exists(env_tmpl_path):
+            logging.error("Environment template '%s' doesn't exist", tmpl_name)
+            raise Exception("Template '%s' does not exist!" % tmpl_name)
+
         logging.debug("generating env from template %s", env_tmpl_path)
         return self.get_config_from_template(env_tmpl_path, global_vars_dict)
 

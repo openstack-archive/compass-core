@@ -222,6 +222,11 @@ class CobblerInstaller(OSInstaller):
         tmpl_path = os.path.join(
             os.path.join(self.tmpl_dir, os_version), self.SYS_TMPL_NAME
         )
+        if not os.path.exists(tmpl_path):
+            err_msg = "Template '%s' does not exists!" % self.SYS_TMPL_NAME
+            logging.error(err_msg)
+            raise Exception(err_msg)
+
         system_config = self.get_config_from_template(tmpl_path,
                                                       host_vars_dict)
 

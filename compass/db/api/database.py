@@ -45,7 +45,15 @@ def init(database_url=None):
     if not database_url:
         database_url = setting.SQLALCHEMY_DATABASE_URI
     logging.info('init database %s', database_url)
-    ENGINE = create_engine(database_url, convert_unicode=True)
+    root_logger = logging.getLogger()
+    fine_debug = root_logger.isEnabledFor(logging.DEBUG - 1)
+    if fine_debug:
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+    ENGINE = create_engine(
+        database_url, convert_unicode=True,
+        pool_recycle=setting.SQLALCHEMY_DATABASE_POOL_RECYCLE_PERIOD,
+        pool_size=setting.SQLALCHEMY_DATABASE_POOL_SIZE
+    )
     SESSION.configure(bind=ENGINE)
     SCOPED_SESSION = scoped_session(SESSION)
     models.BASE.query = SCOPED_SESSION.query_property()

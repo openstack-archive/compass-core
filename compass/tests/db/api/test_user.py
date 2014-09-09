@@ -93,9 +93,9 @@ class TestGetRecordCleanToken(BaseTest):
         )
         self.assertIsNotNone(token)
 
-    def test_get_user_object_from_token_forbidden(self):
+    def test_get_user_object_from_token_unauthorized(self):
         self.assertRaises(
-            exception.Forbidden,
+            exception.Unauthorized,
             user_api.get_user_object_from_token,
             'token'
         )

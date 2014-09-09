@@ -592,36 +592,36 @@ class Client(object):
     def get_cluster_metadata(self, cluster_id):
         return self._get('/clusters/%s/metadata' % cluster_id)
 
-    def update_cluster_config(self, cluster_id, put_os_config=None,
-                              put_package_config=None, config_step=None,
+    def update_cluster_config(self, cluster_id, os_config=None,
+                              package_config=None, config_step=None,
                               raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
 
-        if put_os_config:
-            data['put_os_config'] = put_os_config
+        if os_config:
+            data['os_config'] = os_config
 
-        if put_package_config:
-            data['put_package_config'] = put_package_config
+        if package_config:
+            data['package_config'] = package_config
 
         if config_step:
             data['config_step'] = config_step
 
         return self._put('/clusters/%s/config' % cluster_id, data=data)
 
-    def patch_cluster_config(self, cluster_id, patched_os_config=None,
-                             patched_package_config=None, config_step=None,
+    def patch_cluster_config(self, cluster_id, os_config=None,
+                             package_config=None, config_step=None,
                              raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
 
-        if patched_os_config:
-            data['patched_os_config'] = patched_os_config
+        if os_config:
+            data['os_config'] = os_config
 
-        if patched_package_config:
-            data['patched_package_config'] = patched_package_config
+        if package_config:
+            data['package_config'] = package_config
 
         if config_step:
             data['config_step'] = config_step
@@ -702,68 +702,68 @@ class Client(object):
         return self._get('/clusterhosts/%s/config' % clusterhost_id)
 
     def update_cluster_host_config(self, cluster_id, host_id,
-                                   put_os_config=None,
-                                   put_package_config=None,
+                                   os_config=None,
+                                   package_config=None,
                                    raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
         else:
-            if put_os_config:
-                data['put_os_config'] = put_os_config
+            if os_config:
+                data['os_config'] = os_config
 
-            if put_package_config:
-                data['put_package_config'] = put_package_config
+            if package_config:
+                data['package_config'] = package_config
 
         return self._put('/clusters/%s/hosts/%s/config' %
                          (cluster_id, host_id), data=data)
 
-    def update_clusterhost_config(self, clusterhost_id, put_os_config=None,
-                                  put_package_config=None, raw_data=None):
+    def update_clusterhost_config(self, clusterhost_id, os_config=None,
+                                  package_config=None, raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
 
         else:
-            if put_os_config:
-                data['put_os_config'] = put_os_config
+            if os_config:
+                data['os_config'] = os_config
 
-            if put_package_config:
-                data['put_package_config'] = put_package_config
+            if package_config:
+                data['package_config'] = package_config
 
         return self._put('/clusterhosts/%s/config' % clusterhost_id,
                          data=data)
 
     def patch_cluster_host_config(self, cluster_id, host_id,
-                                  patched_os_config=None,
-                                  patched_package_config=None,
+                                  os_config=None,
+                                  package_config=None,
                                   raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
 
         else:
-            if patched_os_config:
-                data['patched_os_config'] = patched_os_config
+            if os_config:
+                data['os_config'] = os_config
 
-            if patched_package_config:
-                data['patched_package_config'] = patched_package_config
+            if package_config:
+                data['package_config'] = package_config
 
         return self._patch('/clusters/%s/hosts/%s/config' %
                            (cluster_id, host_id), data=data)
 
-    def patch_clusterhost_config(self, clusterhost_id, patched_os_config=None,
-                                 patched_package_config=None, raw_data=None):
+    def patch_clusterhost_config(self, clusterhost_id, os_config=None,
+                                 package_config=None, raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
 
         else:
-            if patched_os_config:
-                data['patched_os_config'] = patched_os_config
+            if os_config:
+                data['os_config'] = os_config
 
-            if patched_package_config:
-                data['patched_package_config'] = patched_package_config
+            if package_config:
+                data['package_config'] = package_config
 
         return self._patch('/clusterhosts/%s' % clusterhost_id, data=data)
 
@@ -777,6 +777,52 @@ class Client(object):
     def get_cluster_host_state(self, cluster_id, host_id):
         return self._get('/clusters/%s/hosts/%s/state' %
                          (cluster_id, host_id))
+
+    def update_cluster_host(self, cluster_id, host_id,
+                            roles=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if roles:
+                data['roles'] = roles
+
+        return self._put('/clusters/%s/hosts/%s' %
+                         (cluster_id, host_id), data=data)
+
+    def update_clusterhost(self, clusterhost_id,
+                           roles=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if roles:
+                data['roles'] = roles
+
+        return self._put('/clusterhosts/%s' % clusterhost_id, data=data)
+
+    def patch_cluster_host(self, cluster_id, host_id,
+                           roles=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if roles:
+                data['roles'] = roles
+
+        return self._patch('/clusters/%s/hosts/%s' %
+                           (cluster_id, host_id), data=data)
+
+    def patch_clusterhost(self, clusterhost_id,
+                          roles=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if roles:
+                data['roles'] = roles
+
+        return self._patch('/clusterhosts/%s' % clusterhost_id, data=data)
 
     def get_clusterhost_state(self, clusterhost_id):
         return self._get('/clusterhosts/%s/state' % clusterhost_id)
@@ -884,17 +930,17 @@ class Client(object):
     def get_host_config(self, host_id):
         return self._get('/hosts/%s/config' % host_id)
 
-    def update_host_config(self, host_id, put_os_config, raw_data=None):
+    def update_host_config(self, host_id, os_config, raw_data=None):
         data = {}
-        data['put_os_config'] = put_os_config
+        data['os_config'] = os_config
         if raw_data:
             data.update(raw_data)
 
         return self._put('/hosts/%s/config' % host_id, data=data)
 
-    def patch_host_config(self, host_id, patched_os_config, raw_data=None):
+    def patch_host_config(self, host_id, os_config, raw_data=None):
         data = {}
-        data['patched_os_config'] = patched_os_config
+        data['os_config'] = os_config
         if raw_data:
             data.update(raw_data)
 

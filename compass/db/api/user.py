@@ -245,7 +245,7 @@ def get_user_object_from_token(session, token):
         token=token, expire_timestamp=expire_timestamp
     )
     if not user_token:
-        raise exception.Forbidden(
+        raise exception.Unauthorized(
             'invalid user token: %s' % token
         )
     user_dict = utils.get_db_object(

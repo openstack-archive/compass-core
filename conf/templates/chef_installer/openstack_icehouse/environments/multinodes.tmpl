@@ -19,11 +19,13 @@
 ## Network worker node management IP/interface
 #set network_worker_ip = $network_worker_role.management.ip
 #set network_worker_nic = $network_worker_role.management.interface
+#set network_worker_tenent_nic = $network_worker_role.tenent.interface
 #set network_worker_public_nic = $network_worker_role.public.interface
 
 ## Database node management IP
 #set db_role = $get_role('os_ops_database', $controller_role)
 #set db_ip = $db_role.management.ip
+#set db_nic = $db_role.management.nic
 
 ## Message queue node management IP/interface
 #set msg_queue_role = $get_role('os_ops_messaging', $controller_role)
@@ -149,7 +151,7 @@
         }
       },
       "db": {
-        "bind_interface": "$controller_ip",
+        "bind_interface": "$db_nic",
         "compute": {
           "host": "$db_ip"
         },
@@ -277,7 +279,7 @@
           "bind_interface": "$network_server_nic"
         },
         "network-openvswitch": {
-          "bind_interface": "$network_server_nic"
+          "bind_interface": "$network_worker_tenent_nic"
         },
         "orchestration-api": {
           "host": "$controller_ip",

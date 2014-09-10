@@ -16,10 +16,12 @@
 
 """binary to deploy a cluster by compass client api."""
 import logging
+import netaddr
 import os
 import re
 import requests
 import site
+import socket
 import sys
 import time
 
@@ -48,7 +50,7 @@ flags.add('switch_ips',
           default='')
 flags.add('switch_credential',
           help='comma separated <credential key>=<credential value>',
-          default='version=v2c,community=public')
+          default='version=2c,community=public')
 flags.add('switch_max_retries', type='int',
           help='max retries of poll switch',
           default=5)
@@ -61,39 +63,90 @@ flags.add_bool('poll_switches',
 flags.add('machines',
           help='comma separated mac addresses of machines',
           default='')
-flags.add('adapter_os_name',
+flags.add('subnets',
+          help='comma seperated subnets',
+          default='')
+flags.add('adapter_os_pattern',
           help='adapter os name',
           default=r'(?i)centos.*')
-flags.add('adapter_target_system',
+flags.add('adapter_target_system_pattern',
           help='adapter target system name',
-          default='openstack')
-flags.add('adapter_flavor',
+          default='openstack.*')
+flags.add('adapter_flavor_pattern',
           help='adapter flavor name',
           default='allinone')
 flags.add('cluster_name',
           help='cluster name',
           default='cluster1')
-flags.add('credentials',
+flags.add('language',
+          help='language',
+          default='EN')
+flags.add('timezone',
+          help='timezone',
+          default='GMT')
+flags.add('http_proxy',
+          help='http proxy',
+          default='')
+flags.add('https_proxy',
+          help='https proxy',
+          default='')
+flags.add('no_proxy',
+          help='no proxy',
+          default='')
+flags.add('ntp_server',
+          help='ntp server',
+          default='')
+flags.add('dns_servers',
+          help='dns servers',
+          default='')
+flags.add('domain',
+          help='domain',
+          default='')
+flags.add('search_path',
+          help='search path',
+          default='')
+flags.add('default_gateway',
+          help='default gateway',
+          default='')
+flags.add('server_credential',
           help=(
-              'comma separated credentials formatted as '
-              '<credential_name>:<username>=<password>'
+              'server credential formatted as '
+              '<username>=<password>'
           ),
-          default=(
-              'server:root=root,service:service=service,'
-              'console:console=console'
-          ))
-flags.add('networking',
+          default='root=root')
+flags.add('service_credentials',
           help=(
-              'semicomma seperated network property and its value '
-              '<network_property_name>=<value>'
+              'comma seperated service credentials formatted as '
+              '<servicename>:<username>=<password>,...'
+          ),
+          default='')
+flags.add('console_credentials',
+          help=(
+              'comma seperated console credential formated as '
+              '<consolename>:<username>=<password>'
+          ),
+          default='')
+flags.add('hostnames',
+          help='comma seperated hostname',
+          default='')
+flags.add('host_networks',
+          help=(
+              'semicomma seperated host name and its networks '
+              '<hostname>:<interface_name>=<ip>|<is_mgmt>|<is_promiscous>,...'
           ),
           default='')
 flags.add('partitions',
           help=(
               'comma seperated partitions '
-              '<partition name>:<partition_type>=<partition_value>'
+              '<partition name>=<partition_value>'
           ),
-          default='tmp:percentage=10,var:percentage=20,home:percentage=40')
+          default='tmp:percentage=10%,var:percentage=30%,home:percentage=30%')
+flags.add('network_mapping',
+          help=(
+              'comma seperated network mapping '
+              '<network_type>=<interface_name>'
+          ),
+          default='')
 flags.add('host_roles',
           help=(
               'semicomma separated host roles '
@@ -106,9 +159,9 @@ flags.add('deployment_timeout',
 flags.add('progress_update_check_interval',
           help='progress update status check interval in seconds',
           default=60)
-flags.add('dashboard_role',
-          help='dashboard role name',
-          default='os-dashboard')
+flags.add('dashboard_url',
+          help='dashboard url',
+          default='')
 flags.add('dashboard_link_pattern',
           help='dashboard link pattern',
           default=r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)')
@@ -186,6 +239,10 @@ def _poll_switches(client):
         switch_ip for switch_ip in flags.OPTIONS.switch_ips.split(',')
         if switch_ip
     ]
+    if not switch_ips:
+        raise Exception(
+            'there is no switches to poll')
+
     switch_credential = dict([
         credential.split('=', 1)
         for credential in flags.OPTIONS.switch_credential.split(',')
@@ -206,6 +263,15 @@ def _poll_switches(client):
 
     remain_retries = flags.OPTIONS.switch_max_retries
     while True:
+        for switch_ip, switch in all_switches.items():
+            status, resp = client.poll_switch(switch['id'])
+            logging.info(
+                'get switch %s status %s: %s',
+                switch_ip, status, resp)
+            if status >= 400:
+                msg = 'failed to update switch %s' % switch_ip
+                raise Exception(msg)
+        remain_retries -= 1
         time.sleep(flags.OPTIONS.switch_retry_interval)
         for switch_ip, switch in all_switches.items():
             switch_id = switch['id']
@@ -237,15 +303,7 @@ def _poll_switches(client):
         except Exception:
             logging.error('failed to get all machines')
 
-        if remain_retries > 0:
-            for switch_ip, switch in all_switches.items():
-                status, resp = client.poll_switch(switch['id'])
-                if status >= 400:
-                    msg = 'failed to update switch %s' % switch_ip
-                    raise Exception(msg)
-
-            remain_retries -= 1
-        else:
+        if remain_retries <= 0:
             msg = 'max retries reached'
             raise Exception(msg)
 
@@ -261,17 +319,19 @@ def _get_adapter(client):
         msg = 'failed to get adapters'
         raise Exception(msg)
 
-    os_name_pattern = flags.OPTIONS.adapter_os_name
-    os_name_re = re.compile(os_name_pattern)
-    target_system_pattern = flags.OPTIONS.adapter_target_system
+    os_pattern = flags.OPTIONS.adapter_os_pattern
+    os_re = re.compile(os_pattern)
+    target_system_pattern = flags.OPTIONS.adapter_target_system_pattern
     target_system_re = re.compile(target_system_pattern)
-    flavor_name_pattern = flags.OPTIONS.adapter_flavor
-    flavor_re = re.compile(flavor_name_pattern)
+    flavor_pattern = flags.OPTIONS.adapter_flavor_pattern
+    flavor_re = re.compile(flavor_pattern)
     adapter_id = None
     os_id = None
     flavor_id = None
     adapter = None
     for item in resp:
+        if 'distributed_system_name' not in item:
+            continue
         if target_system_re.match(item['distributed_system_name']):
             adapter = item
             adapter_id = adapter['id']
@@ -282,12 +342,12 @@ def _get_adapter(client):
         raise Exception(msg)
 
     for supported_os in adapter['supported_oses']:
-        if os_name_re.match(supported_os['name']):
+        if os_re.match(supported_os['name']):
             os_id = supported_os['os_id']
             break
 
     if not os_id:
-        msg = 'no os found for %s' % os_name_pattern
+        msg = 'no os found for %s' % os_pattern
         raise Exception(msg)
 
     for flavor in adapter['flavors']:
@@ -296,20 +356,39 @@ def _get_adapter(client):
             break
 
     if not flavor_id:
-        msg = 'no flavor found for %s' % flavor_name_pattern
+        msg = 'no flavor found for %s' % flavor_pattern
         raise Exception(msg)
 
     logging.info('adpater for deploying a cluster: %s', adapter_id)
     return (adapter_id, os_id, flavor_id)
 
 
-def _add_subnet(client):
-    pass
+def _add_subnets(client):
+    subnets = [
+        subnet for subnet in flags.OPTIONS.subnets.split(',')
+        if subnet
+    ]
+    if not subnets:
+        raise Exception(
+            'there is no subnets added')
+    subnet_mapping = {}
+    for subnet in subnets:
+        status, resp = client.add_subnet(subnet)
+        logging.info('add subnet %s status %s response %s',
+                     subnet, status, resp)
+        if status >= 400:
+            msg = 'failed to add subnet %s' % subnet
+            raise Exception(msg)
+        subnet_mapping[resp['subnet']] = resp['id']
+    return subnet_mapping
 
 
 def _add_cluster(client, adapter_id, os_id, flavor_id, machines):
     """add a cluster."""
     cluster_name = flags.OPTIONS.cluster_name
+    if not cluster_name:
+        raise Exception(
+            'no cluster name set')
     status, resp = client.add_cluster(
         cluster_name, adapter_id,
         os_id, flavor_id)
@@ -322,321 +401,417 @@ def _add_cluster(client, adapter_id, os_id, flavor_id, machines):
 
     cluster = resp
     cluster_id = cluster['id']
+    hostnames = [
+        hostname for hostname in flags.OPTIONS.hostnames.split(',')
+        if hostname
+    ]
+    if len(machines) != len(hostnames):
+        msg = 'hostname %s length does not match machines mac %s length' % (
+            hostnames, machines)
+        raise Exception(msg)
+
     machines_dict = []
-    for machine_id in machines:
+    for machine_id, hostname in map(None, machines, hostnames):
         machines_dict.append({
-            'machine_id': machine_id
+            'machine_id': machine_id,
+            'name': hostname
         })
     # add hosts to the cluster.
     status, resp = client.add_hosts_to_cluster(
         cluster_id,
-        machines_dict)
-    logging.info('add hosts to cluster %s status: %s, resp: %s',
-                 cluster_id, status, resp)
+        {'machines': machines_dict})
+    logging.info('add machines %s to cluster %s status: %s, resp: %s',
+                 machines_dict, cluster_id, status, resp)
     if status >= 400:
         msg = 'failed to add machines %s to cluster %s' % (
             machines, cluster_name)
         raise Exception(msg)
-
-    host_ids = []
-    for host in resp['cluster_hosts']:
-        host_ids.append(host['id'])
-
-    logging.info('added hosts in cluster %s: %s', cluster_id, host_ids)
-    if len(host_ids) != len(machines):
+    host_mapping = {}
+    for host in resp['hosts']:
+        host_mapping[host['hostname']] = host['id']
+    logging.info('added hosts in cluster %s: %s', cluster_id, host_mapping)
+    if len(host_mapping) != len(machines):
         msg = 'machines %s to add to the cluster %s while hosts %s' % (
-            machines, cluster_name, host_ids)
+            machines, cluster_name, host_mapping)
         raise Exception(msg)
+    return (cluster_id, host_mapping)
 
-    return {cluster_id: host_ids}
 
-
-def _set_cluster_security(client, cluster_hosts):
-    """set cluster security."""
-    credentials = [
-        credential for credential in flags.OPTIONS.credentials.split(',')
-        if ':' in credential
+def _set_cluster_os_config(client, cluster_id, host_ips):
+    """set cluster os config."""
+    os_config = {}
+    language = flags.OPTIONS.language
+    timezone = flags.OPTIONS.timezone
+    http_proxy = flags.OPTIONS.http_proxy
+    https_proxy = flags.OPTIONS.https_proxy
+    if not https_proxy and http_proxy:
+        https_proxy = http_proxy
+    no_proxy = [
+        no_proxy for no_proxy in flags.OPTIONS.no_proxy.split(',')
+        if no_proxy
     ]
-    logging.info('set cluster security: %s', credentials)
-    credential_mapping = {}
-    for credential in credentials:
-        credential_name, username_and_password = credential.split(':', 1)
-        if not credential_name:
-            raise Exception('there is no credential name in %s' % credential)
-
-        if not username_and_password:
-            raise Exception('there is no username/password in %s' % credential)
-
-        if '=' not in username_and_password:
-            raise Exception('there is no = in %s' % username_and_password)
-
-        username, password = username_and_password.split('=', 1)
-        if not username or not password:
-            raise Exception(
-                'there is no username or password in %s' % (
-                    username_and_password))
-
-        credential_mapping['%s_username' % credential_name] = username
-        credential_mapping['%s_password' % credential_name] = password
-
-    for cluster_id, host_ids in cluster_hosts.items():
-        status, resp = client.set_security(
-            cluster_id, **credential_mapping)
-        logging.info(
-            'set security config to cluster %s status: %s, resp: %s',
-            cluster_id, status, resp)
-        if status >= 400:
-            msg = 'failed to set security %s for cluster %s' % (
-                credential_mapping, cluster_id)
-            raise Exception(msg)
-
-
-def _set_cluster_networking(client, cluster_hosts):
-    """set cluster networking."""
-    networking_map = {}
-    networkings = [
-        network for network in flags.OPTIONS.networking.split(';')
-        if '=' in network
+    compass_name = socket.gethostname()
+    compass_ip = socket.gethostbyname(compass_name)
+    if http_proxy and not no_proxy:
+        no_proxy = ['127.0.0.1', compass_name, compass_ip]
+        for hostname, ips in host_ips.items():
+            no_proxy.append(hostname)
+            no_proxy.extend(ips)
+    ntp_server = flags.OPTIONS.ntp_server
+    if not ntp_server:
+        ntp_server = compass_ip
+    dns_servers = [
+        dns_server for dns_server in flags.OPTIONS.dns_servers.split(',')
+        if dns_server
     ]
-    logging.info('set cluster networking: %s', networkings)
-    for networking in networkings:
-        networking_name, networking_value = networking.split('=', 1)
-        if not networking_name:
-            raise Exception(
-                'there is no networking name in %s' % networking)
-
-        if networking_name.endswith('_promisc'):
-            networking_map[networking_name] = int(networking_value)
-        else:
-            networking_map[networking_name] = networking_value
-
-    for cluster_id, host_ids in cluster_hosts.items():
-        status, resp = client.set_networking(
-            cluster_id, **networking_map)
-        logging.info(
-            'set networking config %s to cluster %s status: %s, resp: %s',
-            networking_map, cluster_id, status, resp)
-        if status >= 400:
-            msg = 'failed to set networking config %s to cluster %s' % (
-                networking_map, cluster_id)
-            raise Exception(msg)
-
-
-def _set_cluster_partition(client, cluster_hosts):
-    """set partiton of each host in cluster."""
+    if not dns_servers:
+        dns_servers = [compass_ip]
+    domain = flags.OPTIONS.domain
+    if not domain:
+        raise Exception('domain is not defined')
+    search_path = [
+        search_path for search_path in flags.OPTIONS.search_path.split(',')
+        if search_path
+    ]
+    if not search_path:
+        search_path = [domain]
+    default_gateway = flags.OPTIONS.default_gateway
+    if not default_gateway:
+        raise Exception('default gateway is not defined')
+    os_config['general'] = {
+        'language': language,
+        'timezone': timezone,
+        'ntp_server': ntp_server,
+        'dns_servers': dns_servers,
+        'default_gateway': default_gateway
+    }
+    if http_proxy:
+        os_config['general']['http_proxy'] = http_proxy
+    if https_proxy:
+        os_config['general']['https_proxy'] = https_proxy
+    if no_proxy:
+        os_config['general']['no_proxy'] = no_proxy
+    if domain:
+        os_config['general']['domain'] = domain
+    if search_path:
+        os_config['general']['search_path'] = search_path
+    server_credential = flags.OPTIONS.server_credential
+    if '=' in server_credential:
+        server_username, server_password = server_credential.split('=', 1)
+    elif server_credential:
+        server_username = server_credential
+        server_password = server_username
+    else:
+        server_username = 'root'
+        server_password = 'root'
+    os_config['server_credentials'] = {
+        'username': server_username,
+        'password': server_password
+    }
     partitions = [
         partition for partition in flags.OPTIONS.partitions.split(',')
-        if ':' in partition
     ]
-    logging.info('set cluster partition: %s', partitions)
-    partiton_mapping = {}
+    os_config['partition'] = {}
     for partition in partitions:
-        partition_name, partition_pair = partition.split(':', 1)
+        partition_name, partition_value = partition.split('=', 1)
         if not partition_name:
             raise Exception(
                 'there is no partition name in %s' % partition)
-
-        if not partition_pair:
+        if not partition_value:
             raise Exception(
-                'there is no partition pair in %s' % partition)
+                'there is no partition value in %s' % partition)
 
-        if '=' not in partition_pair:
-            raise Exception(
-                'there is no = in %s' % partition_pair)
-
-        partition_type, partition_value = partition_pair.split('=', 1)
-        if partition_type == 'percentage':
-            partition_value = int(partition_value)
-        elif partition_type == 'mbytes':
-            partition_value = int(partition_value)
+        if partition_value.endswith('%'):
+            partition_type = 'percentage'
+            partition_value = int(partition_value[:-1])
         else:
-            raise Exception(
-                'unsupported partition type %s' % partition_type)
-
-        partiton_mapping[
-            '%s_%s' % (partition_name, partition_type)
-        ] = partition_value
-
-    for cluster_id, host_ids in cluster_hosts.items():
-        status, resp = client.set_partition(
-            cluster_id, **partiton_mapping)
-        logging.info(
-            'set partition config %s to cluster %s status: %s, resp: %s',
-            partiton_mapping, cluster_id, status, resp)
-        if status >= 400:
-            msg = 'failed to set partition %s to cluster %s' % (
-                partiton_mapping, cluster_id)
-            raise Exception(msg)
-
-
-def _set_host_config(client, cluster_hosts):
-    host_configs = []
-    for host in flags.OPTIONS.host_roles.split(';'):
-        if not host:
-            continue
-
-        hostname, roles = host.split('=', 1)
-        if hostname:
-            roles = [role for role in roles.split(',') if role]
-
-        host_configs.append({
-            'hostname': hostname,
-            'roles': roles
-        })
-
-    total_hosts = 0
-    for cluster_id, host_ids in cluster_hosts.items():
-        total_hosts += len(host_ids)
-
-    if total_hosts != len(host_configs):
-        msg = '%s host to assign but got %s host configs' % (
-            total_hosts, len(host_configs))
+            partition_type = 'size'
+        os_config['partition'][partition_name] = {
+            partition_type: partition_value
+        }
+    status, resp = client.update_cluster_config(
+        cluster_id, os_config=os_config)
+    logging.info(
+        'set os config %s to cluster %s status: %s, resp: %s',
+        os_config, cluster_id, status, resp)
+    if status >= 400:
+        msg = 'failed to set os config %s to cluster %s' % (
+            os_config, cluster_id)
         raise Exception(msg)
 
-    for cluster_id, host_ids in cluster_hosts.items():
-        for hostid in host_ids:
-            host_config = host_configs.pop(0)
-            status, resp = client.update_host_config(
-                hostid, **host_config)
+
+def _set_host_networking(client, host_mapping, subnet_mapping):
+    """set cluster hosts networking."""
+    host_ips = {}
+    for host_network in flags.OPTIONS.host_networks.split(';'):
+        hostname, networks_str = host_network.split(':', 1)
+        if hostname not in host_mapping:
+            msg = 'hostname %s does not exist in host mapping %s' % (
+                hostname, host_mapping
+            )
+            raise Exception(msg)
+        host_id = host_mapping[hostname]
+        networks = networks_str.split(',')
+        for network in networks:
+            interface, network_properties_str = network.split('=', 1)
+            network_properties = network_properties_str.split('|')
+            ip_addr = network_properties[0]
+            ip = netaddr.IPAddress(ip_addr)
+            subnet_id = None
+            for subnet_addr, subnetid in subnet_mapping.items():
+                subnet = netaddr.IPNetwork(subnet_addr)
+                if ip in subnet:
+                    subnet_id = subnetid
+                    break
+            if not subnet_id:
+                msg = 'no subnet found for ip %s' % ip_addr
+                raise Exception(msg)
+            properties = dict([
+                (network_property, True)
+                for network_property in network_properties[1:]
+            ])
             logging.info(
-                'set host %s config %s status: %s, resp: %s',
-                hostid, host_config, status, resp
+                'add host %s interface %s ip %s network proprties %s',
+                hostname, interface, ip_addr, properties)
+            status, response = client.add_host_network(
+                host_id, interface, ip=ip_addr, subnet_id=subnet_id,
+                **properties
+            )
+            logging.info(
+                'add host %s interface %s ip %s network properties %s '
+                'status %s: %s',
+                hostname, interface, ip_addr, properties,
+                status, response
             )
             if status >= 400:
-                msg = 'failed to set host %s config %s' % (
-                    hostid, host_config)
+                msg = 'failed to set host %s interface %s network' % (
+                    hostname, interface
+                )
                 raise Exception(msg)
+            host_ips.setdefault(hostname, []).append(ip_addr)
+    return host_ips
 
 
-def _deploy_clusters(client, cluster_hosts):
-    """deploy cluster."""
-    for cluster_id, host_ids in cluster_hosts.items():
-        status, resp = client.deploy_hosts(cluster_id)
+def _set_cluster_package_config(client, cluster_id):
+    """set cluster package config."""
+    package_config = {
+        'security': {
+            'service_credentials': {
+            },
+            'console_credentials': {
+            }
+        }
+    }
+    service_credentials = [
+        service_credential
+        for service_credential in flags.OPTIONS.service_credentials.split(',')
+        if service_credential
+    ]
+    for service_credential in service_credentials:
+        if ':' not in service_credential:
+            raise Exception(
+                'there is no : in service credential %s' % service_credential
+            )
+        service_name, service_pair = service_credential.split(':', 1)
+        if '=' not in service_pair:
+            raise Exception(
+                'there is no = in service %s security' % service_name
+            )
+        username, password = service_pair.split('=', 1)
+        package_config['security']['service_credentials'][service_name] = {
+            'username': username,
+            'password': password
+        }
+    console_credentials = [
+        console_credential
+        for console_credential in flags.OPTIONS.console_credentials.split(',')
+        if console_credential
+    ]
+    for console_credential in console_credentials:
+        if ':' not in console_credential:
+            raise Exception(
+                'there is no : in console credential %s' % console_credential
+            )
+        console_name, console_pair = console_credential.split(':', 1)
+        if '=' not in console_pair:
+            raise Exception(
+                'there is no = in console %s security' % console_name
+            )
+        username, password = console_pair.split('=', 1)
+        package_config['security']['console_credentials'][service_name] = {
+            'username': username,
+            'password': password
+        }
+    package_config['network_mapping'] = dict([
+        network_pair.split('=', 1)
+        for network_pair in flags.OPTIONS.network_mapping.split(',')
+        if '=' in network_pair
+    ])
+    status, resp = client.update_cluster_config(
+        cluster_id, package_config=package_config)
+    logging.info(
+        'set package config %s to cluster %s status: %s, resp: %s',
+        package_config, cluster_id, status, resp)
+    if status >= 400:
+        msg = 'failed to set package config %s to cluster %s' % (
+            package_config, cluster_id)
+        raise Exception(msg)
+
+
+def _set_host_roles(client, cluster_id, host_mapping):
+    host_roles = {}
+    for host_str in flags.OPTIONS.host_roles.split(';'):
+        if not host_str:
+            continue
+        hostname, roles_str = host_str.split('=', 1)
+        if hostname not in host_mapping:
+            raise Exception(
+                'hostname %s not found in host mapping %s' % (
+                    hostname, host_mapping
+                )
+            )
+        host_id = host_mapping[hostname]
+        roles = [role for role in roles_str.split(',') if role]
+        status, response = client.update_cluster_host(
+            cluster_id, host_id, roles=roles)
         logging.info(
-            'deploy cluster %s status: %s, resp: %s',
-            cluster_id, status, resp)
+            'set cluster %s host %s roles %s status %s: %s',
+            cluster_id, hostname, roles, status, response
+        )
         if status >= 400:
-            msg = 'failed to deploy cluster %s' % cluster_id
-            raise Exception(msg)
+            raise Exception(
+                'failed to set cluster %s host %s roles %s' % (
+                    cluster_id, host_id, roles
+                )
+            )
+        host_roles[hostname] = roles
+    return host_roles
 
 
-def _get_installing_progress(client, cluster_hosts):
+def _deploy_clusters(client, cluster_id, host_mapping):
+    """deploy cluster."""
+    host_ids = [host_id for _, host_id in host_mapping.items()]
+    status, response = client.review_cluster(
+        cluster_id, review={'hosts': host_ids}
+    )
+    logging.info(
+        'review cluster %s hosts %s, status %s: %s',
+        cluster_id, host_ids, status, response
+    )
+    if status >= 400:
+        raise Exception(
+            'review cluster %s fails' % cluster_id
+        )
+    status, response = client.deploy_cluster(
+        cluster_id, deploy={'hosts': host_ids}
+    )
+    logging.info(
+        'deploy cluster %s hosts %s status %s: %s',
+        cluster_id, host_ids, status, response
+    )
+    if status >= 400:
+        raise Exception(
+            'deploy cluster %s fails' % cluster_id
+        )
+
+
+def _get_installing_progress(client, cluster_id, host_mapping):
     """get intalling progress."""
     timeout = time.time() + 60 * float(flags.OPTIONS.deployment_timeout)
-    clusters_progress = {}
-    hosts_progress = {}
+    cluster_installed = False
+    cluster_failed = False
+    hosts_installed = {}
+    hosts_failed = {}
     install_finished = False
-    failed_hosts = {}
-    failed_clusters = {}
     while time.time() < timeout:
-        found_installing_clusters = False
-        found_installing_hosts = False
-        for cluster_id, host_ids in cluster_hosts.items():
-            for hostid in host_ids:
-                if hostid in hosts_progress:
-                    continue
-
-                status, resp = client.get_host_installing_progress(hostid)
-                logging.info(
-                    'get host %s installing progress status: %s, resp: %s',
-                    hostid, status, resp)
-                if status >= 400:
-                    msg = 'failed to get host %s progress' % hostid
-                    raise Exception(msg)
-
-                progress = resp['progress']
-                if (
-                    progress['state'] not in ['UNINITIALIZED', 'INSTALLING'] or
-                    progress['percentage'] >= 1.0
-                ):
-                    hosts_progress[hostid] = progress
-                    if progress['state'] in ['ERROR']:
-                        failed_hosts[hostid] = progress
-
-                else:
-                    found_installing_hosts = True
-
-            if cluster_id in clusters_progress:
-                continue
-
-            status, resp = client.get_cluster_installing_progress(cluster_id)
+        status, cluster_state = client.get_cluster_state(cluster_id)
+        logging.info(
+            'get cluster %s state status %s: %s',
+            cluster_id, status, cluster_state
+        )
+        if status >= 400:
+            raise Exception(
+                'failed to acquire cluster %s state' % cluster_id
+            )
+        if cluster_state['state'] == 'SUCCESSFUL':
+            cluster_installed = True
+        if cluster_state['state'] == 'ERROR':
+            cluster_failed = True
+        for hostname, host_id in host_mapping.items():
+            status, host_state = client.get_cluster_host_state(
+                cluster_id, host_id
+            )
             logging.info(
-                'get cluster %s installing progress status: %s, resp: %s',
-                cluster_id, status, resp)
+                'get cluster %s host %s state status %s: %s',
+                cluster_id, host_id, status, host_state
+            )
             if status >= 400:
-                msg = 'failed to get cluster %s intsalling progress' % (
-                    cluster_id)
-                raise Exception(msg)
-
-            progress = resp['progress']
-            if (
-                progress['state'] not in ['UNINITIALIZED', 'INSTALLING'] or
-                progress['percentage'] >= 1.0
-            ):
-                clusters_progress[cluster_id] = progress
-                if progress['state'] in ['ERROR']:
-                    failed_clusters[cluster_id] = progress
-
+                raise Exception(
+                    'failed to acquire cluster %s host %s state' % (
+                        cluster_id, host_id
+                    )
+                )
+            if host_state['state'] == 'SUCCESSFUL':
+                hosts_installed[host_id] = True
             else:
-                found_installing_clusters = True
+                hosts_installed[host_id] = False
+            if host_state['state'] == 'ERROR':
+                hosts_failed[host_id] = True
+            else:
+                hosts_failed[host_id] = False
 
-        if found_installing_clusters and found_installing_hosts:
+        cluster_finished = cluster_installed or cluster_failed
+        hosts_finished = {}
+        for _, host_id in host_mapping.items():
+            hosts_finished[host_id] = (
+                hosts_installed.get(host_id, False) or
+                hosts_failed.get(host_id, False)
+            )
+        if cluster_finished and all(hosts_finished.values()):
+            logging.info('all clusters/hosts are installed.')
+            install_finished = True
+            break
+        else:
             logging.info(
                 'there are some clusters/hosts in installing.'
                 'sleep %s seconds and retry',
                 flags.OPTIONS.progress_update_check_interval)
             time.sleep(float(flags.OPTIONS.progress_update_check_interval))
-        else:
-            install_finished = True
-            logging.info('all clusters/hosts are installed.')
-            break
 
     if not install_finished:
-        msg = 'installing %s is not all finished: hosts %s clusters %s' % (
-            cluster_hosts, hosts_progress, clusters_progress)
+        raise Exception(
+            'cluster %s installation not finished: '
+            'installed %s, failed: %s' % (
+                cluster_id, hosts_installed, hosts_failed
+            )
+        )
+    if cluster_failed or any(hosts_failed.values()):
+        msg = 'cluster %s hosts %s is not all finished. failed hosts %s' % (
+            cluster_id, host_mapping.values(), hosts_failed.keys()
+        )
         raise Exception(msg)
 
-    if failed_hosts:
-        msg = 'installing hosts failed: %s' % failed_hosts
-        raise Exception(msg)
 
-    if failed_clusters:
-        msg = 'installing clusters failed: %s' % failed_clusters
-        raise Exception(msg)
-
-
-def _check_dashboard_links(client, cluster_hosts):
-    dashboard_role = flags.OPTIONS.dashboard_role
+def _check_dashboard_links(client, cluster_id):
+    dashboard_url = flags.OPTIONS.dashboard_url
+    if not dashboard_url:
+        raise Exception(
+            'no dashboard url set')
     dashboard_link_pattern = re.compile(
         flags.OPTIONS.dashboard_link_pattern)
-    for cluster_id, host_ids in cluster_hosts.items():
-        status, resp = client.get_dashboard_links(cluster_id)
+    r = requests.get(dashboard_url, verify=False)
+    r.raise_for_status()
+    match = dashboard_link_pattern.search(r.text)
+    if match:
         logging.info(
-            'get cluster %s dashboard links status: %s, resp: %s',
-            cluster_id, status, resp)
-        if status >= 400:
-            msg = 'failed to get cluster %s dashboard links' % cluster_id
-            raise Exception(msg)
-
-        dashboardlinks = resp['dashboardlinks']
-        if dashboard_role not in dashboardlinks:
-            msg = 'no dashboard role %s found in %s' % (
-                dashboard_role, dashboardlinks)
-            raise Exception(msg)
-
-        r = requests.get(dashboardlinks[dashboard_role], verify=False)
-        r.raise_for_status()
-        match = dashboard_link_pattern.search(r.text)
-        if match:
-            logging.info(
-                'dashboard login page for cluster %s can be downloaded',
-                cluster_id)
-        else:
-            msg = (
-                '%s dashboard login page failed to be downloaded\n'
-                'the context is:\n%s\n'
-            ) % (dashboard_role, r.text)
-            raise Exception(msg)
+            'dashboard login page for cluster %s can be downloaded',
+            cluster_id)
+    else:
+        msg = (
+            '%s failed to be downloaded\n'
+            'the context is:\n%s\n'
+        ) % (dashboard_url, r.text)
+        raise Exception(msg)
 
 
 def main():
@@ -648,16 +823,19 @@ def main():
         machines = _poll_switches(client)
     else:
         machines = _get_machines(client)
+    subnet_mapping = _add_subnets(client)
     adapter_id, os_id, flavor_id = _get_adapter(client)
-    cluster_hosts = _add_cluster(
+    cluster_id, host_mapping = _add_cluster(
         client, adapter_id, os_id, flavor_id, machines)
-    _set_cluster_security(client, cluster_hosts)
-    _set_cluster_networking(client, cluster_hosts)
-    _set_cluster_partition(client, cluster_hosts)
-    _set_host_config(client, cluster_hosts)
-    _deploy_clusters(client, cluster_hosts)
-    _get_installing_progress(client, cluster_hosts)
-    _check_dashboard_links(client, cluster_hosts)
+    host_ips = _set_host_networking(
+        client, host_mapping, subnet_mapping
+    )
+    _set_cluster_os_config(client, cluster_id, host_ips)
+    _set_cluster_package_config(client, cluster_id)
+    _set_host_roles(client, cluster_id, host_mapping)
+    _deploy_clusters(client, cluster_id, host_mapping)
+    _get_installing_progress(client, cluster_id, host_mapping)
+    _check_dashboard_links(client, cluster_id)
 
 
 if __name__ == "__main__":

@@ -96,10 +96,8 @@ def _poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
     )
 
 
-def poll_switch(
-    poller_email, ip_addr, credentials,
-    req_obj='mac', oper="SCAN"
-):
+def poll_switch(poller_email, ip_addr, credentials,
+		req_obj='mac', oper="SCAN"):
     """Query switch and update switch machines.
 
     .. note::
@@ -130,19 +128,15 @@ def poll_switch(
         switch_dict, machine_dicts = _poll_switch(
             ip_addr, credentials, req_obj=req_obj, oper=oper
         )
-        switches = switch_api.list_switches(
-            poller, ip_int=ip_int
-        )
+        switches = switch_api.list_switches(poller, ip_int=ip_int)
         if not switches:
             logging.error('no switch found for %s', ip_addr)
             return
 
         for switch in switches:
-            switch_api.update_switch(
-                poller, switch['id'], **switch_dict
-            )
             for machine_dict in machine_dicts:
                 print 'add machine: %s' % machine_dict
                 switch_api.add_switch_machine(
                     poller, switch['id'], False, **machine_dict
                 )
+		switch_api.update_switch(poller, switch['id'], **switch_dict)

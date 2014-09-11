@@ -138,11 +138,11 @@ def poll_switch(
             return
 
         for switch in switches:
-            switch_api.update_switch(
-                poller, switch['id'], **switch_dict
-            )
             for machine_dict in machine_dicts:
                 print 'add machine: %s' % machine_dict
                 switch_api.add_switch_machine(
                     poller, switch['id'], False, **machine_dict
                 )
+	    switch_api.update_switch(
+                 poller, switch['id'], **switch_dict
+            )

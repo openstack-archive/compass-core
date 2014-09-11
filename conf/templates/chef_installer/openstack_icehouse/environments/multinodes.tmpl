@@ -19,7 +19,6 @@
 ## Network worker node management IP/interface
 #set network_worker_ip = $network_worker_role.management.ip
 #set network_worker_nic = $network_worker_role.management.interface
-#set network_worker_tenant_nic = $network_worker_role.tenant.interface
 #set network_worker_public_nic = $network_worker_role.public.interface
 
 ## Database node management IP
@@ -277,9 +276,6 @@
         },
         "network-api-bind": {
           "bind_interface": "$network_server_nic"
-        },
-        "network-openvswitch": {
-          "bind_interface": "$network_worker_tenant_nic"
         },
         "orchestration-api": {
           "host": "$controller_ip",

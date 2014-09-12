@@ -260,6 +260,7 @@ def validate_host(session, host):
 
 
 @utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.input_validates(name=utils.check_name)
 @utils.wrap_to_dict(RESP_FIELDS)
 def _update_host(session, updater, host_id, **kwargs):
     """Update a host internal."""
@@ -278,7 +279,7 @@ def _update_host(session, updater, host_id, **kwargs):
         if host_by_name and host_by_name.id != host.id:
             raise exception.InvalidParameter(
                 'hostname %s is already exists in host %s' % (
-                    hostname, host_by_name.to_dict()
+                    hostname, host_by_name.id
                 )
             )
     return utils.update_db_object(session, host, **kwargs)
@@ -621,7 +622,7 @@ def _update_host_network(
         if host_network_by_ip and host_network_by_ip.id != host_network.id:
             raise exception.InvalidParameter(
                 'ip %s exist in host network %s' % (
-                    ip, host_network_by_ip.to_dict()
+                    ip, host_network_by_ip.id
                 )
             )
     is_host_editable(session, host_network.host, updater)

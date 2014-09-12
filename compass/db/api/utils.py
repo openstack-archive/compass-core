@@ -577,6 +577,18 @@ def check_mac(mac):
         )
 
 
+NAME_PATTERN = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_-]*')
+
+
+def check_name(name):
+    if not NAME_PATTERN.match(name):
+        raise exception.InvalidParameter(
+            'name %s does not match the pattern %s' % (
+                name, NAME_PATTERN.pattern
+            )
+        )
+
+
 def _check_ipmi_credentials_ip(ip):
     check_ip(ip)
 

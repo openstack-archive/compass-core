@@ -145,6 +145,13 @@ UPDATED_CLUSTERHOST_LOG_FIELDS = [
 ]
 
 
+def _check_roles(roles):
+    if not roles:
+        raise exception.InvalidParameter(
+            'roles %s is empty' % roles
+        )
+
+
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -229,6 +236,7 @@ def is_cluster_editable(
     ADDED_FIELDS,
     optional_support_keys=OPTIONAL_ADDED_FIELDS
 )
+@utils.input_validates(name=utils.check_name)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_CLUSTER
@@ -248,6 +256,7 @@ def add_cluster(
 
 
 @utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.input_validates(name=utils.check_name)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_CLUSTER
@@ -264,6 +273,17 @@ def update_cluster(session, updater, cluster_id, **kwargs):
             kwargs.get('reinstall_distributed_system', False)
         )
     )
+    if 'name' in kwargs:
+        clustername = kwargs['name']
+        cluster_by_name = utils.get_db_object(
+            session, models.Cluster, False, name=clustername
+        )
+        if cluster_by_name and cluster_by_name.id != cluster.id:
+            raise exception.InvalidParameter(
+                'cluster name %s is already exists in cluster %s' % (
+                    clustername, cluster_by_name.id
+                )
+            )
     return utils.update_db_object(session, cluster, **kwargs)
 
 
@@ -454,8 +474,9 @@ def del_cluster_config(session, deleter, cluster_id):
 
 @utils.supported_filters(
     ADDED_HOST_FIELDS,
-    optional_support_keys=UPDATED_HOST_FIELDS
+    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS)
 )
+@utils.input_validates(name=utils.check_name, roles=_check_roles)
 def add_clusterhost_internal(
         session, cluster,
         exception_when_existing=False,
@@ -486,7 +507,7 @@ def add_clusterhost_internal(
                 if host_by_name and host_by_name.id != host.id:
                     raise exception.InvalidParameter(
                         'host name %s exists in host %s' % (
-                            hostname, host_by_name.to_dict()
+                            hostname, host_by_name.id
                         )
                     )
             utils.update_db_object(
@@ -504,7 +525,7 @@ def add_clusterhost_internal(
             if host and host.machine_id != machine_id:
                 raise exception.InvalidParameter(
                     'host name %s exists in host %s' % (
-                        hostname, host.to_dict()
+                        hostname, host.id
                     )
                 )
         host = utils.add_db_object(
@@ -628,6 +649,7 @@ def add_cluster_host(
     )
 
 
+@utils.input_validates(roles=_check_roles)
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_CLUSTER_HOSTS
 )
@@ -704,7 +726,7 @@ def update_clusterhost(
     roles='patched_roles'
 )
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS
 )
 @database.run_in_session()
 def patch_cluster_host(
@@ -722,7 +744,7 @@ def patch_cluster_host(
     roles='patched_roles'
 )
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS
 )
 @database.run_in_session()
 def patch_clusterhost(

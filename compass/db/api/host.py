@@ -76,7 +76,7 @@ ADDED_NETWORK_FIELDS = [
 ]
 OPTIONAL_ADDED_NETWORK_FIELDS = ['is_mgmt', 'is_promiscuous']
 UPDATED_NETWORK_FIELDS = [
-    'ip', 'subnet_id', 'subnet', 'is_mgmt',
+    'interface', 'ip', 'subnet_id', 'subnet', 'is_mgmt',
     'is_promiscuous'
 ]
 IGNORED_NETWORK_FIELDS = [
@@ -260,6 +260,7 @@ def validate_host(session, host):
 
 
 @utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.input_validates(name=utils.check_name)
 @utils.wrap_to_dict(RESP_FIELDS)
 def _update_host(session, updater, host_id, **kwargs):
     """Update a host internal."""
@@ -278,7 +279,7 @@ def _update_host(session, updater, host_id, **kwargs):
         if host_by_name and host_by_name.id != host.id:
             raise exception.InvalidParameter(
                 'hostname %s is already exists in host %s' % (
-                    hostname, host_by_name.to_dict()
+                    hostname, host_by_name.id
                 )
             )
     return utils.update_db_object(session, host, **kwargs)
@@ -526,6 +527,21 @@ def _add_host_network(
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
+    host_network = utils.get_db_object(
+        session, models.HostNetwork, False,
+        host_id=host_id, interface=interface
+    )
+    if (
+        host_network and not (
+            host_network.host_id == host_id and
+            host_network.interface == interface
+        )
+    ):
+        raise exception.InvalidParameter(
+            'interface %s exists in host network %s' % (
+                interface, host_network.id
+            )
+        )
     ip_int = long(netaddr.IPAddress(ip))
     host_network = utils.get_db_object(
         session, models.HostNetwork, False,
@@ -539,7 +555,7 @@ def _add_host_network(
     ):
         raise exception.InvalidParameter(
             'ip %s exists in host network %s' % (
-                ip, host_network.to_dict()
+                ip, host_network.id
             )
         )
     is_host_editable(session, host, creator)
@@ -611,6 +627,22 @@ def add_host_networks(
 def _update_host_network(
     session, updater, host_network, **kwargs
 ):
+    if 'interface' in kwargs:
+        interface = kwargs['interface']
+        host_network_by_interface = utils.get_db_object(
+            session, models.HostNetwork, False,
+            host_id=host_network.host_id,
+            interface=interface
+        )
+        if (
+            host_network_by_interface and
+            host_network_by_interface.id != host_network.id
+        ):
+            raise exception.InvalidParameter(
+                'interface %s exists in host network %s' % (
+                    interface, host_network_by_interface.id
+                )
+            )
     if 'ip' in kwargs:
         ip = kwargs['ip']
         ip_int = long(netaddr.IPAddress(ip))
@@ -621,7 +653,7 @@ def _update_host_network(
         if host_network_by_ip and host_network_by_ip.id != host_network.id:
             raise exception.InvalidParameter(
                 'ip %s exist in host network %s' % (
-                    ip, host_network_by_ip.to_dict()
+                    ip, host_network_by_ip.id
                 )
             )
     is_host_editable(session, host_network.host, updater)

@@ -118,11 +118,12 @@ if [[ ! -L compass_logs ]]; then
 fi
 CLIENT_SCRIPT=/opt/compass/bin/client.py
 if [[ "$CLEAN_OLD_DATA" == "0" || "$CLEAN_OLD_DATA" == "false" ]]; then
+    echo "keep old deployment data"
 else
     /opt/compass/bin/refresh.sh
     if [[ "$?" != "0" ]]; then
         echo "failed to refresh"
-        exit 1 
+        exit 1
     fi
     /opt/compass/bin/clean_nodes.sh
     /opt/compass/bin/clean_clients.sh
@@ -148,8 +149,8 @@ if [[ "$USE_POLL_SWITCHES" == "0" || "$USE_POLL_SWITCHES" == "false" ]]; then
     echo "======================================================="
     /opt/compass/bin/manage_db.py set_switch_machines --switch_machines_file ${TMP_SWITCH_MACHINE_FILE}
     if [[ "$?" != "0" ]]; then
-	echo "failed to set switch machines"
-	exit 1
+        echo "failed to set switch machines"
+        exit 1
     fi
 else
     POLL_SWITCHES_FLAG="poll_switches"

@@ -24,13 +24,16 @@ class Client(object):
     """compass restful api wrapper"""
 
     def __init__(self, url, headers=None, proxies=None, stream=None):
-
+        logging.info('create api client %s', url)
         self.url_ = url
         self.session_ = requests.Session()
 
         if headers:
-            self.session_.headers = headers
-
+            self.session_.headers.update(headers)
+        self.session_.headers.update({
+            'Accept': 'application/json'
+        })
+        
         if proxies is not None:
             self.session_.proxies = proxies
 
@@ -56,6 +59,7 @@ class Client(object):
 
     def _get(self, req_url, data=None):
         url = '%s%s' % (self.url_, req_url)
+        logging.debug('get %s with data %s', url, data)
         if data:
             resp = self.session_.get(url, params=data)
         else:
@@ -65,6 +69,7 @@ class Client(object):
 
     def _post(self, req_url, data=None):
         url = '%s%s' % (self.url_, req_url)
+        logging.debug('post %s with data %s', url, data)
         if data:
             resp = self.session_.post(url, json.dumps(data))
         else:
@@ -75,6 +80,7 @@ class Client(object):
     def _put(self, req_url, data=None):
         """encapsulate put method."""
         url = '%s%s' % (self.url_, req_url)
+        logging.debug('put %s with data %s', url, data)
         if data:
             resp = self.session_.put(url, json.dumps(data))
         else:
@@ -84,6 +90,7 @@ class Client(object):
 
     def _patch(self, req_url, data=None):
         url = '%s%s' % (self.url_, req_url)
+        logging.debug('patch %s with data %s', url, data)
         if data:
             resp = self.session_.patch(url, json.dumps(data))
         else:
@@ -93,17 +100,23 @@ class Client(object):
 
     def _delete(self, req_url):
         url = '%s%s' % (self.url_, req_url)
+        logging.debug('delete %s', url)
         return self._get_response(self.session_.delete(url))
 
     def login(self, email, password):
-        return self._login(email, password)
-
-    def _login(self, email, password):
         credential = {}
         credential['email'] = email
         credential['password'] = password
-        token = self._post('/users/token', data=credential)
-        return token
+        return self._post('/users/login', data=credential)
+
+    def get_token(self, email, password):
+        credential = {}
+        credential['email'] = email
+        credential['password'] = password
+        status, resp = self._post('/users/token', data=credential)
+        if status < 400:
+            self.session_.headers.update({'X-Auth-Token': resp['token']})
+        return status, resp
 
     def get_users(self):
         users = self._get('/users')
@@ -112,8 +125,7 @@ class Client(object):
     def list_switches(
             self,
             switch_ips=None,
-            switch_ip_networks=None,
-            limit=None):
+            switch_ip_networks=None):
         """list switches."""
         params = {}
         if switch_ips:
@@ -121,9 +133,6 @@ class Client(object):
 
         if switch_ip_networks:
             params['switchIpNetwork'] = switch_ip_networks
-
-        if limit:
-            params['limit'] = limit
 
         switchlist = self._get('/switches', data=params)
         return switchlist
@@ -371,13 +380,12 @@ class Client(object):
         return self._put('/switch-machines/%s' % switchmachine_id, data=data)
 
     def patch_switchmachine(self, switchmachine_id,
-                            patched_vlans=None, raw_data=None):
+                            vlans=None, raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
-
-        elif patched_vlans:
-            data['patched_vlans'] = patched_vlans
+        elif vlans:
+            data['vlans'] = vlans
 
         return self._patch('/switch-machines/%s' % switchmachine_id, data=data)
 
@@ -390,36 +398,17 @@ class Client(object):
             data['mac'] = mac
 
         if tag:
-            data['tag'] = mac
-
-        if tag:
-            data['location'] = location
-
-        return self._get('/machines', data=data)
-
-    def get_machine(self, machine_id, id=None, mac=None, ipmi_credentials=None,
-                    tag=None, location=None, created_at=None, updated_at=None):
-        data = {}
-        if id:
-            data['id'] = id
-
-        if mac:
-            data['mac'] = mac
-
-        if ipmi_credentials:
-            data['ipmi_credentials'] = ipmi_credentials
-
-        if tag:
             data['tag'] = tag
 
         if location:
             data['location'] = location
 
-        if created_at:
-            data['created_at'] = created_at
+        return self._get('/machines', data=data)
 
-        if updated_at:
-            data['updated_at'] = updated_at
+    def get_machine(self, machine_id):
+        data = {}
+        if id:
+            data['id'] = id
 
         return self._get('/machines/%s' % machine_id, data=data)
 
@@ -440,21 +429,21 @@ class Client(object):
 
         return self._put('/machines/%s' % machine_id, data=data)
 
-    def patch_machine(self, machine_id, patched_ipmi_credentials=None,
-                      patched_tag=None, patched_location=None,
+    def patch_machine(self, machine_id, ipmi_credentials=None,
+                      tag=None, location=None,
                       raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
         else:
-            if patched_ipmi_credentials:
-                data['patched_ipmi_credentials'] = patched_ipmi_credentials
+            if ipmi_credentials:
+                data['ipmi_credentials'] = ipmi_credentials
 
-            if patched_tag:
-                data['patched_tag'] = patched_tag
+            if tag:
+                data['tag'] = tag
 
-            if patched_location:
-                data['patched_location'] = patched_location
+            if location:
+                data['location'] = location
 
         return self._patch('/machines/%s' % machine_id, data=data)
 

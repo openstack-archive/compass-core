@@ -115,6 +115,10 @@ if [[ "$?" != "0" ]]; then
 else
     echo "compassed service is refreshed"
 fi
+/opt/compass/bin/clean_nodes.sh
+/opt/compass/bin/clean_clients.sh
+/opt/compass/bin/clean_environments.sh
+/opt/compass/bin/remove_systems.sh
 
 sudo service httpd status
 if [[ "$?" != "0" ]]; then

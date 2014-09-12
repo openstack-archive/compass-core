@@ -32,6 +32,8 @@ from compass.actions import deploy
 from compass.actions import reinstall
 from compass.api import app
 from compass.db.api import database
+from compass.db.api import switch as switch_api
+from compass.db.api import user as user_api
 from compass.tasks.client import celery
 from compass.utils import flags
 from compass.utils import logsetting
@@ -120,6 +122,44 @@ def dropdb():
     """Drops database from sqlalchemy models."""
     database.init()
     database.drop_db()
+
+
+@app_manager.command
+def set_switch_machines():
+    """Set switches and machines.
+
+    .. note::
+       --switch_machines_file is the filename which stores all switches
+       and machines information.
+       each line in fake_switches_files presents one machine.
+       the format of each line machine,<switch_ip>,<switch_port>,<vlan>,<mac>
+       or switch,<switch_ip>,<switch_vendor>,<switch_version>,
+       <switch_community>,<switch_state>
+    """
+    if not flags.OPTIONS.switch_machines_file:
+        print 'flag --switch_machines_file is missing'
+        return
+    database.init()
+    switches, switch_machines = util.get_switch_machines_from_file(
+        flags.OPTIONS.switch_machines_file)
+    user = user_api.get_user_object(
+        setting.COMPASS_ADMIN_EMAIL
+    )
+    switch_mapping = {}
+    for switch in switches:
+        added_switch = switch_api.add_switch(
+            user, False, **switch
+        )
+        switch_mapping[switch['ip']] = added_switch['id']
+    for switch_ip, machines in switch_machines.items():
+        if switch_ip not in switch_mapping:
+            print 'switch ip %s not found' % switch_ip
+            sys.exit(1)
+        switch_id = switch_mapping[switch_ip]
+        for machine in machines:
+            switch_api.add_switch_machine(
+                user, switch_id, False, **machine
+            )
 
 
 @app_manager.command

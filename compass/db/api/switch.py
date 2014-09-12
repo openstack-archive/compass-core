@@ -88,7 +88,9 @@ RESP_MACHINES_HOSTS_FIELDS = [
     'id', 'switch_id', 'switch_ip', 'machine_id', 'switch_machine_id',
     'port', 'vlans', 'mac',
     'ipmi_credentials', 'tag', 'location',
-    'name', 'hostname', 'os_name', 'clusters',
+    'name', 'hostname', 'os_name', 'os_id', 'owner',
+    'os_installer', 'reinstall_os', 'os_installed',
+    'clusters',
     'created_at', 'updated_at'
 ]
 RESP_CLUSTER_FIELDS = [

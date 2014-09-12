@@ -218,24 +218,43 @@ def pretty_print(*contents):
         print "\n".join(content for content in contents)
 
 
-def get_clusters_from_str(clusters_str):
-    """get clusters from string."""
-    clusters = {}
-    for cluster_and_hosts in clusters_str.split(';'):
-        if not cluster_and_hosts:
-            continue
+def get_switch_machines_from_file(filename):
+    """get switch machines from file."""
+    switches = []
+    switch_machines = {}
+    with open(filename) as switch_file:
+        for line in switch_file:
+            line = line.strip()
+            if not line:
+                # ignore empty line
+                continue
 
-        if ':' in cluster_and_hosts:
-            cluster_str, hosts_str = cluster_and_hosts.split(
-                ':', 1)
-        else:
-            cluster_str = cluster_and_hosts
-            hosts_str = ''
+            if line.startswith('#'):
+                # ignore comments
+                continue
 
-        hosts = [
-            host for host in hosts_str.split(',')
-            if host
-        ]
-        clusters[cluster_str] = hosts
+            columns = [column for column in line.split(',')]
+            if not columns:
+                # ignore empty line
+                continue
 
-    return clusters
+            if columns[0] == 'switch':
+                (switch_ip, switch_vendor, switch_version,
+                 switch_community, switch_state) = columns[1:]
+                switches.append({
+                    'ip': switch_ip,
+                    'vendor': switch_vendor,
+                    'credentials': {
+                        'version': switch_version,
+                        'community': switch_community,
+                    },
+                    'state': switch_state,
+                })
+            elif columns[0] == 'machine':
+                switch_ip, switch_port, mac = columns[1:]
+                switch_machines.setdefault(switch_ip, []).append({
+                    'mac': mac,
+                    'port': switch_port,
+                })
+
+    return (switches, switch_machines)

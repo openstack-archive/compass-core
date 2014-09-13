@@ -124,8 +124,35 @@ def _get_request_data_as_list():
         return []
 
 
-def _get_request_args():
-    return dict(request.args)
+def _bool_converter(value):
+    if not value:
+        return True
+    if value in ['False', 'false', '0']:
+        return False
+    return True
+
+
+def _int_converter(value):
+    try:
+        return int(value)
+    except Exception:
+        raise exception_handler.BadRequest(
+            '%r type is not int' % value
+        )
+
+
+def _get_request_args(**kwargs):
+    args = dict(request.args)
+    logging.debug('origin request args: %s', args)
+    for key, value in args.items():
+        if key in kwargs:
+            converter = kwargs[key]
+            if isinstance(value, list):
+                args[key] = [converter(item) for item in value]
+            else:
+                args[key] = converter(value)
+    logging.debug('request args: %s', args)
+    return args
 
 
 def _group_data_action(data, **data_callbacks):
@@ -232,7 +259,10 @@ def logout():
 @login_required
 def list_users():
     """list users."""
-    data = _get_request_args()
+    data = _get_request_args(
+        is_admin=_bool_converter,
+        active=_bool_converter
+    )
     return utils.make_json_response(
         200, user_api.list_users(current_user, **data)
     )
@@ -748,7 +778,7 @@ def _filter_location(data):
 @login_required
 def list_switch_machines(switch_id):
     """Get switch machines."""
-    data = _get_request_args()
+    data = _get_request_args(vlans=_int_converter)
     _filter_port(data)
     _filter_general(data, 'vlans')
     _filter_tag(data)
@@ -766,7 +796,7 @@ def list_switch_machines(switch_id):
 @login_required
 def list_switch_machines_hosts(switch_id):
     """Get switch machines or hosts."""
-    data = _get_request_args()
+    data = _get_request_args(vlans=_int_converter, os_id=_int_converter)
     _filter_port(data)
     _filter_general(data, 'vlans')
     _filter_tag(data)
@@ -929,7 +959,7 @@ def take_machine_action(machine_id):
 @login_required
 def list_switchmachines():
     """List switch machines."""
-    data = _get_request_args()
+    data = _get_request_args(vlans=_int_converter)
     _filter_ip(data)
     _filter_port(data)
     _filter_general(data, 'vlans')
@@ -948,7 +978,7 @@ def list_switchmachines():
 @login_required
 def list_switchmachines_hosts():
     """List switch machines or hosts."""
-    data = _get_request_args()
+    data = _get_request_args(vlans=_int_converter, os_id=_int_converter)
     _filter_ip(data)
     _filter_port(data)
     _filter_general(data, 'vlans')
@@ -1276,7 +1306,7 @@ def list_clusters():
 @login_required
 def show_cluster(cluster_id):
     """Get cluster."""
-    data = _get_request_args()
+    data = _get_request_args(adapter_id=_int_converter)
     return utils.make_json_response(
         200,
         cluster_api.get_cluster(
@@ -1828,11 +1858,11 @@ def show_host(host_id):
 @login_required
 def list_machines_or_hosts():
     """Get host."""
-    data = _get_request_args()
+    data = _get_request_args(os_id=_int_converter)
     _filter_tag(data)
     _filter_location(data)
     _filter_general(data, 'os_name')
-    _filter_general(data, 'os_name')
+    _filter_general(data, 'os_id')
     return utils.make_json_response(
         200,
         _reformat_host(host_api.list_machines_or_hosts(
@@ -1979,7 +2009,10 @@ def list_host_networks(host_id):
 @login_required
 def list_hostnetworks():
     """list host networks."""
-    data = _get_request_args()
+    data = _get_request_args(
+        is_mgmt=_bool_converter,
+        is_promiscuous=_bool_converter
+    )
     return utils.make_json_response(
         200, host_api.list_hostnetworks(current_user, **data)
     )

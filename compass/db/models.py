@@ -1146,11 +1146,13 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
                         distributed_system.name
                     )
                 )
-            flavor = self.flavor
-            if not flavor:
+        flavor = self.flavor
+        if not flavor:
+            if distributed_system:
                 raise exception.InvalidParameter(
                     'flavor is not set in cluster %s' % self.id
                 )
+        else:
             flavor_adapter_id = flavor.adapter_id
             adapter_id = self.adapter_id
             logging.info(
@@ -1497,39 +1499,57 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
     def filtered(self):
         filters = self.switch.filters
         port = self.port
+        unmatched_allowed = True
+        ports_pattern = re.compile(r'(\D*)(\d+)-(\d+)(\D*)')
+        port_pattern = re.compile(r'(\D*)(\d+)(\D*)')
+        port_match = port_pattern.match(port)
+        if port_match:
+            port_prefix = port_match.group(1)
+            port_number = int(port_match.group(2))
+            port_suffix = port_match.group(3)
+        else:
+            port_prefix = ''
+            port_number = 0
+            port_suffix = ''
         for port_filter in filters:
-            logging.debug('apply filter %s on port %s', port_filter, port)
-            denied = port_filter['filter_type'] != 'allow'
+            filter_type = port_filter.get('filter_type', 'allow')
+            denied = filter_type != 'allow'
+            unmatched_allowed = denied
             if 'ports' in port_filter:
                 if port in port_filter['ports']:
-                    logging.debug('port %s is allowed? %s', port, not denied)
                     return denied
-            port_prefix = port_filter.get('port_prefix', '')
-            port_suffix = port_filter.get('port_suffix', '')
-            pattern = re.compile(r'%s(\d+)%s' % (port_prefix, port_suffix))
-            match = pattern.match(port)
-            if match:
-                logging.debug(
-                    'port %s matches pattern %s',
-                    port, pattern.pattern
-                )
-                port_number = match.group(1)
-                if (
-                    'port_start' not in port_filter or
-                    port_number >= port_filter['port_start']
-                ) and (
-                    'port_end' not in port_filter or
-                    port_number <= port_filter['port_end']
-                ):
-                    logging.debug('port %s is allowed? %s', port, not denied)
-                    return denied
+                if port_match:
+                    for port_or_ports in port_filter['ports']:
+                        ports_match = ports_pattern.match(port_or_ports)
+                        if ports_match:
+                            filter_port_prefix = ports_match.group(1)
+                            filter_port_start = int(ports_match.group(2))
+                            filter_port_end = int(ports_match.group(3))
+                            filter_port_suffix = ports_match.group(4)
+                            if (
+                                filter_port_prefix == port_prefix and
+                                filter_port_suffix == port_suffix and
+                                filter_port_start <= port_number and
+                                port_number <= filter_port_end
+                            ):
+                                return denied
             else:
-                logging.debug(
-                    'port %s does not match pattern %s',
-                    port, pattern.pattern
-                )
-        logging.debug('port %s is allowed', port)
-        return False
+                filter_port_prefix = port_filter.get('port_prefix', '')
+                filter_port_suffix = port_filter.get('port_suffix', '')
+                if (
+                    port_match and
+                    port_prefix == filter_port_prefix and
+                    port_suffix == filter_port_suffix
+                ):
+                    if (
+                        'port_start' not in port_filter or
+                        port_number >= port_filter['port_start']
+                    ) and (
+                        'port_end' not in port_filter or
+                        port_number <= port_filter['port_end']
+                    ):
+                        return denied
+        return not unmatched_allowed
 
     def to_dict(self):
         dict_info = self.machine.to_dict()
@@ -1632,13 +1652,124 @@ class Switch(BASE, HelperMixin, TimestampMixin):
                         'repolling', 'error', 'under_monitoring',
                         name='switch_state'),
                    ColumnDefault('initialized'))
-    filters = Column(JSONEncoded, default=[])
+    _filters = Column('filters', JSONEncoded, default=[])
     switch_machines = relationship(
         SwitchMachine,
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',
         backref=backref('switch')
     )
+
+    @classmethod
+    def parse_filters(cls, filters):
+        if isinstance(filters, basestring):
+            filters = filters.replace('\r\n', '\n').replace('\n', ';')
+            filters = [
+                switch_filter for switch_filter in filters.split(';')
+                if switch_filter
+            ]
+        if not isinstance(filters, list):
+            filters = [filters]
+        switch_filters = []
+        for switch_filter in filters:
+            if not switch_filter:
+                continue
+            if isinstance(switch_filter, basestring):
+                filter_dict = {}
+                filter_items = [
+                    item for item in switch_filter.split() if item
+                ]
+                if filter_items[0] in ['allow', 'deny']:
+                    filter_dict['filter_type'] = filter_items[0]
+                    filter_items = filter_items[1:]
+                elif filter_items[0] not in [
+                    'ports', 'port_prefix', 'port_suffix',
+                    'port_start', 'port_end'
+                ]:
+                    raise exception.InvalidParameter(
+                        'unrecognized filter type %s' % filter_items[0]
+                    )
+                while filter_items:
+                    if len(filter_items) >= 2:
+                        filter_dict[filter_items[0]] = filter_items[1]
+                        filter_items = filter_items[2:]
+                    else:
+                        filter_dict[filter_items[0]] = ''
+                        filter_items = filter_items[1:]
+                switch_filter = filter_dict
+            if not isinstance(switch_filter, dict):
+                raise exception.InvalidParameter(
+                    'filter %s is not dict' % switch_filter
+                )
+            if 'filter_type' in switch_filter:
+                if switch_filter['filter_type'] not in ['allow', 'deny']:
+                    raise exception.InvalidParameter(
+                        'filter_type should be `allow` or `deny` in %s' % (
+                            switch_filter
+                        )
+                    )
+            if 'ports' in switch_filter:
+                if isinstance(switch_filter['ports'], basestring):
+                    switch_filter['ports'] = [
+                        port_or_ports
+                        for port_or_ports in switch_filter['ports'].split(',')
+                        if port_or_ports
+                    ]
+                if not isinstance(switch_filter['ports'], list):
+                    raise exception.InvalidParameter(
+                        '`ports` type is not list in filter %s' % switch_filter
+                    )
+                for port_or_ports in switch_filter['ports']:
+                    if not isinstance(port_or_ports, basestring):
+                        raise exception.InvalidParameter(
+                            '%s type is not basestring in `ports` %s' % (
+                                port_or_ports, switch_filter['ports']
+                            )
+                        )
+            for key in ['port_start', 'port_end']:
+                if key in switch_filter:
+                    if isinstance(switch_filter[key], basestring):
+                        if switch_filter[key].isdigit():
+                            switch_filter[key] = int(switch_filter[key])
+                    if not isinstance(switch_filter[key], int):
+                        raise exception.InvalidParameter(
+                            '`%s` type is not int in filer %s' % (
+                                key, switch_filter
+                            )
+                        )
+            switch_filters.append(switch_filter)
+        return switch_filters
+
+    @classmethod
+    def format_filters(cls, filters):
+        filter_strs = []
+        for switch_filter in filters:
+            filter_properties = []
+            filter_properties.append(
+                switch_filter.get('filter_type', 'allow')
+            )
+            if 'ports' in switch_filter:
+                filter_properties.append(
+                    'ports ' + ','.join(switch_filter['ports'])
+                )
+            if 'port_prefix' in switch_filter:
+                filter_properties.append(
+                    'port_prefix ' + switch_filter['port_prefix']
+                )
+            if 'port_suffix' in switch_filter:
+                filter_properties.append(
+                    'port_suffix ' + switch_filter['port_suffix']
+                )
+            if 'port_start' in switch_filter:
+                filter_properties.append(
+                    'port_start ' + str(switch_filter['port_start'])
+                )
+            if 'port_end' in switch_filter:
+                filter_properties.append(
+                    'port_end ' + str(switch_filter['port_end'])
+                )
+            filter_strs.append(' '.join(filter_properties))
+        return ';'.join(filter_strs)
 
     def __init__(self, ip_int, **kwargs):
         self.ip_int = ip_int
@@ -1661,28 +1792,40 @@ class Switch(BASE, HelperMixin, TimestampMixin):
         self.credentials = util.merge_dict(dict(self.credentials), value)
 
     @property
+    def filters(self):
+        return self._filters
+
+    @filters.setter
+    def filters(self, value):
+        if not value:
+            return
+        self._filters = self.parse_filters(value)
+
+    @property
+    def put_filters(self):
+        return self._filters
+
+    @put_filters.setter
+    def put_filters(self, value):
+        if not value:
+            return
+        self._filters = self.parse_filters(value)
+
+    @property
     def patched_filters(self):
-        return self.filters
+        return self._filters
 
     @patched_filters.setter
     def patched_filters(self, value):
         if not value:
             return
         filters = list(self.filters)
-        for item in value:
-            found_filter = False
-            for switch_filter in filters:
-                if switch_filter['filter_name'] == item['filter_name']:
-                    switch_filter.update(item)
-                    found_filter = True
-                    break
-            if not found_filter:
-                filters.append(item)
-        self.filters = filters
+        self.filters = self.parse_filters(value) + filters
 
     def to_dict(self):
         dict_info = super(Switch, self).to_dict()
         dict_info['ip'] = self.ip
+        dict_info['filters'] = self.format_filters(self._filters)
         return dict_info
 
 
@@ -1904,7 +2047,9 @@ class AdapterFlavor(BASE, HelperMixin):
     name = Column(String(80), unique=True)
     display_name = Column(String(80))
     template = Column(String(80))
-    _ordered_flavor_roles = Column(JSONEncoded, default=[])
+    _ordered_flavor_roles = Column(
+        'ordered_flavor_roles', JSONEncoded, default=[]
+    )
 
     flavor_roles = relationship(
         AdapterFlavorRole,

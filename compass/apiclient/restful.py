@@ -555,12 +555,13 @@ class Client(object):
         return self._get('/clusters/%s' % cluster_id)
 
     def add_cluster(self, name, adapter_id, os_id,
-                    flavor_id, raw_data=None):
+                    flavor_id=None, raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
         else:
-            data['flavor_id'] = flavor_id
+            if flavor_id:
+                data['flavor_id'] = flavor_id
             data['name'] = name
             data['adapter_id'] = adapter_id
             data['os_id'] = os_id

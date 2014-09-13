@@ -96,6 +96,7 @@ RESP_REVIEW_FIELDS = [
 RESP_DEPLOY_FIELDS = [
     'status', 'cluster', 'clusterhosts'
 ]
+IGNORE_FIELDS = ['created_at', 'updated_at']
 ADDED_FIELDS = ['name', 'adapter_id', 'os_id']
 OPTIONAL_ADDED_FIELDS = ['flavor_id']
 UPDATED_FIELDS = ['name', 'reinstall_distributed_system']
@@ -234,7 +235,8 @@ def is_cluster_editable(
 
 @utils.supported_filters(
     ADDED_FIELDS,
-    optional_support_keys=OPTIONAL_ADDED_FIELDS
+    optional_support_keys=OPTIONAL_ADDED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(name=utils.check_name)
 @database.run_in_session()
@@ -255,7 +257,10 @@ def add_cluster(
     )
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(name=utils.check_name)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -370,7 +375,8 @@ def _update_cluster_config(session, updater, cluster, **kwargs):
     package_config='deployed_package_config'
 )
 @utils.supported_filters(
-    optional_support_keys=UPDATED_DEPLOYED_CONFIG_FIELDS
+    optional_support_keys=UPDATED_DEPLOYED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -395,7 +401,10 @@ def update_cluster_deployed_config(
     os_config='put_os_config',
     package_config='put_package_config'
 )
-@utils.supported_filters(optional_support_keys=UPDATED_CONFIG_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 def update_cluster_config(session, updater, cluster_id, **kwargs):
     """Update cluster config."""
@@ -427,7 +436,10 @@ def update_cluster_config(session, updater, cluster_id, **kwargs):
     os_config='patched_os_config',
     package_config='patched_package_config'
 )
-@utils.supported_filters(optional_support_keys=PATCHED_CONFIG_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=PATCHED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 def patch_cluster_config(session, updater, cluster_id, **kwargs):
     """patch cluster config."""
@@ -474,7 +486,8 @@ def del_cluster_config(session, deleter, cluster_id):
 
 @utils.supported_filters(
     ADDED_HOST_FIELDS,
-    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS)
+    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS),
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(name=utils.check_name, roles=_check_roles)
 def add_clusterhost_internal(
@@ -693,7 +706,8 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 def update_cluster_host(
@@ -708,7 +722,8 @@ def update_cluster_host(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 def update_clusterhost(
@@ -726,7 +741,8 @@ def update_clusterhost(
     roles='patched_roles'
 )
 @utils.supported_filters(
-    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS
+    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 def patch_cluster_host(
@@ -744,7 +760,8 @@ def patch_cluster_host(
     roles='patched_roles'
 )
 @utils.supported_filters(
-    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS
+    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 def patch_clusterhost(
@@ -1430,7 +1447,8 @@ def get_clusterhost_self_state(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -1450,7 +1468,8 @@ def update_cluster_host_state(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -1470,7 +1489,8 @@ def update_clusterhost_state(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTER_STATE_FIELDS
+    optional_support_keys=UPDATED_CLUSTER_STATE_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -1538,7 +1558,8 @@ def get_clusterhost_log_history(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
@@ -1554,7 +1575,8 @@ def update_cluster_host_log_history(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
@@ -1571,7 +1593,8 @@ def update_clusterhost_log_history(
 
 @utils.supported_filters(
     ADDED_CLUSTERHOST_LOG_FIELDS,
-    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
@@ -1588,7 +1611,8 @@ def add_clusterhost_log_history(
 
 @utils.supported_filters(
     ADDED_CLUSTERHOST_LOG_FIELDS,
-    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)

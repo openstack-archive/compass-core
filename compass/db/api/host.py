@@ -79,8 +79,8 @@ UPDATED_NETWORK_FIELDS = [
     'interface', 'ip', 'subnet_id', 'subnet', 'is_mgmt',
     'is_promiscuous'
 ]
-IGNORED_NETWORK_FIELDS = [
-    'interface'
+IGNORE_FIELDS = [
+    'created_at', 'updated_at'
 ]
 RESP_STATE_FIELDS = [
     'id', 'state', 'percentage', 'message', 'severity'
@@ -259,7 +259,10 @@ def validate_host(session, host):
         )
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(name=utils.check_name)
 @utils.wrap_to_dict(RESP_FIELDS)
 def _update_host(session, updater, host_id, **kwargs):
@@ -349,7 +352,10 @@ def get_host_deployed_config(session, getter, host_id, **kwargs):
 @utils.replace_filters(
     os_config='deployed_os_config'
 )
-@utils.supported_filters(UPDATED_DEPLOYED_CONFIG_FIELDS)
+@utils.supported_filters(
+    UPDATED_DEPLOYED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_HOST_CONFIG
@@ -378,7 +384,10 @@ def _update_host_config(session, updater, host, **kwargs):
 @utils.replace_filters(
     os_config='put_os_config'
 )
-@utils.supported_filters(UPDATED_CONFIG_FIELDS)
+@utils.supported_filters(
+    UPDATED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 def update_host_config(session, updater, host_id, **kwargs):
     host = utils.get_db_object(
@@ -404,7 +413,10 @@ def update_host_config(session, updater, host_id, **kwargs):
 @utils.replace_filters(
     os_config='patched_os_config'
 )
-@utils.supported_filters(PATCHED_CONFIG_FIELDS)
+@utils.supported_filters(
+    PATCHED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 def patch_host_config(session, updater, host_id, **kwargs):
     host = utils.get_db_object(
@@ -514,7 +526,9 @@ def get_hostnetwork(session, getter, host_network_id, **kwargs):
 
 
 @utils.supported_filters(
-    ADDED_NETWORK_FIELDS, optional_support_keys=OPTIONAL_ADDED_NETWORK_FIELDS
+    ADDED_NETWORK_FIELDS,
+    optional_support_keys=OPTIONAL_ADDED_NETWORK_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(
     ip=utils.check_ip
@@ -662,7 +676,7 @@ def _update_host_network(
 
 @utils.supported_filters(
     optional_support_keys=UPDATED_NETWORK_FIELDS,
-    ignore_support_keys=IGNORED_NETWORK_FIELDS
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(
     ip=utils.check_ip
@@ -689,7 +703,7 @@ def update_host_network(
 
 @utils.supported_filters(
     optional_support_keys=UPDATED_NETWORK_FIELDS,
-    ignore_support_keys=IGNORED_NETWORK_FIELDS
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(
     ip=utils.check_ip
@@ -755,7 +769,10 @@ def get_host_state(session, getter, host_id, **kwargs):
     ).state_dict()
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_STATE_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_STATE_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_HOST_STATE
@@ -790,7 +807,10 @@ def get_host_log_history(session, getter, host_id, filename, **kwargs):
     )
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_LOG_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_LOG_FIELDS)
 def update_host_log_history(session, updater, host_id, filename, **kwargs):
@@ -803,7 +823,9 @@ def update_host_log_history(session, updater, host_id, filename, **kwargs):
 
 @utils.supported_filters(
     ADDED_LOG_FIELDS,
-    optional_support_keys=UPDATED_LOG_FIELDS)
+    optional_support_keys=UPDATED_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_LOG_FIELDS)
 def add_host_log_history(

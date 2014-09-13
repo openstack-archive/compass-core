@@ -30,13 +30,10 @@ RESP_FIELDS = [
 ]
 ADDED_FIELDS = ['subnet']
 OPTIONAL_ADDED_FIELDS = ['name']
-IGNORE_ADDED_FIELDS = [
+IGNORE_FIELDS = [
     'id', 'created_at', 'updated_at'
 ]
 UPDATED_FIELDS = ['subnet', 'name']
-IGNORE_UPDATED_FIELDS = [
-    'id', 'created_at', 'updated_at'
-]
 
 
 def _check_subnet(subnet):
@@ -80,7 +77,7 @@ def get_subnet(
 
 @utils.supported_filters(
     ADDED_FIELDS, optional_support_keys=OPTIONAL_ADDED_FIELDS,
-    ignore_support_keys=IGNORE_ADDED_FIELDS
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(subnet=_check_subnet)
 @database.run_in_session()
@@ -101,7 +98,7 @@ def add_subnet(
 
 @utils.supported_filters(
     optional_support_keys=UPDATED_FIELDS,
-    ignore_support_keys=IGNORE_UPDATED_FIELDS
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(subnet=_check_subnet)
 @database.run_in_session()

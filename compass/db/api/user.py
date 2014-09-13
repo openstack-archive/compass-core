@@ -31,6 +31,7 @@ SUPPORTED_FIELDS = ['email', 'is_admin', 'active']
 PERMISSION_SUPPORTED_FIELDS = ['name']
 SELF_UPDATED_FIELDS = ['email', 'firstname', 'lastname', 'password']
 ADMIN_UPDATED_FIELDS = ['is_admin', 'active']
+IGNORE_FIELDS = ['id', 'created_at', 'updated_at']
 UPDATED_FIELDS = [
     'email', 'firstname', 'lastname', 'password', 'is_admin', 'active'
 ]
@@ -321,7 +322,9 @@ def list_users(session, lister, **filters):
 
 @utils.input_validates(email=_check_email)
 @utils.supported_filters(
-    ADDED_FIELDS, optional_support_keys=OPTIONAL_ADDED_FIELDS
+    ADDED_FIELDS,
+    optional_support_keys=OPTIONAL_ADDED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @check_user_admin()
 @database.run_in_session()
@@ -347,7 +350,10 @@ def del_user(session, deleter, user_id, **kwargs):
     return utils.del_db_object(session, user)
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(email=_check_email)
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
@@ -414,7 +420,10 @@ def del_permission(session, deleter, user_id, permission_id, **kwargs):
     return utils.del_db_object(session, user_permission)
 
 
-@utils.supported_filters(PERMISSION_ADDED_FIELDS)
+@utils.supported_filters(
+    PERMISSION_ADDED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @check_user_admin()
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)

@@ -42,19 +42,21 @@ SUPPORTED_MACHINES_HOSTS_FIELDS = [
     'port', 'vlans', 'mac', 'tag', 'location',
     'os_name', 'os_id'
 ]
+IGNORE_FIELDS = ['created_at', 'updated_at']
 ADDED_FIELDS = ['ip']
-OPTIONAL_ADDED_FIELDS = ['credentials', 'vendor', 'state', 'err_msg']
-UPDATED_FIELDS = ['credentials', 'vendor', 'state', 'err_msg']
-PATCHED_FIELDS = ['patched_credentials']
-UPDATED_FILTERS_FIELDS = ['filters']
+OPTIONAL_ADDED_FIELDS = [
+    'credentials', 'vendor', 'state', 'err_msg', 'filters'
+]
+UPDATED_FIELDS = ['credentials', 'vendor', 'state', 'err_msg', 'put_filters']
+PATCHED_FIELDS = ['patched_credentials', 'patched_filters']
+UPDATED_FILTERS_FIELDS = ['put_filters']
 PATCHED_FILTERS_FIELDS = ['patched_filters']
 ADDED_MACHINES_FIELDS = ['mac', 'port']
 OPTIONAL_ADDED_MACHINES_FIELDS = [
     'vlans', 'ipmi_credentials', 'tag', 'location'
 ]
-CHECK_FILTER_FIELDS = ['filter_name', 'filter_type']
 OPTIONAL_CHECK_FILTER_FIELDS = [
-    'ports', 'port_prefix', 'port_suffix',
+    'filter_type', 'ports', 'port_prefix', 'port_suffix',
     'port_start', 'port_end'
 ]
 ADDED_SWITCH_MACHINES_FIELDS = ['port', 'vlans']
@@ -70,7 +72,7 @@ PATCHED_MACHINES_FIELDS = [
 PATCHED_SWITCH_MACHINES_FIELDS = ['patched_vlans']
 RESP_FIELDS = [
     'id', 'ip', 'credentials', 'vendor', 'state', 'err_msg',
-    'created_at', 'updated_at'
+    'filters', 'created_at', 'updated_at'
 ]
 RESP_FILTERS_FIELDS = [
     'id', 'ip', 'filters', 'created_at', 'updated_at'
@@ -90,8 +92,7 @@ RESP_MACHINES_HOSTS_FIELDS = [
     'ipmi_credentials', 'tag', 'location',
     'name', 'hostname', 'os_name', 'os_id', 'owner',
     'os_installer', 'reinstall_os', 'os_installed',
-    'clusters',
-    'created_at', 'updated_at'
+    'clusters', 'created_at', 'updated_at'
 ]
 RESP_CLUSTER_FIELDS = [
     'name', 'id'
@@ -99,35 +100,19 @@ RESP_CLUSTER_FIELDS = [
 
 
 def _check_filters(switch_filters):
+    logging.debug('check filters: %s', switch_filters)
+    switch_filters = models.Switch.parse_filters(switch_filters)
     for switch_filter in switch_filters:
-        if not isinstance(switch_filter, dict):
-            raise exception.InvalidParameter(
-                'filter %s is not dict' % switch_filter
-            )
         _check_filter_internal(**switch_filter)
 
 
 @utils.supported_filters(
-    CHECK_FILTER_FIELDS, optional_support_keys=OPTIONAL_CHECK_FILTER_FIELDS
+    optional_support_keys=OPTIONAL_CHECK_FILTER_FIELDS
 )
 def _check_filter_internal(
-    filter_name, filter_type, **switch_filter
+    **switch_filter
 ):
-    if filter_type not in ['allow', 'deny']:
-        raise exception.InvalidParameter(
-            'filter_type should be `allow` or `deny` in %s' % switch_filter
-        )
-    if 'ports' in switch_filter:
-        if not isinstance(switch_filter['ports'], list):
-            raise exception.InvalidParameter(
-                '`ports` is not list in filter %s' % switch_filter
-            )
-    for key in ['port_start', 'port_end']:
-        if key in switch_filter:
-            if not isinstance(switch_filter[key], int):
-                raise exception.InvalidParameter(
-                    '`key` is not int in filer %s' % switch_filter
-                )
+    pass
 
 
 def _check_vlans(vlans):
@@ -211,11 +196,13 @@ def del_switch(session, deleter, switch_id, **kwargs):
 
 @utils.supported_filters(
     ADDED_FIELDS,
-    optional_support_keys=OPTIONAL_ADDED_FIELDS
+    optional_support_keys=OPTIONAL_ADDED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(
     ip=utils.check_ip,
-    credentials=utils.check_switch_credentials
+    credentials=utils.check_switch_credentials,
+    filters=_check_filters
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -253,9 +240,13 @@ def _update_switch(session, updater, switch_id, **kwargs):
     return utils.update_db_object(session, switch, **kwargs)
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(
-    credentials=utils.check_switch_credentials
+    credentials=utils.check_switch_credentials,
+    put_filters=_check_filters
 )
 @database.run_in_session()
 def update_switch(session, updater, switch_id, **kwargs):
@@ -265,7 +256,13 @@ def update_switch(session, updater, switch_id, **kwargs):
 @utils.replace_filters(
     credentials='patched_credentials'
 )
-@utils.supported_filters(optional_support_keys=PATCHED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=PATCHED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
+@utils.input_validates(
+    patched_filters=_check_filters
+)
 @database.run_in_session()
 @utils.output_validates(
     credentials=utils.check_switch_credentials
@@ -302,8 +299,14 @@ def get_switch_filters(
     )
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_FILTERS_FIELDS)
-@utils.input_validates(filters=_check_filters)
+@utils.replace_filters(
+    filters='put_filters'
+)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_FILTERS_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
+@utils.input_validates(put_filters=_check_filters)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_SWITCH_FILTERS
@@ -318,7 +321,10 @@ def update_switch_filters(session, updater, switch_id, **kwargs):
 @utils.replace_filters(
     filters='patched_filters'
 )
-@utils.supported_filters(optional_support_keys=PATCHED_FILTERS_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=PATCHED_FILTERS_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(patched_filters=_check_filters)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -511,7 +517,8 @@ def list_switchmachines_hosts(session, lister, **filters):
 
 @utils.supported_filters(
     ADDED_MACHINES_FIELDS,
-    optional_support_keys=OPTIONAL_ADDED_MACHINES_FIELDS
+    optional_support_keys=OPTIONAL_ADDED_MACHINES_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(mac=utils.check_mac, vlans=_check_vlans)
 @database.run_in_session()
@@ -634,7 +641,10 @@ def update_switch_machine_internal(
     )
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_MACHINES_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_MACHINES_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(vlans=_check_vlans)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -653,7 +663,10 @@ def update_switch_machine(session, updater, switch_id, machine_id, **kwargs):
     )
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_MACHINES_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_MACHINES_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(vlans=_check_vlans)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -678,7 +691,10 @@ def update_switchmachine(session, updater, switch_machine_id, **kwargs):
     tag='patched_tag',
     location='patched_location'
 )
-@utils.supported_filters(optional_support_keys=PATCHED_MACHINES_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=PATCHED_MACHINES_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(patched_vlans=_check_vlans)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -703,7 +719,10 @@ def patch_switch_machine(session, updater, switch_id, machine_id, **kwargs):
     tag='patched_tag',
     location='patched_location'
 )
-@utils.supported_filters(optional_support_keys=PATCHED_MACHINES_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=PATCHED_MACHINES_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(patched_vlans=_check_vlans)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -754,7 +773,8 @@ def del_switchmachine(session, deleter, switch_machine_id, **kwargs):
 
 @utils.supported_filters(
     ['machine_id'],
-    optional_support_keys=UPDATED_SWITCH_MACHINES_FIELDS
+    optional_support_keys=UPDATED_SWITCH_MACHINES_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 def _update_machine_internal(session, switch_id, machine_id, **kwargs):
     utils.add_db_object(

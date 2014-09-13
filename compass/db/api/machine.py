@@ -27,6 +27,7 @@ from compass.utils import util
 
 
 SUPPORTED_FIELDS = ['mac', 'tag', 'location']
+IGNORE_FIELDS = ['created_at', 'updated_at']
 UPDATED_FIELDS = ['ipmi_credentials', 'tag', 'location']
 PATCHED_FIELDS = [
     'patched_ipmi_credentials', 'patched_tag',
@@ -89,7 +90,10 @@ def _update_machine(session, updater, machine_id, **kwargs):
     return utils.update_db_object(session, machine, **kwargs)
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(ipmi_credentials=utils.check_ipmi_credentials)
 @database.run_in_session()
 def update_machine(session, updater, machine_id, **kwargs):
@@ -103,7 +107,10 @@ def update_machine(session, updater, machine_id, **kwargs):
     tag='patched_tag',
     location='patched_location'
 )
-@utils.supported_filters(optional_support_keys=PATCHED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=PATCHED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 @utils.output_validates(ipmi_credentials=utils.check_ipmi_credentials)
 def patch_machine(session, updater, machine_id, **kwargs):

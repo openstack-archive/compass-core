@@ -96,6 +96,7 @@ RESP_REVIEW_FIELDS = [
 RESP_DEPLOY_FIELDS = [
     'status', 'cluster', 'clusterhosts'
 ]
+IGNORE_FIELDS = ['id', 'created_at', 'updated_at']
 ADDED_FIELDS = ['name', 'adapter_id', 'os_id']
 OPTIONAL_ADDED_FIELDS = ['flavor_id']
 UPDATED_FIELDS = ['name', 'reinstall_distributed_system']
@@ -143,13 +144,6 @@ UPDATED_CLUSTERHOST_LOG_FIELDS = [
     'position', 'partial_line', 'percentage',
     'message', 'severity', 'line_matcher_name'
 ]
-
-
-def _check_roles(roles):
-    if not roles:
-        raise exception.InvalidParameter(
-            'roles %s is empty' % roles
-        )
 
 
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
@@ -234,7 +228,8 @@ def is_cluster_editable(
 
 @utils.supported_filters(
     ADDED_FIELDS,
-    optional_support_keys=OPTIONAL_ADDED_FIELDS
+    optional_support_keys=OPTIONAL_ADDED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(name=utils.check_name)
 @database.run_in_session()
@@ -255,7 +250,10 @@ def add_cluster(
     )
 
 
-@utils.supported_filters(optional_support_keys=UPDATED_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @utils.input_validates(name=utils.check_name)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -370,7 +368,8 @@ def _update_cluster_config(session, updater, cluster, **kwargs):
     package_config='deployed_package_config'
 )
 @utils.supported_filters(
-    optional_support_keys=UPDATED_DEPLOYED_CONFIG_FIELDS
+    optional_support_keys=UPDATED_DEPLOYED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -395,7 +394,10 @@ def update_cluster_deployed_config(
     os_config='put_os_config',
     package_config='put_package_config'
 )
-@utils.supported_filters(optional_support_keys=UPDATED_CONFIG_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 def update_cluster_config(session, updater, cluster_id, **kwargs):
     """Update cluster config."""
@@ -427,7 +429,10 @@ def update_cluster_config(session, updater, cluster_id, **kwargs):
     os_config='patched_os_config',
     package_config='patched_package_config'
 )
-@utils.supported_filters(optional_support_keys=PATCHED_CONFIG_FIELDS)
+@utils.supported_filters(
+    optional_support_keys=PATCHED_CONFIG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 def patch_cluster_config(session, updater, cluster_id, **kwargs):
     """patch cluster config."""
@@ -474,9 +479,10 @@ def del_cluster_config(session, deleter, cluster_id):
 
 @utils.supported_filters(
     ADDED_HOST_FIELDS,
-    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS)
+    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS),
+    ignore_support_keys=IGNORE_FIELDS
 )
-@utils.input_validates(name=utils.check_name, roles=_check_roles)
+@utils.input_validates(name=utils.check_name)
 def add_clusterhost_internal(
         session, cluster,
         exception_when_existing=False,
@@ -535,6 +541,14 @@ def add_clusterhost_internal(
             creator=cluster.creator,
             **host_dict
         )
+
+    if 'roles' in kwargs:
+        roles = kwargs['roles']
+        if not roles and cluster.flavor.flavor_roles:
+            raise exception.InvalidParameter(
+                'roles %s is empty' % roles
+            )
+
     return utils.add_db_object(
         session, models.ClusterHost, exception_when_existing,
         cluster.id, host.id, **clusterhost_dict
@@ -649,7 +663,6 @@ def add_cluster_host(
     )
 
 
-@utils.input_validates(roles=_check_roles)
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_CLUSTER_HOSTS
 )
@@ -672,6 +685,12 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
                         role, cluster_roles
                     )
                 )
+    if 'roles' in kwargs:
+        roles = kwargs['roles']
+        if not roles and clusterhost.cluster.flavor.flavor_roles:
+            raise exception.InvalidParameter(
+                'roles %s is empty' % roles
+            )
 
     @utils.input_validates(
         roles=roles_validates,
@@ -693,7 +712,8 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 def update_cluster_host(
@@ -708,7 +728,8 @@ def update_cluster_host(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 def update_clusterhost(
@@ -726,7 +747,8 @@ def update_clusterhost(
     roles='patched_roles'
 )
 @utils.supported_filters(
-    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS
+    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 def patch_cluster_host(
@@ -744,7 +766,8 @@ def patch_cluster_host(
     roles='patched_roles'
 )
 @utils.supported_filters(
-    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS
+    optional_support_keys=PATCHED_CLUSTERHOST_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 def patch_clusterhost(
@@ -900,7 +923,7 @@ def _update_clusterhost_deployed_config(
 ):
     from compass.db.api import host as host_api
     ignore_keys = []
-    if host_api.is_host_editable(
+    if not host_api.is_host_editable(
         session, clusterhost.host, updater,
         exception_when_not_editable=False
     ):
@@ -1010,7 +1033,7 @@ def update_clusterhost_deployed_config(
 def _patch_clusterhost_config(session, updater, clusterhost, **kwargs):
     from compass.db.api import host as host_api
     ignore_keys = []
-    if host_api.is_host_editable(
+    if not host_api.is_host_editable(
         session, clusterhost.host, updater,
         exception_when_not_editable=False
     ):
@@ -1089,7 +1112,7 @@ def _delete_clusterhost_config(
 ):
     from compass.db.api import host as host_api
     ignore_keys = []
-    if host_api.is_host_editable(
+    if not host_api.is_host_editable(
         session, clusterhost.host, deleter,
         exception_when_not_editable=False
     ):
@@ -1430,7 +1453,8 @@ def get_clusterhost_self_state(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -1450,7 +1474,8 @@ def update_cluster_host_state(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -1470,7 +1495,8 @@ def update_clusterhost_state(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTER_STATE_FIELDS
+    optional_support_keys=UPDATED_CLUSTER_STATE_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
@@ -1538,7 +1564,8 @@ def get_clusterhost_log_history(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
@@ -1554,7 +1581,8 @@ def update_cluster_host_log_history(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
@@ -1571,7 +1599,8 @@ def update_clusterhost_log_history(
 
 @utils.supported_filters(
     ADDED_CLUSTERHOST_LOG_FIELDS,
-    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
@@ -1588,7 +1617,8 @@ def add_clusterhost_log_history(
 
 @utils.supported_filters(
     ADDED_CLUSTERHOST_LOG_FIELDS,
-    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS
+    optional_support_keys=UPDATED_CLUSTERHOST_LOG_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)

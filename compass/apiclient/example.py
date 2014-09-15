@@ -97,9 +97,9 @@ for v in PRESET_VALUES:
 client = Client(COMPASS_SERVER_URL)
 
 # login
-status, token = client.login(COMPASS_LOGIN_EMAIL, COMPASS_LOGIN_PASSWORD)
+status, response = client.login(COMPASS_LOGIN_EMAIL, COMPASS_LOGIN_PASSWORD)
 print '============================================================'
-print 'login status: %s token: %s' % (status, token)
+print 'login status: %s response: %s' % (status, response)
 if status >= 400:
     sys.exit(1)
 

@@ -132,7 +132,7 @@ flags.add('hostnames',
 flags.add('host_networks',
           help=(
               'semicomma seperated host name and its networks '
-              '<hostname>:<interface_name>=<ip>|<is_mgmt>|<is_promiscous>,...'
+              '<hostname>:<interface_name>=<ip>|<is_mgmt>|<is_promiscuous>,...'
           ),
           default='')
 flags.add('partitions',
@@ -150,7 +150,13 @@ flags.add('network_mapping',
 flags.add('host_roles',
           help=(
               'semicomma separated host roles '
-              '<hostname>=<comma separated roles>',
+              '<hostname>=<comma separated roles>'
+          ),
+          default='')
+flags.add('default_roles',
+          help=(
+              'comma seperated default roles '
+              '<rolename>'
           ),
           default='')
 flags.add('deployment_timeout',
@@ -174,13 +180,13 @@ def _get_client():
 
 def _login(client):
     """get apiclient token."""
-    status, token = client.login(
+    status, resp = client.get_token(
         flags.OPTIONS.compass_user_email,
         flags.OPTIONS.compass_user_password
     )
     logging.info(
-        'login status: %s, token: %s',
-        status, token
+        'login status: %s, resp: %s',
+        status, resp
     )
     if status >= 400:
         raise Exception(
@@ -188,7 +194,7 @@ def _login(client):
             flags.OPTIONS.compass_server,
             flags.OPTIONS.compass_user_email
         )
-    return token
+    return resp['token']
 
 
 def _get_machines(client):
@@ -364,22 +370,36 @@ def _get_adapter(client):
 
 
 def _add_subnets(client):
+    status, resp = client.list_subnets()
+    logging.info('get all subnets status: %s resp: %s', status, resp)
+    if status >= 400:
+        msg = 'failed to get subnets'
+        raise Exception(msg)
+
+    all_subnets = {}
+    for subnet in resp:
+        all_subnets[subnet['subnet']] = subnet
+
     subnets = [
         subnet for subnet in flags.OPTIONS.subnets.split(',')
         if subnet
     ]
-    if not subnets:
-        raise Exception(
-            'there is no subnets added')
     subnet_mapping = {}
     for subnet in subnets:
-        status, resp = client.add_subnet(subnet)
-        logging.info('add subnet %s status %s response %s',
-                     subnet, status, resp)
-        if status >= 400:
-            msg = 'failed to add subnet %s' % subnet
-            raise Exception(msg)
-        subnet_mapping[resp['subnet']] = resp['id']
+        if subnet not in all_subnets:
+            status, resp = client.add_subnet(subnet)
+            logging.info('add subnet %s status %s response %s',
+                         subnet, status, resp)
+            if status >= 400:
+                msg = 'failed to add subnet %s' % subnet
+                raise Exception(msg)
+            subnet_mapping[resp['subnet']] = resp['id']
+        else:
+            subnet_mapping[subnet] = all_subnets[subnet]['id']
+    if not subnet_mapping:
+        raise Exception(
+            'there is not subnets found'
+        )
     return subnet_mapping
 
 
@@ -401,6 +421,14 @@ def _add_cluster(client, adapter_id, os_id, flavor_id, machines):
 
     cluster = resp
     cluster_id = cluster['id']
+    flavor = cluster['flavor']
+    roles = flavor['roles']
+    role_mapping = {}
+    for role in roles:
+        if role.get('optional', False):
+            role_mapping[role['name']] = 1
+        else:
+            role_mapping[role['name']] = 0
     hostnames = [
         hostname for hostname in flags.OPTIONS.hostnames.split(',')
         if hostname
@@ -434,7 +462,7 @@ def _add_cluster(client, adapter_id, os_id, flavor_id, machines):
         msg = 'machines %s to add to the cluster %s while hosts %s' % (
             machines, cluster_name, host_mapping)
         raise Exception(msg)
-    return (cluster_id, host_mapping)
+    return (cluster_id, host_mapping, role_mapping)
 
 
 def _set_cluster_os_config(client, cluster_id, host_ips):
@@ -452,8 +480,7 @@ def _set_cluster_os_config(client, cluster_id, host_ips):
     ]
     compass_name = socket.gethostname()
     compass_ip = socket.gethostbyname(compass_name)
-    if http_proxy and not no_proxy:
-        no_proxy = ['127.0.0.1', compass_name, compass_ip]
+    if http_proxy:
         for hostname, ips in host_ips.items():
             no_proxy.append(hostname)
             no_proxy.extend(ips)
@@ -510,9 +537,14 @@ def _set_cluster_os_config(client, cluster_id, host_ips):
     }
     partitions = [
         partition for partition in flags.OPTIONS.partitions.split(',')
+        if partition
     ]
     os_config['partition'] = {}
     for partition in partitions:
+        if '=' not in partition:
+            raise Exception(
+                'there is no = in partition %s' % partition
+            )
         partition_name, partition_value = partition.split('=', 1)
         if not partition_name:
             raise Exception(
@@ -556,6 +588,12 @@ def _set_host_networking(client, host_mapping, subnet_mapping):
             interface, network_properties_str = network.split('=', 1)
             network_properties = network_properties_str.split('|')
             ip_addr = network_properties[0]
+            if not ip_addr:
+                raise Exception(
+                    'ip is not set for host %s interface %s' % (
+                        hostname, interface
+                    )
+                )
             ip = netaddr.IPAddress(ip_addr)
             subnet_id = None
             for subnet_addr, subnetid in subnet_mapping.items():
@@ -658,7 +696,25 @@ def _set_cluster_package_config(client, cluster_id):
         raise Exception(msg)
 
 
-def _set_host_roles(client, cluster_id, host_mapping):
+def _set_host_roles(client, cluster_id, host_id, roles, role_mapping):
+    status, response = client.update_cluster_host(
+        cluster_id, host_id, roles=roles)
+    logging.info(
+        'set cluster %s host %s roles %s status %s: %s',
+        cluster_id, host_id, roles, status, response
+    )
+    if status >= 400:
+        raise Exception(
+            'failed to set cluster %s host %s roles %s' % (
+                cluster_id, host_id, roles
+            )
+        )
+    for role in roles:
+        if role in role_mapping and role_mapping[role] > 0:
+            role_mapping[role] -= 1
+
+
+def _set_hosts_roles(client, cluster_id, host_mapping, role_mapping):
     host_roles = {}
     for host_str in flags.OPTIONS.host_roles.split(';'):
         if not host_str:
@@ -672,19 +728,50 @@ def _set_host_roles(client, cluster_id, host_mapping):
             )
         host_id = host_mapping[hostname]
         roles = [role for role in roles_str.split(',') if role]
-        status, response = client.update_cluster_host(
-            cluster_id, host_id, roles=roles)
-        logging.info(
-            'set cluster %s host %s roles %s status %s: %s',
-            cluster_id, hostname, roles, status, response
-        )
-        if status >= 400:
-            raise Exception(
-                'failed to set cluster %s host %s roles %s' % (
-                    cluster_id, host_id, roles
-                )
-            )
+        _set_host_roles(client, cluster_id, host_id, roles, role_mapping)
         host_roles[hostname] = roles
+
+    # assign unassigned roles to unassigned hosts
+    unassigned_hostnames = []
+    for hostname, _ in host_mapping.items():
+        if hostname not in host_roles:
+            unassigned_hostnames.append(hostname)
+    unassigned_roles = []
+    for role, count in role_mapping.items():
+        if count > 0:
+            unassigned_roles.apend(role)
+    if len(unassigned_hostnames) < len(unassigned_roles):
+        raise Exception(
+            'there is no enough hosts %s to assign roles %s' % (
+                unassigned_hostnames, unassigned_roles
+            )
+        )
+    for offset, role in enumerate(unassigned_roles):
+        hostname = unassigned_hostnames[offset]
+        host_id = host_mapping[hostname]
+        roles = [role]
+        _set_host_roles(client, cluster_id, host_id, roles, role_mapping)
+        host_roles[hostname] = roles
+    unassigned_hostnames = unassigned_hostnames[len(unassigned_roles):]
+    unassigned_roles = []
+
+    # assign default roles to unassigned hosts
+    default_roles = [
+        role for role in flags.OPTIONS.default_roles.split(',')
+        if role
+    ]
+    if not default_roles and unassigned_hostnames:
+        raise Exception(
+            'hosts %s do not have roles set' % unassigned_hostnames
+        )
+    for hostname in unassigned_hostnames:
+        host_id = host_mapping[hostname]
+        roles = [default_roles[0]]
+        _set_host_roles(client, cluster_id, host_id, roles, role_mapping)
+        host_roles[hostname] = roles
+        default_roles = default_roles[1:]
+        default_roles.extend(roles)
+
     return host_roles
 
 
@@ -825,14 +912,14 @@ def main():
         machines = _get_machines(client)
     subnet_mapping = _add_subnets(client)
     adapter_id, os_id, flavor_id = _get_adapter(client)
-    cluster_id, host_mapping = _add_cluster(
+    cluster_id, host_mapping, role_mapping = _add_cluster(
         client, adapter_id, os_id, flavor_id, machines)
     host_ips = _set_host_networking(
         client, host_mapping, subnet_mapping
     )
     _set_cluster_os_config(client, cluster_id, host_ips)
     _set_cluster_package_config(client, cluster_id)
-    _set_host_roles(client, cluster_id, host_mapping)
+    _set_hosts_roles(client, cluster_id, host_mapping, role_mapping)
     _deploy_clusters(client, cluster_id, host_mapping)
     _get_installing_progress(client, cluster_id, host_mapping)
     _check_dashboard_links(client, cluster_id)

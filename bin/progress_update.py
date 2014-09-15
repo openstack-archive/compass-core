@@ -49,7 +49,7 @@ flags.add('run_interval', type='int',
 def progress_update():
     """entry function."""
     if flags.OPTIONS.async:
-        celery.send_task('compass.tasks.update_progress')
+        celery.send_task('compass.tasks.update_progress', ())
     else:
         try:
             update_progress.update_progress()

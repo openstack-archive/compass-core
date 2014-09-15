@@ -38,15 +38,7 @@ source ${REGTEST_DIR}/${REGTEST_CONF}
 source `which virtualenvwrapper.sh`
 workon compass-core
 
-declare -A roles_list
 machines=''
-
-for roles in ${HOST_ROLES//;/ }; do
-    roles_list[${#roles_list[@]}]=${roles}
-done
-echo "role list: ${roles_list[@]}"
-roles_offset=0
-host_roles_list=''
 
 tear_down_machines
 
@@ -112,23 +104,9 @@ for i in `seq $VIRT_NUM`; do
     else
         machines="${machines},${mac}"
     fi
-
-    if [ $roles_offset -lt ${#roles_list[@]} ]; then
-        host_roles="host${i}=${roles_list[$roles_offset]}"
-        roles_offset=$(expr $roles_offset + 1)
-    else
-        host_roles="host${i}="
-    fi
-
-    if [ -z "$host_roles_list" ]; then
-        host_roles_list="$host_roles"
-    else
-        host_roles_list="${host_roles_list};$host_roles"
-    fi
 done
 
 echo "machines: $machines"
-echo "host roles: $host_roles_list"
 virsh list
 
 # Avoid infinite relative symbolic links
@@ -139,10 +117,17 @@ if [[ ! -L compass_logs ]]; then
     ln -s /var/log/compass compass_logs
 fi
 CLIENT_SCRIPT=/opt/compass/bin/client.py
-/opt/compass/bin/refresh.sh
-if [[ "$?" != "0" ]]; then
-    echo "failed to refresh"
-    exit 1 
+if [[ "$CLEAN_OLD_DATA" == "0" || "$CLEAN_OLD_DATA" == "false" ]]; then
+else
+    /opt/compass/bin/refresh.sh
+    if [[ "$?" != "0" ]]; then
+        echo "failed to refresh"
+        exit 1 
+    fi
+    /opt/compass/bin/clean_nodes.sh
+    /opt/compass/bin/clean_clients.sh
+    /opt/compass/bin/clean_environments.sh
+    /opt/compass/bin/remove_systems.sh
 fi
 
 if [[ "$USE_POLL_SWITCHES" == "0" || "$USE_POLL_SWITCHES" == "false" ]]; then
@@ -153,7 +138,7 @@ if [[ "$USE_POLL_SWITCHES" == "0" || "$USE_POLL_SWITCHES" == "false" ]]; then
         echo "switch,${switch_ip},huawei,${SWITCH_VERSION},${SWITCH_COMMUNITY},under_monitoring" >> ${TMP_SWITCH_MACHINE_FILE}
         switch_port=1
         for mac in ${machines//,/ }; do
-            echo "machine,${switch_ip},${switch_port},1,${mac}" >> ${TMP_SWITCH_MACHINE_FILE}
+            echo "machine,${switch_ip},${switch_port},${mac}" >> ${TMP_SWITCH_MACHINE_FILE}
             let switch_port+=1
         done
         break
@@ -162,11 +147,15 @@ if [[ "$USE_POLL_SWITCHES" == "0" || "$USE_POLL_SWITCHES" == "false" ]]; then
     cat $TMP_SWITCH_MACHINE_FILE
     echo "======================================================="
     /opt/compass/bin/manage_db.py set_switch_machines --switch_machines_file ${TMP_SWITCH_MACHINE_FILE}
+    if [[ "$?" != "0" ]]; then
+	echo "failed to set switch machines"
+	exit 1
+    fi
 else
     POLL_SWITCHES_FLAG="poll_switches"
 fi
 
-${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG}
+${CLIENT_SCRIPT} --logfile= --loglevel=debug --logdir= --compass_server="${COMPASS_SERVER_URL}" --compass_user_email="${COMPASS_USER_EMAIL}" --compass_user_password="${COMPASS_USER_PASSWORD}" --cluster_name="${CLUSTER_NAME}" --language="${LANGUAGE}" --timezone="${TIMEZONE}" --hostnames="${HOSTNAMES}" --partitions="${PARTITIONS}" --subnets="${SUBNETS}" --adapter_os_pattern="${ADAPTER_OS_PATTERN}" --adapter_target_system_pattern="${ADAPTER_TARGET_SYSTEM_PATTERN}" --adapter_flavor_pattern="${ADAPTER_FLAVOR_PATTERN}" --http_proxy="${PROXY}" --https_proxy="${PROXY}" --no_proxy="${IGNORE_PROXY}" --ntp_server="${NTP_SERVER}" --dns_servers="${NAMESERVERS}" --domain="${DOMAIN}" --search_path="${SEARCH_PATH}" --default_gateway="${GATEWAY}" --server_credential="${SERVER_CREDENTIAL}" --service_credentials="${SERVICE_CREDENTIALS}" --console_credentials="${CONSOLE_CREDENTIALS}" --host_networks="${HOST_NETWORKS}" --network_mapping="${NETWORK_MAPPING}" --host_roles="${HOST_ROLES}" --default_roles="${DEFAULT_ROLES}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG} --dashboard_url="${DASHBOARD_URL}"
 rc=$?
 deactivate
 # Tear down machines after the test

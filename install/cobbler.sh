@@ -108,7 +108,7 @@ sudo cp -rf $ADAPTERS_HOME/cobbler/kickstarts/default.ks /var/lib/cobbler/kickst
 sudo cp -rf $ADAPTERS_HOME/cobbler/kickstarts/default.seed /var/lib/cobbler/kickstarts/
 sudo chmod 666 /var/lib/cobbler/kickstarts/default.ks
 sudo chmod 666 /var/lib/cobbler/kickstarts/default.seed
-sudo mkdir /var/www/cblr_ks
+sudo mkdir -p /var/www/cblr_ks
 sudo chmod 755 /var/www/cblr_ks
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/cobbler.conf /etc/httpd/conf.d/
 chmod 644 /etc/httpd/conf.d/cobbler.conf

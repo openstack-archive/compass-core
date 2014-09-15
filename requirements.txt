@@ -1,5 +1,6 @@
 argparse
 celery
+Markdown==2.4.1
 Cheetah==2.4.1
 daemon
 Flask

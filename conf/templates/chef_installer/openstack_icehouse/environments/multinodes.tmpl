@@ -19,6 +19,7 @@
 ## Network worker node management IP/interface
 #set network_worker_ip = $network_worker_role.management.ip
 #set network_worker_nic = $network_worker_role.management.interface
+#set network_worker_tenant_nic = $network_worker_role.tenant.interface
 #set network_worker_public_nic = $network_worker_role.public.interface
 
 ## Database node management IP
@@ -143,7 +144,8 @@
         "openvswitch": {
           "tenant_network_type": "gre",
           "enable_tunneling": "True",
-          "tunnel_id_ranges": "1:1000"
+          "tunnel_id_ranges": "1:1000",
+          "bind_interface": "$network_worker_tenant_nic"
         },
         "l3": {
             "external_network_bridge_interface": "$network_worker_public_nic"

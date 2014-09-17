@@ -298,7 +298,10 @@ def del_cluster(session, deleter, cluster_id, **kwargs):
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    is_cluster_editable(session, cluster, deleter)
+    is_cluster_editable(
+        session, cluster, deleter,
+        reinstall_distributed_system_set=True
+    )
     return utils.del_db_object(session, cluster)
 
 
@@ -770,6 +773,10 @@ def del_cluster_host(session, deleter, cluster_id, host_id, **kwargs):
         session, models.ClusterHost,
         cluster_id=cluster_id, host_id=host_id
     )
+    is_cluster_editable(
+        session, clusterhost.cluster, deleter,
+        reinstall_distributed_system_set=True
+    )
     return utils.del_db_object(
         session, clusterhost
     )
@@ -786,6 +793,10 @@ def del_clusterhost(session, deleter, clusterhost_id, **kwargs):
     clusterhost = utils.get_db_object(
         session, models.ClusterHost,
         clusterhost_id=clusterhost_id
+    )
+    is_cluster_editable(
+        session, clusterhost.cluster, deleter,
+        reinstall_distributed_system_set=True
     )
     return utils.del_db_object(
         session, clusterhost

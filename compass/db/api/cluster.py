@@ -1547,7 +1547,7 @@ def update_cluster_host_log_history(
 ):
     """Update a host log history."""
     cluster_host_log_history = utils.get_db_object(
-        session, models.HostLogHistory,
+        session, models.ClusterHostLogHistory,
         cluster_id=cluster_id, host_id=host_id, filename=filename
     )
     return utils.update_db_object(session, cluster_host_log_history, **kwargs)

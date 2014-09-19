@@ -57,6 +57,7 @@ sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/progress_update.
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/manage_db.py
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/client.py
 sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/clean_installation_logs.py
+sudo sed -e 's|$PythonHome|'$VIRTUAL_ENV'|' -i /opt/compass/bin/delete_clusters.py
 sudo sed -e 's|$Python|'$VIRTUAL_ENV/bin/python'|' -i /etc/init.d/compass-progress-updated
 sudo sed -e 's|$CeleryPath|'$VIRTUAL_ENV/bin/celery'|' -i /etc/init.d/compass-celeryd
 sudo sed -i "s/\$ipaddr/$ipaddr/g" /etc/compass/os_metadata/general.conf

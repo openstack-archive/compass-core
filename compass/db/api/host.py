@@ -316,7 +316,10 @@ def del_host(session, deleter, host_id, **kwargs):
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
-    is_host_editable(session, host, deleter)
+    is_host_editable(
+        session, host, deleter,
+        reinstall_os_set=True
+    )
     return utils.del_db_object(session, host)
 
 

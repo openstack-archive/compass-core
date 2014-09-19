@@ -735,7 +735,7 @@ def patch_cluster_host(
 ):
     """Update cluster host."""
     clusterhost = utils.get_db_object(
-        session, models.Cluster, cluster_id=cluster_id, host_id=host_id
+        session, models.ClusterHost, cluster_id=cluster_id, host_id=host_id
     )
     return _update_clusterhost(session, updater, clusterhost, **kwargs)
 

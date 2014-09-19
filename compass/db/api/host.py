@@ -530,21 +530,6 @@ def _add_host_network(
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
-    host_network = utils.get_db_object(
-        session, models.HostNetwork, False,
-        host_id=host_id, interface=interface
-    )
-    if (
-        host_network and not (
-            host_network.host_id == host_id and
-            host_network.interface == interface
-        )
-    ):
-        raise exception.InvalidParameter(
-            'interface %s exists in host network %s' % (
-                interface, host_network.id
-            )
-        )
     ip_int = long(netaddr.IPAddress(ip))
     host_network = utils.get_db_object(
         session, models.HostNetwork, False,

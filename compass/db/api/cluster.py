@@ -685,13 +685,9 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
             session, clusterhost, **in_kwargs
         )
 
+    is_cluster_editable(session, clusterhost.cluster, updater)
     return update_internal(
         clusterhost, **kwargs
-    )
-
-    is_cluster_editable(session, clusterhost.cluster, updater)
-    return utils.update_db_object(
-        session, clusterhost, **kwargs
     )
 
 
@@ -738,7 +734,7 @@ def patch_cluster_host(
 ):
     """Update cluster host."""
     clusterhost = utils.get_db_object(
-        session, models.Cluster, cluster_id=cluster_id, host_id=host_id
+        session, models.ClusterHost, cluster_id=cluster_id, host_id=host_id
     )
     return _update_clusterhost(session, updater, clusterhost, **kwargs)
 

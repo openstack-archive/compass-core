@@ -237,7 +237,6 @@ class TestUpdateSwitchFilters(BaseTest):
             1,
             filters=[
                 {
-                    'filter_name': 'test',
                     'filter_type': 'allow'
                 }
             ]
@@ -247,7 +246,6 @@ class TestUpdateSwitchFilters(BaseTest):
             1
         )
         expected = {
-            'filter_name': 'test',
             'filter_type': 'allow'
         }
         self.assertTrue(
@@ -271,7 +269,6 @@ class TestPatchSwitchFilter(BaseTest):
             1,
             patched_filters=[
                 {
-                    'filter_name': 'test',
                     'filter_type': 'allow'
                 }
             ]
@@ -281,7 +278,6 @@ class TestPatchSwitchFilter(BaseTest):
             1
         )
         expected = {
-            'filter_name': 'test',
             'filter_type': 'allow'
         }
         self.assertTrue(

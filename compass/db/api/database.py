@@ -22,10 +22,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import SingletonThreadPool
+from sqlalchemy.pool import StaticPool
 from threading import local
 
 from compass.db import exception
 from compass.db import models
+from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
 
 
@@ -33,6 +38,13 @@ ENGINE = None
 SESSION = sessionmaker(autocommit=False, autoflush=False)
 SCOPED_SESSION = None
 SESSION_HOLDER = local()
+
+POOL_MAPPING = {
+    'instant': NullPool,
+    'static': StaticPool,
+    'queued': QueuePool,
+    'thread_single': SingletonThreadPool
+}
 
 
 def init(database_url=None):
@@ -46,13 +58,20 @@ def init(database_url=None):
         database_url = setting.SQLALCHEMY_DATABASE_URI
     logging.info('init database %s', database_url)
     root_logger = logging.getLogger()
-    fine_debug = root_logger.isEnabledFor(logging.DEBUG - 1)
+    fine_debug = root_logger.isEnabledFor(logsetting.LOGLEVEL_MAPPING['fine'])
     if fine_debug:
         logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+    finest_debug = root_logger.isEnabledFor(
+        logsetting.LOGLEVEL_MAPPING['finest']
+    )
+    if finest_debug:
+        logging.getLogger('sqlalchemy.dialects').setLevel(logging.INFO)
+        logging.getLogger('sqlalchemy.pool').setLevel(logging.INFO)
+        logging.getLogger('sqlalchemy.orm').setLevel(logging.INFO)
+    poolclass = POOL_MAPPING[setting.SQLALCHEMY_DATABASE_POOL_TYPE]
     ENGINE = create_engine(
         database_url, convert_unicode=True,
-        pool_recycle=setting.SQLALCHEMY_DATABASE_POOL_RECYCLE_PERIOD,
-        pool_size=setting.SQLALCHEMY_DATABASE_POOL_SIZE
+        poolclass=poolclass
     )
     SESSION.configure(bind=ENGINE)
     SCOPED_SESSION = scoped_session(SESSION)

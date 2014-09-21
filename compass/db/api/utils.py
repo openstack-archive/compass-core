@@ -31,7 +31,7 @@ def model_query(session, model):
     if not issubclass(model, models.BASE):
         raise exception.DatabaseException("model should be sublass of BASE!")
 
-    return session.query(model)
+    return session.query(model).with_lockmode('update')
 
 
 def _default_list_condition_func(col_attr, value, condition_func):

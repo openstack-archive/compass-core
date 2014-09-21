@@ -180,7 +180,16 @@ def update_progress():
                     'is not in adaper_mapping %s',
                     clusterhost, adapter_id, adapter_mapping
                 )
+                continue
             adapter = adapter_mapping[adapter_id]
+            if 'package_installer' not in adapter:
+                logging.info(
+                    'ignore clusterhost %s '
+                    'since the package_installer is not define '
+                    'in adapter %s',
+                    clusterhost, adapter
+                )
+                continue
             package_installer = adapter['package_installer']
             clusterhost['package_installer'] = package_installer
             clusterhost_state = cluster_api.get_clusterhost_self_state(

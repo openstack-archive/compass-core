@@ -1229,6 +1229,8 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         )
         if self.flavor:
             dict_info['flavor'] = self.flavor.to_dict()
+        else:
+            dict_info['flavor'] = {'roles': []}
         return dict_info
 
 

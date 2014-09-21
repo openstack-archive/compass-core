@@ -245,9 +245,7 @@ class ActionHelper(object):
             info[const.ROLES] = ActionHelper._get_role_names(info[const.ROLES])
 
             # TODO(grace): Is following line necessary??
-            roles_info = info.setdefault(const.ROLES, [])
-            if not roles_info:
-                raise Exception("Host(id=%d) haven't set any roles!" % host_id)
+            info.setdefault(const.ROLES, [])
 
             config = cluster_db.get_cluster_host_config(user,
                                                         cluster_id,

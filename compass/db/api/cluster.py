@@ -889,7 +889,7 @@ def get_clusterhost_deployed_config(session, getter, clusterhost_id, **kwargs):
 def _update_clusterhost_config(session, updater, clusterhost, **kwargs):
     from compass.db.api import host as host_api
     ignore_keys = []
-    if host_api.is_host_editable(
+    if not host_api.is_host_editable(
         session, clusterhost.host, updater,
         exception_when_not_editable=False
     ):

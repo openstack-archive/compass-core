@@ -66,6 +66,9 @@ flags.add('machines',
 flags.add('subnets',
           help='comma seperated subnets',
           default='')
+flags.add('adapter_name',
+          help='adapter name',
+          default='')
 flags.add('adapter_os_pattern',
           help='adapter os name',
           default=r'(?i)centos.*')
@@ -325,43 +328,73 @@ def _get_adapter(client):
         msg = 'failed to get adapters'
         raise Exception(msg)
 
+    adapter_name = flags.OPTIONS.adapter_name
     os_pattern = flags.OPTIONS.adapter_os_pattern
-    os_re = re.compile(os_pattern)
+    if os_pattern:
+        os_re = re.compile(os_pattern)
+    else:
+        os_re = None
     target_system_pattern = flags.OPTIONS.adapter_target_system_pattern
-    target_system_re = re.compile(target_system_pattern)
+    if target_system_pattern:
+        target_system_re = re.compile(target_system_pattern)
+    else:
+        target_system_re = None
     flavor_pattern = flags.OPTIONS.adapter_flavor_pattern
-    flavor_re = re.compile(flavor_pattern)
+    if flavor_pattern:
+        flavor_re = re.compile(flavor_pattern)
+    else:
+        flavor_re = None
     adapter_id = None
     os_id = None
     flavor_id = None
     adapter = None
     for item in resp:
-        if 'distributed_system_name' not in item:
+        adapter_id = None
+        os_id = None
+        flavor_id = None
+        adapter = item
+        for supported_os in adapter['supported_oses']:
+            if not os_re or os_re.match(supported_os['name']):
+                os_id = supported_os['os_id']
+                break
+
+        if not os_id:
+            logging.info('no os found for adapter %s', adapter)
             continue
-        if target_system_re.match(item['distributed_system_name']):
-            adapter = item
+
+        if 'flavors' in adapter:
+            for flavor in adapter['flavors']:
+                if not flavor_re or flavor_re.match(flavor['name']):
+                    flavor_id = flavor['id']
+                    break
+
+        if adapter_name and adapter['name'] == adapter_name:
             adapter_id = adapter['id']
+            logging.info('adapter name %s match: %s', adapter_name, adapter)
+        elif 'distributed_system_name' in item:
+            if (
+                not target_system_re or
+                target_system_re.match(adapter['distributed_system_name'])
+            ):
+                adapter_id = adapter['id']
+                logging.info(
+                    'distributed system name pattern %s match: %s',
+                    target_system_pattern, adapter
+                )
+
+        if adapter_id:
+            logging.info('adadpter does not match: %s', adapter)
             break
 
     if not adapter_id:
-        msg = 'no adapter found for %s' % target_system_pattern
+        msg = 'no adapter found'
         raise Exception(msg)
-
-    for supported_os in adapter['supported_oses']:
-        if os_re.match(supported_os['name']):
-            os_id = supported_os['os_id']
-            break
 
     if not os_id:
         msg = 'no os found for %s' % os_pattern
         raise Exception(msg)
 
-    for flavor in adapter['flavors']:
-        if flavor_re.match(flavor['name']):
-            flavor_id = flavor['id']
-            break
-
-    if not flavor_id:
+    if flavor_re and not flavor_id:
         msg = 'no flavor found for %s' % flavor_pattern
         raise Exception(msg)
 
@@ -421,14 +454,21 @@ def _add_cluster(client, adapter_id, os_id, flavor_id, machines):
 
     cluster = resp
     cluster_id = cluster['id']
-    flavor = cluster['flavor']
-    roles = flavor['roles']
+    if 'flavor' in cluster:
+        flavor = cluster['flavor']
+    else:
+        flavor = None
+    if flavor and 'roles' in flavor:
+        roles = flavor['roles']
+    else:
+        roles = []
     role_mapping = {}
     for role in roles:
         if role.get('optional', False):
             role_mapping[role['name']] = 1
         else:
             role_mapping[role['name']] = 0
+
     hostnames = [
         hostname for hostname in flags.OPTIONS.hostnames.split(',')
         if hostname
@@ -882,8 +922,8 @@ def _get_installing_progress(client, cluster_id, host_mapping):
 def _check_dashboard_links(client, cluster_id):
     dashboard_url = flags.OPTIONS.dashboard_url
     if not dashboard_url:
-        raise Exception(
-            'no dashboard url set')
+        logging.info('no dashboarde url set')
+        return
     dashboard_link_pattern = re.compile(
         flags.OPTIONS.dashboard_link_pattern)
     r = requests.get(dashboard_url, verify=False)
@@ -918,8 +958,10 @@ def main():
         client, host_mapping, subnet_mapping
     )
     _set_cluster_os_config(client, cluster_id, host_ips)
-    _set_cluster_package_config(client, cluster_id)
-    _set_hosts_roles(client, cluster_id, host_mapping, role_mapping)
+    if flavor_id:
+        _set_cluster_package_config(client, cluster_id)
+    if role_mapping:
+        _set_hosts_roles(client, cluster_id, host_mapping, role_mapping)
     _deploy_clusters(client, cluster_id, host_mapping)
     _get_installing_progress(client, cluster_id, host_mapping)
     _check_dashboard_links(client, cluster_id)

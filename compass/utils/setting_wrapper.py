@@ -26,8 +26,7 @@ import os.path
 # default setting
 CONFIG_DIR = '/etc/compass'
 SQLALCHEMY_DATABASE_URI = 'sqlite://'
-SQLALCHEMY_DATABASE_POOL_SIZE = 10
-SQLALCHEMY_DATABASE_POOL_RECYCLE_PERIOD = 7200
+SQLALCHEMY_DATABASE_POOL_TYPE = 'static'
 INSTALLATION_LOGDIR = {
     'CobblerInstaller': '/var/log/cobbler/anamon',
     'ChefInstaller': '/var/log/cobbler/anamon'

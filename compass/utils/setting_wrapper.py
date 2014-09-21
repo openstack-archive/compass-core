@@ -30,10 +30,10 @@ SQLALCHEMY_DATABASE_POOL_SIZE = 10
 SQLALCHEMY_DATABASE_POOL_RECYCLE_PERIOD = 7200
 INSTALLATION_LOGDIR = {
     'CobblerInstaller': '/var/log/cobbler/anamon',
-    'ChefInstaller': '/var/log/cobbler/anamon'
+    'ChefInstaller': '/var/log/chef'
 }
-CLUSTERHOST_INATALLATION_LOGDIR_NAME = 'hostname'
-HOST_INSTALLATION_LOGDIR_NAME = 'hostname'
+CLUSTERHOST_INATALLATION_LOGDIR_NAME = 'name'
+HOST_INSTALLATION_LOGDIR_NAME = 'name'
 DEFAULT_LOGLEVEL = 'debug'
 DEFAULT_LOGDIR = '/tmp'
 DEFAULT_LOGINTERVAL = 1

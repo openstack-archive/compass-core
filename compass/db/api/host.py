@@ -219,7 +219,7 @@ def is_host_editable(
     reinstall_os_set=False, exception_when_not_editable=True
 ):
     if reinstall_os_set:
-        if host.state.state == 'DEPLOYING':
+        if host.state.state == 'INSTALLING':
             return _conditional_exception(
                 host, exception_when_not_editable
             )

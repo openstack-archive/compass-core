@@ -779,7 +779,7 @@ def _set_hosts_roles(client, cluster_id, host_mapping, role_mapping):
     unassigned_roles = []
     for role, count in role_mapping.items():
         if count > 0:
-            unassigned_roles.apend(role)
+            unassigned_roles.append(role)
     if len(unassigned_hostnames) < len(unassigned_roles):
         raise Exception(
             'there is no enough hosts %s to assign roles %s' % (

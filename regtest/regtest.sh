@@ -116,10 +116,14 @@ fi
 if [[ ! -L compass_logs ]]; then
     ln -s /var/log/compass compass_logs
 fi
+if [[ ! -L chef_logs ]]; then
+    ln -s /var/log/chef chef_logs
+fi
 CLIENT_SCRIPT=/opt/compass/bin/client.py
 if [[ "$CLEAN_OLD_DATA" == "0" || "$CLEAN_OLD_DATA" == "false" ]]; then
     echo "keep old deployment data"
 else
+    rm -rf /var/log/compass/*
     /opt/compass/bin/refresh.sh
     if [[ "$?" != "0" ]]; then
         echo "failed to refresh"

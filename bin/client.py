@@ -465,9 +465,10 @@ def _add_cluster(client, adapter_id, os_id, flavor_id, machines):
     role_mapping = {}
     for role in roles:
         if role.get('optional', False):
-            role_mapping[role['name']] = 1
-        else:
             role_mapping[role['name']] = 0
+        else:
+            role_mapping[role['name']] = 1
+    logging.info('cluster %s role mapping: %s', cluster_id, role_mapping)
 
     hostnames = [
         hostname for hostname in flags.OPTIONS.hostnames.split(',')
@@ -779,7 +780,7 @@ def _set_hosts_roles(client, cluster_id, host_mapping, role_mapping):
     unassigned_roles = []
     for role, count in role_mapping.items():
         if count > 0:
-            unassigned_roles.apend(role)
+            unassigned_roles.append(role)
     if len(unassigned_hostnames) < len(unassigned_roles):
         raise Exception(
             'there is no enough hosts %s to assign roles %s' % (

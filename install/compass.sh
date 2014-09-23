@@ -1,11 +1,12 @@
 #!/bin/bash
 # Move files to their respective locations
-mkdir -p /etc/compass
-mkdir -p /opt/compass/bin
-mkdir -p /var/www/compass_web
-mkdir -p /var/log/compass
-mkdir -p /opt/compass/db
-mkdir -p /var/www/compass
+sudo mkdir -p /etc/compass
+sudo mkdir -p /opt/compass/bin
+sudo mkdir -p /var/www/compass_web
+sudo mkdir -p /var/log/compass
+sudo mkdir -p /var/log/chef
+sudo mkdir -p /opt/compass/db
+sudo mkdir -p /var/www/compass
 
 sudo cp -rf $COMPASSDIR/misc/apache/ods-server.conf /etc/httpd/conf.d/ods-server.conf
 sudo cp -rf $COMPASSDIR/misc/apache/compass.wsgi /var/www/compass/compass.wsgi
@@ -32,6 +33,7 @@ fi
 
 sudo chmod -R 777 /opt/compass/db
 sudo chmod -R 777 /var/log/compass
+sudo chmod -R 777 /var/log/chef
 sudo echo "export C_FORCE_ROOT=1" > /etc/profile.d/celery_env.sh
 sudo chmod +x /etc/profile.d/celery_env.sh
 cd $COMPASSDIR
@@ -71,21 +73,21 @@ sudo chmod +x /opt/compass/bin/addcookbooks.py
 sudo chmod +x /opt/compass/bin/adddatabags.py
 sudo chmod +x /opt/compass/bin/addroles.py
 
-/opt/compass/bin/addcookbooks.py
+sudo /opt/compass/bin/addcookbooks.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add cookbooks"
     exit 1
 else
     echo "cookbooks are added to chef server"
 fi
-/opt/compass/bin/adddatabags.py
+sudo /opt/compass/bin/adddatabags.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add databags"
     exit 1
 else
     echo "databags are added to chef server"
 fi
-/opt/compass/bin/addroles.py
+sudo /opt/compass/bin/addroles.py
 if [[ "$?" != "0" ]]; then
     echo "failed to add roles"
     exit 1
@@ -116,10 +118,10 @@ if [[ "$?" != "0" ]]; then
 else
     echo "compassed service is refreshed"
 fi
-/opt/compass/bin/clean_nodes.sh
-/opt/compass/bin/clean_clients.sh
-/opt/compass/bin/clean_environments.sh
-/opt/compass/bin/remove_systems.sh
+sudo /opt/compass/bin/clean_nodes.sh
+sudo /opt/compass/bin/clean_clients.sh
+sudo /opt/compass/bin/clean_environments.sh
+sudo /opt/compass/bin/remove_systems.sh
 
 sudo service httpd status
 if [[ "$?" != "0" ]]; then
@@ -129,12 +131,12 @@ else
     echo "httpd has already started"
 fi
 
-mkdir -p /var/log/redis
-chown -R redis:root /var/log/redis
-mkdir -p /var/lib/redis/
-chown -R redis:root /var/lib/redis
-mkdir -p /var/run/redis
-chown -R redis:root /var/run/redis
+sudo mkdir -p /var/log/redis
+sudo chown -R redis:root /var/log/redis
+sudo mkdir -p /var/lib/redis/
+sudo chown -R redis:root /var/lib/redis
+sudo mkdir -p /var/run/redis
+sudo chown -R redis:root /var/run/redis
 
 sudo service redis status |grep running
 if [[ "$?" != "0" ]]; then

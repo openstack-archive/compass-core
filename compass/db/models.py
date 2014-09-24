@@ -2044,7 +2044,7 @@ class AdapterFlavor(BASE, HelperMixin):
         Integer,
         ForeignKey('adapter.id', onupdate='CASCADE', ondelete='CASCADE')
     )
-    name = Column(String(80), unique=True)
+    name = Column(String(80))
     display_name = Column(String(80))
     template = Column(String(80))
     _ordered_flavor_roles = Column(

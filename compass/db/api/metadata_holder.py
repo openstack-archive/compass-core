@@ -30,10 +30,19 @@ RESP_METADATA_FIELDS = [
 
 @database.run_in_session()
 def load_metadatas(session):
+    load_os_metadatas_internal(session)
+    load_package_metadatas_internal(session)
+
+
+def load_os_metadatas_internal(session):
     global OS_METADATA_MAPPING
-    global PACKAGE_METADATA_MAPPING
-    logging.info('load metadatas into memory')
+    logging.info('load os metadatas into memory')
     OS_METADATA_MAPPING = metadata_api.get_os_metadatas_internal(session)
+
+
+def load_package_metadatas_internal(session):
+    global PACKAGE_METADATA_MAPPING
+    logging.info('load package metadatas into memory')
     PACKAGE_METADATA_MAPPING = (
         metadata_api.get_package_metadatas_internal(session)
     )
@@ -44,48 +53,80 @@ PACKAGE_METADATA_MAPPING = {}
 
 
 def _validate_config(
-    config, id, metadata_mapping, whole_check
+    config, id, id_name, metadata_mapping, whole_check, **kwargs
 ):
     if id not in metadata_mapping:
         raise exception.InvalidParameter(
-            'adapter id %s is not found in metadata mapping' % id
+            '%s id %s is not found in metadata mapping' % (id_name, id)
         )
     metadatas = metadata_mapping[id]
     metadata_api.validate_config_internal(
-        config, metadatas, whole_check
+        config, metadatas, whole_check, **kwargs
     )
 
 
-def validate_os_config(config, os_id, whole_check=False):
+def validate_os_config(
+    session, config, os_id, whole_check=False, **kwargs
+):
+    if not OS_METADATA_MAPPING:
+        load_os_metadatas_internal(session)
     _validate_config(
-        config, os_id, OS_METADATA_MAPPING,
-        whole_check
+        config, os_id, 'os', OS_METADATA_MAPPING,
+        whole_check, session=session, **kwargs
     )
 
 
-def validate_package_config(config, adapter_id, whole_check=False):
+def validate_package_config(
+    session, config, adapter_id, whole_check=False, **kwargs
+):
+    if not PACKAGE_METADATA_MAPPING:
+        load_package_metadatas_internal(session)
     _validate_config(
-        config, adapter_id, PACKAGE_METADATA_MAPPING,
-        whole_check
+        config, adapter_id, 'adapter', PACKAGE_METADATA_MAPPING,
+        whole_check, session=session, **kwargs
     )
 
 
-def _filter_metadata(metadata):
+def _filter_metadata(metadata, **kwargs):
     if not isinstance(metadata, dict):
         return metadata
     filtered_metadata = {}
     for key, value in metadata.items():
         if key == '_self':
+            filtered_metadata['_self'] = {}
+            default_value = value.get('default_value', None)
+            if default_value is None:
+                default_callback_params = value.get(
+                    'default_callback_params', {}
+                )
+                callback_params = dict(kwargs)
+                if default_callback_params:
+                    callback_params.update(default_callback_params)
+                default_callback = value.get('default_callback', None)
+                if default_callback:
+                    default_value = default_callback(key, **callback_params)
+            options = value.get('options', None)
+            if options is None:
+                options_callback_params = value.get(
+                    'options_callback_params', {}
+                )
+                callback_params = dict(kwargs)
+                if options_callback_params:
+                    callback_params.update(options_callback_params)
+
+                options_callback = value.get('options_callback', None)
+                if options_callback:
+                    options = options_callback(key, **callback_params)
             filtered_metadata[key] = {
                 'name': value['name'],
                 'description': value.get('description', None),
-                'default_value': value.get('default_value', None),
+                'default_value': default_value,
                 'is_required': value.get(
                     'is_required', False),
                 'required_in_whole_config': value.get(
                     'required_in_whole_config', False),
                 'js_validator': value.get('js_validator', None),
-                'options': value.get('options', []),
+                'options': options,
                 'required_in_options': value.get(
                     'required_in_options', False),
                 'field_type': value.get(
@@ -98,13 +139,17 @@ def _filter_metadata(metadata):
     return filtered_metadata
 
 
-def get_package_metadata_internal(adapter_id):
+def get_package_metadata_internal(session, adapter_id):
     """get package metadata internal."""
+    if not PACKAGE_METADATA_MAPPING:
+        load_package_metadatas_internal(session)
     if adapter_id not in PACKAGE_METADATA_MAPPING:
         raise exception.RecordNotExists(
             'adpater %s does not exist' % adapter_id
         )
-    return _filter_metadata(PACKAGE_METADATA_MAPPING[adapter_id])
+    return _filter_metadata(
+        PACKAGE_METADATA_MAPPING[adapter_id], session=session
+    )
 
 
 @utils.supported_filters([])
@@ -114,16 +159,22 @@ def get_package_metadata_internal(adapter_id):
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
 def get_package_metadata(session, getter, adapter_id, **kwargs):
-    return {'package_config': get_package_metadata_internal(adapter_id)}
+    return {
+        'package_config': get_package_metadata_internal(session, adapter_id)
+    }
 
 
-def get_os_metadata_internal(os_id):
+def get_os_metadata_internal(session, os_id):
     """get os metadata internal."""
+    if not OS_METADATA_MAPPING:
+        load_os_metadatas_internal(session)
     if os_id not in OS_METADATA_MAPPING:
         raise exception.RecordNotExists(
             'os %s does not exist' % os_id
         )
-    return _filter_metadata(OS_METADATA_MAPPING[os_id])
+    return _filter_metadata(
+        OS_METADATA_MAPPING[os_id], session=session
+    )
 
 
 @utils.supported_filters([])
@@ -134,7 +185,7 @@ def get_os_metadata_internal(os_id):
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
 def get_os_metadata(session, getter, os_id, **kwargs):
     """get os metadatas."""
-    return {'os_config': get_os_metadata_internal(os_id)}
+    return {'os_config': get_os_metadata_internal(session, os_id)}
 
 
 @utils.supported_filters([])
@@ -145,7 +196,7 @@ def get_os_metadata(session, getter, os_id, **kwargs):
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
 def get_package_os_metadata(session, getter, adapter_id, os_id, **kwargs):
     from compass.db.api import adapter_holder as adapter_api
-    adapter = adapter_api.get_adapter_internal(adapter_id)
+    adapter = adapter_api.get_adapter_internal(session, adapter_id)
     os_ids = [os['os_id'] for os in adapter['supported_oses']]
     if os_id not in os_ids:
         raise exception.InvalidParameter(
@@ -155,9 +206,47 @@ def get_package_os_metadata(session, getter, adapter_id, os_id, **kwargs):
         )
     metadatas = {}
     metadatas['os_config'] = get_os_metadata_internal(
-        os_id
+        session, os_id
     )
     metadatas['package_config'] = get_package_metadata_internal(
-        adapter_id
+        session, adapter_id
     )
     return metadatas
+
+
+def _autofill_config(
+    config, id, id_name, metadata_mapping, **kwargs
+):
+    if id not in metadata_mapping:
+        raise exception.InvalidParameter(
+            '%s id %s is not found in metadata mapping' % (id_name, id)
+        )
+    metadatas = metadata_mapping[id]
+    logging.debug(
+        'auto fill %s config %s by metadata %s',
+        id_name, config, metadatas
+    )
+    return metadata_api.autofill_config_internal(
+        config, metadatas, **kwargs
+    )
+
+
+def autofill_os_config(
+    session, config, os_id, **kwargs
+):
+    if not OS_METADATA_MAPPING:
+        load_os_metadatas_internal(session)
+    return _autofill_config(
+        config, os_id, 'os', OS_METADATA_MAPPING, session=session, **kwargs
+    )
+
+
+def autofill_package_config(
+    session, config, adapter_id, **kwargs
+):
+    if not PACKAGE_METADATA_MAPPING:
+        load_package_metadatas_internal(session)
+    return _autofill_config(
+        config, adapter_id, 'adapter', PACKAGE_METADATA_MAPPING,
+        session=session, **kwargs
+    )

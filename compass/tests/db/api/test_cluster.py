@@ -122,7 +122,10 @@ class ClusterTestCase(unittest2.TestCase):
                 }
             },
             'network_mapping': {
-                '$interface_type': 'eth0'
+                '$interface_type': {
+                    'interface': 'eth0',
+                    'subnet': '10.145.88.0/23'
+                }
             }
         }
 

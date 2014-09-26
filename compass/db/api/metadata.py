@@ -13,13 +13,17 @@
 # limitations under the License.
 
 """Metadata related database operations."""
+import copy
 import logging
+import string
 
 from compass.db.api import database
 from compass.db.api import utils
+from compass.db import callback as metadata_callback
 from compass.db import exception
 from compass.db import models
-from compass.db import validator
+from compass.db import validator as metadata_validator
+
 
 from compass.utils import setting_wrapper as setting
 from compass.utils import util
@@ -28,6 +32,10 @@ from compass.utils import util
 def _add_field_internal(session, model, configs):
     fields = []
     for config in configs:
+        if not isinstance(config, dict):
+            raise exception.InvalidParameter(
+                'config %s is not dict' % config
+            )
         fields.append(utils.add_db_object(
             session, model, False,
             config['NAME'],
@@ -41,9 +49,12 @@ def _add_field_internal(session, model, configs):
 
 
 def add_os_field_internal(session):
+    env_locals = {}
+    env_locals.update(metadata_validator.VALIDATOR_LOCALS)
+    env_locals.update(metadata_callback.CALLBACK_LOCALS)
     configs = util.load_configs(
         setting.OS_FIELD_DIR,
-        env_locals=validator.VALIDATOR_LOCALS
+        env_locals=env_locals
     )
     return _add_field_internal(
         session, models.OSConfigField, configs
@@ -51,9 +62,12 @@ def add_os_field_internal(session):
 
 
 def add_package_field_internal(session):
+    env_locals = {}
+    env_locals.update(metadata_validator.VALIDATOR_LOCALS)
+    env_locals.update(metadata_callback.CALLBACK_LOCALS)
     configs = util.load_configs(
         setting.PACKAGE_FIELD_DIR,
-        env_locals=validator.VALIDATOR_LOCALS
+        env_locals=env_locals
     )
     return _add_field_internal(
         session, models.PackageConfigField, configs
@@ -61,9 +75,13 @@ def add_package_field_internal(session):
 
 
 def _add_metadata(
-    session, field_model, metadata_model, path, name, config,
-    parent=None, **kwargs
+    session, field_model, metadata_model, id, path, name, config,
+    exception_when_existing=True, parent=None, **kwargs
 ):
+    if not isinstance(config, dict):
+        raise exception.InvalidParameter(
+            '%s config %s is not dict' % (path, config)
+        )
     metadata_self = config.get('_self', {})
     if 'field' in metadata_self:
         field = utils.get_db_object(
@@ -71,38 +89,96 @@ def _add_metadata(
         )
     else:
         field = None
+    mapping_to_template = metadata_self.get('mapping_to', None)
+    if mapping_to_template:
+        mapping_to = string.Template(
+            mapping_to_template
+        ).safe_substitute(
+            **kwargs
+        )
+    else:
+        mapping_to = None
     metadata = utils.add_db_object(
-        session, metadata_model, False,
-        path, name=name, parent=parent, field=field,
+        session, metadata_model, exception_when_existing,
+        id, path, name=name, parent=parent, field=field,
         display_name=metadata_self.get('display_name', name),
         description=metadata_self.get('description', None),
         is_required=metadata_self.get('is_required', False),
         required_in_whole_config=metadata_self.get(
-            'required_in_whole_config', False
-        ),
-        mapping_to=metadata_self.get('mapping_to', None),
+            'required_in_whole_config', False),
+        mapping_to=mapping_to,
         validator=metadata_self.get('validator', None),
         js_validator=metadata_self.get('js_validator', None),
         default_value=metadata_self.get('default_value', None),
-        options=metadata_self.get('options', []),
-        required_in_options=metadata_self.get('required_in_options', False),
+        default_callback=metadata_self.get('default_callback', None),
+        default_callback_params=metadata_self.get(
+            'default_callback_params', {}),
+        options=metadata_self.get('options', None),
+        options_callback=metadata_self.get('options_callback', None),
+        options_callback_params=metadata_self.get(
+            'options_callback_params', {}),
+        autofill_callback=metadata_self.get(
+            'autofill_callback', None),
+        autofill_callback_params=metadata_self.get(
+            'autofill_callback_params', {}),
+        required_in_options=metadata_self.get(
+            'required_in_options', False),
         **kwargs
     )
+    key_extensions = metadata_self.get('key_extensions', {})
+    general_keys = []
     for key, value in config.items():
-        if key not in '_self':
+        if key.startswith('_'):
+            continue
+        if key in key_extensions:
+            if not key.startswith('$'):
+                raise exception.InvalidParameter(
+                    '%s subkey %s should start with $' % (
+                        path, key
+                    )
+                )
+            extended_keys = key_extensions[key]
+            for extended_key in extended_keys:
+                if extended_key.startswith('$'):
+                    raise exception.InvalidParameter(
+                        '%s extended key %s should not start with $' % (
+                            path, extended_key
+                        )
+                    )
+                sub_kwargs = dict(kwargs)
+                sub_kwargs[key[1:]] = extended_key
+                _add_metadata(
+                    session, field_model, metadata_model,
+                    id, '%s/%s' % (path, extended_key), extended_key, value,
+                    exception_when_existing=exception_when_existing,
+                    parent=metadata, **sub_kwargs
+                )
+        else:
+            if key.startswith('$'):
+                general_keys.append(key)
             _add_metadata(
                 session, field_model, metadata_model,
-                '%s/%s' % (path, key), key, value,
+                id, '%s/%s' % (path, key), key, value,
+                exception_when_existing=exception_when_existing,
                 parent=metadata, **kwargs
+            )
+        if len(general_keys) > 1:
+            raise exception.InvalidParameter(
+                'foud multi general keys in %s: %s' % (
+                    path, general_keys
+                )
             )
     return metadata
 
 
-def add_os_metadata_internal(session):
+def add_os_metadata_internal(session, exception_when_existing=True):
     os_metadatas = []
+    env_locals = {}
+    env_locals.update(metadata_validator.VALIDATOR_LOCALS)
+    env_locals.update(metadata_callback.CALLBACK_LOCALS)
     configs = util.load_configs(
         setting.OS_METADATA_DIR,
-        env_locals=validator.VALIDATOR_LOCALS
+        env_locals=env_locals
     )
     for config in configs:
         os = utils.get_db_object(
@@ -112,17 +188,21 @@ def add_os_metadata_internal(session):
             os_metadatas.append(_add_metadata(
                 session, models.OSConfigField,
                 models.OSConfigMetadata,
-                key, key, value, parent=None,
-                os=os
+                os.id, key, key, value,
+                exception_when_existing=exception_when_existing,
+                parent=None
             ))
     return os_metadatas
 
 
-def add_package_metadata_internal(session):
+def add_package_metadata_internal(session, exception_when_existing=True):
     package_metadatas = []
+    env_locals = {}
+    env_locals.update(metadata_validator.VALIDATOR_LOCALS)
+    env_locals.update(metadata_callback.CALLBACK_LOCALS)
     configs = util.load_configs(
         setting.PACKAGE_METADATA_DIR,
-        env_locals=validator.VALIDATOR_LOCALS
+        env_locals=env_locals
     )
     for config in configs:
         adapter = utils.get_db_object(
@@ -132,8 +212,9 @@ def add_package_metadata_internal(session):
             package_metadatas.append(_add_metadata(
                 session, models.PackageConfigField,
                 models.PackageConfigMetadata,
-                key, key, value, parent=None,
-                adapter=adapter
+                adapter.id, key, key, value,
+                exception_when_existing=exception_when_existing,
+                parent=None
             ))
     return package_metadatas
 
@@ -173,9 +254,15 @@ def get_os_metadatas_internal(session):
 
 
 def _validate_self(
-    config_path, config_key, config, metadata, whole_check
+    config_path, config_key, config,
+    metadata, whole_check,
+    **kwargs
 ):
     if '_self' not in metadata:
+        if isinstance(config, dict):
+            _validate_config(
+                config_path, config, metadata, whole_check, **kwargs
+            )
         return
     field_type = metadata['_self'].get('field_type', 'basestring')
     if not isinstance(config, field_type):
@@ -185,34 +272,39 @@ def _validate_self(
     required_in_options = metadata['_self'].get(
         'required_in_options', False
     )
-    options = metadata['_self'].get('options', [])
+    options = metadata['_self'].get('options', None)
     if required_in_options:
         if field_type in [int, basestring, float, bool]:
-            if config not in options:
+            if options and config not in options:
                 raise exception.InvalidParameter(
                     '%s config is not in %s' % (config_path, options)
                 )
         elif field_type in [list, tuple]:
-            if not set(config).issubset(set(options)):
+            if options and not set(config).issubset(set(options)):
                 raise exception.InvalidParameter(
                     '%s config is not in %s' % (config_path, options)
                 )
         elif field_type == dict:
-            if not set(config.keys()).issubset(set(options)):
+            if options and not set(config.keys()).issubset(set(options)):
                 raise exception.InvalidParameter(
                     '%s config is not in %s' % (config_path, options)
                 )
     validator = metadata['_self'].get('validator', None)
     if validator:
-        if not validator(config_key, config):
+        if not validator(config_key, config, **kwargs):
             raise exception.InvalidParameter(
                 '%s config is invalid' % config_path
             )
-    if issubclass(field_type, dict):
-        _validate_config(config_path, config, metadata, whole_check)
+    if isinstance(config, dict):
+        _validate_config(
+            config_path, config, metadata, whole_check, **kwargs
+        )
 
 
-def _validate_config(config_path, config, metadata, whole_check):
+def _validate_config(
+    config_path, config, metadata, whole_check,
+    **kwargs
+):
     generals = {}
     specified = {}
     for key, value in metadata.items():
@@ -250,15 +342,108 @@ def _validate_config(config_path, config, metadata, whole_check):
     for key in intersect_keys:
         _validate_self(
             '%s/%s' % (config_path, key),
-            key, config[key], specified[key], whole_check
+            key, config[key], specified[key], whole_check,
+            **kwargs
         )
     for key in not_found_keys:
+        if not generals:
+            raise exception.InvalidParameter(
+                'key %s missing in metadata %s' % (
+                    key, config_path
+                )
+            )
         for general_key, general_value in generals.items():
             _validate_self(
                 '%s/%s' % (config_path, key),
-                key, config[key], general_value, whole_check
+                key, config[key], general_value, whole_check,
+                **kwargs
             )
 
 
-def validate_config_internal(config, metadata, whole_check):
-    _validate_config('', config, metadata, whole_check)
+def _autofill_self_config(
+    config_path, config_key, config,
+    metadata,
+    **kwargs
+):
+    if '_self' not in metadata:
+        if isinstance(config, dict):
+            _autofill_config(
+                config_path, config, metadata, **kwargs
+            )
+        return config
+    autofill_callback = metadata['_self'].get(
+        'autofill_callback', None
+    )
+    autofill_callback_params = metadata['_self'].get(
+        'autofill_callback_params', {}
+    )
+    callback_params = dict(kwargs)
+    if autofill_callback_params:
+        callback_params.update(autofill_callback_params)
+    if autofill_callback:
+        config = autofill_callback(
+            config_key, config, **callback_params
+        )
+    if config is None:
+        new_config = {}
+    else:
+        new_config = config
+    if isinstance(new_config, dict):
+        _autofill_config(
+            config_path, new_config, metadata, **kwargs
+        )
+        if new_config:
+            config = new_config
+    return config
+
+
+def _autofill_config(
+    config_path, config, metadata, **kwargs
+):
+    generals = {}
+    specified = {}
+    for key, value in metadata.items():
+        if key.startswith('$'):
+            generals[key] = value
+        elif key.startswith('_'):
+            pass
+        else:
+            specified[key] = value
+    config_keys = set(config.keys())
+    specified_keys = set(specified.keys())
+    intersect_keys = config_keys & specified_keys
+    not_found_keys = config_keys - specified_keys
+    redundant_keys = specified_keys - config_keys
+    for key in redundant_keys:
+        self_config = _autofill_self_config(
+            '%s/%s' % (config_path, key),
+            key, None, specified[key], **kwargs
+        )
+        if self_config is not None:
+            config[key] = self_config
+    for key in intersect_keys:
+        config[key] = _autofill_self_config(
+            '%s/%s' % (config_path, key),
+            key, config[key], specified[key],
+            **kwargs
+        )
+    for key in not_found_keys:
+        for general_key, general_value in generals.items():
+            config[key] = _autofill_self_config(
+                '%s/%s' % (config_path, key),
+                key, config[key], general_value,
+                **kwargs
+            )
+    return config
+
+
+def validate_config_internal(
+    config, metadata, whole_check, **kwargs
+):
+    _validate_config('', config, metadata, whole_check, **kwargs)
+
+
+def autofill_config_internal(
+    config, metadata, **kwargs
+):
+    return _autofill_config('', config, metadata, **kwargs)

@@ -25,7 +25,7 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-def _add_system(session, model, configs):
+def _add_system(session, model, configs, exception_when_existing=True):
     parents = {}
     for config in configs:
         logging.info(
@@ -34,7 +34,7 @@ def _add_system(session, model, configs):
         )
         object = utils.add_db_object(
             session, model,
-            False, config['NAME'],
+            exception_when_existing, config['NAME'],
             deployable=config.get('DEPLOYABLE', False)
         )
         parents[config['NAME']] = (
@@ -48,17 +48,23 @@ def _add_system(session, model, configs):
         utils.update_db_object(session, object, parent=parent)
 
 
-def add_oses_internal(session):
+def add_oses_internal(session, exception_when_existing=True):
     configs = util.load_configs(setting.OS_DIR)
-    _add_system(session, models.OperatingSystem, configs)
+    _add_system(
+        session, models.OperatingSystem, configs,
+        exception_when_existing=exception_when_existing
+    )
 
 
-def add_distributed_systems_internal(session):
+def add_distributed_systems_internal(session, exception_when_existing=True):
     configs = util.load_configs(setting.DISTRIBUTED_SYSTEM_DIR)
-    _add_system(session, models.DistributedSystem, configs)
+    _add_system(
+        session, models.DistributedSystem, configs,
+        exception_when_existing=exception_when_existing
+    )
 
 
-def add_adapters_internal(session):
+def add_adapters_internal(session, exception_when_existing=True):
     parents = {}
     configs = util.load_configs(setting.ADAPTER_DIR)
     for config in configs:
@@ -86,7 +92,7 @@ def add_adapters_internal(session):
             package_installer = None
         adapter = utils.add_db_object(
             session, models.Adapter,
-            False,
+            exception_when_existing,
             config['NAME'],
             display_name=config.get('DISPLAY_NAME', None),
             distributed_system=distributed_system,
@@ -109,7 +115,7 @@ def add_adapters_internal(session):
                 if supported_os_pattern.match(os_name):
                     utils.add_db_object(
                         session, models.AdapterOS,
-                        True,
+                        exception_when_existing,
                         os.id, adapter.id
                     )
                     break
@@ -123,7 +129,7 @@ def add_adapters_internal(session):
             utils.update_db_object(session, adapter, parent=parent)
 
 
-def add_roles_internal(session):
+def add_roles_internal(session, exception_when_existing=True):
     configs = util.load_configs(setting.ADAPTER_ROLE_DIR)
     for config in configs:
         logging.info(
@@ -136,14 +142,14 @@ def add_roles_internal(session):
         for role_dict in config['ROLES']:
             utils.add_db_object(
                 session, models.AdapterRole,
-                False, role_dict['role'], adapter.id,
+                exception_when_existing, role_dict['role'], adapter.id,
                 display_name=role_dict.get('display_name', None),
                 description=role_dict.get('description', None),
                 optional=role_dict.get('optional', False)
             )
 
 
-def add_flavors_internal(session):
+def add_flavors_internal(session, exception_when_existing=True):
     configs = util.load_configs(setting.ADAPTER_FLAVOR_DIR)
     for config in configs:
         logging.info('add config %s to flavor', config)
@@ -154,7 +160,7 @@ def add_flavors_internal(session):
         for flavor_dict in config['FLAVORS']:
             flavor = utils.add_db_object(
                 session, models.AdapterFlavor,
-                False, flavor_dict['flavor'], adapter.id,
+                exception_when_existing, flavor_dict['flavor'], adapter.id,
                 display_name=flavor_dict.get('display_name', None),
                 template=flavor_dict.get('template', None)
             )
@@ -166,7 +172,7 @@ def add_flavors_internal(session):
                 )
                 utils.add_db_object(
                     session, models.AdapterFlavorRole,
-                    False, flavor.id, role.id
+                    exception_when_existing, flavor.id, role.id
                 )
                 utils.update_db_object(
                     session, flavor,

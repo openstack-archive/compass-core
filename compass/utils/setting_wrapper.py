@@ -59,6 +59,14 @@ SWITCHES_DEFAULT_FILTERS = []
 DEFAULT_SWITCH_IP = '0.0.0.0'
 DEFAULT_SWITCH_PORT = 0
 
+COMPASS_SUPPORTED_PROXY = 'http://127.0.0.1:3128'
+COMPASS_SUPPORTED_DEFAULT_NOPROXY = ['127.0.0.1']
+COMPASS_SUPPORTED_NTP_SERVER = '127.0.0.1'
+COMPASS_SUPPORTED_DNS_SERVERS = ['127.0.0.1']
+COMPASS_SUPPORTED_DOMAINS = []
+COMPASS_SUPPORTED_DEFAULT_GATEWAY = '127.0.0.1'
+COMPASS_SUPPORTED_LOCAL_REPO = 'http://127.0.0.1'
+
 # For test chef server. please replace these config info with your own.
 TEST_CHEF_URL = "https://api.opscode.com/organizations/compasscheftest"
 TEST_CLIENT_KEY_PATH = "/etc/compass/client.pem"
@@ -101,6 +109,9 @@ ADAPTER_FLAVOR_DIR = lazypy.delay(
 )
 VALIDATOR_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'validator')
+)
+CALLBACK_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'callback')
 )
 TMPL_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'templates')

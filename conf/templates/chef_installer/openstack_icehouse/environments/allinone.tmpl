@@ -3,6 +3,7 @@
 ## allinone compute management IP/interface
 #set allinone_compute_mgmt_nic = $allinone_compute.management.interface
 #set allinone_compute_mgmt_ip = $allinone_compute.management.ip
+
 {
   "name": "testing",
   "description": "Environment used in testing the upstream cookbooks and reference Chef repository",
@@ -11,6 +12,7 @@
   "json_class": "Chef::Environment",
   "chef_type": "environment",
   "default_attributes": {
+    "local_repo": ""
   },
   "override_attributes": {
     "mysql": {

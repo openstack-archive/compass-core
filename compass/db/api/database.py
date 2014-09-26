@@ -93,6 +93,9 @@ def session():
        .. note::
        To operate database, it should be called in database session.
     """
+    if not ENGINE:
+        init()
+
     if hasattr(SESSION_HOLDER, 'session'):
         logging.error('we are already in session')
         raise exception.DatabaseException('session already exist')
@@ -174,12 +177,7 @@ def _setup_switch_table(switch_session):
     from compass.db.api import switch
     switch.add_switch_internal(
         switch_session, long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP)),
-        True, filters=[{
-            'filter_name': 'deny-all',
-            'filter_type': 'deny',
-            'port_prefix': '.*',
-            'port_suffix': '.*'
-        }]
+        True, filters=['deny ports all']
     )
 
 

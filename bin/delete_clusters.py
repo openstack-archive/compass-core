@@ -18,14 +18,15 @@
 import logging
 import os
 import os.path
-import site
 import sys
 
-activate_this = '$PythonHome/bin/activate_this.py'
-execfile(activate_this, dict(__file__=activate_this))
-site.addsitedir('$PythonHome/lib/python2.6/site-packages')
-sys.path.append('$PythonHome')
-os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg'
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(current_dir)
+
+
+import switch_virtualenv
+
 
 from compass.db.api import cluster as cluster_api
 from compass.db.api import database

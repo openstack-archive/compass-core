@@ -20,16 +20,16 @@ import netaddr
 import os
 import re
 import requests
-import site
 import socket
 import sys
 import time
 
-activate_this = '$PythonHome/bin/activate_this.py'
-execfile(activate_this, dict(__file__=activate_this))
-site.addsitedir('$PythonHome/lib/python2.6/site-packages')
-sys.path.append('$PythonHome')
-os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg'
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(current_dir)
+
+
+import switch_virtualenv
 
 from compass.apiclient.restful import Client
 from compass.utils import flags
@@ -71,10 +71,10 @@ flags.add('adapter_name',
           default='')
 flags.add('adapter_os_pattern',
           help='adapter os name',
-          default=r'(?i)centos.*')
+          default=r'^(?i)centos.*')
 flags.add('adapter_target_system_pattern',
           help='adapter target system name',
-          default='openstack.*')
+          default='^openstack$')
 flags.add('adapter_flavor_pattern',
           help='adapter flavor name',
           default='allinone')
@@ -346,6 +346,7 @@ def _get_adapter(client):
         flavor_re = None
     adapter_id = None
     os_id = None
+    distributed_system_id = None
     flavor_id = None
     adapter = None
     for item in resp:
@@ -370,20 +371,30 @@ def _get_adapter(client):
 
         if adapter_name and adapter['name'] == adapter_name:
             adapter_id = adapter['id']
-            logging.info('adapter name %s match: %s', adapter_name, adapter)
-        elif 'distributed_system_name' in item:
+            logging.info('adapter name %s matches: %s', adapter_name, adapter)
+        elif (
+            'distributed_system_name' in item and
+            adapter['distributed_system_name']
+        ):
             if (
-                not target_system_re or
+                target_system_re and
                 target_system_re.match(adapter['distributed_system_name'])
             ):
                 adapter_id = adapter['id']
+                distributed_system_id = adapter['distributed_system_id']
                 logging.info(
-                    'distributed system name pattern %s match: %s',
+                    'distributed system name pattern %s matches: %s',
                     target_system_pattern, adapter
+                )
+        else:
+            if not target_system_re:
+                adapter_id = adapter['id']
+                logging.info(
+                    'os only adapter matches no target_system_pattern'
                 )
 
         if adapter_id:
-            logging.info('adadpter does not match: %s', adapter)
+            logging.info('adadpter matches: %s', adapter)
             break
 
     if not adapter_id:
@@ -394,12 +405,16 @@ def _get_adapter(client):
         msg = 'no os found for %s' % os_pattern
         raise Exception(msg)
 
+    if target_system_re and not distributed_system_id:
+        msg = 'no distributed system found for' % target_system_pattern
+        raise Exception(msg)
+
     if flavor_re and not flavor_id:
         msg = 'no flavor found for %s' % flavor_pattern
         raise Exception(msg)
 
     logging.info('adpater for deploying a cluster: %s', adapter_id)
-    return (adapter_id, os_id, flavor_id)
+    return (adapter_id, os_id, distributed_system_id, flavor_id)
 
 
 def _add_subnets(client):
@@ -686,6 +701,9 @@ def _set_cluster_package_config(client, cluster_id):
         for service_credential in flags.OPTIONS.service_credentials.split(',')
         if service_credential
     ]
+    logging.debug(
+        'service credentials: %s', service_credentials
+    )
     for service_credential in service_credentials:
         if ':' not in service_credential:
             raise Exception(
@@ -706,6 +724,9 @@ def _set_cluster_package_config(client, cluster_id):
         for console_credential in flags.OPTIONS.console_credentials.split(',')
         if console_credential
     ]
+    logging.debug(
+        'console credentials: %s', console_credentials
+    )
     for console_credential in console_credentials:
         if ':' not in console_credential:
             raise Exception(
@@ -717,7 +738,7 @@ def _set_cluster_package_config(client, cluster_id):
                 'there is no = in console %s security' % console_name
             )
         username, password = console_pair.split('=', 1)
-        package_config['security']['console_credentials'][service_name] = {
+        package_config['security']['console_credentials'][console_name] = {
             'username': username,
             'password': password
         }
@@ -952,14 +973,14 @@ def main():
     else:
         machines = _get_machines(client)
     subnet_mapping = _add_subnets(client)
-    adapter_id, os_id, flavor_id = _get_adapter(client)
+    adapter_id, os_id, distributed_system_id, flavor_id = _get_adapter(client)
     cluster_id, host_mapping, role_mapping = _add_cluster(
         client, adapter_id, os_id, flavor_id, machines)
     host_ips = _set_host_networking(
         client, host_mapping, subnet_mapping
     )
     _set_cluster_os_config(client, cluster_id, host_ips)
-    if flavor_id:
+    if distributed_system_id:
         _set_cluster_package_config(client, cluster_id)
     if role_mapping:
         _set_hosts_roles(client, cluster_id, host_mapping, role_mapping)

@@ -20,16 +20,16 @@ import netaddr
 import os
 import re
 import requests
-import site
 import socket
 import sys
 import time
 
-activate_this = '$PythonHome/bin/activate_this.py'
-execfile(activate_this, dict(__file__=activate_this))
-site.addsitedir('$PythonHome/lib/python2.6/site-packages')
-sys.path.append('$PythonHome')
-os.environ['PYTHON_EGG_CACHE'] = '/tmp/.egg'
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(current_dir)
+
+
+import switch_virtualenv
 
 from compass.apiclient.restful import Client
 from compass.utils import flags
@@ -71,10 +71,10 @@ flags.add('adapter_name',
           default='')
 flags.add('adapter_os_pattern',
           help='adapter os name',
-          default=r'(?i)centos.*')
+          default=r'^(?i)centos.*')
 flags.add('adapter_target_system_pattern',
           help='adapter target system name',
-          default='openstack.*')
+          default='^openstack$')
 flags.add('adapter_flavor_pattern',
           help='adapter flavor name',
           default='allinone')
@@ -383,7 +383,7 @@ def _get_adapter(client):
                 )
 
         if adapter_id:
-            logging.info('adadpter does not match: %s', adapter)
+            logging.info('adadpter does match: %s', adapter)
             break
 
     if not adapter_id:
@@ -686,6 +686,9 @@ def _set_cluster_package_config(client, cluster_id):
         for service_credential in flags.OPTIONS.service_credentials.split(',')
         if service_credential
     ]
+    logging.debug(
+        'service credentials: %s', service_credentials
+    )
     for service_credential in service_credentials:
         if ':' not in service_credential:
             raise Exception(
@@ -706,6 +709,9 @@ def _set_cluster_package_config(client, cluster_id):
         for console_credential in flags.OPTIONS.console_credentials.split(',')
         if console_credential
     ]
+    logging.debug(
+        'console credentials: %s', console_credentials
+    )
     for console_credential in console_credentials:
         if ':' not in console_credential:
             raise Exception(
@@ -717,7 +723,7 @@ def _set_cluster_package_config(client, cluster_id):
                 'there is no = in console %s security' % console_name
             )
         username, password = console_pair.split('=', 1)
-        package_config['security']['console_credentials'][service_name] = {
+        package_config['security']['console_credentials'][console_name] = {
             'username': username,
             'password': password
         }

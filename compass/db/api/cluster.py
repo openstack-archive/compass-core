@@ -91,10 +91,10 @@ RESP_CLUSTERHOST_STATE_FIELDS = [
     'created_at', 'updated_at'
 ]
 RESP_REVIEW_FIELDS = [
-    'cluster', 'clusterhosts'
+    'cluster', 'hosts'
 ]
 RESP_DEPLOY_FIELDS = [
-    'status', 'cluster', 'clusterhosts'
+    'status', 'cluster', 'hosts'
 ]
 IGNORE_FIELDS = ['id', 'created_at', 'updated_at']
 ADDED_FIELDS = ['name', 'adapter_id', 'os_id']
@@ -779,7 +779,7 @@ def patch_clusterhost(
 ):
     """Update cluster host."""
     clusterhost = utils.get_db_object(
-        session, models.Cluster, clusterhost_id=clusterhost_id
+        session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _update_clusterhost(session, updater, clusterhost, **kwargs)
 
@@ -1261,7 +1261,7 @@ def validate_cluster(session, cluster):
 @utils.wrap_to_dict(
     RESP_REVIEW_FIELDS,
     cluster=RESP_CONFIG_FIELDS,
-    clusterhosts=RESP_CLUSTERHOST_CONFIG_FIELDS
+    hosts=RESP_CLUSTERHOST_CONFIG_FIELDS
 )
 def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
     """review cluster."""
@@ -1335,7 +1335,7 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
 @utils.wrap_to_dict(
     RESP_DEPLOY_FIELDS,
     cluster=RESP_CONFIG_FIELDS,
-    clusterhosts=RESP_CLUSTERHOST_FIELDS
+    hosts=RESP_CLUSTERHOST_FIELDS
 )
 def deploy_cluster(
     session, deployer, cluster_id, deploy={}, **kwargs

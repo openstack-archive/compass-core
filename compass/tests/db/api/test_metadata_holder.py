@@ -53,6 +53,7 @@ class MetadataTestCase(unittest2.TestCase):
         database.init('sqlite://')
         database.create_db()
         adapter.load_adapters()
+        metadata.load_metadatas()
 
         #Get a os_id and adapter_id
         self.user_object = (
@@ -82,53 +83,56 @@ class MetadataTestCase(unittest2.TestCase):
 class TestGetPackageMetadata(MetadataTestCase):
 
     def setUp(self):
-        super(TestGetPackageMetadata, self).setUp()
-        mock_config = mock.Mock()
-        self.backup_package_configs = util.load_configs
-        util.load_configs = mock_config
-        configs = [{
-            'ADAPTER': 'openstack',
-            'METADATA': {
-                'security': {
-                    '_self': {
-                        'required_in_whole_config': True
-                    },
-                    'service_credentials': {
+        self.backup_load_configs = util.load_configs
+
+        def mock_load_configs(config_dir, *args, **kwargs):
+            if config_dir != setting.PACKAGE_METADATA_DIR:
+                return self.backup_load_configs(
+                    config_dir, *args, **kwargs
+                )
+            config = {
+                'ADAPTER': 'openstack',
+                'METADATA': {
+                    'security': {
                         '_self': {
-                            'mapping_to': 'service_credentials'
+                            'required_in_whole_config': True
                         },
-                        '$service': {
-                            'username': {
-                                '_self': {
-                                    'is_required': True,
-                                    'field': 'username',
-                                    'mapping_to': 'username'
-                                }
+                        'service_credentials': {
+                            '_self': {
+                                'mapping_to': 'service_credentials'
                             },
-                            'password': {
-                                '_self': {
-                                    'is_required': True,
-                                    'field': 'password',
-                                    'mapping_to': 'password'
+                            '$service': {
+                                'username': {
+                                    '_self': {
+                                        'is_required': True,
+                                        'field': 'username',
+                                        'mapping_to': 'username'
+                                    }
+                                },
+                                'password': {
+                                    '_self': {
+                                        'is_required': True,
+                                        'field': 'password',
+                                        'mapping_to': 'password'
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                'test_package_metadata': {
-                    '_self': {
-                        'dummy': 'fake'
+                    },
+                    'test_package_metadata': {
+                        '_self': {
+                            'dummy': 'fake'
+                        }
                     }
                 }
             }
-        }]
-        util.load_configs.return_value = configs
-        with database.session() as session:
-            metadata_api.add_package_metadata_internal(session)
-        metadata.load_metadatas()
+            return [config]
+
+        util.load_configs = mock.Mock(side_effect=mock_load_configs)
+        super(TestGetPackageMetadata, self).setUp()
 
     def tearDown(self):
-        util.load_configs = self.backup_package_configs
+        util.load_configs = self.backup_load_configs
         super(TestGetPackageMetadata, self).tearDown()
 
     def test_get_package_metadata(self):
@@ -155,56 +159,59 @@ class TestGetPackageMetadata(MetadataTestCase):
 
 class TestGetOsMetadata(MetadataTestCase):
     def setUp(self):
-        super(TestGetOsMetadata, self).setUp()
-        mock_config = mock.Mock()
-        self.backup_os_configs = util.load_configs
-        util.load_configs = mock_config
-        configs = [{
-            'OS': 'general',
-            'METADATA': {
-                'general': {
-                    '_self': {
-                        'required_in_whole_config': True
-                    },
-                    'language': {
+        self.backup_load_configs = util.load_configs
+
+        def mock_load_configs(config_dir, *args, **kwargs):
+            if config_dir != setting.OS_METADATA_DIR:
+                return self.backup_load_configs(
+                    config_dir, *args, **kwargs
+                )
+            config = {
+                'OS': 'general',
+                'METADATA': {
+                    'general': {
                         '_self': {
-                            'field': 'general',
-                            'default_value': 'EN',
-                            'options': ['EN', 'CN'],
-                            'mapping_to': 'language'
+                            'required_in_whole_config': True
+                        },
+                        'language': {
+                            '_self': {
+                                'field': 'general',
+                                'default_value': 'EN',
+                                'options': ['EN', 'CN'],
+                                'mapping_to': 'language'
+                            }
+                        },
+                        'timezone': {
+                            '_self': {
+                                'field': 'general',
+                                'default_value': 'UTC',
+                                'options': [
+                                    'America/New_York', 'America/Chicago',
+                                    'America/Los_Angeles', 'Asia/Shanghai',
+                                    'Asia/Tokyo', 'Europe/Paris',
+                                    'Europe/London', 'Europe/Moscow',
+                                    'Europe/Rome', 'Europe/Madrid',
+                                    'Europe/Berlin', 'UTC'
+                                ],
+                                'mapping_to': 'timezone'
+                            }
                         }
                     },
-                    'timezone': {
+                    'test_os_metadata': {
                         '_self': {
-                            'field': 'general',
-                            'default_value': 'UTC',
-                            'options': [
-                                'America/New_York', 'America/Chicago',
-                                'America/Los_Angeles', 'Asia/Shanghai',
-                                'Asia/Tokyo', 'Europe/Paris',
-                                'Europe/London', 'Europe/Moscow',
-                                'Europe/Rome', 'Europe/Madrid',
-                                'Europe/Berlin', 'UTC'
-                            ],
-                            'mapping_to': 'timezone'
+                            'test': 'dummy'
                         }
-                    }
-                },
-                'test_os_metadata': {
-                    '_self': {
-                        'test': 'dummy'
                     }
                 }
             }
-        }]
-        util.load_configs.return_value = configs
-        with database.session() as session:
-            metadata_api.add_os_metadata_internal(session)
-        metadata.load_metadatas()
+            return [config]
+
+        util.load_configs = mock.Mock(side_effect=mock_load_configs)
+        super(TestGetOsMetadata, self).setUp()
 
     def tearDown(self):
+        util.load_configs = self.backup_load_configs
         super(TestGetOsMetadata, self).tearDown()
-        util.load_configs = self.backup_os_configs
 
     def test_get_os_metadata(self):
         """Test get os metadata."""

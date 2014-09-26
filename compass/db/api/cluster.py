@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Cluster database operations."""
+import copy
 import functools
 import logging
 
@@ -344,12 +345,14 @@ def get_cluster_metadata(session, getter, cluster_id, **kwargs):
     os = cluster.os
     if os:
         metadatas['os_config'] = metadata_api.get_os_metadata_internal(
-            os.id
+            session, os.id
         )
     adapter = cluster.adapter
     if adapter:
         metadatas['package_config'] = (
-            metadata_api.get_package_metadata_internal(adapter.id)
+            metadata_api.get_package_metadata_internal(
+                session, adapter.id
+            )
         )
     return metadatas
 
@@ -407,10 +410,16 @@ def update_cluster_config(session, updater, cluster_id, **kwargs):
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    os_config_validates = functools.partial(
-        metadata_api.validate_os_config, os_id=cluster.os_id)
-    package_config_validates = functools.partial(
-        metadata_api.validate_package_config, adapter_id=cluster.adapter_id)
+
+    def os_config_validates(config):
+        metadata_api.validate_os_config(
+            session, config, os_id=cluster.os_id
+        )
+
+    def package_config_validates(config):
+        metadata_api.validate_package_config(
+            session, config, adapter_id=cluster.adapter_id
+        )
 
     @utils.input_validates(
         put_os_config=os_config_validates,
@@ -443,10 +452,15 @@ def patch_cluster_config(session, updater, cluster_id, **kwargs):
         session, models.Cluster, id=cluster_id
     )
 
-    os_config_validates = functools.partial(
-        metadata_api.validate_os_config, os_id=cluster.os_id)
-    package_config_validates = functools.partial(
-        metadata_api.validate_package_config, adapter_id=cluster.adapter_id)
+    def os_config_validates(config):
+        metadata_api.validate_os_config(
+            session, config, os_id=cluster.os_id
+        )
+
+    def package_config_validates(config):
+        metadata_api.validate_package_config(
+            session, config, adapter_id=cluster.adapter_id
+        )
 
     @utils.output_validates(
         os_config=os_config_validates,
@@ -896,15 +910,15 @@ def _update_clusterhost_config(session, updater, clusterhost, **kwargs):
         ignore_keys.append('put_os_config')
 
     def os_config_validates(os_config):
-        from compass.db.api import host as host_api
         host = clusterhost.host
-        metadata_api.validate_os_config(os_config, host.os_id)
+        metadata_api.validate_os_config(
+            session, os_config, host.os_id)
 
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
         is_cluster_editable(session, cluster, updater)
         metadata_api.validate_package_config(
-            package_config, cluster.adapter_id
+            session, package_config, cluster.adapter_id
         )
 
     @utils.supported_filters(
@@ -1052,13 +1066,13 @@ def _patch_clusterhost_config(session, updater, clusterhost, **kwargs):
 
     def os_config_validates(os_config):
         host = clusterhost.host
-        metadata_api.validate_os_config(os_config, host.os_id)
+        metadata_api.validate_os_config(session, os_config, host.os_id)
 
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
         is_cluster_editable(session, cluster, updater)
         metadata_api.validate_package_config(
-            package_config, cluster.adapter_id
+            session, package_config, cluster.adapter_id
         )
 
     @utils.supported_filters(
@@ -1240,10 +1254,16 @@ def validate_cluster(session, cluster):
         role.name for role in cluster_roles if not role.optional
     ])
     clusterhost_roles = set([])
+    interface_subnets = {}
     for clusterhost in cluster.clusterhosts:
         roles = clusterhost.roles
         for role in roles:
             clusterhost_roles.add(role.name)
+        host = clusterhost.host
+        for host_network in host.host_networks:
+            interface_subnets.setdefault(
+                host_network.interface, set([])
+            ).add(host_network.subnet.subnet)
     missing_roles = necessary_roles - clusterhost_roles
     if missing_roles:
         raise exception.InvalidParameter(
@@ -1251,6 +1271,13 @@ def validate_cluster(session, cluster):
                 list(missing_roles), cluster.name
             )
         )
+    for interface, subnets in interface_subnets.items():
+        if len(subnets) > 1:
+            raise exception.InvalidParameter(
+                'multi subnets %s in interface %s' % (
+                    list(subnets), interface
+                )
+            )
 
 
 @utils.supported_filters(optional_support_keys=['review'])
@@ -1279,10 +1306,14 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
             clusterhost.host_id in host_ids
         ):
             clusterhosts.append(clusterhost)
-    os_config = cluster.os_config
+    os_config = copy.deepcopy(cluster.os_config)
+    os_config = metadata_api.autofill_os_config(
+        session, os_config, cluster.os_id,
+        cluster=cluster
+    )
     if os_config:
         metadata_api.validate_os_config(
-            os_config, cluster.os_id, True
+            session, os_config, cluster.os_id, True
         )
         for clusterhost in clusterhosts:
             host = clusterhost.host
@@ -1294,33 +1325,56 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
                     'since it is not editable' % host.name
                 )
                 continue
-            host_os_config = host.os_config
+            host_os_config = copy.deepcopy(host.os_config)
+            host_os_config = metadata_api.autofill_os_config(
+                session, host_os_config, host.os_id,
+                host=host
+            )
             deployed_os_config = util.merge_dict(
                 os_config, host_os_config
             )
             metadata_api.validate_os_config(
-                deployed_os_config, host.os_id, True
+                session, deployed_os_config, host.os_id, True
             )
             host_api.validate_host(session, host)
-            utils.update_db_object(session, host, config_validated=True)
-    package_config = cluster.package_config
+            utils.update_db_object(
+                session, host, os_config=host_os_config, config_validated=True
+            )
+    package_config = copy.deepcopy(cluster.package_config)
+    package_config = metadata_api.autofill_package_config(
+        session, package_config, cluster.adapter_id,
+        cluster=cluster
+    )
     if package_config:
         metadata_api.validate_package_config(
-            package_config, cluster.adapter_id, True
+            session, package_config, cluster.adapter_id, True
         )
         for clusterhost in clusterhosts:
-            clusterhost_package_config = clusterhost.package_config
+            clusterhost_package_config = copy.deepcopy(
+                clusterhost.package_config
+            )
+            clusterhost_package_config = metadata_api.autofill_package_config(
+                session, clusterhost_package_config,
+                cluster.adapter_id, clusterhost=clusterhost
+            )
             deployed_package_config = util.merge_dict(
                 package_config, clusterhost_package_config
             )
             metadata_api.validate_package_config(
-                deployed_package_config,
+                session, deployed_package_config,
                 cluster.adapter_id, True
             )
             validate_clusterhost(session, clusterhost)
-            utils.update_db_object(session, clusterhost, config_validated=True)
+            utils.update_db_object(
+                session, clusterhost,
+                package_config=clusterhost_package_config,
+                config_validated=True
+            )
     validate_cluster(session, cluster)
-    utils.update_db_object(session, cluster, config_validated=True)
+    utils.update_db_object(
+        session, cluster, os_config=os_config, package_config=package_config,
+        config_validated=True
+    )
     return {
         'cluster': cluster,
         'hosts': clusterhosts

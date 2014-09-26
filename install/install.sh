@@ -134,22 +134,21 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
 export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
-export netaddr=$(ipcalc $ipaddr $netmask -n |cut -f 2 -d '=')
-export netprefix=$(ipcalc $ipaddr $netmask -p |cut -f 2 -d '=')
-loadvars SUBNET ${netaddr}/${netprefix}
-ipcalc $SUBNET -c
+loadvars IPADDR ${ipaddr}
+ipcalc $IPADDR -c
 if [ $? -ne 0 ]; then
-    echo "subnet $SUBNET format should be x.x.x.x/x"
+    echo "ip addr $IPADDR format should be x.x.x.x"
     exit 1
 fi
-export netaddr=$(ipcalc $SUBNET -n |cut -f 2 -d '=')
-export netprefix=$(ipcalc $SUBNET -p |cut -f 2 -d '=')
-export netmask=$(ipcalc $SUBNET -m |cut -f 2 -d '=')
-export expected_subnet=${netaddr}/${netprefix}
-if [[ "$SUBNET" != "$expected_subnet" ]]; then
-    echo "expected subnet should be $expected_subnet"
+export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
+loadvars NETMASK ${netmask}
+export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
+export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')
+subnet=${netaddr}/${netprefix}
+ipcalc $subnet -c
+if [ $? -ne 0 ]; then
+    echo "subnet $subnet format should be x.x.x.x/x"
     exit 1
 fi
 loadvars OPTION_ROUTER $(route -n | grep '^0.0.0.0' | xargs | cut -d ' ' -f 2)
@@ -158,8 +157,8 @@ if [ $? -ne 0 ]; then
     echo "router $OPTION_ROUTER format should be x.x.x.x"
     exit 1
 fi
-export ip_start=$(echo "$ipaddr"|cut -f 1,2,3 -d '.')."100"
-export ip_end=$(echo "$ipaddr"|cut -f 1,2,3 -d '.')."250"
+export ip_start=$(echo "$IPADDR"|cut -f 1,2,3 -d '.')."100"
+export ip_end=$(echo "$IPADDR"|cut -f 1,2,3 -d '.')."250"
 loadvars IP_START "$ip_start"
 ipcalc $IP_START -c
 if [ $? -ne 0 ]; then
@@ -168,9 +167,9 @@ if [ $? -ne 0 ]; then
 else
     echo "ip start address is $IP_START"
 fi
-ip_start_net=$(ipcalc $IP_START $netmask -n |cut -f 2 -d '=')
+ip_start_net=$(ipcalc $IP_START $NETMASK -n |cut -f 2 -d '=')
 if [[ "$ip_start_net" != "$netaddr" ]]; then
-    echo "ip start $IP_START is not in $SUBNET"
+    echo "ip start $IP_START is not in $subnet"
     exit 1
 fi
 loadvars IP_END "$ip_end"
@@ -179,9 +178,9 @@ if [ $? -ne 0 ]; then
     echo "ip end $IP_END format should be x.x.x.x"
     exit 1
 fi
-ip_end_net=$(ipcalc $IP_END $netmask -n |cut -f 2 -d '=')
+ip_end_net=$(ipcalc $IP_END $NETMASK -n |cut -f 2 -d '=')
 if [[ "$ip_end_net" != "$netaddr" ]]; then
-    echo "ip end $IP_END is not in $SUBNET"
+    echo "ip end $IP_END is not in $subnet"
     exit 1
 fi
 ip_start_int=$(ipaddr_convert $IP_START)
@@ -192,7 +191,7 @@ if [ $ip_range -le 0 ]; then
     exit 1
 fi
 echo "there will be at most $ip_range hosts deployed."
-loadvars NEXTSERVER $ipaddr
+loadvars NEXTSERVER $IPADDR
 ipcalc $NEXTSERVER -c
 if [ $? -ne 0 ]; then
     echo "next server $NEXTSERVER format should be x.x.x.x"
@@ -204,6 +203,9 @@ loadvars ADAPTERS_SOURCE 'http://git.openstack.org/stackforge/compass-adapters'
 
 echo "script dir: $SCRIPT_DIR"
 echo "compass dir is $COMPASSDIR"
+
+echo "generate env.conf"
+source ${COMPASSDIR}/install/setup_env.sh || exit $?
 
 echo "Install the Dependencies"
 source ${COMPASSDIR}/install/dependency.sh || exit $?

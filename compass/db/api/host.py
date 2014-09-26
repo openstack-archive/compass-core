@@ -397,8 +397,10 @@ def update_host_config(session, updater, host_id, **kwargs):
         session, models.Host, id=host_id
     )
 
-    os_config_validates = functools.partial(
-        metadata_api.validate_os_config, os_id=host.os_id)
+    def os_config_validates(config):
+        metadata_api.validate_os_config(
+            session, config, os_id=host.os_id
+        )
 
     @utils.input_validates(
         put_os_config=os_config_validates,
@@ -426,8 +428,10 @@ def patch_host_config(session, updater, host_id, **kwargs):
         session, models.Host, id=host_id
     )
 
-    os_config_validates = functools.partial(
-        metadata_api.validate_os_config, os_id=host.os_id)
+    def os_config_validates(config):
+        metadata_api.validate_os_config(
+            session, config, os_id=host.os_id
+        )
 
     @utils.output_validates(
         os_config=os_config_validates,

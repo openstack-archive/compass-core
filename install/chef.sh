@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 
+echo "Installing chef related packages"
+
 # create backup dir
 sudo mkdir -p /root/backup/chef
 
@@ -11,6 +13,8 @@ else
     echo "chef-server has already installed"
 fi
 
+
+echo "reconfigure chef server"
 # configure chef-server
 sudo chef-server-ctl cleanse
 mkdir -p /etc/chef-server
@@ -45,6 +49,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "configure chef client and knife"
 # configure chef client and knife
 rpm -q chef
 if [[ "$?" != "0" ]]; then

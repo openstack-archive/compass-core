@@ -10,7 +10,7 @@ copy2dir()
     if [  -n "$4" ]; then
        git_branch=$4
     fi
-
+    echo "copy $repo branch $git_branch to $destdir"
     if [[ "$repo" =~ (git|http|https|ftp):// ]]; then
         if [[ -d $destdir || -L $destdir ]]; then
             cd $destdir
@@ -101,6 +101,7 @@ copy2dir()
 sudo mkdir -p /root/backup
 
 # update /etc/hosts
+echo "update /etc/hosts"
 sudo cp -rn /etc/hosts /root/backup/hosts
 sudo rm -f /etc/hosts
 sudo cp -rf $COMPASSDIR/misc/hosts /etc/hosts
@@ -108,6 +109,7 @@ sudo sed -i "s/\$ipaddr \$hostname/$ipaddr $HOSTNAME/g" /etc/hosts
 sudo chmod 644 /etc/hosts
 
 # update rsyslog
+echo "update rsyslog"
 sudo cp -rn /etc/rsyslog.conf /root/backup/
 sudo rm -f /etc/rsyslog.conf
 sudo cp -rf $COMPASSDIR/misc/rsyslog/rsyslog.conf /etc/rsyslog.conf
@@ -122,12 +124,14 @@ else
 fi
 
 # update logrotate.d
+echo "update logrotate config"
 sudo cp -rn /etc/logrotate.d /root/backup/
 rm -f /etc/logrotate.d/*
 sudo cp -rf $COMPASSDIR/misc/logrotate.d/* /etc/logrotate.d/
 sudo chmod 644 /etc/logrotate.d/*
 
 # update ntp conf
+echo "update ntp config"
 sudo cp -rn /etc/ntp.conf /root/backup/
 sudo rm -f /etc/ntp.conf
 sudo cp -rf $COMPASSDIR/misc/ntp/ntp.conf /etc/ntp.conf
@@ -144,6 +148,7 @@ else
 fi
 
 # update squid conf
+echo "update squid config"
 sudo cp -rn /etc/squid/squid.conf /root/backup/
 sudo rm -f /etc/squid/squid.conf 
 sudo cp $COMPASSDIR/misc/squid/squid.conf /etc/squid/
@@ -162,13 +167,14 @@ else
 fi
 
 #update mysqld
+echo "update mysqld"
 sudo service mysqld restart
 MYSQL_USER=${MYSQL_USER:-root}
 MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-root}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
 MYSQL_SERVER=${MYSQL_SERVER:-127.0.0.1}
 MYSQL_PORT=${MYSQL_PORT:-3306}
-MYSQL_DATABASE=${MYSQL_DATABASE:-db}
+MYSQL_DATABASE=${MYSQL_DATABASE:-compass}
 # first time set mysql password
 sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} -p"${MYSQL_OLD_PASSWORD}" password ${MYSQL_PASSWORD}
 if [[ "$?" != "0" ]]; then
@@ -213,6 +219,7 @@ fi
 copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" dev/experimental || exit $?
 
 if [ "$tempest" == "true" ]; then
+    echo "download tempest packages"
     if [[ ! -e /tmp/tempest ]]; then
         git clone http://git.openstack.org/openstack/tempest /tmp/tempest
         if [[ "$?" != "0" ]]; then
@@ -259,8 +266,9 @@ source `which virtualenvwrapper.sh`
 if ! lsvirtualenv |grep compass-core>/dev/null; then
     mkvirtualenv compass-core
 fi
-workon compass-core
 cd $COMPASSDIR
+workon compass-core
+echo "install compass requirements"
 pip install -U -r requirements.txt
 if [[ "$?" != "0" ]]; then
     echo "failed to install compass requiremnts"
@@ -280,9 +288,11 @@ fi
 # TODO(xicheng): Please add comments to ths function. e.g, arg list
 download()
 {
+    #download params: <download url> [<package name>] [<action after package downloaded>]
     url=$1
     package=${2:-$(basename $url)}
     action=${3:-""}
+    echo "download $package from $url and run $action"
     if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
         echo "$package already exists"
     else
@@ -356,6 +366,7 @@ download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso ||
 download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
 
 # Install net-snmp
+echo "install snmp config"
 if [[ ! -e /etc/snmp ]]; then
     sudo mkdir -p /etc/snmp
 fi
@@ -371,6 +382,7 @@ sudo mkdir -p /var/lib/net-snmp/mib_indexes
 sudo chmod 755 /var/lib/net-snmp/mib_indexes
 
 # generate ssh key
+echo "generate ssh key"
 if [[ ! -e $HOME/.ssh ]]; then
     sudo mkdir -p $HOME/.ssh
 fi

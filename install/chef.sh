@@ -1,6 +1,19 @@
 #!/bin/bash
 #
 
+echo "Installing chef"
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+source $DIR/install.conf
+if [ -f $DIR/env.conf ]; then
+    source $DIR/env.conf
+else
+    echo "failed to load environment"
+    exit 1
+fi
+source $DIR/install_func.sh
+
+echo "Installing chef related packages"
+
 # create backup dir
 sudo mkdir -p /root/backup/chef
 
@@ -11,6 +24,8 @@ else
     echo "chef-server has already installed"
 fi
 
+
+echo "reconfigure chef server"
 # configure chef-server
 sudo chef-server-ctl cleanse
 mkdir -p /etc/chef-server
@@ -45,6 +60,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "configure chef client and knife"
 # configure chef client and knife
 rpm -q chef
 if [[ "$?" != "0" ]]; then
@@ -55,7 +71,7 @@ fi
 
 sudo mkdir -p ~/.chef
 
-sudo knife configure -y -i --defaults -r ~/chef-repo -s https://localhost:443 -u $USER --admin-client-name admin --admin-client-key /etc/chef-server/admin.pem --validation-client-name chef-validator --validation-key /etc/chef-server/chef-validator.pem <<EOF
+sudo knife configure -y -i --defaults -r ~/chef-repo -s https://$IPADDR:443 -u $USER --admin-client-name admin --admin-client-key /etc/chef-server/admin.pem --validation-client-name chef-validator --validation-key /etc/chef-server/chef-validator.pem <<EOF
 $CHEF_PASSWORD
 EOF
 sudo sed -i "/node_name/c\node_name                \'admin\'" /$USER/.chef/knife.rb

@@ -23,7 +23,7 @@
 # Checking Sanity
 DEBIAN=/etc/debian_version
 SUSE=/etc/SuSE-release
-CELERY=$CeleryPath
+CELERY=/opt/compass/bin/celery
 
 if [ -f $DEBIAN ]; then
     . /lib/lsb/init-functions

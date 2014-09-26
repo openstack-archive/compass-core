@@ -1,6 +1,16 @@
 #!/bin/bash
 #
 
+echo "Installing cobbler"
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+source $DIR/install.conf
+if [ -f $DIR/env.conf ]; then
+    source $DIR/env.conf
+else
+    echo "failed to load environment"
+    exit 1
+fi
+
 echo "Installing cobbler related packages"
 sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart reprepro
 if [[ "$?" != "0" ]]; then
@@ -36,8 +46,8 @@ sudo cp -rn /etc/cobbler/settings /root/backup/cobbler/
 sudo rm -f /etc/cobbler/settings
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/settings /etc/cobbler/settings
 sudo sed -i "s/next_server:[ \t]*\$next_server/next_server: $NEXTSERVER/g" /etc/cobbler/settings
-sudo sed -i "s/server:[ \t]*\$ipaddr/server: $ipaddr/g" /etc/cobbler/settings
-sudo sed -i "s/default_name_servers:[ \t]*\['\$ipaddr'\]/default_name_servers: \['$ipaddr'\]/g" /etc/cobbler/settings
+sudo sed -i "s/server:[ \t]*\$ipaddr/server: $IPADDR/g" /etc/cobbler/settings
+sudo sed -i "s/default_name_servers:[ \t]*\['\$ipaddr'\]/default_name_servers: \['$IPADDR'\]/g" /etc/cobbler/settings
 domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")
 sudo sed -i "s/manage_forward_zones:[ \t]*\[\]/manage_forward_zones: \['$domains'\]/g" /etc/cobbler/settings
 export cobbler_passwd=$(openssl passwd -1 -salt 'huawei' '123456')
@@ -48,13 +58,15 @@ sudo chmod 644 /etc/cobbler/settings
 sudo cp -rn /etc/cobbler/dhcp.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/dhcp.template
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/dhcp.template /etc/cobbler/dhcp.template
-subnet=$(ipcalc $SUBNET -n |cut -f 2 -d '=')
-sudo sed -i "s/subnet \$subnet netmask \$netmask/subnet $subnet netmask $netmask/g" /etc/cobbler/dhcp.template
+export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
+export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')
+subnet=${netaddr}/${netprefix}
+sudo sed -i "s/subnet \$subnet netmask \$netmask/subnet $subnet netmask $NETMASK/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option routers \$gateway/option routers $OPTION_ROUTER/g" /etc/cobbler/dhcp.template
-sudo sed -i "s/option subnet-mask \$netmask/option subnet-mask $netmask/g" /etc/cobbler/dhcp.template
-sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $ipaddr/g" /etc/cobbler/dhcp.template
+sudo sed -i "s/option subnet-mask \$netmask/option subnet-mask $NETMASK/g" /etc/cobbler/dhcp.template
+sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $IPADDR/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_START $IP_END/g" /etc/cobbler/dhcp.template
-sudo sed -i "s/local-address \$ipaddr/local-address $ipaddr/g" /etc/cobbler/dhcp.template
+sudo sed -i "s/local-address \$ipaddr/local-address $IPADDR/g" /etc/cobbler/dhcp.template
 sudo chmod 644 /etc/cobbler/dhcp.template
 
 # update tftpd.template
@@ -67,8 +79,8 @@ sudo chmod 644 /etc/cobbler/tftpd.template
 sudo cp -rn /etc/cobbler/named.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/named.template
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/named.template /etc/cobbler/named.template
-sudo sed -i "s/listen-on port 53 { \$ipaddr; }/listen-on port 53 \{ $ipaddr; \}/g" /etc/cobbler/named.template
-subnet_escaped=$(echo $SUBNET | sed -e 's/[\/&]/\\&/g')
+sudo sed -i "s/listen-on port 53 { \$ipaddr; }/listen-on port 53 \{ $IPADDR; \}/g" /etc/cobbler/named.template
+subnet_escaped=$(echo $subnet | sed -e 's/[\/&]/\\&/g')
 sudo sed -i "s/allow-query { 127.0.0.0\/8; \$subnet; }/allow-query \{ 127.0.0.0\/8; $subnet_escaped; \}/g" /etc/cobbler/named.template
 sudo chmod 644 /etc/cobbler/named.template
 
@@ -76,8 +88,8 @@ sudo chmod 644 /etc/cobbler/named.template
 sudo cp -rn /etc/cobbler/zone.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/zone.template
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/zone.template /etc/cobbler/zone.template
-sudo sed -i "s/\$hostname IN A \$ipaddr/$HOSTNAME IN A $ipaddr/g" /etc/cobbler/zone.template
-sudo sed -i "s/metrics IN A \$ipaddr/metrics IN A $ipaddr/g" /etc/cobbler/zone.template
+sudo sed -i "s/\$hostname IN A \$ipaddr/$HOSTNAME IN A $IPADDR/g" /etc/cobbler/zone.template
+sudo sed -i "s/metrics IN A \$ipaddr/metrics IN A $IPADDR/g" /etc/cobbler/zone.template
 sudo chmod 644 /etc/cobbler/zone.template
 
 # update modules.conf
@@ -390,7 +402,7 @@ for profile in $(cobbler profile list); do
 done
 
 if [ "$centos_found_profile" == "0" ]; then
-    sudo cobbler profile add --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+    sudo cobbler profile add --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
     if [[ "$?" != "0" ]]; then
         echo "failed to add profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
         exit 1
@@ -399,7 +411,7 @@ if [ "$centos_found_profile" == "0" ]; then
     fi
 else
     echo "profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already existed."
-    sudo cobbler profile edit --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+    sudo cobbler profile edit --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
     if [[ "$?" != "0" ]]; then
         echo "failed to edit profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
         exit 1
@@ -416,7 +428,7 @@ for profile in $(cobbler profile list); do
 done
 
 if [ "$ubuntu_found_profile" == "0" ]; then
-    sudo cobbler profile add --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
+    sudo cobbler profile add --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
     if [[ "$?" != "0" ]]; then
         echo "failed to add profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1
@@ -425,7 +437,7 @@ if [ "$ubuntu_found_profile" == "0" ]; then
     fi
 else
     echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed."
-    sudo cobbler profile edit --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$ipaddr/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
+    sudo cobbler profile edit --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
     if [[ "$?" != "0" ]]; then
         echo "failed to edit profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1

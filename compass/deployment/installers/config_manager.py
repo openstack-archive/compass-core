@@ -371,6 +371,8 @@ class BaseConfigManager(object):
         temp = {}
         for key in network_mapping:
             nic = network_mapping[key]
+            if isinstance(nic, dict):
+                nic = nic['interface']
             if nic in interfaces:
                 temp[key] = self.get_host_interface_config(host_id, nic)
                 temp[key][const.NIC] = nic

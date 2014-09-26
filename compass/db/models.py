@@ -37,8 +37,9 @@ from sqlalchemy import Text
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy import UniqueConstraint
 
+from compass.db import callback as metadata_callback
 from compass.db import exception
-from compass.db import validator
+from compass.db import validator as metadata_validator
 from compass.utils import util
 
 
@@ -126,10 +127,22 @@ class MetadataMixin(HelperMixin):
     is_required = Column(Boolean, default=False)
     required_in_whole_config = Column(Boolean, default=False)
     mapping_to = Column(String(80), default='')
-    validator_data = Column('validator', Text)
+    _validator = Column('validator', Text)
     js_validator = Column(Text)
     default_value = Column(JSONEncoded)
-    options = Column(JSONEncoded, default=[])
+    _default_callback = Column('default_callback', Text)
+    default_callback_params = Column(
+        'default_callback_params', JSONEncoded, default={}
+    )
+    options = Column(JSONEncoded)
+    _options_callback = Column('options_callback', Text)
+    options_callback_params = Column(
+        'options_callback_params', JSONEncoded, default={}
+    )
+    _autofill_callback = Column('autofill_callback', Text)
+    autofill_callback_params = Column(
+        'autofill_callback_params', JSONEncoded, default={}
+    )
     required_in_options = Column(Boolean, default=False)
 
     def initialize(self):
@@ -138,36 +151,125 @@ class MetadataMixin(HelperMixin):
                 self.display_name = self.name
         super(MetadataMixin, self).initialize()
 
-    @property
-    def validator(self):
+    def validate(self):
+        super(MetadataMixin, self).validate()
         if not self.name:
             raise exception.InvalidParamter(
                 'name is not set in os metadata %s' % self.id
             )
-        if not self.validator_data:
+
+    @property
+    def validator(self):
+        if not self._validator:
             return None
         func = eval(
-            self.validator_data,
-            validator.VALIDATOR_GLOBALS,
-            validator.VALIDATOR_LOCALS
+            self._validator,
+            metadata_validator.VALIDATOR_GLOBALS,
+            metadata_validator.VALIDATOR_LOCALS
         )
         if not callable(func):
             raise Exception(
-                '%s is not callable' % self.validator_data
+                'validator %s is not callable' % self._validator
             )
         return func
 
     @validator.setter
     def validator(self, value):
         if not value:
-            self.validator_data = None
+            self._validator = None
         elif isinstance(value, basestring):
-            self.validator_data = value
+            self._validator = value
         elif callable(value):
-            self.validator_data = value.func_name
+            self._validator = value.func_name
         else:
             raise Exception(
-                '%s is not callable' % value
+                'validator %s is not callable' % value
+            )
+
+    @property
+    def default_callback(self):
+        if not self._default_callback:
+            return None
+        func = eval(
+            self._default_callback,
+            metadata_callback.CALLBACK_GLOBALS,
+            metadata_callback.CALLBACK_LOCALS
+        )
+        if not callable(func):
+            raise Exception(
+                'default callback %s is not callable' % self._default_callback
+            )
+        return func
+
+    @default_callback.setter
+    def default_callback(self, value):
+        if not value:
+            self._default_callback = None
+        elif isinstance(value, basestring):
+            self._default_callback = value
+        elif callable(value):
+            self._default_callback = value.func_name
+        else:
+            raise Exception(
+                'default callback %s is not callable' % value
+            )
+
+    @property
+    def options_callback(self):
+        if not self._options_callback:
+            return None
+        func = eval(
+            self._options_callback,
+            metadata_callback.CALLBACK_GLOBALS,
+            metadata_callback.CALLBACK_LOCALS
+        )
+        if not callable(func):
+            raise Exception(
+                'options callback %s is not callable' % self._options_callback
+            )
+        return func
+
+    @options_callback.setter
+    def options_callback(self, value):
+        if not value:
+            self._options_callback = None
+        elif isinstance(value, basestring):
+            self._options_callback = value
+        elif callable(value):
+            self._options_callback = value.func_name
+        else:
+            raise Exception(
+                'options callback %s is not callable' % value
+            )
+
+    @property
+    def autofill_callback(self):
+        if not self._autofill_callback:
+            return None
+        func = eval(
+            self._autofill_callback,
+            metadata_callback.CALLBACK_GLOBALS,
+            metadata_callback.CALLBACK_LOCALS
+        )
+        if not callable(func):
+            raise Exception(
+                'autofill callback %s is not callable' % (
+                    self._autofill_callback
+                )
+            )
+        return func
+
+    @autofill_callback.setter
+    def autofill_callback(self, value):
+        if not value:
+            self._autofill_callback = None
+        elif isinstance(value, basestring):
+            self._autofill_callback = value
+        elif callable(value):
+            self._autofill_callback = value.func_name
+        else:
+            raise Exception(
+                'autofill callback %s is not callable' % value
             )
 
     def to_dict(self):
@@ -180,8 +282,16 @@ class MetadataMixin(HelperMixin):
         self_dict_info.update(super(MetadataMixin, self).to_dict())
         validator = self.validator
         if validator:
-            self_dict_info['validator_data'] = self.validator_data
             self_dict_info['validator'] = validator
+        default_callback = self.default_callback
+        if default_callback:
+            self_dict_info['default_callback'] = default_callback
+        options_callback = self.options_callback
+        if options_callback:
+            self_dict_info['options_callback'] = options_callback
+        autofill_callback = self.autofill_callback
+        if autofill_callback:
+            self_dict_info['autofill_callback'] = autofill_callback
         js_validator = self.js_validator
         if js_validator:
             self_dict_info['js_validator'] = js_validator
@@ -201,7 +311,10 @@ class FieldMixin(HelperMixin):
     field = Column(String(80), unique=True)
     field_type_data = Column(
         'field_type',
-        Enum('basestring', 'int', 'float', 'list', 'bool'),
+        Enum(
+            'basestring', 'int', 'float', 'list', 'bool',
+            'dict', 'object'
+        ),
         ColumnDefault('basestring')
     )
     display_type = Column(
@@ -212,7 +325,7 @@ class FieldMixin(HelperMixin):
         ),
         ColumnDefault('text')
     )
-    validator_data = Column('validator', Text)
+    _validator = Column('validator', Text)
     js_validator = Column(Text)
     description = Column(Text)
 
@@ -242,27 +355,27 @@ class FieldMixin(HelperMixin):
 
     @property
     def validator(self):
-        if not self.validator_data:
+        if not self._validator:
             return None
         func = eval(
-            self.validator_data,
-            validator.VALIDATOR_GLOBALS,
-            validator.VALIDATOR_LOCALS
+            self._validator,
+            metadata_validator.VALIDATOR_GLOBALS,
+            metadata_validator.VALIDATOR_LOCALS
         )
         if not callable(func):
             raise Exception(
-                '%s is not callable' % self.validator_data
+                '%s is not callable' % self._validator
             )
         return func
 
     @validator.setter
     def validator(self, value):
         if not value:
-            self.validator_data = None
+            self._validator = None
         elif isinstance(value, basestring):
-            self.validator_data = value
+            self._validator = value
         elif callable(value):
-            self.validator_data = value.func_name
+            self._validator = value.func_name
         else:
             raise Exception(
                 '%s is not callable' % value
@@ -561,9 +674,6 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     @patched_package_config.setter
     def patched_package_config(self, value):
         package_config = util.merge_dict(dict(self.package_config), value)
-        if 'roles' in package_config:
-            self.patched_roles = package_config['roles']
-            del package_config['roles']
         self.package_config = package_config
         self.config_validated = False
 
@@ -575,9 +685,6 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     def put_package_config(self, value):
         package_config = dict(self.package_config)
         package_config.update(value)
-        if 'roles' in package_config:
-            self.roles = package_config['roles']
-            del package_config['roles']
         self.package_config = package_config
         self.config_validated = False
 
@@ -922,10 +1029,15 @@ class Host(BASE, TimestampMixin, HelperMixin):
         dict_info = self.machine.to_dict()
         dict_info.update(super(Host, self).to_dict())
         state_dict = self.state_dict()
+        ip = None
+        for host_network in self.host_networks:
+            if host_network.is_mgmt:
+                ip = host_network.ip
         dict_info.update({
             'machine_id': self.machine.id,
             'os_installed': self.os_installed,
             'hostname': self.name,
+            'ip': ip,
             'networks': [
                 host_network.to_dict()
                 for host_network in self.host_networks
@@ -1164,14 +1276,6 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         else:
             flavor_adapter_id = flavor.adapter_id
             adapter_id = self.adapter_id
-            logging.info(
-                'flavor adapter type %s value %s',
-                type(flavor_adapter_id), flavor_adapter_id
-            )
-            logging.info(
-                'adapter type %s value %s',
-                type(adapter_id), adapter_id
-            )
             if flavor_adapter_id != adapter_id:
                 raise exception.InvalidParameter(
                     'flavor adapter id %s does not match adapter id %s' % (
@@ -1525,6 +1629,8 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
             denied = filter_type != 'allow'
             unmatched_allowed = denied
             if 'ports' in port_filter:
+                if 'all' in port_filter['ports']:
+                    return denied
                 if port in port_filter['ports']:
                     return denied
                 if port_match:
@@ -1870,7 +1976,8 @@ class OSConfigMetadata(BASE, MetadataMixin):
         UniqueConstraint('path', 'os_id', name='constraint'),
     )
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, os_id, path, **kwargs):
+        self.os_id = os_id
         self.path = path
         super(OSConfigMetadata, self).__init__(**kwargs)
 
@@ -1982,7 +2089,7 @@ class OperatingSystem(BASE, HelperMixin):
         if self.parent:
             dict_info.update(self.parent.metadata_dict())
         for metadata in self.root_metadatas:
-            dict_info.update(metadata.to_dict())
+            util.merge_dict(dict_info, metadata.to_dict())
         return dict_info
 
     @property
@@ -2206,8 +2313,9 @@ class PackageConfigMetadata(BASE, MetadataMixin):
     )
 
     def __init__(
-        self, path, **kwargs
+        self, adapter_id, path, **kwargs
     ):
+        self.adapter_id = adapter_id
         self.path = path
         super(PackageConfigMetadata, self).__init__(**kwargs)
 
@@ -2342,7 +2450,7 @@ class Adapter(BASE, HelperMixin):
         if self.parent:
             dict_info.update(self.parent.metadata_dict())
         for metadata in self.root_metadatas:
-            dict_info.update(metadata.to_dict())
+            util.merge_dict(dict_info, metadata.to_dict())
         return dict_info
 
     @property

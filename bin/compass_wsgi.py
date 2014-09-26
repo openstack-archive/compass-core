@@ -14,10 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""clean all installation logs."""
-import logging
+"""compass wsgi module."""
 import os
-import os.path
 import sys
 
 
@@ -32,19 +30,13 @@ from compass.utils import logsetting
 from compass.utils import setting_wrapper as setting
 
 
-def clean_installation_logs():
-    installation_log_dirs = setting.INSTALLATION_LOGDIR
-    successful = True
-    for _, logdir in installation_log_dirs.items():
-        cmd = 'rm -rf %s/*' % logdir
-        status = os.system(cmd)
-        logging.info('run cmd %s resturns %s', cmd, status)
-        if status:
-            successful = False
-    return successful
+flags.init()
+flags.OPTIONS.logfile = setting.WEB_LOGFILE
+logsetting.init()
 
 
-if __name__ == "__main__":
-    flags.init()
-    logsetting.init()
-    clean_installation_logs()
+from compass.api import api as compass_api
+
+
+compass_api.init()
+application = compass_api.app

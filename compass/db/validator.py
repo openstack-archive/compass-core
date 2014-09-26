@@ -21,7 +21,7 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-def is_valid_ip(name, ip_addr):
+def is_valid_ip(name, ip_addr, **kwargs):
     """Valid the format of an IP address."""
     try:
         netaddr.IPAddress(ip_addr)
@@ -30,7 +30,7 @@ def is_valid_ip(name, ip_addr):
     return True
 
 
-def is_valid_network(name, ip_network):
+def is_valid_network(name, ip_network, **kwargs):
     """Valid the format of an Ip network."""
     try:
         netaddr.IPNetwork(ip_network)
@@ -39,7 +39,7 @@ def is_valid_network(name, ip_network):
     return False
 
 
-def is_valid_netmask(name, ip_addr):
+def is_valid_netmask(name, ip_addr, **kwargs):
     """Valid the format of a netmask."""
     if not is_valid_ip(ip_addr):
         return False
@@ -50,7 +50,7 @@ def is_valid_netmask(name, ip_addr):
         return False
 
 
-def is_valid_gateway(name, ip_addr):
+def is_valid_gateway(name, ip_addr, **kwargs):
     """Valid the format of gateway."""
     if not is_valid_ip(ip_addr):
         return False
@@ -61,7 +61,7 @@ def is_valid_gateway(name, ip_addr):
         return False
 
 
-def is_valid_dns(name, dns):
+def is_valid_dns(name, dns, **kwargs):
     """Valid the format of DNS."""
     if is_valid_ip(dns):
         return True
@@ -72,17 +72,17 @@ def is_valid_dns(name, dns):
     return True
 
 
-def is_valid_username(name, username):
+def is_valid_username(name, username, **kwargs):
     """Valid the format of username."""
     return bool(username)
 
 
-def is_valid_password(name, password):
+def is_valid_password(name, password, **kwargs):
     """Valid the format of password."""
     return bool(password)
 
 
-def is_valid_partition(name, partition):
+def is_valid_partition(name, partition, **kwargs):
     """Valid the format of partition name."""
     if name != 'swap' and not name.startswith('/'):
         return False
@@ -91,17 +91,17 @@ def is_valid_partition(name, partition):
     return True
 
 
-def is_valid_percentage(name, percentage):
+def is_valid_percentage(name, percentage, **kwargs):
     """Valid the percentage."""
     return 0 <= percentage <= 100
 
 
-def is_valid_port(name, port):
+def is_valid_port(name, port, **kwargs):
     """Valid the format of port."""
     return 0 < port < 65536
 
 
-def is_valid_size(name, size):
+def is_valid_size(name, size, **kwargs):
     if re.match(r'(\d+)(K|M|G|T)?', size):
         return True
     return False

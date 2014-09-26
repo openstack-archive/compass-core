@@ -407,10 +407,16 @@ def update_cluster_config(session, updater, cluster_id, **kwargs):
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    os_config_validates = functools.partial(
-        metadata_api.validate_os_config, os_id=cluster.os_id)
-    package_config_validates = functools.partial(
-        metadata_api.validate_package_config, adapter_id=cluster.adapter_id)
+
+    def os_config_validates(config):
+        metadata_api.validate_os_config(
+            session, config, os_id=cluster.os_id
+        )
+
+    def package_config_validates(config):
+        metadata_api.validate_package_config(
+            session, config, adapter_id=cluster.adapter_id
+        )
 
     @utils.input_validates(
         put_os_config=os_config_validates,
@@ -443,10 +449,15 @@ def patch_cluster_config(session, updater, cluster_id, **kwargs):
         session, models.Cluster, id=cluster_id
     )
 
-    os_config_validates = functools.partial(
-        metadata_api.validate_os_config, os_id=cluster.os_id)
-    package_config_validates = functools.partial(
-        metadata_api.validate_package_config, adapter_id=cluster.adapter_id)
+    def os_config_validates(config):
+        metadata_api.validate_os_config(
+            session, config, os_id=cluster.os_id
+        )
+
+    def package_config_validates(config):
+        metadata_api.validate_package_config(
+            session, config, adapter_id=cluster.adapter_id
+        )
 
     @utils.output_validates(
         os_config=os_config_validates,
@@ -896,15 +907,15 @@ def _update_clusterhost_config(session, updater, clusterhost, **kwargs):
         ignore_keys.append('put_os_config')
 
     def os_config_validates(os_config):
-        from compass.db.api import host as host_api
         host = clusterhost.host
-        metadata_api.validate_os_config(os_config, host.os_id)
+        metadata_api.validate_os_config(
+            session, os_config, host.os_id)
 
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
         is_cluster_editable(session, cluster, updater)
         metadata_api.validate_package_config(
-            package_config, cluster.adapter_id
+            session, package_config, cluster.adapter_id
         )
 
     @utils.supported_filters(
@@ -1052,13 +1063,13 @@ def _patch_clusterhost_config(session, updater, clusterhost, **kwargs):
 
     def os_config_validates(os_config):
         host = clusterhost.host
-        metadata_api.validate_os_config(os_config, host.os_id)
+        metadata_api.validate_os_config(session, os_config, host.os_id)
 
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
         is_cluster_editable(session, cluster, updater)
         metadata_api.validate_package_config(
-            package_config, cluster.adapter_id
+            session, package_config, cluster.adapter_id
         )
 
     @utils.supported_filters(
@@ -1282,7 +1293,7 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
     os_config = cluster.os_config
     if os_config:
         metadata_api.validate_os_config(
-            os_config, cluster.os_id, True
+            session, os_config, cluster.os_id, True
         )
         for clusterhost in clusterhosts:
             host = clusterhost.host
@@ -1299,7 +1310,7 @@ def review_cluster(session, reviewer, cluster_id, review={}, **kwargs):
                 os_config, host_os_config
             )
             metadata_api.validate_os_config(
-                deployed_os_config, host.os_id, True
+                session, deployed_os_config, host.os_id, True
             )
             host_api.validate_host(session, host)
             utils.update_db_object(session, host, config_validated=True)

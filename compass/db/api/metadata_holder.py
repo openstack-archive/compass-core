@@ -30,10 +30,19 @@ RESP_METADATA_FIELDS = [
 
 @database.run_in_session()
 def load_metadatas(session):
+    load_os_metadatas_internal(session)
+    load_package_metadatas_internal(session)
+
+
+def load_os_metadatas_internal(session):
     global OS_METADATA_MAPPING
-    global PACKAGE_METADATA_MAPPING
-    logging.info('load metadatas into memory')
+    logging.info('load os metadatas into memory')
     OS_METADATA_MAPPING = metadata_api.get_os_metadatas_internal(session)
+
+
+def load_package_metadatas_internal(session):
+    global PACKAGE_METADATA_MAPPING
+    logging.info('load package metadatas into memory')
     PACKAGE_METADATA_MAPPING = (
         metadata_api.get_package_metadatas_internal(session)
     )
@@ -56,14 +65,18 @@ def _validate_config(
     )
 
 
-def validate_os_config(config, os_id, whole_check=False):
+def validate_os_config(session, config, os_id, whole_check=False):
+    if not OS_METADATA_MAPPING:
+        load_os_metadatas_internal(session)
     _validate_config(
         config, os_id, OS_METADATA_MAPPING,
         whole_check
     )
 
 
-def validate_package_config(config, adapter_id, whole_check=False):
+def validate_package_config(session, config, adapter_id, whole_check=False):
+    if not PACKAGE_METADATA_MAPPING:
+        load_package_metadatas_internal(session)
     _validate_config(
         config, adapter_id, PACKAGE_METADATA_MAPPING,
         whole_check
@@ -98,8 +111,10 @@ def _filter_metadata(metadata):
     return filtered_metadata
 
 
-def get_package_metadata_internal(adapter_id):
+def get_package_metadata_internal(session, adapter_id):
     """get package metadata internal."""
+    if not PACKAGE_METADATA_MAPPING:
+        load_package_metadatas_internal(session)
     if adapter_id not in PACKAGE_METADATA_MAPPING:
         raise exception.RecordNotExists(
             'adpater %s does not exist' % adapter_id
@@ -114,11 +129,15 @@ def get_package_metadata_internal(adapter_id):
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
 def get_package_metadata(session, getter, adapter_id, **kwargs):
-    return {'package_config': get_package_metadata_internal(adapter_id)}
+    return {
+        'package_config': get_package_metadata_internal(session, adapter_id)
+    }
 
 
-def get_os_metadata_internal(os_id):
+def get_os_metadata_internal(session, os_id):
     """get os metadata internal."""
+    if not OS_METADATA_MAPPING:
+        load_os_metadatas_internal(session)
     if os_id not in OS_METADATA_MAPPING:
         raise exception.RecordNotExists(
             'os %s does not exist' % os_id
@@ -134,7 +153,7 @@ def get_os_metadata_internal(os_id):
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
 def get_os_metadata(session, getter, os_id, **kwargs):
     """get os metadatas."""
-    return {'os_config': get_os_metadata_internal(os_id)}
+    return {'os_config': get_os_metadata_internal(session, os_id)}
 
 
 @utils.supported_filters([])
@@ -145,7 +164,7 @@ def get_os_metadata(session, getter, os_id, **kwargs):
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
 def get_package_os_metadata(session, getter, adapter_id, os_id, **kwargs):
     from compass.db.api import adapter_holder as adapter_api
-    adapter = adapter_api.get_adapter_internal(adapter_id)
+    adapter = adapter_api.get_adapter_internal(session, adapter_id)
     os_ids = [os['os_id'] for os in adapter['supported_oses']]
     if os_id not in os_ids:
         raise exception.InvalidParameter(
@@ -155,9 +174,9 @@ def get_package_os_metadata(session, getter, adapter_id, os_id, **kwargs):
         )
     metadatas = {}
     metadatas['os_config'] = get_os_metadata_internal(
-        os_id
+        session, os_id
     )
     metadatas['package_config'] = get_package_metadata_internal(
-        adapter_id
+        session, adapter_id
     )
     return metadatas

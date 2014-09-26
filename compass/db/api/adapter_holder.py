@@ -47,6 +47,10 @@ RESP_FLAVORS_FIELDS = [
 
 @database.run_in_session()
 def load_adapters(session):
+    load_adapters_internal(session)
+
+
+def load_adapters_internal(session):
     global ADAPTER_MAPPING
     logging.info('load adapters into memory')
     ADAPTER_MAPPING = adapter_api.get_adapters_internal(session)
@@ -93,11 +97,16 @@ def _filter_adapters(adapter_config, filter_name, filter_value):
 )
 def list_adapters(session, lister, **filters):
     """list adapters."""
+    if not ADAPTER_MAPPING:
+        load_adapters_internal(session)
     return ADAPTER_MAPPING.values()
 
 
-def get_adapter_internal(adapter_id):
+def get_adapter_internal(session, adapter_id):
     """get adapter."""
+    if not ADAPTER_MAPPING:
+        load_adapters_internal(session)
+
     if adapter_id not in ADAPTER_MAPPING:
         raise exception.RecordNotExists(
             'adpater %s does not exist' % adapter_id
@@ -118,7 +127,7 @@ def get_adapter_internal(adapter_id):
 )
 def get_adapter(session, getter, adapter_id, **kwargs):
     """get adapter."""
-    return get_adapter_internal(adapter_id)
+    return get_adapter_internal(session, adapter_id)
 
 
 @utils.supported_filters([])
@@ -129,8 +138,5 @@ def get_adapter(session, getter, adapter_id, **kwargs):
 @utils.wrap_to_dict(RESP_ROLES_FIELDS)
 def get_adapter_roles(session, getter, adapter_id, **kwargs):
     """get adapter roles."""
-    if adapter_id not in ADAPTER_MAPPING:
-        raise exception.RecordNotExists(
-            'adpater %s does not exist' % adapter_id
-        )
-    return ADAPTER_MAPPING[adapter_id].get('roles', [])
+    adapter = get_adapter_internal(session, adapter_id)
+    return adapter.get('roles', [])

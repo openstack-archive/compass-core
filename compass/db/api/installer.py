@@ -25,23 +25,29 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-def _add_installers(session, model, configs):
+def _add_installers(session, model, configs, exception_when_existing=True):
     installers = []
     for config in configs:
         installers.append(utils.add_db_object(
             session, model,
-            True, config['INSTANCE_NAME'],
+            exception_when_existing, config['INSTANCE_NAME'],
             name=config['NAME'],
             settings=config.get('SETTINGS', {})
         ))
     return installers
 
 
-def add_os_installers_internal(session):
+def add_os_installers_internal(session, exception_when_existing=True):
     configs = util.load_configs(setting.OS_INSTALLER_DIR)
-    return _add_installers(session, models.OSInstaller, configs)
+    return _add_installers(
+        session, models.OSInstaller, configs,
+        exception_when_existing=exception_when_existing
+    )
 
 
-def add_package_installers_internal(session):
+def add_package_installers_internal(session, exception_when_existing=True):
     configs = util.load_configs(setting.PACKAGE_INSTALLER_DIR)
-    return _add_installers(session, models.PackageInstaller, configs)
+    return _add_installers(
+        session, models.PackageInstaller, configs,
+        exception_when_existing=exception_when_existing
+    )

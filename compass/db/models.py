@@ -599,6 +599,15 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         host = self.host
         host.put_os_config = value
 
+    @property
+    def deployed_os_config(self):
+        return self.host.deployed_os_config
+
+    @deployed_os_config.setter
+    def deployed_os_config(self, value):
+        host = self.host
+        host.deployed_os_config = value
+
     @hybrid_property
     def distributed_system_name(self):
         return self.cluster.distributed_system_name

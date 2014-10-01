@@ -438,7 +438,7 @@ def patch_host_config(session, updater, host_id, **kwargs):
         )
 
     return patch_config_internal(
-        session, updater, host, **kwargs
+        host, **kwargs
     )
 
 
@@ -842,7 +842,7 @@ def poweron_host(
     """power on host."""
     from compass.tasks import client as celery_client
     host = utils.get_db_object(
-        session, models.host, id=host_id
+        session, models.Host, id=host_id
     )
     is_host_validated(session, host)
     celery_client.celery.send_task(
@@ -870,7 +870,7 @@ def poweroff_host(
     """power off host."""
     from compass.tasks import client as celery_client
     host = utils.get_db_object(
-        session, models.host, id=host_id
+        session, models.Host, id=host_id
     )
     is_host_validated(session, host)
     celery_client.celery.send_task(
@@ -898,7 +898,7 @@ def reset_host(
     """reset host."""
     from compass.tasks import client as celery_client
     host = utils.get_db_object(
-        session, models.host, id=host_id
+        session, models.Host, id=host_id
     )
     is_host_validated(session, host)
     celery_client.celery.send_task(

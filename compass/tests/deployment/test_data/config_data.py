@@ -228,9 +228,15 @@ cluster_test_config = {
             }
         },
         "network_mapping": {
-            "management": "eth0",
-            "public": "eth2",
-            "tenant": "eth1"
+            "management": {
+                "interface": "eth0"
+            },
+            "public": {
+                "interface": "eth2"
+            },
+            "tenant": {
+                "interface": "eth1"
+            }
         }
     }
 }
@@ -276,8 +282,12 @@ hosts_test_config = {
         },
         "package_config": {
             "network_mapping": {
-                "management": "vnet0",
-                "tenant": "vnet1"
+                "management": {
+                    "interface": "vnet0"
+                },
+                "tenant": {
+                    "interface": "vnet1"
+                }
             }
         }
     },

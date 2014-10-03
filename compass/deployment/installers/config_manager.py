@@ -110,12 +110,11 @@ class BaseConfigManager(object):
             return {}
 
         deploy_config = self.get_cluster_deployed_package_config()
+        mapping = deploy_config.setdefault(const.ROLES_MAPPING, {})
 
-        if const.ROLES_MAPPING not in deploy_config:
+        if not mapping:
             mapping = self._get_cluster_roles_mapping_helper()
             deploy_config[const.ROLES_MAPPING] = mapping
-        else:
-            mapping = deploy_config[const.ROLES_MAPPING]
 
         return mapping
 
@@ -332,6 +331,7 @@ class BaseConfigManager(object):
         """The ouput format will be as below, for example:
            {
                "controller": {
+                   "hostname": "xxx",
                    "management": {
                        "interface": "eth0",
                        "ip": "192.168.1.10",
@@ -361,16 +361,18 @@ class BaseConfigManager(object):
 
     def _get_host_roles_mapping_helper(self, host_id):
         """The format will be the same as cluster roles mapping."""
-        mapping = {}
         network_mapping = self.get_host_network_mapping(host_id)
         if not network_mapping:
             return {}
 
+        hostname = self.get_hostname(host_id)
         roles = self.get_host_roles(host_id)
         interfaces = self.get_host_interfaces(host_id)
-        temp = {}
+
+        mapping = {}
+        temp = {const.HOSTNAME: hostname}
         for key in network_mapping:
-            nic = network_mapping[key]
+            nic = network_mapping[key][const.NIC]
             if nic in interfaces:
                 temp[key] = self.get_host_interface_config(host_id, nic)
                 temp[key][const.NIC] = nic

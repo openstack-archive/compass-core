@@ -12,6 +12,9 @@ export PACKAGE_INSTALLER=chef
 
 # service NIC (A bridge "installation" is used for jenkins CI)
 export NIC=installation
+
+# default local repo config is "n"
+export LOCAL_REPO=${LOCAL_REPO:-"n"}
  
 # DHCP config
 export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`

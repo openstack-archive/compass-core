@@ -12,6 +12,9 @@ export PACKAGE_INSTALLER=chef
 
 # service NIC (A bridge "installation" is used for jenkins CI)
 export NIC=installation
+
+# default local repo config is "n"
+export LOCAL_REPO=${LOCAL_REPO:-"n"}
  
 # DHCP config
 # SUBNET variable specifies the subnet for DHCP server. Example: 192.168.0.0/16

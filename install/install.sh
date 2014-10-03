@@ -198,6 +198,18 @@ if [ $? -ne 0 ]; then
     echo "next server $NEXTSERVER format should be x.x.x.x"
     exit 1
 fi
+
+if [[ -z $LOCAL_REPO ]]; then
+    echo -e "\x1b[32mWould you like to set up a local repository?(y/n)\x1b[37m"
+    while true; do
+        read ans
+        case $ans in 
+            y ) export LOCAL_REPO="y"; break;;
+            n ) export LOCAL_REPO="n"; break;;
+            * ) echo "I don't understand this";;
+        esac
+    done
+fi
 loadvars NAMESERVER_DOMAINS "ods.com"
 loadvars WEB_SOURCE 'http://git.openstack.org/stackforge/compass-web'
 loadvars ADAPTERS_SOURCE 'http://git.openstack.org/stackforge/compass-adapters'
@@ -220,5 +232,9 @@ source ${COMPASSDIR}/install/$PACKAGE_INSTALLER.sh || exit $?
 echo "Download and Setup Compass and related services"
 source ${COMPASSDIR}/install/compass.sh || exit $?
 
+if [[ $LOCAL_REPO = "y" ]]; then
+    echo "setting up local repo"
+    source ${COMPASSDIR}/install/local_repo.sh || exit $?
+fi
 figlet -ctf slant Installation Complete!
 echo -e "It takes\x1b[32m $SECONDS \x1b[0mseconds during the installation."

@@ -64,6 +64,7 @@ class TestConfigManager(unittest2.TestCase):
     def test_get_cluster_roles_mapping(self):
         expected_output = {
             "os_controller": {
+                "hostname": "server01",
                 "management": {
                     "interface": "vnet0",
                     "ip": "12.234.32.100",
@@ -82,6 +83,7 @@ class TestConfigManager(unittest2.TestCase):
                 }
             },
             "os_compute_worker": {
+                "hostname": "server02",
                 "management": {
                     "interface": "eth0",
                     "ip": "12.234.32.101",
@@ -100,6 +102,7 @@ class TestConfigManager(unittest2.TestCase):
                 }
             },
             "os_network": {
+                "hostname": "server03",
                 "management": {
                     "interface": "eth0",
                     "ip": "12.234.32.103",
@@ -139,6 +142,7 @@ class TestConfigManager(unittest2.TestCase):
     def test_get_host_role_mapping(self):
         expected_output = {
             "os_network": {
+                "hostname": "server03",
                 "management": {
                     "interface": "eth0",
                     "ip": "12.234.32.103",
@@ -165,6 +169,7 @@ class TestConfigManager(unittest2.TestCase):
                 }
             },
             "os_compute_worker": {
+                "hostname": "server03",
                 "management": {
                     "interface": "eth0",
                     "ip": "12.234.32.103",

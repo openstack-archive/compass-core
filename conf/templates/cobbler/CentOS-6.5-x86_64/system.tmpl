@@ -28,7 +28,7 @@
             #end if
             #if $val.is_mgmt:
                 #set mac_key = '-'.join(('macaddress', $nic))
-                #set dns_key = '-'.join(('dns', $nic))
+                #set dns_key = '-'.join(('dnsname', $nic))
                 #set $rekeyed[$mac_key] = $mac
                 #set $rekeyed[$dns_key] = $dns
             #end if

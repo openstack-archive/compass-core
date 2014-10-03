@@ -1,0 +1,69 @@
+#import simplejson as json
+#import uuid
+#from copy import deepcopy
+
+#set fsid = str(uuid.uuid4())
+#set public_network_subnet = $network_mapping.public_network.subnet
+#set cluster_network_subnet = $network_mapping.cluster_network.subnet
+
+#set osd_pool_pg_num = $getVar('osd_pool_pg_num', '1024')
+#set osd_pool_pgp_num = $getVar('osd_pool_pgp_num', '1024')
+#set osd_pool_size = $getVar('osd_pool_size', '3')
+
+#set journal_size = $getVar('journal_size', '10000')
+#set osd_op_threads = $getVar('op_threads', 10)
+
+#set devices = []
+#if not $getVar('osd_devices', {})
+    #set devices_info = $osd_devices
+    #set devices_num = len($devices_info)
+    #set devices = [x for x in range($devices_num)]
+    #set index = 0
+    #for device, config in $devices_info.iteritems()
+        #set temp = deepcopy($config)
+        #set temp["device"] = $device
+        #set devices[index] = $temp
+        #set index = $index + 1
+    #end for
+#end if
+#set devices = json.dumps($devices, encoding='utf-8')
+
+{
+  "name": "ceph_env",
+  "description": "",
+  "cookbook_versions": {
+    "ceph": "~> 0.2.1"
+  },
+  "json_class": "Chef::Environment",
+  "chef_type": "environment",
+  "default_attributes": {
+    "ceph": {
+      "config": {
+        "fsid": "$fsid",
+        "global": {
+          "public network": "$public_network_subnet",
+          "cluster network": "$cluster_network_subnet",
+          "auth cluster required": "cephx",
+          "auth service required": "cephx",
+          "auth client required": "cephx",
+          "osd pool default pg num": "$osd_pool_pg_num",
+          "osd pool default pgp num": "$osd_pool_pgp_num",
+          "osd pool default size": "$osd_pool_size"
+        },
+        "mon": {
+          "debug mon": "20",
+          "debug paxos": "1/5",
+          "debug auth": "2"
+        },
+        "osd": {
+          "osd journal size": "$journal_size",
+          "filestore xattr use omap": true,
+          "osd op threads": $osd_op_threads
+        }
+      },
+      "osd_devices": $devices
+    }
+  },
+  "override_attributes": {
+  }
+}

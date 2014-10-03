@@ -102,7 +102,7 @@ class BaseInstaller(object):
         if meta_key.startswith("$"):
             return (False, metadata[meta_key])
 
-        raise KeyError("'%s' is an invalid metadata!" % key)
+        raise KeyError("'%s' is invalid in metadata '%s'!" % (key, metadata))
 
     def _get_tmpl_vars_helper(self, metadata, config, output):
         for key, config_value in sorted(config.iteritems()):

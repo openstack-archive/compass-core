@@ -222,6 +222,7 @@ class TestChefInstaller(unittest2.TestCase):
                     },
                     "roles_mapping": {
                         "os_controller": {
+                            "hostname": "server01",
                             "management": {
                                 "interface": "vnet0",
                                 "ip": "12.234.32.100",
@@ -240,6 +241,7 @@ class TestChefInstaller(unittest2.TestCase):
                             }
                         },
                         "os_compute_worker": {
+                            "hostname": "server02",
                             "management": {
                                 "interface": "eth0",
                                 "ip": "12.234.32.101",
@@ -258,6 +260,7 @@ class TestChefInstaller(unittest2.TestCase):
                             }
                         },
                         "os_network": {
+                            "hostname": "server03",
                             "management": {
                                 "interface": "eth0",
                                 "ip": "12.234.32.103",
@@ -291,6 +294,7 @@ class TestChefInstaller(unittest2.TestCase):
                     "deployed_package_config": {
                         "roles_mapping": {
                             "os_controller": {
+                                "hostname": "server01",
                                 "management": {
                                     "interface": "vnet0",
                                     "ip": "12.234.32.100",
@@ -321,6 +325,7 @@ class TestChefInstaller(unittest2.TestCase):
                     "deployed_package_config": {
                         "roles_mapping": {
                             "os_compute_worker": {
+                                "hostname": "server02",
                                 "management": {
                                     "interface": "eth0",
                                     "ip": "12.234.32.101",
@@ -351,6 +356,7 @@ class TestChefInstaller(unittest2.TestCase):
                     "deployed_package_config": {
                         "roles_mapping": {
                             "os_network": {
+                                "hostname": "server03",
                                 "management": {
                                     "interface": "eth0",
                                     "ip": "12.234.32.103",
@@ -377,6 +383,7 @@ class TestChefInstaller(unittest2.TestCase):
                                 }
                             },
                             "os_compute_worker": {
+                                "hostname": "server03",
                                 "management": {
                                     "interface": "eth0",
                                     "ip": "12.234.32.103",

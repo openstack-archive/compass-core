@@ -1,0 +1,40 @@
+#import uuid
+#set UUID = str(uuid.uuid4())
+{
+  "name": "ceph_env",
+  "description": "",
+  "cookbook_versions": {
+    "ceph": "~> 0.2.1"
+  },
+  "json_class": "Chef::Environment",
+  "chef_type": "environment",
+  "default_attributes": {
+    "ceph": {
+      "config": {
+        "fsid": "$UUID",
+        "global": {
+          "public network": "10.145.88.0/23",
+          "cluster network": "172.16.100.0/24",
+          "auth cluster required": "cephx",
+          "auth service required": "cephx",
+          "auth client required": "cephx",
+          "osd pool default pg num": "1024",
+          "osd pool default pgp num": "1024",
+          "osd pool default size": "3"
+        },
+        "mon": {
+          "debug mon": "20",
+          "debug paxos": "1/5",
+          "debug auth": "2"
+        },
+        "osd": {
+          "osd journal size": "10000",
+          "filestore xattr use omap": true,
+          "osd op threads": 10
+        }
+      }
+    }
+  },
+  "override_attributes": {
+  }
+}

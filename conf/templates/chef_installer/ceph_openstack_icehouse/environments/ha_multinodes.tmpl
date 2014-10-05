@@ -40,7 +40,7 @@
 #set identity_nic = $identity_role.management.interface
 
 ## Glance node management IP/interface
-#set glance_role = $get_role('os_image', $controller_role)
+#set glance_role = $get_role('os_ceph_image', $controller_role)
 #set glance_ip = $glance_role.management.ip
 #set glance_nic = $glance_role.management.interface
 

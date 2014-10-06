@@ -20,6 +20,7 @@ import netaddr
 import os
 import re
 import requests
+import simplejson as json
 import socket
 import sys
 import time
@@ -34,6 +35,7 @@ import switch_virtualenv
 from compass.apiclient.restful import Client
 from compass.utils import flags
 from compass.utils import logsetting
+from compass.utils import util
 
 
 flags.add('compass_server',
@@ -108,6 +110,9 @@ flags.add('domain',
 flags.add('search_path',
           help='search path',
           default='')
+flags.add('local_repo_url',
+          help='local repo url',
+          default='')
 flags.add('default_gateway',
           help='default gateway',
           default='')
@@ -117,6 +122,9 @@ flags.add('server_credential',
               '<username>=<password>'
           ),
           default='root=root')
+flags.add('os_config_json_file',
+          help='json formatted os config file',
+          default='')
 flags.add('service_credentials',
           help=(
               'comma seperated service credentials formatted as '
@@ -150,6 +158,9 @@ flags.add('network_mapping',
               '<network_type>=<interface_name>'
           ),
           default='')
+flags.add('package_config_json_file',
+          help='json formatted os config file',
+          default='')
 flags.add('host_roles',
           help=(
               'semicomma separated host roles '
@@ -174,6 +185,14 @@ flags.add('dashboard_url',
 flags.add('dashboard_link_pattern',
           help='dashboard link pattern',
           default=r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)')
+
+
+def _load_config(config_filename):
+    if not config_filename:
+        return {}
+    with open(config_filename) as config_file:
+        content = config_file.read()
+        return json.loads(content)
 
 
 def _get_client():
@@ -617,6 +636,14 @@ def _set_cluster_os_config(client, cluster_id, host_ips):
         os_config['partition'][partition_name] = {
             partition_type: partition_value
         }
+    local_repo_url = flags.OPTIONS.local_repo_url
+    if local_repo_url:
+        os_config['general']['local_repo'] = local_repo_url
+    os_config_filename = flags.OPTIONS.os_config_json_file
+    if os_config_filename:
+        util.merge_dict(
+            os_config, _load_config(os_config_filename)
+        )
     status, resp = client.update_cluster_config(
         cluster_id, os_config=os_config)
     logging.info(
@@ -689,12 +716,6 @@ def _set_host_networking(client, host_mapping, subnet_mapping):
 def _set_cluster_package_config(client, cluster_id):
     """set cluster package config."""
     package_config = {
-        'security': {
-            'service_credentials': {
-            },
-            'console_credentials': {
-            }
-        }
     }
     service_credentials = [
         service_credential
@@ -715,7 +736,11 @@ def _set_cluster_package_config(client, cluster_id):
                 'there is no = in service %s security' % service_name
             )
         username, password = service_pair.split('=', 1)
-        package_config['security']['service_credentials'][service_name] = {
+        package_config.setdefault(
+            'security', {}
+        ).setdefault(
+            'service_credentials', {}
+        )[service_name] = {
             'username': username,
             'password': password
         }
@@ -738,15 +763,28 @@ def _set_cluster_package_config(client, cluster_id):
                 'there is no = in console %s security' % console_name
             )
         username, password = console_pair.split('=', 1)
-        package_config['security']['console_credentials'][console_name] = {
+        package_config.setdefault(
+            'security', {}
+        ).setdefault(
+            'console_credentials', {}
+        )[console_name] = {
             'username': username,
             'password': password
         }
-    package_config['network_mapping'] = dict([
+    network_mapping = dict([
         network_pair.split('=', 1)
         for network_pair in flags.OPTIONS.network_mapping.split(',')
         if '=' in network_pair
     ])
+    for network_type, network in network_mapping.items():
+        package_config.setdefault(
+            'network_mapping', {}
+        )[network_type] = network
+    package_config_filename = flags.OPTIONS.package_config_json_file
+    if package_config_filename:
+        util.merge_dict(
+            package_config, _load_config(package_config_filename)
+        )
     status, resp = client.update_cluster_config(
         cluster_id, package_config=package_config)
     logging.info(

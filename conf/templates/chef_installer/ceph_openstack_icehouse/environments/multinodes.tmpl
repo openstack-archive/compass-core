@@ -32,7 +32,7 @@
 #end if
 #set devices = json.dumps($devices, encoding='utf-8')
 
-#set radosgw_role = $getVar('ceph_radosgw', '')
+#set radosgw_role = $getVar('ceph_os_radosgw', '')
 #set radosgw_domain = ''
 #if $radosgw_role != ''
     #set radosgw_domain = $radosgw_role.hostname
@@ -46,7 +46,7 @@
 #set controller_nic = $controller_role.management.interface
 
 ## Compute node management IP/interface
-#set compute_role = $getVar('os_compute_worker', None)
+#set compute_role = $getVar('os_ceph_compute_worker', None)
 #set compute_nic = $compute_role.management.interface
 
 ## Network server/worker node IP/interface

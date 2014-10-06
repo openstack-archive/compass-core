@@ -6,8 +6,9 @@
 #set fsid = str(uuid.uuid4())
 #set rbd_secret_uuid = str(uuid.uuid4())
 
-#set public_network_subnet = $network_mapping.public_network.subnet
-#set cluster_network_subnet = $network_mapping.cluster_network.subnet
+#set ceph_osd_role = $getVar('ceph_osd', None)
+#set public_network_subnet = $ceph_osd_role.public_network.subnet
+#set cluster_network_subnet = $ceph_osd_role.cluster_network.subnet
 
 #set osd_pool_pg_num = $getVar('osd_pool_pg_num', '1024')
 #set osd_pool_pgp_num = $getVar('osd_pool_pgp_num', '1024')
@@ -17,7 +18,7 @@
 #set osd_op_threads = $getVar('op_threads', 10)
 
 #set devices = []
-#if not $getVar('osd_devices', {})
+#if $getVar('osd_devices', None) != None
     #set devices_info = $osd_devices
     #set devices_num = len($devices_info)
     #set devices = [x for x in range($devices_num)]

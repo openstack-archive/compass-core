@@ -347,7 +347,7 @@ def list_user_permissions(user_id):
 @log_user_action
 @login_required
 def take_user_action(user_id):
-    """Update user permissions."""
+    """Take user action."""
     data = _get_request_data()
     update_permissions_func = _wrap_response(
         functools.partial(

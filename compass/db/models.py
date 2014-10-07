@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Database model"""
+import copy
 import datetime
 import logging
 import netaddr
@@ -673,8 +674,12 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @patched_package_config.setter
     def patched_package_config(self, value):
-        package_config = util.merge_dict(dict(self.package_config), value)
-        self.package_config = package_config
+        package_config = copy.deepcopy(self.package_config)
+        self.package_config = util.merge_dict(package_config, value)
+        logging.debug(
+            'patch clusterhost %s package_config: %s',
+            self.clusterhost_id, value
+        )
         self.config_validated = False
 
     @property
@@ -683,9 +688,13 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @put_package_config.setter
     def put_package_config(self, value):
-        package_config = dict(self.package_config)
+        package_config = copy.deepcopy(self.package_config)
         package_config.update(value)
         self.package_config = package_config
+        logging.debug(
+            'put clusterhost %s package_config: %s',
+            self.clusterhost_id, value
+        )
         self.config_validated = False
 
     @property
@@ -949,8 +958,9 @@ class Host(BASE, TimestampMixin, HelperMixin):
 
     @patched_os_config.setter
     def patched_os_config(self, value):
-        self.os_config = util.merge_dict(dict(self.os_config), value)
-        logging.info('patch host os config in %s: %s', self.id, value)
+        os_config = copy.deepcopy(self.os_config)
+        self.os_config = util.merge_dict(os_config, value)
+        logging.debug('patch host os config in %s: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -959,10 +969,10 @@ class Host(BASE, TimestampMixin, HelperMixin):
 
     @put_os_config.setter
     def put_os_config(self, value):
-        os_config = dict(self.os_config)
+        os_config = copy.deepcopy(self.os_config)
         os_config.update(value)
         self.os_config = os_config
-        logging.info('put host os config in %s: %s', self.id, value)
+        logging.debug('put host os config in %s: %s', self.id, value)
         self.config_validated = False
 
     def __init__(self, id, **kwargs):
@@ -1289,8 +1299,9 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
 
     @patched_os_config.setter
     def patched_os_config(self, value):
-        self.os_config = util.merge_dict(dict(self.os_config), value)
-        logging.info('patch cluster %s os config: %s', self.id, value)
+        os_config = copy.deepcopy(self.os_config)
+        self.os_config = util.merge_dict(os_config, value)
+        logging.debug('patch cluster %s os config: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -1299,10 +1310,10 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
 
     @put_os_config.setter
     def put_os_config(self, value):
-        os_config = dict(self.os_config)
+        os_config = copy.deepcopy(self.os_config)
         os_config.update(value)
         self.os_config = os_config
-        logging.info('put cluster %s os config: %s', self.id, value)
+        logging.debug('put cluster %s os config: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -1311,9 +1322,9 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
 
     @patched_package_config.setter
     def patched_package_config(self, value):
-        package_config = dict(self.package_config)
+        package_config = copy.deepcopy(self.package_config)
         self.package_config = util.merge_dict(package_config, value)
-        logging.info('patch cluster %s package config: %s', self.id, value)
+        logging.debug('patch cluster %s package config: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -1325,7 +1336,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         package_config = dict(self.package_config)
         package_config.update(value)
         self.package_config = package_config
-        logging.info('put cluster %s package config: %s', self.id, value)
+        logging.debug('put cluster %s package config: %s', self.id, value)
         self.config_validated = False
 
     @property
@@ -1715,9 +1726,10 @@ class Machine(BASE, HelperMixin, TimestampMixin):
 
     @patched_ipmi_credentials.setter
     def patched_ipmi_credentials(self, value):
-        self.ipmi_credentials = (
-            util.merge_dict(dict(self.ipmi_credentials), value)
-        )
+        if not value:
+            return
+        ipmi_credentials = copy.deepcopy(self.ipmi_credentials)
+        self.ipmi_credentials = util.merge_dict(ipmi_credentials, value)
 
     @property
     def patched_tag(self):
@@ -1725,7 +1737,9 @@ class Machine(BASE, HelperMixin, TimestampMixin):
 
     @patched_tag.setter
     def patched_tag(self, value):
-        tag = dict(self.tag)
+        if not value:
+            return
+        tag = copy.deepcopy(self.tag)
         tag.update(value)
         self.tag = value
 
@@ -1735,7 +1749,9 @@ class Machine(BASE, HelperMixin, TimestampMixin):
 
     @patched_location.setter
     def patched_location(self, value):
-        location = dict(self.location)
+        if not value:
+            return
+        location = copy.deepcopy(self.location)
         location.update(value)
         self.location = location
 
@@ -1904,7 +1920,10 @@ class Switch(BASE, HelperMixin, TimestampMixin):
 
     @patched_credentials.setter
     def patched_credentials(self, value):
-        self.credentials = util.merge_dict(dict(self.credentials), value)
+        if not value:
+            return
+        credentials = copy.deepcopy(self.credentials)
+        self.credentials = util.merge_dict(credentials, value)
 
     @property
     def filters(self):

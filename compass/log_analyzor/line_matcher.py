@@ -55,8 +55,8 @@ class ProgressCalculator(object):
                 log_history['severity'] = severity
             logging.debug('update progress to %s', log_history)
         else:
-            logging.info('ignore update progress %s to %s',
-                         progress_data, log_history)
+            logging.debug('ignore update progress %s to %s',
+                          progress_data, log_history)
 
     def update(self, message, severity, log_history):
         """vritual method to update progress by message and severity.

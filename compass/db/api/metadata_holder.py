@@ -93,40 +93,15 @@ def _filter_metadata(metadata, **kwargs):
     filtered_metadata = {}
     for key, value in metadata.items():
         if key == '_self':
-            filtered_metadata['_self'] = {}
-            default_value = value.get('default_value', None)
-            if default_value is None:
-                default_callback_params = value.get(
-                    'default_callback_params', {}
-                )
-                callback_params = dict(kwargs)
-                if default_callback_params:
-                    callback_params.update(default_callback_params)
-                default_callback = value.get('default_callback', None)
-                if default_callback:
-                    default_value = default_callback(key, **callback_params)
-            options = value.get('options', None)
-            if options is None:
-                options_callback_params = value.get(
-                    'options_callback_params', {}
-                )
-                callback_params = dict(kwargs)
-                if options_callback_params:
-                    callback_params.update(options_callback_params)
-
-                options_callback = value.get('options_callback', None)
-                if options_callback:
-                    options = options_callback(key, **callback_params)
             filtered_metadata[key] = {
                 'name': value['name'],
                 'description': value.get('description', None),
-                'default_value': default_value,
-                'is_required': value.get(
-                    'is_required', False),
+                'default_value': value.get('default_value', None),
+                'is_required': value.get('is_required', False),
                 'required_in_whole_config': value.get(
                     'required_in_whole_config', False),
                 'js_validator': value.get('js_validator', None),
-                'options': options,
+                'options': value.get('options', None),
                 'required_in_options': value.get(
                     'required_in_options', False),
                 'field_type': value.get(
@@ -135,7 +110,7 @@ def _filter_metadata(metadata, **kwargs):
                 'mapping_to': value.get('mapping_to', None)
             }
         else:
-            filtered_metadata[key] = _filter_metadata(value)
+            filtered_metadata[key] = _filter_metadata(value, **kwargs)
     return filtered_metadata
 
 
@@ -223,8 +198,8 @@ def _autofill_config(
         )
     metadatas = metadata_mapping[id]
     logging.debug(
-        'auto fill %s config %s by metadata %s',
-        id_name, config, metadatas
+        'auto fill %s config %s by params %s',
+        id_name, config, kwargs
     )
     return metadata_api.autofill_config_internal(
         config, metadatas, **kwargs

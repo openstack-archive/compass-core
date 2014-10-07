@@ -219,6 +219,45 @@ def add_package_metadata_internal(session, exception_when_existing=True):
     return package_metadatas
 
 
+def _filter_metadata(metadata, **kwargs):
+    if not isinstance(metadata, dict):
+        return metadata
+    filtered_metadata = {}
+    for key, value in metadata.items():
+        if key == '_self':
+            default_value = value.get('default_value', None)
+            if default_value is None:
+                default_callback_params = value.get(
+                    'default_callback_params', {}
+                )
+                callback_params = dict(kwargs)
+                if default_callback_params:
+                    callback_params.update(default_callback_params)
+                default_callback = value.get('default_callback', None)
+                if default_callback:
+                    default_value = default_callback(key, **callback_params)
+            options = value.get('options', None)
+            if options is None:
+                options_callback_params = value.get(
+                    'options_callback_params', {}
+                )
+                callback_params = dict(kwargs)
+                if options_callback_params:
+                    callback_params.update(options_callback_params)
+
+                options_callback = value.get('options_callback', None)
+                if options_callback:
+                    options = options_callback(key, **callback_params)
+            filtered_metadata[key] = value
+            if default_value is not None:
+                filtered_metadata[key]['default_value'] = default_value
+            if options is not None:
+                filtered_metadata[key]['options'] = options
+        else:
+            filtered_metadata[key] = _filter_metadata(value, **kwargs)
+    return filtered_metadata
+
+
 def get_package_metadatas_internal(session):
     metadata_mapping = {}
     adapters = utils.list_db_objects(
@@ -227,7 +266,9 @@ def get_package_metadatas_internal(session):
     for adapter in adapters:
         if adapter.deployable:
             metadata_dict = adapter.metadata_dict()
-            metadata_mapping[adapter.id] = metadata_dict
+            metadata_mapping[adapter.id] = _filter_metadata(
+                metadata_dict, session=session
+            )
         else:
             logging.info(
                 'ignore metadata since its adapter %s is not deployable',
@@ -244,7 +285,9 @@ def get_os_metadatas_internal(session):
     for os in oses:
         if os.deployable:
             metadata_dict = os.metadata_dict()
-            metadata_mapping[os.id] = metadata_dict
+            metadata_mapping[os.id] = _filter_metadata(
+                metadata_dict, session=session
+            )
         else:
             logging.info(
                 'ignore metadata since its os %s is not deployable',
@@ -324,7 +367,7 @@ def _validate_config(
             continue
         if specified[key]['_self'].get('is_required', False):
             raise exception.InvalidParameter(
-                '%s/%s does not find is_required' % (
+                '%s/%s does not find but it is required' % (
                     config_path, key
                 )
             )
@@ -335,7 +378,7 @@ def _validate_config(
             )
         ):
             raise exception.InvalidParameter(
-                '%s/%s does not find required_in_whole_config' % (
+                '%s/%s does not find but it is required in whole config' % (
                     config_path, key
                 )
             )
@@ -371,6 +414,9 @@ def _autofill_self_config(
                 config_path, config, metadata, **kwargs
             )
         return config
+    logging.debug(
+        'autofill %s by metadata %s', config_path, metadata['_self']
+    )
     autofill_callback = metadata['_self'].get(
         'autofill_callback', None
     )

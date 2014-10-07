@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Metadata Callback methods."""
+import logging
 import netaddr
 import random
 import re
@@ -128,7 +129,39 @@ def autofill_callback_random_option(name, config, **kwargs):
     return config
 
 
+def autofill_no_proxy(name, config, **kwargs):
+    logging.debug(
+        'autofill %s config %s by params %s',
+        name, config, kwargs
+    )
+    if 'cluster' in kwargs:
+        if config is None:
+            config = []
+        if 'default_value' in kwargs:
+            for default_no_proxy in kwargs['default_value']:
+                if default_no_proxy and default_no_proxy not in config:
+                    config.append(default_no_proxy)
+        cluster = kwargs['cluster']
+        for clusterhost in cluster.clusterhosts:
+            host = clusterhost.host
+            hostname = host.name
+            if hostname not in config:
+                config.append(hostname)
+            for host_network in host.host_networks:
+                if host_network.is_mgmt:
+                    ip = host_network.ip
+                    if ip not in config:
+                        config.append(ip)
+    if not config:
+        return config
+    return [no_proxy for no_proxy in config if no_proxy]
+
+
 def autofill_network_mapping(name, config, **kwargs):
+    logging.debug(
+        'autofill %s config %s by params %s',
+        name, config, kwargs
+    )
     if not config:
         return config
     if isinstance(config, basestring):

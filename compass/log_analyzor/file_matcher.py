@@ -62,7 +62,7 @@ class FilterFileExist(FileFilter):
         """filter log file."""
         file_exist = os.path.isfile(pathname)
         if not file_exist:
-            logging.error("%s is not exist", pathname)
+            logging.debug("%s is not exist", pathname)
 
         return file_exist
 
@@ -150,7 +150,7 @@ class FileReaderFactory(object):
         pathname = os.path.join(self.logdir_, hostname, filename)
         logging.debug('get FileReader from %s', pathname)
         if not self.filefilter_.filter(pathname):
-            logging.error('%s is filtered', pathname)
+            logging.debug('%s is filtered', pathname)
             return None
 
         return FileReader(pathname, log_history)

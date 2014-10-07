@@ -45,10 +45,11 @@ def update_progress():
        After the progress got updated, these information will be stored back
        to the log_progressing_history for next time run.
     """
-    with util.lock('log_progressing', blocking=False) as lock:
+    with util.lock('log_progressing', timeout=60, blocking=False) as lock:
         if not lock:
             logging.error(
-                'failed to acquire lock to calculate installation progress')
+                'failed to acquire lock to calculate installation progress'
+            )
             return
 
         logging.info('update installing progress')

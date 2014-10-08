@@ -41,7 +41,7 @@
 
 ## OpenStack config
 ## Contoller node management IP/interface
-#set controller_role = $get_role('os_ceph_compute_controller', $getVar('os_controller', None))
+#set controller_role = $get_role('os_compute_controller', $getVar('os_ceph_controller', None))
 #set controller_ip = $controller_role.management.ip
 #set controller_nic = $controller_role.management.interface
 
@@ -83,7 +83,7 @@
 #set glance_nic = $glance_role.management.interface
 
 ## Cinder node management IP/interface
-#set cinder_role = $get_role('os_block_storage_controller', $controller_role)
+#set cinder_role = $get_role('os_ceph_block_storage_controller', $controller_role)
 #set cinder_controller_ip = $cinder_role.management.ip
 #set cinder_controller_nic = $cinder_role.management.interface
 

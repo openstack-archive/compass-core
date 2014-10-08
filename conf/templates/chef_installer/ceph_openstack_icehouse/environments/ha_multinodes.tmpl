@@ -2,7 +2,7 @@
 #set ha_proxy_role = $getVar('os_ha', None)
 #set ha_proxy_nic = $ha_proxy_role.management.interface
 
-#set controller_role = $getVar('os_ceph_compute_controller', None)
+#set controller_role = $get_role('os_compute_controller', $getVar('os_ceph_controller', None))
 
 ## Contoller node management IP/interface
 #set controller_ip = $controller_role.management.ip

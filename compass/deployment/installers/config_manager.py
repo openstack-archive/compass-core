@@ -165,9 +165,9 @@ class BaseConfigManager(object):
             return None
 
         if const.DNS not in host_info:
-            name = host_info[const.NAME]
+            hostname = host_info[const.HOSTNAME]
             domain = self.get_host_domain(host_id)
-            host_info[const.DNS] = '.'.join((name, domain))
+            host_info[const.DNS] = '.'.join((hostname, domain))
 
         return host_info[const.DNS]
 

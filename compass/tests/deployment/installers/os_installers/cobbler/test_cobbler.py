@@ -47,7 +47,7 @@ class TestCobblerInstaller(unittest2.TestCase):
                 "name": "server01.test",
                 "profile": "Ubuntu-12.04-x86_64",
                 "hostname": "server01",
-                "dns": "server01.test.ods.com",
+                "dns": "server01.ods.com",
                 "reinstall_os": True,
                 "networks": {
                     "vnet0": {
@@ -91,7 +91,7 @@ class TestCobblerInstaller(unittest2.TestCase):
                 "https_proxy": "",
                 "ntp_server": "127.0.0.1",
                 "nameservers": ["127.0.0.1"],
-                "search_path": ["1.ods.com", "ods.com"],
+                "search_path": ["ods.com"],
                 "gateway": "10.145.88.1"
             }
         }
@@ -137,14 +137,14 @@ class TestCobblerInstaller(unittest2.TestCase):
             "profile": "Ubuntu-12.04-x86_64",
             "gateway": "10.145.88.1",
             "name_servers": ["127.0.0.1"],
-            "name_servers_search": "1.ods.com ods.com",
+            "name_servers_search": "ods.com",
             "proxy": "http://127.0.0.1:3128",
             "modify_interface": {
                 "ipaddress-vnet0": "12.234.32.100",
                 "netmask-vnet0": "255.255.255.0",
                 "management-vnet0": True,
                 "macaddress-vnet0": "00:0c:29:3e:60:e9",
-                "dns-vnet0": "server01.test.ods.com",
+                "dns-vnet0": "server01.ods.com",
                 "static-vnet0": True,
                 "ipaddress-vnet1": "172.16.1.1",
                 "netmask-vnet1": "255.255.255.0",
@@ -196,7 +196,7 @@ class TestCobblerInstaller(unittest2.TestCase):
                     "https_proxy": "",
                     "ntp_server": "127.0.0.1",
                     "nameservers": ["127.0.0.1"],
-                    "search_path": ["1.ods.com", "ods.com"],
+                    "search_path": ["ods.com"],
                     "partition": {
                         "/var": {
                             "vol_percentage": 20,
@@ -223,7 +223,7 @@ class TestCobblerInstaller(unittest2.TestCase):
                         "https_proxy": "",
                         "ntp_server": "127.0.0.1",
                         "nameservers": ["127.0.0.1"],
-                        "search_path": ["1.ods.com", "ods.com"],
+                        "search_path": ["ods.com"],
                         "partition": {
                             "/var": {
                                 "vol_percentage": 30,
@@ -253,7 +253,7 @@ class TestCobblerInstaller(unittest2.TestCase):
                         "https_proxy": "",
                         "ntp_server": "127.0.0.1",
                         "nameservers": ["127.0.0.1"],
-                        "search_path": ["1.ods.com", "ods.com"],
+                        "search_path": ["ods.com"],
                         "partition": {
                             "/var": {
                                 "vol_percentage": 20,

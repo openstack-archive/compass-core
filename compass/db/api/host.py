@@ -33,7 +33,7 @@ SUPPORTED_NETOWORK_FIELDS = [
 ]
 RESP_FIELDS = [
     'id', 'name', 'hostname', 'os_name', 'os_id', 'owner', 'mac',
-    'switch_ip', 'port', 'switches', 'os_installer',
+    'switch_ip', 'port', 'switches', 'os_installer', 'ip',
     'reinstall_os', 'os_installed', 'tag', 'location', 'networks',
     'created_at', 'updated_at'
 ]
@@ -235,20 +235,24 @@ def is_host_editable(
 
 
 def validate_host(session, host):
+    if not host.hostname:
+        raise exception.Invalidparameter(
+            'host %s does not set hostname' % host.name
+        )
     if not host.host_networks:
         raise exception.InvalidParameter(
-            '%s does not have any network' % host.name
+            'host %s does not have any network' % host.name
         )
     mgmt_interface_set = False
     for host_network in host.host_networks:
         if host_network.is_mgmt:
             if mgmt_interface_set:
                 raise exception.InvalidParameter(
-                    '%s multi interfaces set mgmt ' % host.name
+                    'host %s multi interfaces set mgmt ' % host.name
                 )
             if host_network.is_promiscuous:
                 raise exception.InvalidParameter(
-                    '%s interface %s is mgmt but promiscuous' % (
+                    'host %s interface %s is mgmt but promiscuous' % (
                         host.name, host_network.interface
                     )
                 )

@@ -20,7 +20,7 @@
 #set network_worker_ip = $network_worker_role.management.ip
 #set network_worker_nic = $network_worker_role.management.interface
 #set network_worker_tenant_nic = $network_worker_role.tenant.interface
-#set network_worker_public_nic = $network_worker_role.public.interface
+#set network_worker_public_nic = $network_worker_role.external.interface
 
 ## Database node management IP
 #set db_role = $get_role('os_ops_database', $controller_role)

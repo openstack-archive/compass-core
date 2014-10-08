@@ -45,7 +45,7 @@ RESP_CLUSTERHOST_FIELDS = [
     'cluster_id', 'clustername', 'location', 'tag',
     'networks', 'mac', 'switch_ip', 'port', 'switches',
     'os_installed', 'distributed_system_installed',
-    'os_name', 'distributed_system_name',
+    'os_name', 'distributed_system_name', 'ip',
     'reinstall_os', 'reinstall_distributed_system',
     'owner', 'cluster_id',
     'created_at', 'updated_at'
@@ -1240,7 +1240,7 @@ def validate_clusterhost(session, clusterhost):
 def validate_cluster(session, cluster):
     if not cluster.clusterhosts:
         raise exception.InvalidParameter(
-            '%s does not have any hosts' % cluster.name
+            'cluster %s does not have any hosts' % cluster.name
         )
     flavor = cluster.flavor
     if flavor:
@@ -1267,15 +1267,15 @@ def validate_cluster(session, cluster):
     missing_roles = necessary_roles - clusterhost_roles
     if missing_roles:
         raise exception.InvalidParameter(
-            'some roles %s are not assigned to any host in cluster %s' % (
-                list(missing_roles), cluster.name
+            'cluster %s have some roles %s not assigned to any host' % (
+                cluster.name, list(missing_roles)
             )
         )
     for interface, subnets in interface_subnets.items():
         if len(subnets) > 1:
             raise exception.InvalidParameter(
-                'multi subnets %s in interface %s' % (
-                    list(subnets), interface
+                'cluster %s multi subnets %s in interface %s' % (
+                    cluster.name, list(subnets), interface
                 )
             )
 

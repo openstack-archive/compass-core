@@ -201,7 +201,7 @@ cluster_test_config = {
             "https_proxy": "",
             "ntp_server": "127.0.0.1",
             "dns_servers": ["127.0.0.1"],
-            "search_path": ["1.ods.com", "ods.com"]
+            "search_path": ["ods.com"]
         },
         "partition": {
             "/var": {
@@ -375,7 +375,7 @@ hosts_test_config = {
                 "https_proxy": "",
                 "ntp_server": "10.145.88.211",
                 "dns_servers": "10.145.88.211",
-                "search_path": "1.ods.com ods.com"
+                "search_path": "ods.com"
             },
             "partition": {
                 "/var": {

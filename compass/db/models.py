@@ -750,7 +750,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @hybrid_property
     def hostname(self):
-        return self.host.name
+        return self.host.hostname
 
     @hostname.expression
     def hostname(cls):
@@ -952,6 +952,17 @@ class Host(BASE, TimestampMixin, HelperMixin):
         else:
             return None
 
+    @hybrid_property
+    def hostname(self):
+        if self.name == str(self.id):
+            return None
+        else:
+            return self.name
+
+    @hostname.expression
+    def hostname(cls):
+        return cls.name
+
     @property
     def patched_os_config(self):
         return self.os_config
@@ -1046,7 +1057,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
         dict_info.update({
             'machine_id': self.machine.id,
             'os_installed': self.os_installed,
-            'hostname': self.name,
+            'hostname': self.hostname,
             'ip': ip,
             'networks': [
                 host_network.to_dict()

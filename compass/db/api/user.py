@@ -395,7 +395,7 @@ def get_permissions(session, lister, user_id, **kwargs):
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
 def get_permission(
     session, getter, user_id, permission_id,
-    exception_when_missing, **kwargs
+    exception_when_missing=True, **kwargs
 ):
     """Get a specific user permission."""
     return utils.get_db_object(

@@ -80,6 +80,7 @@ class TestGetRecordCleanToken(BaseTest):
             datetime.datetime.now() + datetime.timedelta(seconds=10000)
         )
         self.assertIsNotNone(token)
+        self.assertEqual(token['token'], 'test_token')
 
     def test_clean_user_token(self):
         token = user_api.clean_user_token(self.user_object, 'test_token')
@@ -113,6 +114,24 @@ class TestGetUser(BaseTest):
     def test_get_user(self):
         user = user_api.get_user(self.user_object, self.user_object.id)
         self.assertIsNotNone(user)
+        self.assertEqual(user['email'], setting.COMPASS_ADMIN_EMAIL)
+
+
+class TestGetCurrentUser(BaseTest):
+    """Test get current user."""
+
+    def setUp(self):
+        super(TestGetCurrentUser, self).setUp()
+
+    def tearDown(self):
+        super(TestGetCurrentUser, self).tearDown()
+
+    def test_get_current_user(self):
+        current_user = user_api.get_current_user(
+            self.user_object
+        )
+        self.assertIsNotNone(current_user)
+        self.assertEqual(current_user['email'], setting.COMPASS_ADMIN_EMAIL)
 
 
 class TestListUsers(BaseTest):
@@ -120,6 +139,11 @@ class TestListUsers(BaseTest):
 
     def setUp(self):
         super(TestListUsers, self).setUp()
+        user_api.add_user(
+            self.user_object,
+            email='test@huawei.com',
+            password='test'
+        )
 
     def tearDown(self):
         super(TestListUsers, self).tearDown()
@@ -127,6 +151,12 @@ class TestListUsers(BaseTest):
     def test_list_users(self):
         user = user_api.list_users(self.user_object)
         self.assertIsNotNone(user)
+        result = []
+        for item in user:
+            result.append(item['email'])
+        expects = ['test@huawei.com', setting.COMPASS_ADMIN_EMAIL]
+        for expect in expects:
+            self.assertIn(expect, result)
 
 
 class TestAddUser(BaseTest):
@@ -183,27 +213,21 @@ class TestUpdateUser(BaseTest):
             active=True
         )
         self.assertEqual(setting.COMPASS_ADMIN_EMAIL, user_objs['email'])
+        self.assertEqual(user_objs['firstname'], 'a')
+        self.assertEqual(user_objs['lastname'], 'b')
 
-    def test_user_id(self):
+    def test_not_admin(self):
         user_api.add_user(
             self.user_object,
             email='dummy@abc.com',
-            password='dummy'
+            password='dummy',
+            is_admin=False
         )
-        user_objs = user_api.update_user(
-            self.user_object,
-            2,
-            is_admin=False,
-            active=True
-        )
-        self.assertEqual(2, user_objs['id'])
-
-    def test_not_admin(self):
         self.assertRaises(
             exception.Forbidden,
             user_api.update_user,
             self.user_object,
-            self.user_object.id
+            2
         )
 
 
@@ -222,38 +246,55 @@ class TestGetPermissions(BaseTest):
             self.user_object.id
         )
         self.assertIsNotNone(user_permissions)
+        result = []
+        for user_permission in user_permissions:
+            result.append(user_permission['name'])
+        self.assertIn('list_permissions', result)
 
 
-class TestAddGetDelUserPermission(BaseTest):
-    """Test add user permission."""
-    """Test delete user permission."""
-    """Test get user permission."""
+class TestGetPermission(BaseTest):
+    """Test get permission."""
 
     def setUp(self):
-        super(TestAddGetDelUserPermission, self).setUp()
+        super(TestGetPermission, self).setUp()
 
     def tearDown(self):
-        super(TestAddGetDelUserPermission, self).tearDown()
+        super(TestGetPermission, self).tearDown()
 
     def test_get_permission(self):
-        permission = user_api.get_permission(
+        user_permission = user_api.get_permission(
             self.user_object,
             self.user_object.id,
             1,
-            True
         )
-        self.assertIsNotNone(permission)
+        self.assertEqual(user_permission['name'], 'list_permissions')
+
+
+class TestAddDelUserPermission(BaseTest):
+    """Test add user permission."""
+    """Test delete user permission."""
+
+    def setUp(self):
+        super(TestAddDelUserPermission, self).setUp()
+
+    def tearDown(self):
+        super(TestAddDelUserPermission, self).tearDown()
 
     def test_add_permission(self):
-        permission = user_api.add_permission(
+        user_api.add_permission(
             self.user_object,
             self.user_object.id,
             permission_id=2
         )
-        expected = {'permission_id': 2}
-        self.assertTrue(
-            item in permission[0].items() for item in expected.items()
+        permissions = user_api.get_permissions(
+            self.user_object,
+            self.user_object.id
         )
+        result = None
+        for permission in permissions:
+            if permission['id'] == 2:
+                result = permission['name']
+        self.assertEqual(result, 'list_switches')
 
     def test_del_permission(self):
         user_api.del_permission(
@@ -290,15 +331,20 @@ class TestUpdatePermissions(BaseTest):
         self.assertEqual([], del_user_permission)
 
     def test_add_permissions(self):
-        add_permission = user_api.update_permissions(
+        user_api.update_permissions(
             self.user_object,
             self.user_object.id,
             add_permissions=2
         )
-        expected = {'permission_id': 2}
-        self.assertTrue(
-            item in add_permission[0].items() for item in expected.items()
+        permissions = user_api.get_permissions(
+            self.user_object,
+            self.user_object.id
         )
+        result = None
+        for permission in permissions:
+            if permission['id'] == 2:
+                result = permission['name']
+        self.assertEqual(result, 'list_switches')
 
 
 if __name__ == '__main__':

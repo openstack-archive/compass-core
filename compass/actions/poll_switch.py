@@ -73,7 +73,6 @@ def _poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
         )
 
     logging.info('poll switch result: %s' % str(results))
-    state = under_monitoring
     machine_dicts = {}
     for machine in results:
         mac = machine['mac']
@@ -90,6 +89,7 @@ def _poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
             machine_dicts[mac]['vlans'].extend(vlans)
 
     logging.debug('update switch %s state to under monitoring', ip_addr)
+    state = under_monitoring
     return (
         {'vendor': vendor, 'state': state, 'err_msg': err_msg},
         machine_dicts.values()

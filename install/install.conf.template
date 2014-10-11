@@ -14,7 +14,7 @@ export PACKAGE_INSTALLER=chef
 export NIC=installation
 
 # default local repo config is "n"
-export LOCAL_REPO=${LOCAL_REPO:-"n"}
+export LOCAL_REPO=${LOCAL_REPO:-"y"}
  
 # DHCP config
 export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`

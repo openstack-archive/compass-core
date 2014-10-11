@@ -103,30 +103,84 @@ copy2dir()
 download()
 {
     #download params: <download url> [<package name>] [<action after package downloaded>]
-    url=$1
-    package=${2:-$(basename $url)}
-    action=${3:-""}
+    force=0
+    url=""
+    package=""
+    options=()
+    while [ $# -gt 0 ]; do
+	case "$1" in
+	    -f | --force)
+	        force=1
+		shift 1
+		;;
+	    -u | --url):
+	        url=$2
+		shift 2
+		;;
+	    -p | --package):
+	        package=$2
+		shift 2
+		;;
+	    -*)
+	        echo "Unknown options: $1"
+		shift 1
+		;;
+	    *)
+	        options+=($1)
+		shift 1
+		;;
+	esac
+    done
+    set ${options[@]}
+    if [ -z "$url" ]; then
+        url=$1
+	shift 1
+    fi
+    if [ -z "$package" ]; then
+        package=${1:-$(basename $url)}
+	shift 1
+    fi
+    echo "download options: $@"
+    action=${1:-""}
+    downloaded=0
     echo "download $package from $url and run $action"
-    if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
-        echo "$package already exists"
-    else
-        if [[ "$url" =~ (http|https|ftp):// ]]; then
-            echo "downloading $url to /tmp/${package}"
-            curl -L -o /tmp/${package}.tmp $url
+    if [[ "$force" == "0" || "$force" == "false" ]]; then
+        if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
+            echo "$package already exists"
+	    downloaded=1
+        fi
+    fi
+    if [[ "$url" =~ (http|https|ftp):// ]]; then
+        if [[ "$downloaded" == "0" ]]; then
+	    echo "downloading $url to /tmp/${package}"
+	    if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
+                curl -L -z /tmp/${package} -o /tmp/${package}.tmp $url
+	    else
+		curl -L -o /tmp/${package}.tmp $url
+	    fi
             if [[ "$?" != "0" ]]; then
                 echo "failed to download $package"
                 exit 1
             else
                 echo "successfully download $package"
-                mv -f /tmp/${package}.tmp /tmp/${package}
+		if [[ -f /tmp/${package}.tmp || -L /tmp/${package}.tmp ]]; then
+                    mv -f /tmp/${package}.tmp /tmp/${package}
+		fi
             fi
-        else
-            cp -rf $url /tmp/${package}
-        fi
-        if [[ ! -f /tmp/${package} && ! -L /tmp/${package} ]]; then
-            echo "/tmp/$package is not created"
-            exit 1
-        fi
+	fi
+    else
+	echo "copy $url to /tmp/${package}"
+        cp -rf $url /tmp/${package}
+    fi
+    if [[ ! -f /tmp/${package} && ! -L /tmp/${package} ]]; then
+        echo "/tmp/$package is not created"
+	exit 1
+    fi
+    if [[ -z "$action" ]]; then
+	echo "download $package is done"
+	return
+    else
+	echo "execute $action after downloading $package"
     fi
     if [[ "$action" == "install" ]]; then
         echo "install /tmp/$package"
@@ -138,8 +192,27 @@ download()
             echo "$package is installed"
         fi
     elif [[ "$action" == "copy" ]]; then
-        echo "copy /tmp/$package to $destdir"
-        destdir=$4
+        destdir=$2
+	echo "copy /tmp/$package to $destdir"
         sudo cp /tmp/$package $destdir
+	if [[ "$?" != "0" ]]; then
+	    echo "failed to copy $package to $destdir"
+	    exit 1
+	else
+	    echo "$package is copied to $destdir"
+	fi
+    elif [[ "$action" == "unzip" ]]; then
+        destdir=$2
+	echo "unzip /tmp/$package to $destdir"
+	sudo tar -C $destdir -xzvf /tmp/$package
+	if [[ "$?" != "0" ]]; then
+	    echo "failed to unzip $package to $destdir"
+	    exit 1
+	else
+	    echo "$package is unziped to $destdir"
+	fi
+    else
+	echo "unknown action $action"
+	exit 1
     fi
 }

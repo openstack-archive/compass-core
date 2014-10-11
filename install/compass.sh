@@ -14,24 +14,11 @@ fi
 source $DIR/install_func.sh
 
 cd $SCRIPT_DIR
-if [ -z $WEB_SOURCE ]; then
-    echo "web source $WEB_SOURCE is not set"
-    exit 1
-fi
-copy2dir "$WEB_SOURCE" "$WEB_HOME" "stackforge/compass-web" || exit $?
-
-if [ -z $ADAPTERS_SOURCE ]; then
-    echo "adpaters source $ADAPTERS_SOURCE is not set"
-    exit 1
-fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" dev/experimental || exit $?
 
 mkdir -p /etc/compass
 rm -rf /etc/compass/*
 mkdir -p /opt/compass/bin
 rm -rf /opt/compass/bin/*
-mkdir -p /var/www/compass_web
-rm -rf /var/www/compass_web/*
 mkdir -p /var/log/compass
 rm -rf /var/log/compass/*
 sudo mkdir -p /var/log/chef
@@ -50,29 +37,6 @@ sudo ln -s -f /opt/compass/bin/compass_check.py /usr/bin/compass
 sudo ln -s -f /opt/compass/bin/compass_wsgi.py /var/www/compass/compass.wsgi
 sudo cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/cobbler/* /opt/compass/bin/
-
-sudo cp -rf $WEB_HOME/public/* /var/www/compass_web/
-sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
-
-sudo rm -rf /var/chef
-sudo mkdir -p /var/chef/cookbooks/
-sudo cp -r $ADAPTERS_HOME/chef/cookbooks/* /var/chef/cookbooks/
-if [ $? -ne 0 ]; then
-    echo "failed to copy cookbooks to /var/chef/cookbooks/"
-    exit 1
-fi
-sudo mkdir -p /var/chef/databags/
-sudo cp -r $ADAPTERS_HOME/chef/databags/* /var/chef/databags/
-if [ $? -ne 0 ]; then
-    echo "failed to copy databags to /var/chef/databags/"
-    exit 1
-fi
-sudo mkdir -p /var/chef/roles/
-sudo cp -r $ADAPTERS_HOME/chef/roles/* /var/chef/roles/
-if [ $? -ne 0 ]; then
-    echo "failed to copy roles to /var/chef/roles/"
-    exit 1
-fi
 
 # add apache user to the group of virtualenv user
 sudo usermod -a -G `groups $USER|awk '{print$3}'` apache
@@ -94,15 +58,10 @@ fi
 cd $COMPASSDIR
 workon compass-core
 
-function compass_cleanup {
-    echo "deactive"
-    deactivate
-}
-trap compass_cleanup EXIT
-
 python setup.py install
 if [[ "$?" != "0" ]]; then
     echo "failed to install compass package"
+    deactivate
     exit 1
 else
     echo "compass package is installed in virtualenv under current dir"
@@ -120,27 +79,7 @@ sudo sed -i "s/\$chef_hostname/$HOSTNAME/g" /etc/compass/package_installer/chef-
 sudo sed -i "s|\$PythonHome|$VIRTUAL_ENV|g" /opt/compass/bin/switch_virtualenv.py
 sudo ln -s -f $VIRTUAL_ENV/bin/celery /opt/compass/bin/celery
 
-/opt/compass/bin/addcookbooks.py
-if [[ "$?" != "0" ]]; then
-    echo "failed to add cookbooks"
-    exit 1
-else
-    echo "cookbooks are added to chef server"
-fi
-/opt/compass/bin/adddatabags.py
-if [[ "$?" != "0" ]]; then
-    echo "failed to add databags"
-    exit 1
-else
-    echo "databags are added to chef server"
-fi
-/opt/compass/bin/addroles.py
-if [[ "$?" != "0" ]]; then
-    echo "failed to add roles"
-    exit 1
-else
-    echo "roles are added to chef server"
-fi
+deactivate
 
 sudo mkdir -p /var/log/redis
 sudo chown -R redis:root /var/log/redis
@@ -168,6 +107,7 @@ if [[ "$?" != "0" ]]; then
 else
     echo "compassed service is refreshed"
 fi
+
 /opt/compass/bin/clean_nodes.sh
 /opt/compass/bin/clean_clients.sh
 /opt/compass/bin/clean_environments.sh

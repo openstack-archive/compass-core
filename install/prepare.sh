@@ -238,6 +238,9 @@ download $CHEF_SRV chef-server || exit $?
 download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
 download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
 
+# download local repo
+download -f https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz || exit $?
+
 # Install net-snmp
 echo "install snmp config"
 if [[ ! -e /etc/snmp ]]; then

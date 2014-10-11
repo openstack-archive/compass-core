@@ -268,12 +268,11 @@ source ${COMPASSDIR}/install/$OS_INSTALLER.sh || exit $?
 echo "Install the Package Installer Tool"
 source ${COMPASSDIR}/install/$PACKAGE_INSTALLER.sh || exit $?
 
+echo "Download and install Compass Web"
+source ${COMPASSDIR}/install/compass_web.sh || exit $?
+
 echo "Download and Setup Compass and related services"
 source ${COMPASSDIR}/install/compass.sh || exit $?
 
-if [[ $LOCAL_REPO = "y" ]]; then
-    echo "setting up local repo"
-    source ${COMPASSDIR}/install/local_repo.sh || exit $?
-fi
 figlet -ctf slant Installation Complete!
 echo -e "It takes\x1b[32m $SECONDS \x1b[0mseconds during the installation."

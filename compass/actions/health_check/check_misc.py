@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """Miscellaneous Health Check for Compass."""
+import logging
+
 from compass.actions.health_check import base
 from compass.actions.health_check import utils as health_check_utils
 
@@ -23,16 +25,16 @@ class MiscCheck(base.BaseCheck):
 
     MISC_MAPPING = {
         "yum": "rsyslog ntp iproute openssh-clients python git wget "
-               "python-setuptools python-netaddr python-flask "
-               "python-flask-sqlalchemy python-amqplib amqp "
-               "python-paramiko python-mock mod_wsgi httpd squid "
+               "python-setuptools "
+               "amqp mod_wsgi httpd squid "
                "dhcp bind rsync yum-utils xinetd tftp-server gcc "
-               "net-snmp-utils net-snmp python-daemon".split(" "),
-        "pip": "flask-script flask-restful celery six discover "
-               "unittest2 chef".replace("-", "_").split(" "),
+               "net-snmp-utils net-snmp".split(" "),
+        "pip": "netaddr flask flask_script flask_restful amqplib "
+               "flask_sqlalchemy paramiko mock celery six discover daemon "
+               "unittest2 chef".split(" "),
         "disable": "iptables ip6tables".split(" "),
         "enable": "httpd squid xinetd dhcpd named sshd rsyslog cobblerd "
-                  "ntpd compassd".split(" "),
+                  "ntpd compass-celeryd compass-progress-updated".split(" "),
     }
 
     def run(self):
@@ -70,8 +72,10 @@ class MiscCheck(base.BaseCheck):
             self._set_status(
                 0,
                 "[%s]Error: No module named %s, "
-                "please install it first." % (self.NAME, pkg_module))
+                "please install it first." % (self.NAME, pkg_type))
+            return True
 
+        logging.info('import %s: %s', pkg_type, pkg_module)
         method_name = 'self.check_' + pkg_type + '_dependencies(pkg_module)'
         eval(method_name)
 

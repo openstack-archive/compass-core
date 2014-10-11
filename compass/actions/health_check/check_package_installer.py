@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Health Check module for Package Installer."""
-
+import logging
 import os
 import requests
 
@@ -32,10 +32,9 @@ class PackageInstallerCheck(base.BaseCheck):
         return eval(method_name)
 
     def chef_check(self):
-        """Checks chef setting, cookbooks, databags and roles."""
+        """Checks chef setting, cookbooks and roles."""
         chef_data_map = {
             'CookBook': health_check_setting.COOKBOOKS,
-            'DataBag': health_check_setting.DATABAGS,
             'Role': health_check_setting.ROLES,
         }
 
@@ -107,7 +106,7 @@ class PackageInstallerCheck(base.BaseCheck):
                 name for name, item in chef.Role.list(api=api).iteritems()
             ])
             github = set([
-                item['name'].replace(".rb", "")
+                item['name'].replace(".rb", "").replace(".json", "")
                 for item in requests.get(github_url).json()
             ])
         else:
@@ -116,6 +115,8 @@ class PackageInstallerCheck(base.BaseCheck):
                     'chef.' + data_type + '.list(api=api)'
                 )
             ])
+        logging.info('github %s: %s', data_type, github)
+        logging.info('local %s: %s', data_type, local)
         diff = github - local
 
         if len(diff) <= 0:

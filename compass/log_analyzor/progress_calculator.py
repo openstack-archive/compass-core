@@ -71,7 +71,7 @@ OS_INSTALLER_CONFIGURATIONS = {
                             ),
                             match_nextline_next_matcher_name='localechooser'
                         ),
-                        'localechoose': LineMatcher(
+                        'localechooser': LineMatcher(
                             pattern=r'Menu.*item.*\'localechooser\'.*selected',
                             progress=.18,
                             message_template='localechooser selected',

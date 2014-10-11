@@ -183,7 +183,7 @@ fi
 
 source `which virtualenvwrapper.sh`
 if ! lsvirtualenv |grep compass-core>/dev/null; then
-    mkvirtualenv compass-core
+    mkvirtualenv --system-site-packages compass-core
 fi
 cd $COMPASSDIR
 workon compass-core
@@ -237,6 +237,9 @@ download $CHEF_SRV chef-server || exit $?
 # download os images
 download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
 download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
+
+# download local repo
+download -f https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz || exit $?
 
 # Install net-snmp
 echo "install snmp config"

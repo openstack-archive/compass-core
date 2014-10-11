@@ -33,10 +33,11 @@ class OsInstallerCheck(base.BaseCheck):
         """Runs cobbler check from xmlrpc client."""
         try:
             remote = xmlrpclib.Server(
-                self.os_installer['url'],
+                self.os_installer['cobbler_url'],
                 allow_none=True)
+            credentials = self.os_installer['credentials']
             token = remote.login(
-                *self.os_installer['token'])
+                credentials['username'], credentials['password'])
         except Exception:
             self.code = 0
             self.messages.append(

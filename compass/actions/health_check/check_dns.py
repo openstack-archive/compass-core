@@ -35,10 +35,11 @@ class DnsCheck(base.BaseCheck):
         """Checks if Cobbler has taken over DNS service."""
         try:
             remote = xmlrpclib.Server(
-                self.os_installer['url'],
+                self.os_installer['cobbler_url'],
                 allow_none=True)
+            credentials = self.os_installer['credentials']
             remote.login(
-                *self.os_installer['token'])
+                credentials['username'], credentials['password'])
         except Exception:
             self._set_status(0,
                              "[%s]Error: Cannot login to Cobbler "

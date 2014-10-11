@@ -1,3 +1,4 @@
+amqplib
 argparse
 celery
 Markdown==2.4.1
@@ -17,6 +18,7 @@ MySQL-python
 netaddr
 paramiko==1.7.5
 PyChef
+python-daemon
 SQLAlchemy>=0.9.0
 simplejson
 requests

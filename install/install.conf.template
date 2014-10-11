@@ -14,7 +14,7 @@ export PACKAGE_INSTALLER=chef
 export NIC=installation
 
 # default local repo config is "n"
-export LOCAL_REPO=${LOCAL_REPO:-"n"}
+export LOCAL_REPO=${LOCAL_REPO:-"y"}
  
 # DHCP config
 export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
@@ -84,8 +84,8 @@ export SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export COMPASSDIR=${SCRIPT_DIR}/..
 
 # Set test script variables
-export NAMESERVERS=$IPADDR
-export NTP_SERVER=$IPADDR
-export GATEWAY=$IPADDR
-export PROXY=http://$IPADDR:3128
+# export NAMESERVERS=$IPADDR
+# export NTP_SERVER=$IPADDR
+# export GATEWAY=$IPADDR
+# export PROXY=http://$IPADDR:3128
 export TESTMODE=${TESTMODE:-"True"}

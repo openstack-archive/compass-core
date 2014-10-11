@@ -20,6 +20,7 @@ import netaddr
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
@@ -112,6 +113,10 @@ def session():
         logging.exception(error)
         if isinstance(error, IntegrityError):
             raise exception.NotAcceptable(
+                'operation error in database'
+            )
+        elif isinstance(error, OperationalError):
+            raise exception.DatabaseExcedption(
                 'operation error in database'
             )
         elif isinstance(error, exception.DatabaseException):

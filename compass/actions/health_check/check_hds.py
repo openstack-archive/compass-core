@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """Health Check module for Hardware Discovery."""
+import logging
+
 from compass.actions.health_check import base
 from compass.actions.health_check import utils as health_check_utils
 
@@ -31,10 +33,13 @@ class HdsCheck(base.BaseCheck):
         try:
             pkg_module = __import__(pkg_type)
         except Exception:
-            self.messages.append("[%s]Error: No module named %s, "
-                                 "please install it first."
-                                 % (self.NAME, pkg_module))
+            self._set_status(
+                0, "[%s]Error: No module named %s please install it first."
+                   % (self.NAME, pkg_type)
+            )
+            return (self.code, self.messages)
 
+        logging.info('import %s: %s', pkg_type, pkg_module)
         method_name = 'self.check_' + pkg_type + '_snmp(pkg_module)'
         eval(method_name)
         print "[Done]"

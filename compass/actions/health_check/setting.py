@@ -17,10 +17,7 @@
 # Chef data on github
 COOKBOOKS = (
     "https://api.github.com/repos/stackforge"
-    "/compass-adapters/contents/chef/cookbooks")
+    "/compass-adapters/contents/chef/cookbooks?ref=dev/experimental")
 ROLES = (
     "https://api.github.com/repos/stackforge"
-    "/compass-adapters/contents/chef/roles")
-DATABAGS = (
-    "https://api.github.com/repos/stackforge"
-    "/compass-adapters/contents/chef/databags")
+    "/compass-adapters/contents/chef/roles?ref=dev/experimental")

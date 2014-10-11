@@ -56,3 +56,34 @@ $CHEF_PASSWORD
 EOF
 sudo sed -i "/node_name/c\node_name                \'admin\'" /$USER/.chef/knife.rb
 sudo sed -i "/client_key/c\client_key               \'\/etc\/chef-server\/admin.pem\'" /$USER/.chef/knife.rb
+
+
+sudo rm -rf /var/chef
+sudo mkdir -p /var/chef/cookbooks/
+sudo cp -r $ADAPTERS_HOME/chef/cookbooks/* /var/chef/cookbooks/
+if [ $? -ne 0 ]; then
+    echo "failed to copy cookbooks to /var/chef/cookbooks/"
+    exit 1
+fi
+sudo mkdir -p /var/chef/roles/
+sudo cp -r $ADAPTERS_HOME/chef/roles/* /var/chef/roles/
+if [ $? -ne 0 ]; then
+    echo "failed to copy roles to /var/chef/roles/"
+    exit 1
+fi
+
+knife cookbook upload --all --cookbook-path /var/chef/cookbooks
+if [[ "$?" != "0" ]]; then
+    echo "failed to add cookbooks"
+    exit 1
+else
+    echo "cookbooks are added to chef server"
+fi
+
+knife role from file /var/chef/roles/*.json
+if [[ "$?" != "0" ]]; then
+    echo "failed to add roles"
+    exit 1
+else
+    echo "roles are added to chef server"
+fi

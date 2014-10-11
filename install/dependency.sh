@@ -10,7 +10,7 @@ if [ "$tempest" == "true" ]; then
         exit 1
     fi
 fi
-sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget syslinux amqp mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp python-daemon unzip openssl openssl098e ca-certificates redis mysql mysql-server mysql-devel python-virtualenv python-setuptools
+sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget syslinux amqp mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp net-snmp-python unzip openssl openssl098e ca-certificates redis mysql mysql-server mysql-devel python-virtualenv python-setuptools
 if [[ "$?" != "0" ]]; then
     echo "failed to install yum dependency"
     exit 1

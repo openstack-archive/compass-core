@@ -55,7 +55,7 @@ flags.add('switch_credential',
           default='version=2c,community=public')
 flags.add('switch_max_retries', type='int',
           help='max retries of poll switch',
-          default=5)
+          default=10)
 flags.add('switch_retry_interval', type='int',
           help='interval to repoll switch',
           default=10)
@@ -173,6 +173,9 @@ flags.add('default_roles',
               '<rolename>'
           ),
           default='')
+flags.add('action_timeout',
+          help='action timeout in seconds',
+          default=60)
 flags.add('deployment_timeout',
           help='deployment timeout in minutes',
           default=60)
@@ -904,13 +907,17 @@ def _deploy_clusters(client, cluster_id, host_mapping):
 
 def _get_installing_progress(client, cluster_id, host_mapping):
     """get intalling progress."""
-    timeout = time.time() + 60 * float(flags.OPTIONS.deployment_timeout)
+    action_timeout = time.time() + 60 * float(flags.OPTIONS.action_timeout)
+    deployment_timeout = time.time() + 60 * float(
+        flags.OPTIONS.deployment_timeout)
     cluster_installed = False
     cluster_failed = False
     hosts_installed = {}
     hosts_failed = {}
     install_finished = False
-    while time.time() < timeout:
+    deployment_failed = False
+    current_time = time.time()
+    while current_time < deployment_timeout:
         status, cluster_state = client.get_cluster_state(cluster_id)
         logging.info(
             'get cluster %s state status %s: %s',
@@ -920,6 +927,12 @@ def _get_installing_progress(client, cluster_id, host_mapping):
             raise Exception(
                 'failed to acquire cluster %s state' % cluster_id
             )
+        if cluster_state['state'] in ['UNINITIALIZED', 'INITIALIZED']:
+            if current_time >= action_timeout:
+                deployment_failed = True
+                break
+            else:
+                continue
         if cluster_state['state'] == 'SUCCESSFUL':
             cluster_installed = True
         if cluster_state['state'] == 'ERROR':
@@ -938,6 +951,12 @@ def _get_installing_progress(client, cluster_id, host_mapping):
                         cluster_id, host_id
                     )
                 )
+            if host_state['state'] in ['UNINITIALIZED', 'INITIALIZED']:
+                raise Exception(
+                    'unintended status for host %s: %s' % (
+                        hostname, host_state
+                    )
+                )
             if host_state['state'] == 'SUCCESSFUL':
                 hosts_installed[host_id] = True
             else:
@@ -954,7 +973,11 @@ def _get_installing_progress(client, cluster_id, host_mapping):
                 hosts_installed.get(host_id, False) or
                 hosts_failed.get(host_id, False)
             )
-        if cluster_finished and all(hosts_finished.values()):
+        if cluster_finished:
+            if not all(hosts_finished.values()):
+                raise Exception(
+                    'some host are not finished: %s' % hosts_finished
+                )
             logging.info('all clusters/hosts are installed.')
             install_finished = True
             break
@@ -964,7 +987,12 @@ def _get_installing_progress(client, cluster_id, host_mapping):
                 'sleep %s seconds and retry',
                 flags.OPTIONS.progress_update_check_interval)
             time.sleep(float(flags.OPTIONS.progress_update_check_interval))
+        current_time = time.time()
 
+    if deployment_failed:
+        raise Exception(
+            'cluster %s deployment action fails: %s' % cluster_id
+        )
     if not install_finished:
         raise Exception(
             'cluster %s installation not finished: '

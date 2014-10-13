@@ -294,13 +294,13 @@ class ActionHelper(object):
 
     @staticmethod
     def update_state(cluster_id, host_id_list, user):
-        # update cluster state
-        cluster_db.update_cluster_state(user, cluster_id, state='INSTALLING')
-
         # update all clusterhosts state
         for host_id in host_id_list:
             cluster_db.update_cluster_host_state(user, cluster_id, host_id,
                                                  state='INSTALLING')
+
+        # update cluster state
+        cluster_db.update_cluster_state(user, cluster_id, state='INSTALLING')
 
     @staticmethod
     def get_machine_IPMI(machine_id, user):

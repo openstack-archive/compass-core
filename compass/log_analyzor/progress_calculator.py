@@ -111,16 +111,27 @@ OS_INSTALLER_CONFIGURATIONS = {
                             progress=.35,
                             message_template='partman-base selected',
                             unmatch_nextline_next_matcher_name='partman-base',
-                            match_nextline_next_matcher_name='live-installer'
+                            match_nextline_next_matcher_name='bootstrap-base'
                         ),
-                        'live-installer': LineMatcher(
+                        'bootstrap-base': LineMatcher(
                             pattern=(
-                                r'Menu.*item.*\'live-installer\'.*selected'
+                                r'Menu.*item.*\'bootstrap-base\'.*selected'
+                            ),
+                            progress=.40,
+                            message_template='bootstrap-base selected',
+                            unmatch_nextline_next_matcher_name=(
+                                'bootstrap-base'
+                            ),
+                            match_nextline_next_matcher_name='apt-setup-udeb'
+                        ),
+                        'apt-setup-udeb': LineMatcher(
+                            pattern=(
+                                r'Menu.*item.*\'apt-setup-udeb\'.*selected'
                             ),
                             progress=.45,
-                            message_template='live-installer selected',
+                            message_template='apt-setup-udeb selected',
                             unmatch_nextline_next_matcher_name=(
-                                'live-installer'
+                                'apt-setup-udeb'
                             ),
                             match_nextline_next_matcher_name='pkgsel'
                         ),

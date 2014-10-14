@@ -31,7 +31,7 @@ def model_query(session, model):
     if not issubclass(model, models.BASE):
         raise exception.DatabaseException("model should be sublass of BASE!")
 
-    return session.query(model).with_lockmode('update')
+    return session.query(model)
 
 
 def _default_list_condition_func(col_attr, value, condition_func):
@@ -441,7 +441,7 @@ def get_db_object(session, table, exception_when_missing=True, **kwargs):
             model_query(session, table), table, **kwargs
         ).first()
         logging.debug(
-            'session %s db object %s added', session, db_object
+            'session %s got db object %s', session, db_object
         )
         if db_object:
             return db_object

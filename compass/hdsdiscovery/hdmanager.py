@@ -19,6 +19,8 @@ import re
 
 from compass.hdsdiscovery.error import TimeoutError
 from compass.hdsdiscovery import utils
+from compass.utils import setting_wrapper as setting
+from compass.utils import util
 
 
 UNREACHABLE = 'unreachable'
@@ -99,7 +101,11 @@ class HDManager(object):
         :return a tuple (vendor, switch_state, error)
         """
 
-        if host == '127.0.0.1':
+        switch_lists = util.load_configs(setting.SWITCH_LIST_DIR)
+        switch_list = None
+        for item in switch_lists:
+            switch_list = item['SWITCH_LIST']
+        if host in switch_list:
             return ("appliance", "Found", "")
 
         # TODO(grace): Why do we need to have valid IP?

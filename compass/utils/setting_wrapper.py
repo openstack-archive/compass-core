@@ -116,6 +116,12 @@ CALLBACK_DIR = lazypy.delay(
 TMPL_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'templates')
 )
+MAC_LIST_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'mac_list')
+)
+SWITCH_LIST_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'switch_list')
+)
 PROXY_URL_PREFIX = 'http://10.145.81.205:5000'
 
 if (

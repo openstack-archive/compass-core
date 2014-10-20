@@ -16,29 +16,24 @@
 
    .. moduleauthor:: Xiaodong Wang ,xiaodongwang@huawei.com>
 """
+import datetime
+import lazypy
 import logging
 import os
+import os.path
 
 
 # default setting
-PROVIDER_NAME = 'mix'
-GLOBAL_CONFIG_PROVIDER = 'file'
-CLUSTER_CONFIG_PROVIDER = 'db'
-HOST_CONFIG_PROVIDER = 'db'
 CONFIG_DIR = '/etc/compass'
-GLOBAL_CONFIG_FILENAME = 'global_config'
-CONFIG_FILE_FORMAT = 'python'
-DATABASE_TYPE = 'file'
-DATABASE_FILE = ''
 SQLALCHEMY_DATABASE_URI = 'sqlite://'
-OS_INSTALLER = 'cobbler'
-COBBLER_INSTALLER_URL = ''
-COBBLER_INSTALLER_TOKEN = ['cobbler', 'cobbler']
-PACKAGE_INSTALLER = 'chef'
-CHEF_INSTALLER_URL = ''
-CHEF_GLOBAL_DATABAG_NAME = 'env_default'
-INSTALLATION_LOGDIR = ''
-DEFAULT_LOGLEVEL = 'info'
+SQLALCHEMY_DATABASE_POOL_TYPE = 'static'
+INSTALLATION_LOGDIR = {
+    'CobblerInstaller': '/var/log/cobbler/anamon',
+    'ChefInstaller': '/var/log/chef'
+}
+CLUSTERHOST_INATALLATION_LOGDIR_NAME = 'name'
+HOST_INSTALLATION_LOGDIR_NAME = 'name'
+DEFAULT_LOGLEVEL = 'debug'
 DEFAULT_LOGDIR = '/tmp'
 DEFAULT_LOGINTERVAL = 1
 DEFAULT_LOGINTERVAL_UNIT = 'h'
@@ -46,13 +41,88 @@ DEFAULT_LOGFORMAT = (
     '%(asctime)s - %(filename)s - %(lineno)d - %(levelname)s - %(message)s')
 WEB_LOGFILE = ''
 CELERY_LOGFILE = ''
-CELERYCONFIG_DIR = ''
+CELERYCONFIG_DIR = lazypy.delay(lambda: CONFIG_DIR)
 CELERYCONFIG_FILE = ''
 PROGRESS_UPDATE_INTERVAL = 30
 POLLSWITCH_INTERVAL = 60
 SWITCHES = [
 ]
 
+USER_AUTH_HEADER_NAME = 'X-Auth-Token'
+USER_TOKEN_DURATION = '2h'
+COMPASS_ADMIN_EMAIL = 'admin@huawei.com'
+COMPASS_ADMIN_PASSWORD = 'admin'
+COMPASS_DEFAULT_PERMISSIONS = [
+    'list_permissions',
+]
+SWITCHES_DEFAULT_FILTERS = []
+DEFAULT_SWITCH_IP = '0.0.0.0'
+DEFAULT_SWITCH_PORT = 0
+
+COMPASS_SUPPORTED_PROXY = 'http://127.0.0.1:3128'
+COMPASS_SUPPORTED_DEFAULT_NOPROXY = ['127.0.0.1']
+COMPASS_SUPPORTED_NTP_SERVER = '127.0.0.1'
+COMPASS_SUPPORTED_DNS_SERVERS = ['127.0.0.1']
+COMPASS_SUPPORTED_DOMAINS = []
+COMPASS_SUPPORTED_DEFAULT_GATEWAY = '127.0.0.1'
+COMPASS_SUPPORTED_LOCAL_REPO = 'http://127.0.0.1'
+
+# For test chef server. please replace these config info with your own.
+TEST_CHEF_URL = "https://api.opscode.com/organizations/compasscheftest"
+TEST_CLIENT_KEY_PATH = "/etc/compass/client.pem"
+TEST_CLIENT_NAME = "graceyu"
+
+PROGRESS_UPDATE_PID_FILE = '/var/run/progress_update.pid'
+
+OS_INSTALLER_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'os_installer')
+)
+PACKAGE_INSTALLER_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'package_installer')
+)
+OS_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'os')
+)
+DISTRIBUTED_SYSTEM_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'distributed_system')
+)
+ADAPTER_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'adapter')
+)
+OS_METADATA_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'os_metadata')
+)
+PACKAGE_METADATA_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'package_metadata')
+)
+OS_FIELD_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'os_field')
+)
+PACKAGE_FIELD_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'package_field')
+)
+ADAPTER_ROLE_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'role')
+)
+ADAPTER_FLAVOR_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'flavor')
+)
+VALIDATOR_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'validator')
+)
+CALLBACK_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'callback')
+)
+TMPL_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'templates')
+)
+MAC_LIST_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'mac_list')
+)
+SWITCH_LIST_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'switch_list')
+)
+PROXY_URL_PREFIX = 'http://10.145.81.205:5000'
 
 if (
     'COMPASS_IGNORE_SETTING' in os.environ and

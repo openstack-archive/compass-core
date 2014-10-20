@@ -13,41 +13,26 @@
 # limitations under the License.
 
 """Compass api client library.
-
-   .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
+
 import json
 import logging
 import requests
 
 
 class Client(object):
-    """wrapper for compass restful api.
-
-    .. note::
-       Every api client method returns (status as int, resp as dict).
-       If the api succeeds, the status is 2xx, the resp includes
-       {'status': 'OK'} and other keys depend on method.
-       If the api fails, the status is 4xx, the resp includes {
-       'status': '...', 'message': '...'}
-    """
+    """compass restful api wrapper"""
 
     def __init__(self, url, headers=None, proxies=None, stream=None):
-        """Restful api client initialization.
-
-        :param url: url to the compass web service.
-        :type url: str.
-        :param headers: http header sent in each restful request.
-        :type headers: dict of header name (str) to heade value (str).
-        :param proxies: the proxy address for each protocol.
-        :type proxies: dict of protocol (str) to proxy url (str).
-        :param stream: wether the restful response should be streamed.
-        :type stream: bool.
-        """
+        logging.info('create api client %s', url)
         self.url_ = url
         self.session_ = requests.Session()
+
         if headers:
-            self.session_.headers = headers
+            self.session_.headers.update(headers)
+        self.session_.headers.update({
+            'Accept': 'application/json'
+        })
 
         if proxies is not None:
             self.session_.proxies = proxies
@@ -60,32 +45,31 @@ class Client(object):
 
     @classmethod
     def _get_response(cls, resp):
-        """decapsulate the resp to status code and python formatted data."""
-        resp_obj = {}
+        response_object = {}
         try:
-            resp_obj = resp.json()
+            response_object = resp.json()
         except Exception as error:
             logging.error('failed to load object from %s: %s',
                           resp.url, resp.content)
             logging.exception(error)
-            resp_obj['status'] = 'Json Parsing Failure'
-            resp_obj['message'] = resp.content
+            response_object['status'] = 'Json Parsing Failed'
+            response_object['message'] = resp.content
 
-        return resp.status_code, resp_obj
+        return resp.status_code, response_object
 
-    def _get(self, relative_url, params=None):
-        """encapsulate get method."""
-        url = '%s%s' % (self.url_, relative_url)
-        if params:
-            resp = self.session_.get(url, params=params)
+    def _get(self, req_url, data=None):
+        url = '%s%s' % (self.url_, req_url)
+        logging.debug('get %s with data %s', url, data)
+        if data:
+            resp = self.session_.get(url, params=data)
         else:
             resp = self.session_.get(url)
 
         return self._get_response(resp)
 
-    def _post(self, relative_url, data=None):
-        """encapsulate post method."""
-        url = '%s%s' % (self.url_, relative_url)
+    def _post(self, req_url, data=None):
+        url = '%s%s' % (self.url_, req_url)
+        logging.debug('post %s with data %s', url, data)
         if data:
             resp = self.session_.post(url, json.dumps(data))
         else:
@@ -93,9 +77,10 @@ class Client(object):
 
         return self._get_response(resp)
 
-    def _put(self, relative_url, data=None):
+    def _put(self, req_url, data=None):
         """encapsulate put method."""
-        url = '%s%s' % (self.url_, relative_url)
+        url = '%s%s' % (self.url_, req_url)
+        logging.debug('put %s with data %s', url, data)
         if data:
             resp = self.session_.put(url, json.dumps(data))
         else:
@@ -103,554 +88,1016 @@ class Client(object):
 
         return self._get_response(resp)
 
-    def _delete(self, relative_url):
-        """encapsulate delete method."""
-        url = '%s%s' % (self.url_, relative_url)
+    def _patch(self, req_url, data=None):
+        url = '%s%s' % (self.url_, req_url)
+        logging.debug('patch %s with data %s', url, data)
+        if data:
+            resp = self.session_.patch(url, json.dumps(data))
+        else:
+            resp = self.session_.patch(url)
+
+        return self._get_response(resp)
+
+    def _delete(self, req_url):
+        url = '%s%s' % (self.url_, req_url)
+        logging.debug('delete %s', url)
         return self._get_response(self.session_.delete(url))
 
-    def get_switches(self, switch_ips=None, switch_networks=None, limit=None):
-        """List details for switches.
+    def login(self, email, password):
+        credential = {}
+        credential['email'] = email
+        credential['password'] = password
+        return self._post('/users/login', data=credential)
 
-        .. note::
-           The switches can be filtered by switch_ips, siwtch_networks and
-           limit. These params can be None or missing. If the param is None
-           or missing, that filter will be ignored.
+    def get_token(self, email, password):
+        credential = {}
+        credential['email'] = email
+        credential['password'] = password
+        status, resp = self._post('/users/token', data=credential)
+        if status < 400:
+            self.session_.headers.update({'X-Auth-Token': resp['token']})
+        return status, resp
 
-        :param switch_ips: Filter switch(es) with IP(s).
-        :type switch_ips: list of str. Each is as 'xxx.xxx.xxx.xxx'.
-        :param switch_networks: Filter switche(es) with network(s).
-        :type switch_networks: list of str. Each is as 'xxx.xxx.xxx.xxx/xx'.
-        :param limit: int, The maximum number of switches to return.
-        :type limit: int. 0 means unlimited.
-        """
+    def get_users(self):
+        users = self._get('/users')
+        return users
+
+    def list_switches(
+            self,
+            switch_ips=None,
+            switch_ip_networks=None):
+        """list switches."""
         params = {}
         if switch_ips:
             params['switchIp'] = switch_ips
 
-        if switch_networks:
-            params['switchIpNetwork'] = switch_networks
+        if switch_ip_networks:
+            params['switchIpNetwork'] = switch_ip_networks
 
-        if limit:
-            params['limit'] = limit
-        return self._get('/switches', params=params)
+        switchlist = self._get('/switches', data=params)
+        return switchlist
 
     def get_switch(self, switch_id):
-        """Lists details for a specified switch.
-
-        :param switch_id: switch id.
-        :type switch_id: int.
-        """
         return self._get('/switches/%s' % switch_id)
 
-    def add_switch(self, switch_ip, version=None, community=None,
-                   username=None, password=None, raw_data=None):
-        """Create a switch with specified details.
-
-        .. note::
-           It will trigger switch polling if successful. During
-           the polling, MAC address of the devices connected to the
-           switch will be learned by SNMP or SSH.
-
-        :param switch_ip: the switch IP address.
-        :type switch_ip: str, as xxx.xxx.xxx.xxx.
-        :param version: SNMP version when using SNMP to poll switch.
-        :type version: str, one in ['v1', 'v2c', 'v3']
-        :param community: SNMP community when using SNMP to poll switch.
-        :type community: str, usually 'public'.
-        :param username: SSH username when using SSH to poll switch.
-        :type username: str.
-        :param password: SSH password when using SSH to poll switch.
-        :type password: str.
-        """
+    def add_switch(
+            self,
+            switch_ip,
+            version=None,
+            community=None,
+            raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
         else:
-            data['switch'] = {}
-            data['switch']['ip'] = switch_ip
-            data['switch']['credential'] = {}
+            data['ip'] = switch_ip
+            data['credentials'] = {}
             if version:
-                data['switch']['credential']['version'] = version
+                data['credentials']['version'] = version
 
             if community:
-                data['switch']['credential']['community'] = community
-
-            if username:
-                data['switch']['credential']['username'] = username
-
-            if password:
-                data['switch']['credential']['password'] = password
+                data['credentials']['community'] = community
 
         return self._post('/switches', data=data)
 
-    def update_switch(self, switch_id, ip_addr=None,
-                      version=None, community=None,
-                      username=None, password=None,
-                      raw_data=None):
-        """Updates a switch with specified details.
-
-        .. note::
-           It will trigger switch polling if successful. During
-           the polling, MAC address of the devices connected to the
-           switch will be learned by SNMP or SSH.
-
-        :param switch_id: switch id
-        :type switch_id: int.
-        :param ip_addr: the switch ip address.
-        :type ip_addr: str, as 'xxx.xxx.xxx.xxx' format.
-        :param version: SNMP version when using SNMP to poll switch.
-        :type version: str, one in ['v1', 'v2c', 'v3'].
-        :param community: SNMP community when using SNMP to poll switch.
-        :type community: str, usually be 'public'.
-        :param username: username when using SSH to poll switch.
-        :type username: str.
-        :param password: password when using SSH to poll switch.
-        """
+    def update_switch(self, switch_id, state='initialized',
+                      version='2c', community='public', raw_data={}):
         data = {}
         if raw_data:
             data = raw_data
-        else:
-            data['switch'] = {}
-            if ip_addr:
-                data['switch']['ip'] = ip_addr
 
-            data['switch']['credential'] = {}
+        else:
+            data['credentials'] = {}
             if version:
-                data['switch']['credential']['version'] = version
+                data['credentials']['version'] = version
 
             if community:
-                data['switch']['credential']['community'] = community
+                data['credentials']['community'] = community
 
-            if username:
-                data['switch']['credential']['username'] = username
-
-            if password:
-                data['switch']['credential']['password'] = password
+            if state:
+                data['state'] = state
 
         return self._put('/switches/%s' % switch_id, data=data)
 
     def delete_switch(self, switch_id):
-        """Not implemented in api."""
         return self._delete('/switches/%s' % switch_id)
 
-    def get_machines(self, switch_id=None, vlan_id=None,
-                     port=None, limit=None):
-        """Get the details of machines.
+    def list_switch_machines(self, switch_id, port=None, vlans=None,
+                             tag=None, location=None):
+        data = {}
+        if port:
+            data['port'] = port
 
-        .. note::
-           The machines can be filtered by switch_id, vlan_id, port
-           and limit. These params can be None or missing. If the param
-           is None or missing, the filter will be ignored.
+        if vlans:
+            data['vlans'] = vlans
 
-        :param switch_id: Return machine(s) connected to the switch.
-        :type switch_id: int.
-        :param vlan_id: Return machine(s) belonging to the vlan.
-        :type vlan_id: int.
-        :param port: Return machine(s) connect to the port.
-        :type port: int.
-        :param limit: the maximum number of machines will be returned.
-        :type limit: int. 0 means no limit.
-        """
-        params = {}
-        if switch_id:
-            params['switchId'] = switch_id
+        if tag:
+            data['tag'] = tag
 
-        if vlan_id:
-            params['vlanId'] = vlan_id
+        if location:
+            data['location'] = location
+
+        return self._get('/switches/%s/machines' % switch_id, data=data)
+
+    def get_switch_machine(self, switch_id, machine_id):
+        return self._get('/switches/%s/machines/%s' % (switch_id, machine_id))
+
+    def list_switch_machines_hosts(self, switch_id, port=None, vlans=None,
+                                   mac=None, tag=None, location=None,
+                                   os_name=None, os_id=None):
+
+        data = {}
+        if port:
+            data['port'] = port
+
+        if vlans:
+            data['vlans'] = vlans
+
+        if mac:
+            data['mac'] = mac
+
+        if tag:
+            data['tag'] = tag
+
+        if location:
+            data['location'] = location
+
+        if os_name:
+            data['os_name'] = os_name
+
+        if os_id:
+            data['os_id'] = os_id
+
+        return self._get('/switches/%s/machines-hosts' % switch_id, data=data)
+
+    def add_switch_machine(self, switch_id, mac=None, port=None,
+                           vlans=None, ipmi_credentials=None,
+                           tag=None, location=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if mac:
+                data['mac'] = mac
+
+            if port:
+                data['port'] = port
+
+            if vlans:
+                data['vlans'] = vlans
+
+            if ipmi_credentials:
+                data['ipmi_credentials'] = ipmi_credentials
+
+            if tag:
+                data['tag'] = tag
+
+            if location:
+                data['location'] = location
+
+        return self._post('/switches/%s/machines' % switch_id, data=data)
+
+    def update_switch_machine(self, switch_id, machine_id, port=None,
+                              vlans=None, ipmi_credentials=None, tag=None,
+                              location=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if port:
+                data['port'] = port
+
+            if vlans:
+                data['vlans'] = vlans
+
+            if ipmi_credentials:
+                data['ipmi_credentials'] = ipmi_credentials
+
+            if tag:
+                data['tag'] = tag
+
+            if location:
+                data['location'] = location
+
+        return self._put('/switches/%s/machines/%s' %
+                         (switch_id, machine_id), data=data)
+
+    def delete_switch_machine(self, switch_id, machine_id):
+        return self._delete('/switches/%s/machines/%s' %
+                            (switch_id, machine_id))
+
+    ## test these
+    def poll_switch(self, switch_id):
+        data = {}
+        data['find_machines'] = None
+        return self._post('/switches/%s/action' % switch_id, data=data)
+
+    def add_group_switch_machines(self, switch_id, group_machine_ids):
+        data = {}
+        data['add_machines'] = group_machine_ids
+        return self._post('/switches/%s/action' % switch_id, data=data)
+
+    def remove_group_switch_machines(self, switch_id, group_machine_ids):
+        data = {}
+        data['remove_machines'] = group_machine_ids
+        return self._post('/switches/%s/action' % switch_id, data=data)
+
+    def update_group_switch_machines(self, switch_id, group_machines):
+        data = {}
+        data['set_machines'] = group_machines
+        return self._post('/switches/%s/action' % switch_id, data=data)
+    ## end
+
+    def list_switchmachines(self, switch_ip_int=None, port=None, vlans=None,
+                            mac=None, tag=None, location=None):
+        data = {}
+        if switch_ip_int:
+            data['switch_ip_int'] = switch_ip_int
 
         if port:
-            params['port'] = port
+            data['port'] = port
 
-        if limit:
-            params['limit'] = limit
+        if vlans:
+            data['vlans'] = vlans
 
-        return self._get('/machines', params=params)
+        if mac:
+            data['mac'] = mac
+
+        if tag:
+            data['tag'] = tag
+
+        if location:
+            data['location'] = location
+
+        return self._get('/switch-machines', data=data)
+
+    def list_switchmachines_hosts(self, switch_ip_int=None, port=None,
+                                  vlans=None, mac=None, tag=None,
+                                  location=None, os_name=None, os_id=None):
+
+        data = {}
+        if switch_ip_int:
+            data['switch_ip_int'] = switch_ip_int
+
+        if port:
+            data['port'] = port
+
+        if vlans:
+            data['vlans'] = vlans
+
+        if mac:
+            data['mac'] = mac
+
+        if tag:
+            data['tag'] = tag
+
+        if location:
+            data['location'] = location
+
+        if os_name:
+            data['os_name'] = os_name
+
+        if os_id:
+            data['os_id'] = os_id
+
+        return self._get('/switches-machines-hosts', data=data)
+
+    def show_switchmachine(self, switchmachine_id):
+        return self._get('/switch-machines/%s' % switchmachine_id)
+
+    def update_switchmachine(self, switchmachine_id,
+                             port=None, vlans=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if port:
+                data['port'] = port
+
+            if vlans:
+                data['vlans'] = vlans
+
+        return self._put('/switch-machines/%s' % switchmachine_id, data=data)
+
+    def patch_switchmachine(self, switchmachine_id,
+                            vlans=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        elif vlans:
+            data['vlans'] = vlans
+
+        return self._patch('/switch-machines/%s' % switchmachine_id, data=data)
+
+    def delete_switchmachine(self, switchmachine_id):
+        return self._delete('/switch-machines/%s' % switchmachine_id)
+
+    def list_machines(self, mac=None, tag=None, location=None):
+        data = {}
+        if mac:
+            data['mac'] = mac
+
+        if tag:
+            data['tag'] = tag
+
+        if location:
+            data['location'] = location
+
+        return self._get('/machines', data=data)
 
     def get_machine(self, machine_id):
-        """Lists the details for a specified machine.
+        data = {}
+        if id:
+            data['id'] = id
 
-        :param machine_id: Return machine with the id.
-        :type machine_id: int.
-        """
-        return self._get('/machines/%s' % machine_id)
+        return self._get('/machines/%s' % machine_id, data=data)
 
-    def get_clusters(self):
-        """Lists the details for all clusters.
-        """
-        return self._get('/clusters')
-
-    def get_cluster(self, cluster_id):
-        """Lists the details of the specified cluster.
-
-        :param cluster_id: cluster id.
-        :type cluster_id: int.
-        """
-        return self._get('/clusters/%d' % cluster_id)
-
-    def add_cluster(self, cluster_name, adapter_id, raw_data=None):
-        """Creates a cluster by specified name and given adapter id.
-
-        :param cluster_name: cluster name.
-        :type cluster_name: str.
-        :param adapter_id: adapter id.
-        :type adapter_id: int.
-        """
+    def update_machine(self, machine_id, ipmi_credentials=None, tag=None,
+                       location=None, raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
         else:
-            data['cluster'] = {}
-            data['cluster']['name'] = cluster_name
-            data['cluster']['adapter_id'] = adapter_id
-        return self._post('/clusters', data=data)
+            if ipmi_credentials:
+                data['ipmi_credentials'] = ipmi_credentials
 
-    def add_hosts(self, cluster_id, machine_ids, raw_data=None):
-        """add the specified machine(s) as the host(s) to the cluster.
+            if tag:
+                data['tag'] = tag
 
-        :param cluster_id: cluster id.
-        :type cluster_id: int.
-        :param machine_ids: machine ids to add to cluster.
-        :type machine_ids: list of int, each is the id of one machine.
-        """
+            if location:
+                data['location'] = location
+
+        return self._put('/machines/%s' % machine_id, data=data)
+
+    def patch_machine(self, machine_id, ipmi_credentials=None,
+                      tag=None, location=None,
+                      raw_data=None):
         data = {}
         if raw_data:
             data = raw_data
         else:
-            data['addHosts'] = machine_ids
-        return self._post('/clusters/%d/action' % cluster_id, data=data)
+            if ipmi_credentials:
+                data['ipmi_credentials'] = ipmi_credentials
 
-    def remove_hosts(self, cluster_id, host_ids, raw_data=None):
-        """remove the specified host(s) from the cluster.
+            if tag:
+                data['tag'] = tag
 
-        :param cluster_id: cluster id.
-        :type cluster_id: int.
-        :param host_ids: host ids to remove from cluster.
-        :type host_ids: list of int, each is the id of one host.
-        """
+            if location:
+                data['location'] = location
+
+        return self._patch('/machines/%s' % machine_id, data=data)
+
+    def delete_machine(self, machine_id):
+        return self._delete('machines/%s' % machine_id)
+
+    def list_subnets(self, subnet=None, name=None):
         data = {}
-        if raw_data:
-            data = raw_data
-        else:
-            data['removeHosts'] = host_ids
-        return self._post('/clusters/%s/action' % cluster_id, data=data)
+        if subnet:
+            data['subnet'] = subnet
 
-    def replace_hosts(self, cluster_id, machine_ids, raw_data=None):
-        """replace the cluster hosts with the specified machine(s).
-
-        :param cluster_id: int, The unique identifier of the cluster.
-        :type cluster_id: int.
-        :param machine_ids: the machine ids to replace the hosts in cluster.
-        :type machine_ids: list of int, each is the id of one machine.
-        """
-        data = {}
-        if raw_data:
-            data = raw_data
-        else:
-            data['replaceAllHosts'] = machine_ids
-        return self._post('/clusters/%s/action' % cluster_id, data=data)
-
-    def deploy_hosts(self, cluster_id, raw_data=None):
-        """Deploy the cluster.
-
-        :param cluster_id: The unique identifier of the cluster
-        :type cluster_id: int.
-        """
-        data = {}
-        if raw_data:
-            data = raw_data
-        else:
-            data['deploy'] = []
-        return self._post('/clusters/%d/action' % cluster_id, data=data)
-
-    @classmethod
-    def parse_security(cls, kwargs):
-        """parse the arguments to security data."""
-        data = {}
-        for key, value in kwargs.items():
-            if '_' not in key:
-                continue
-            key_name, key_value = key.split('_', 1)
-            data.setdefault(
-                '%s_credentials' % key_name, {})[key_value] = value
-
-        return data
-
-    def set_security(self, cluster_id, **kwargs):
-        """Update the cluster security configuration.
-
-        :param cluster_id: cluster id.
-        :type cluster_id: int.
-        :param <security_name>_username: username of the security name.
-        :type <security_name>_username: str.
-        :param <security_name>_password: passowrd of the security name.
-        :type <security_name>_password: str.
-
-        .. note::
-           security_name should be one of ['server', 'service', 'console'].
-        """
-        data = {}
-        data['security'] = self.parse_security(kwargs)
-        return self._put('/clusters/%d/security' % cluster_id, data=data)
-
-    @classmethod
-    def parse_networking(cls, kwargs):
-        """parse arguments to network data."""
-        data = {}
-        global_keys = [
-            'nameservers', 'search_path', 'gateway',
-            'proxy', 'ntp_server', 'ha_vip']
-        for key, value in kwargs.items():
-            if key in global_keys:
-                data.setdefault('global', {})[key] = value
-            else:
-                if '_' not in key:
-                    continue
-
-                key_name, key_value = key.split('_', 1)
-                data.setdefault(
-                    'interfaces', {}
-                ).setdefault(
-                    key_name, {}
-                )[key_value] = value
-
-        return data
-
-    def set_networking(self, cluster_id, **kwargs):
-        """Update the cluster network configuration.
-
-        :param cluster_id: cluster id.
-        :type cluster_id: int.
-        :param nameservers: comma seperated nameserver ip address.
-        :type nameservers: str.
-        :param search_path: comma seperated dns name search path.
-        :type search_path: str.
-        :param gateway: gateway ip address for routing to outside.
-        :type gateway: str.
-        :param proxy: proxy url for downloading packages.
-        :type proxy: str.
-        :param ntp_server: ntp server ip address to sync timestamp.
-        :type ntp_server: str.
-        :param ha_vip: ha vip address to run ha proxy.
-        :type ha_vip: str.
-        :param <interface>_ip_start: start ip address to host's interface.
-        :type <interface>_ip_start: str.
-        :param <interface>_ip_end: end ip address to host's interface.
-        :type <interface>_ip_end: str.
-        :param <interface>_netmask: netmask to host's interface.
-        :type <interface>_netmask: str.
-        :param <interface>_nic: host physical interface name.
-        :type <interface>_nic: str.
-        :param <interface>_promisc: if the interface in promiscous mode.
-        :type <interface>_promisc: int, 0 or 1.
-
-        .. note::
-           interface should be one of ['management', 'tenant',
-           'public', 'storage'].
-        """
-        data = {}
-        data['networking'] = self.parse_networking(kwargs)
-        return self._put('/clusters/%d/networking' % cluster_id, data=data)
-
-    @classmethod
-    def parse_partition(cls, kwargs):
-        """parse arguments to partition data."""
-        data = {}
-        for key, value in kwargs.items():
-            if key.endswith('_percentage'):
-                key_name = key[:-len('_percentage')]
-                data[key_name] = '%s%%' % value
-            elif key.endswitch('_mbytes'):
-                key_name = key[:-len('_mbytes')]
-                data[key_name] = str(value)
-
-        return ';'.join([
-            '/%s %s' % (key, value) for key, value in data.items()
-        ])
-
-    def set_partition(self, cluster_id, **kwargs):
-        """Update the cluster partition configuration.
-
-        :param cluster_id: cluster id.
-        :type cluster_id: int.
-        :param <partition>_percentage: the partiton percentage.
-        :type <partition>_percentage: float between 0 to 100.
-        :param <partition>_mbytes: the partition mbytes.
-        :type <partition>_mbytes: int.
-
-        .. note::
-           partition should be one of ['home', 'var', 'tmp'].
-        """
-        data = {}
-        data['partition'] = self.parse_partition(kwargs)
-        return self._put('/clusters/%s/partition' % cluster_id, data=data)
-
-    def get_hosts(self, hostname=None, clustername=None):
-        """Lists the details of hosts.
-
-        .. note::
-           The hosts can be filtered by hostname, clustername.
-           These params can be None or missing. If the param
-           is None or missing, the filter will be ignored.
-
-        :param hostname: The name of a host.
-        :type hostname: str.
-        :param clustername: The name of a cluster.
-        :type clustername: str.
-        """
-        params = {}
-        if hostname:
-            params['hostname'] = hostname
-
-        if clustername:
-            params['clustername'] = clustername
-
-        return self._get('/clusterhosts', params=params)
-
-    def get_host(self, host_id):
-        """Lists the details for the specified host.
-
-        :param host_id: host id.
-        :type host_id: int.
-        """
-        return self._get('/clusterhosts/%s' % host_id)
-
-    def get_host_config(self, host_id):
-        """Lists the details of the config for the specified host.
-
-        :param host_id: host id.
-        :type host_id: int.
-        """
-        return self._get('/clusterhosts/%s/config' % host_id)
-
-    def update_host_config(self, host_id, hostname=None,
-                           roles=None, raw_data=None, **kwargs):
-        """Updates config for the host.
-
-        :param host_id: host id.
-        :type host_id: int.
-        :param hostname: host name.
-        :type hostname: str.
-        :param security_<security>_username: username of the security name.
-        :type security_<security>_username: str.
-        :param security_<security>_password: passowrd of the security name.
-        :type security_<security>_password: str.
-        :param networking_nameservers: comma seperated nameserver ip address.
-        :type networking_nameservers: str.
-        :param networking_search_path: comma seperated dns name search path.
-        :type networking_search_path: str.
-        :param networking_gateway: gateway ip address for routing to outside.
-        :type networking_gateway: str.
-        :param networking_proxy: proxy url for downloading packages.
-        :type networking_proxy: str.
-        :param networking_ntp_server: ntp server ip address to sync timestamp.
-        :type networking_ntp_server: str.
-        :param networking_<interface>_ip: ip address to host interface.
-        :type networking_<interface>_ip: str.
-        :param networking_<interface>_netmask: netmask to host's interface.
-        :type networking_<interface>_netmask: str.
-        :param networking_<interface>_nic: host physical interface name.
-        :type networking_<interface>_nic: str.
-        :param networking_<interface>_promisc: if the interface is promiscous.
-        :type networking_<interface>_promisc: int, 0 or 1.
-        :param partition_<partition>_percentage: the partiton percentage.
-        :type partition_<partition>_percentage: float between 0 to 100.
-        :param partition_<partition>_mbytes: the partition mbytes.
-        :type partition_<partition>_mbytes: int.
-        :param roles: host assigned roles in the cluster.
-        :type roles: list of str.
-        """
-        data = {}
-        if raw_data:
-            data = raw_data
-        else:
-            if hostname:
-                data['hostname'] = hostname
-
-            sub_kwargs = {}
-            for key, value in kwargs.items():
-                key_name, key_value = key.split('_', 1)
-                sub_kwargs.setdefault(key_name, {})[key_value] = value
-
-            if 'security' in sub_kwargs:
-                data['security'] = self.parse_security(sub_kwargs['security'])
-
-            if 'networking' in sub_kwargs:
-                data['networking'] = self.parse_networking(
-                    sub_kwargs['networking'])
-            if 'partition' in sub_kwargs:
-                data['partition'] = self.parse_partition(
-                    sub_kwargs['partition'])
-
-            if roles:
-                data['roles'] = roles
-
-        return self._put('/clusterhosts/%s/config' % host_id, data)
-
-    def delete_from_host_config(self, host_id, delete_key):
-        """Deletes one key in config for the host.
-
-        :param host_id: host id.
-        :type host_id: int.
-        :param delete_key: the key in host config to be deleted.
-        :type delete_key: str.
-        """
-        return self._delete('/clusterhosts/%s/config/%s' % (
-            host_id, delete_key))
-
-    def get_adapters(self, name=None):
-        """Lists details of adapters.
-
-        .. note::
-           the adapter can be filtered by name of name is given and not None.
-
-        :param name: adapter name.
-        :type name: str.
-        """
-        params = {}
         if name:
-            params['name'] = name
+            data['name'] = name
 
-        return self._get('/adapters', params=params)
+        return self._get('/subnets', data=data)
+
+    def get_subnet(self, subnet_id):
+        return self._get('/subnets/%s' % subnet_id)
+
+    def add_subnet(self, subnet, name=None, raw_data=None):
+        data = {}
+        data['subnet'] = subnet
+        if raw_data:
+            data.update(raw_data)
+        else:
+            if name:
+                data['name'] = name
+
+        return self._post('/subnets', data=data)
+
+    def update_subnet(self, subnet_id, subnet=None,
+                      name=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if subnet:
+                data['subnet'] = subnet
+
+            if name:
+                data['name'] = name
+        return self._put('/subnets/%s' % subnet_id, data=data)
+
+    def delete_subnet(self, subnet_id):
+        return self._delete('/subnets/%s' % subnet_id)
+
+    def list_adapters(self, name=None, distributed_system_name=None,
+                      os_installer_name=None, package_installer_name=None):
+        data = {}
+        if name:
+            data['name'] = name
+
+        if distributed_system_name:
+            data['distributed_system_name'] = distributed_system_name
+
+        if os_installer_name:
+            data['os_installer_name'] = os_installer_name
+
+        if package_installer_name:
+            data['package_installer_name'] = package_installer_name
+
+        return self._get('/adapters', data=data)
 
     def get_adapter(self, adapter_id):
-        """Lists details for the specified adapter.
-
-        :param adapter_id: adapter id.
-        :type adapter_id: int.
-        """
         return self._get('/adapters/%s' % adapter_id)
 
     def get_adapter_roles(self, adapter_id):
-        """Lists roles to assign to hosts for the specified adapter.
-
-        :param adapter_id: adapter id.
-        :type adapter_id: int.
-        """
         return self._get('/adapters/%s/roles' % adapter_id)
 
-    def get_host_installing_progress(self, host_id):
-        """Lists progress details for the specified host.
+    def get_adapter_metadata(self, adapter_id):
+        return self._get('/adapters/%s/metadata' % adapter_id)
 
-        :param host_id: host id.
-        :type host_id: int.
-        """
-        return self._get('/clusterhosts/%s/progress' % host_id)
+    def get_os_metadata(self, os_id):
+        return self._get('/oses/%s/metadata' % os_id)
 
-    def get_cluster_installing_progress(self, cluster_id):
-        """Lists progress details for the specified cluster.
+    def list_clusters(self, name=None, os_name=None,
+                      distributed_system_name=None, owner=None,
+                      adapter_id=None):
+        data = {}
+        if name:
+            data['name'] = name
 
-        :param cluster_id: cluster id.
-        :param cluster_id: int.
-        """
+        if os_name:
+            data['os_name'] = os_name
 
-        return self._get('/clusters/%s/progress' % cluster_id)
+        if distributed_system_name:
+            data['distributed_system_name'] = distributed_system_name
 
-    def get_dashboard_links(self, cluster_id):
-        """Lists links for dashboards of deployed cluster.
+        if owner:
+            data['owner'] = owner
 
-        :param cluster_id: cluster id.
-        :type cluster_id: int.
-        """
-        params = {}
-        params['cluster_id'] = cluster_id
-        return self._get('/dashboardlinks', params)
+        if adapter_id:
+            data['adapter_id'] = adapter_id
+
+        return self._get('/clusters', data=data)
+
+    def get_cluster(self, cluster_id):
+        return self._get('/clusters/%s' % cluster_id)
+
+    def add_cluster(self, name, adapter_id, os_id,
+                    flavor_id=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if flavor_id:
+                data['flavor_id'] = flavor_id
+            data['name'] = name
+            data['adapter_id'] = adapter_id
+            data['os_id'] = os_id
+
+        return self._post('/clusters', data=data)
+
+    def update_cluster(self, cluster_id, name=None,
+                       reinstall_distributed_system=None,
+                       raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if name:
+                data['name'] = name
+
+            if reinstall_distributed_system:
+                data['reinstall_distributed_system'] = (
+                    reinstall_distributed_system
+                )
+        return self._put('/clusters/%s' % cluster_id, data=data)
+
+    def delete_cluster(self, cluster_id):
+        return self._delete('/clusters/%s' % cluster_id)
+
+    def get_cluster_config(self, cluster_id):
+        return self._get('/clusters/%s/config' % cluster_id)
+
+    def get_cluster_metadata(self, cluster_id):
+        return self._get('/clusters/%s/metadata' % cluster_id)
+
+    def update_cluster_config(self, cluster_id, os_config=None,
+                              package_config=None, config_step=None,
+                              raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+
+        if os_config:
+            data['os_config'] = os_config
+
+        if package_config:
+            data['package_config'] = package_config
+
+        if config_step:
+            data['config_step'] = config_step
+
+        return self._put('/clusters/%s/config' % cluster_id, data=data)
+
+    def patch_cluster_config(self, cluster_id, os_config=None,
+                             package_config=None, config_step=None,
+                             raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+
+        if os_config:
+            data['os_config'] = os_config
+
+        if package_config:
+            data['package_config'] = package_config
+
+        if config_step:
+            data['config_step'] = config_step
+
+        return self._patch('/clusters/%s/config' % cluster_id, data=data)
+
+    def delete_cluster_config(self, cluster_id):
+        return self._delete('/clusters/%s/config' % cluster_id)
+
+    ## test these
+    def add_hosts_to_cluster(self, cluster_id, hosts):
+        data = {}
+        data['add_hosts'] = hosts
+        return self._post('/clusters/%s/action' % cluster_id, data=data)
+
+    def set_hosts_in_cluster(self, cluster_id, hosts):
+        data = {}
+        data['set_hosts'] = hosts
+        return self._post('/clusters/%s/action' % cluster_id, data=data)
+
+    def remove_hosts_from_cluster(self, cluster_id, hosts):
+        data = {}
+        data['remove_hosts'] = hosts
+        return self._post('/clusters/%s/action' % cluster_id, data=data)
+
+    def review_cluster(self, cluster_id, review={}):
+        data = {}
+        data['review'] = review
+        return self._post('/clusters/%s/action' % cluster_id, data=data)
+
+    def deploy_cluster(self, cluster_id, deploy={}):
+        data = {}
+        data['deploy'] = deploy
+        return self._post('/clusters/%s/action' % cluster_id, data=data)
+
+    def get_cluster_state(self, cluster_id):
+        return self._get('/clusters/%s/state' % cluster_id)
+
+    def list_cluster_hosts(self, cluster_id):
+        return self._get('/clusters/%s/hosts' % cluster_id)
+
+    def list_clusterhosts(self):
+        return self._get('/clusterhosts')
+
+    def get_cluster_host(self, cluster_id, host_id):
+        return self._get('/clusters/%s/hosts/%s' % (cluster_id, host_id))
+
+    def get_clusterhost(self, clusterhost_id):
+        return self._get('/clusterhosts/%s' % clusterhost_id)
+
+    def add_cluster_host(self, cluster_id, machine_id=None, name=None,
+                         reinstall_os=None, raw_data=None):
+        data = {}
+        data['machine_id'] = machine_id
+        if raw_data:
+            data.update(raw_data)
+        else:
+            if name:
+                data['name'] = name
+
+            if reinstall_os:
+                data['reinstall_os'] = reinstall_os
+
+        return self._post('/clusters/%s/hosts' % cluster_id, data=data)
+
+    def delete_cluster_host(self, cluster_id, host_id):
+        return self._delete('/clusters/%s/hosts/%s' %
+                            (cluster_id, host_id))
+
+    def delete_clusterhost(self, clusterhost_id):
+        return self._delete('/clusterhosts/%s' % clusterhost_id)
+
+    def get_cluster_host_config(self, cluster_id, host_id):
+        return self._get('/clusters/%s/hosts/%s/config' %
+                         (cluster_id, host_id))
+
+    def get_clusterhost_config(self, clusterhost_id):
+        return self._get('/clusterhosts/%s/config' % clusterhost_id)
+
+    def update_cluster_host_config(self, cluster_id, host_id,
+                                   os_config=None,
+                                   package_config=None,
+                                   raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if os_config:
+                data['os_config'] = os_config
+
+            if package_config:
+                data['package_config'] = package_config
+
+        return self._put('/clusters/%s/hosts/%s/config' %
+                         (cluster_id, host_id), data=data)
+
+    def update_clusterhost_config(self, clusterhost_id, os_config=None,
+                                  package_config=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+
+        else:
+            if os_config:
+                data['os_config'] = os_config
+
+            if package_config:
+                data['package_config'] = package_config
+
+        return self._put('/clusterhosts/%s/config' % clusterhost_id,
+                         data=data)
+
+    def patch_cluster_host_config(self, cluster_id, host_id,
+                                  os_config=None,
+                                  package_config=None,
+                                  raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+
+        else:
+            if os_config:
+                data['os_config'] = os_config
+
+            if package_config:
+                data['package_config'] = package_config
+
+        return self._patch('/clusters/%s/hosts/%s/config' %
+                           (cluster_id, host_id), data=data)
+
+    def patch_clusterhost_config(self, clusterhost_id, os_config=None,
+                                 package_config=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+
+        else:
+            if os_config:
+                data['os_config'] = os_config
+
+            if package_config:
+                data['package_config'] = package_config
+
+        return self._patch('/clusterhosts/%s' % clusterhost_id, data=data)
+
+    def delete_cluster_host_config(self, cluster_id, host_id):
+        return self._delete('/clusters/%s/hosts/%s/config' %
+                            (cluster_id, host_id))
+
+    def delete_clusterhost_config(self, clusterhost_id):
+        return self._delete('/clusterhosts/%s/config' % clusterhost_id)
+
+    def get_cluster_host_state(self, cluster_id, host_id):
+        return self._get('/clusters/%s/hosts/%s/state' %
+                         (cluster_id, host_id))
+
+    def update_cluster_host(self, cluster_id, host_id,
+                            roles=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if roles:
+                data['roles'] = roles
+
+        return self._put('/clusters/%s/hosts/%s' %
+                         (cluster_id, host_id), data=data)
+
+    def update_clusterhost(self, clusterhost_id,
+                           roles=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if roles:
+                data['roles'] = roles
+
+        return self._put('/clusterhosts/%s' % clusterhost_id, data=data)
+
+    def patch_cluster_host(self, cluster_id, host_id,
+                           roles=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if roles:
+                data['roles'] = roles
+
+        return self._patch('/clusters/%s/hosts/%s' %
+                           (cluster_id, host_id), data=data)
+
+    def patch_clusterhost(self, clusterhost_id,
+                          roles=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if roles:
+                data['roles'] = roles
+
+        return self._patch('/clusterhosts/%s' % clusterhost_id, data=data)
+
+    def get_clusterhost_state(self, clusterhost_id):
+        return self._get('/clusterhosts/%s/state' % clusterhost_id)
+
+    def update_cluster_host_state(self, cluster_id, host_id, state=None,
+                                  percentage=None, message=None,
+                                  raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if state:
+                data['state'] = state
+
+            if percentage:
+                data['percentage'] = percentage
+
+            if message:
+                data['message'] = message
+
+        return self._put('/clusters/%s/hosts/%s/state' % (cluster_id, host_id),
+                         data=data)
+
+    def update_clusterhost_state(self, clusterhost_id, state=None,
+                                 percentage=None, message=None,
+                                 raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if state:
+                data['state'] = state
+
+            if percentage:
+                data['percentage'] = percentage
+
+            if message:
+                data['message'] = message
+
+        return self._put('/clusterhosts/%s/state' % clusterhost_id, data=data)
+
+    def list_hosts(self, name=None, os_name=None, owner=None, mac=None):
+        data = {}
+        if name:
+            data['name'] = name
+
+        if os_name:
+            data['os_name'] = os_name
+
+        if owner:
+            data['owner'] = owner
+
+        if mac:
+            data['mac'] = mac
+
+        return self._get('/hosts', data=data)
+
+    def get_host(self, host_id):
+        return self._get('/hosts/%s' % host_id)
+
+    def list_machines_or_hosts(self, mac=None, tag=None,
+                               location=None, os_name=None,
+                               os_id=None):
+        data = {}
+        if mac:
+            data['mac'] = mac
+
+        if tag:
+            data['tag'] = tag
+
+        if location:
+            data['location'] = location
+
+        if os_name:
+            data['os_name'] = os_name
+
+        if os_id:
+            data['os_id'] = os_id
+
+        return self._get('/machines-hosts', data=data)
+
+    def get_machine_or_host(self, host_id):
+        return self._get('/machines-hosts/%s' % host_id)
+
+    def update_host(self, host_id, name=None,
+                    reinstall_os=None, raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if name:
+                data['name'] = name
+
+            if reinstall_os:
+                data['reinstall_os'] = reinstall_os
+
+        return self._put('/hosts/%s' % host_id, data=data)
+
+    def delete_host(self, host_id):
+        return self._delete('/hosts/%s' % host_id)
+
+    def get_host_clusters(self, host_id):
+        return self._get('/hosts/%s/clusters' % host_id)
+
+    def get_host_config(self, host_id):
+        return self._get('/hosts/%s/config' % host_id)
+
+    def update_host_config(self, host_id, os_config, raw_data=None):
+        data = {}
+        data['os_config'] = os_config
+        if raw_data:
+            data.update(raw_data)
+
+        return self._put('/hosts/%s/config' % host_id, data=data)
+
+    def patch_host_config(self, host_id, os_config, raw_data=None):
+        data = {}
+        data['os_config'] = os_config
+        if raw_data:
+            data.update(raw_data)
+
+        return self._patch('/hosts/%s/config' % host_id, data=data)
+
+    def delete_host_config(self, host_id):
+        return self._delete('/hosts/%s/config' % host_id)
+
+    def list_host_networks(self, host_id, interface=None, ip=None,
+                           subnet=None, is_mgmt=None, is_promiscuous=None):
+        data = {}
+        if interface:
+            data['interface'] = interface
+
+        if ip:
+            data['ip'] = ip
+
+        if subnet:
+            data['subnet'] = subnet
+
+        if is_mgmt:
+            data['is_mgmt'] = is_mgmt
+
+        if is_promiscuous:
+            data['is_promiscuous'] = is_promiscuous
+
+        return self._get('/hosts/%s/networks' % host_id, data=data)
+
+    def list_all_host_networks(self, interface=None, ip=None, subnet=None,
+                               is_mgmt=None, is_promiscuous=None):
+        data = {}
+        if interface:
+            data['interface'] = interface
+
+        if ip:
+            data['ip'] = ip
+
+        if subnet:
+            data['subnet'] = subnet
+
+        if is_mgmt:
+            data['is_mgmt'] = is_mgmt
+
+        if is_promiscuous:
+            data['is_promiscuous'] = is_promiscuous
+
+        return self._get('/host-networks', data=data)
+
+    def get_host_network(self, host_id, host_network_id):
+        return self._get('/hosts/%s/networks/%s' %
+                         (host_id, host_network_id))
+
+    def get_network_for_all_hosts(self, host_network_id):
+        return self._get('/host-networks/%s' % host_network_id)
+
+    def add_host_network(self, host_id, interface, ip, subnet_id,
+                         is_mgmt=None, is_promiscuous=None,
+                         raw_data=None):
+        data = {}
+        data['interface'] = interface
+        data['ip'] = ip
+        data['subnet_id'] = subnet_id
+        if raw_data:
+            data.update(raw_data)
+        else:
+            if is_mgmt:
+                data['is_mgmt'] = is_mgmt
+
+            if is_promiscuous:
+                data['is_promiscuous'] = is_promiscuous
+
+        return self._post('/hosts/%s/networks' % host_id, data=data)
+
+    def update_host_network(self, host_id, host_network_id,
+                            ip=None, subnet_id=None, subnet=None,
+                            is_mgmt=None, is_promiscuous=None,
+                            raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if ip:
+                data['ip'] = ip
+
+            if subnet_id:
+                data['subnet_id'] = subnet_id
+
+            if subnet:
+                data['subnet'] = subnet
+
+            if is_mgmt:
+                data['is_mgmt'] = is_mgmt
+
+            if is_promiscuous:
+                data['is_promiscuous'] = is_promiscuous
+
+        return self._put('/hosts/%s/networks/%s' %
+                         (host_id, host_network_id), data=data)
+
+    def update_hostnetwork(self, host_network_id, ip=None,
+                           subnet_id=None, subnet=None,
+                           is_mgmt=None, is_promiscuous=None,
+                           raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if ip:
+                data['ip'] = ip
+
+            if subnet_id:
+                data['subnet_id'] = subnet_id
+
+            if subnet:
+                data['subnet'] = subnet
+
+            if is_mgmt:
+                data['is_mgmt'] = is_mgmt
+
+            if is_promiscuous:
+                data['is_promiscuous'] = is_promiscuous
+
+        return self._put('/host-networks/%s' % host_network_id,
+                         data=data)
+
+    def delete_host_network(self, host_id, host_network_id):
+        return self._delete('/hosts/%s/networks/%s',
+                            (host_id, host_network_id))
+
+    def delete_hostnetwork(self, host_network_id):
+        return self._delete('/host-networks/%s' % host_network_id)
+
+    def get_host_state(self, host_id):
+        return self._get('/hosts/%s/state' % host_id)
+
+    def update_host_state(self, host_id, state=None,
+                          percentage=None, message=None,
+                          raw_data=None):
+        data = {}
+        if raw_data:
+            data = raw_data
+        else:
+            if state:
+                data['state'] = state
+
+            if percentage:
+                data['percentage'] = percentage
+
+            if message:
+                data['message'] = message
+
+        return self._put('/hosts/%s/state' % host_id, date=data)
+
+    def poweron_host(self, host_id):
+        data = {}
+        data['poweron'] = True
+
+        return self._post('/hosts/%s/action' % host_id, data=data)
+
+    def poweroff_host(self, host_id):
+        data = {}
+        data['poweroff'] = True
+
+        return self._post('/hosts/%s/action' % host_id, data=data)
+
+    def reset_host(self, host_id):
+        data = {}
+        data['reset'] = True
+
+        return self._post('/hosts/%s/action' % host_id, data=data)

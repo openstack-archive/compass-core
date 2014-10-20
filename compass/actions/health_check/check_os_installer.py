@@ -26,18 +26,18 @@ class OsInstallerCheck(base.BaseCheck):
 
     def run(self):
         """do health check."""
-        installer = self.config.OS_INSTALLER
-        method_name = 'self.' + installer + '_check()'
+        method_name = 'self.' + self.os_installer['name'] + '_check()'
         return eval(method_name)
 
     def cobbler_check(self):
         """Runs cobbler check from xmlrpc client."""
         try:
             remote = xmlrpclib.Server(
-                self.config.COBBLER_INSTALLER_URL,
+                self.os_installer['cobbler_url'],
                 allow_none=True)
+            credentials = self.os_installer['credentials']
             token = remote.login(
-                *self.config.COBBLER_INSTALLER_TOKEN)
+                credentials['username'], credentials['password'])
         except Exception:
             self.code = 0
             self.messages.append(

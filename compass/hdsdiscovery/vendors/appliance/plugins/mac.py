@@ -14,6 +14,11 @@
 
 """Compass Appliance Mac module."""
 from compass.hdsdiscovery import base
+from compass.utils import setting_wrapper as setting
+from compass.utils import util
+
+import logging
+
 
 CLASS_NAME = "Mac"
 
@@ -31,15 +36,8 @@ class Mac(base.BaseSnmpMacPlugin):
             Dummy scan function for compass appliance.
             Returns fixed mac addresses.
         """
-        mac_list = [
-            {
-                'port': 1,
-                'mac': '00:01:02:03:04:05',
-                'vlan': 0,
-            },
-            {
-                'port': 2,
-                'mac': '06:07:08:09:0a:0b',
-                'vlan': 0,
-            }]
+        mac_lists = util.load_configs(setting.MAC_LIST_DIR)
+        mac_list = None
+        for item in mac_lists:
+            mac_list = item['MAC_LIST']
         return mac_list

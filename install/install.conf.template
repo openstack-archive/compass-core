@@ -1,6 +1,6 @@
-#####################################################
-# Config File for Compass Installer Used by Testing #
-#####################################################
+#####################################
+# Config File for Compass Installer #
+#####################################
 # REPO_URL indicates the source where to download compass-web and compass-adapters from
 #export REPO_URL=https://review.openstack.org
 
@@ -12,17 +12,18 @@ export PACKAGE_INSTALLER=chef
 
 # service NIC (A bridge "installation" is used for jenkins CI)
 export NIC=installation
+
+# default local repo config is "n"
+export LOCAL_REPO=${LOCAL_REPO:-"y"}
  
 # DHCP config
-# SUBNET variable specifies the subnet for DHCP server. Example: 192.168.0.0/16
-export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
-export ipaddr=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
-export SUBNET=$(ipcalc $ipaddr $netmask -n |cut -f 2 -d '=')/$(ipcalc $ipaddr $netmask -p |cut -f 2 -d '=')
+export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+export NETMASK=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
 # DHCP option router  address(Default is your management interface IP address )"
 export OPTION_ROUTER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 # The IP range for DHCP clients (Default: local subnet start from 100 to 254)
-export IP_START=`echo $ipaddr |cut -d. -f'1 2 3'`.128
-export IP_END=`echo $ipaddr |cut -d. -f'1 2 3'`.254
+export IP_START=`echo $IPADDR |cut -d. -f'1 2 3'`.128
+export IP_END=`echo $IPADDR |cut -d. -f'1 2 3'`.254
 # TFTP server's IP address(Default: Management Interface/eth0 IP)
 export NEXTSERVER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 # the domains covered by nameserver
@@ -33,12 +34,6 @@ export ADAPTERS_SOURCE='http://git.openstack.org/stackforge/compass-adapters'
 # set the default cobbler user "cobbler" password, if not set, the default will be cobbler/cobbler
 export CBLR_USER=cobbler
 export CBLR_PASSWD=cobbler
-export MYSQL_USER=root
-export MYSQL_OLD_PASSWORD=root
-export MYSQL_PASSWORD=root
-export MYSQL_SERVER='127.0.0.1'
-export MYSQL_PORT=3306
-export MYSQL_DATABASE=db
 
 # IMAGE_SOURCE is where you host your CentOS image
 export IMAGE_TYPE=${IMAGE_TYPE:-"CentOS"}
@@ -61,11 +56,12 @@ export CENTOS_IMAGE_SOURCE=${CENTOS_IMAGE_SOURCE:-"http://mirror.rackspace.com/$
 export UBUNTU_IMAGE_TYPE=${UBUNTU_IMAGE_TYPE:-"Ubuntu"}
 export UBUNTU_IMAGE_VERSION_MAJOR=${UBUNTU_IMAGE_VERSION_MAJOR:-"12"}
 export UBUNTU_IMAGE_VERSION_MINOR=${UBUNTU_IMAGE_VERSION_MINOR:-"04"}
+export UBUNTU_IMAGE_PATCH_VERSION=${UBUNTU_IMAGE_PATCH_VERSION:=".4"}
 export UBUNTU_IMAGE_VERSION=${UBUNTU_IMAGE_VERSION:-"${UBUNTU_IMAGE_VERSION_MAJOR}.${UBUNTU_IMAGE_VERSION_MINOR}"}
 export UBUNTU_IMAGE_NAME=${UBUNTU_IMAGE_NAME:-"${UBUNTU_IMAGE_TYPE}-${UBUNTU_IMAGE_VERSION}"}
 export UBUNTU_IMAGE_ARCH=${UBUNTU_IMAGE_ARCH:-"x86_64"}
 export UBUNTU_IMAGE_ARCH_OTHER=${UBUNTU_IMAGE_ARCH_OTHER:-"amd64"}
-export UBUNTU_IMAGE_SOURCE=${UBUNTU_IMAGE_SOURCE:-"http://releases.ubuntu.com/${UBUNTU_IMAGE_VERSION}/${UBUNTU_IMAGE_TYPE,,}-12.04.4-server-${UBUNTU_IMAGE_ARCH_OTHER}.iso"}
+export UBUNTU_IMAGE_SOURCE=${UBUNTU_IMAGE_SOURCE:-"http://releases.ubuntu.com/${UBUNTU_IMAGE_VERSION}/${UBUNTU_IMAGE_TYPE,,}-${UBUNTU_IMAGE_VERSION}${UBUNTU_IMAGE_PATCH_VERSION}-server-${UBUNTU_IMAGE_ARCH_OTHER}.iso"}
 
 export COBBLER_PASSWORD=${COBBLER_PASSWORD:-"cobbler"}
 
@@ -88,8 +84,8 @@ export SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export COMPASSDIR=${SCRIPT_DIR}/..
 
 # Set test script variables
-export NAMESERVERS=$ipaddr
-export NTP_SERVER=$ipaddr
-export GATEWAY=$ipaddr
-export PROXY=http://$ipaddr:3128
+# export NAMESERVERS=$IPADDR
+# export NTP_SERVER=$IPADDR
+# export GATEWAY=$IPADDR
+# export PROXY=http://$IPADDR:3128
 export TESTMODE=${TESTMODE:-"True"}

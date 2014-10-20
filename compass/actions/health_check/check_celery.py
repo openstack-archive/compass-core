@@ -80,7 +80,7 @@ class CeleryCheck(base.BaseCheck):
         """Checks if Celery backend is running and configured properly."""
 
         print "Checking Celery Backend......",
-        if 'celeryd' not in commands.getoutput('ps -ef'):
+        if 'celery worker' not in commands.getoutput('ps -ef'):
             self._set_status(0, "[%s]Error: celery is not running" % self.NAME)
             return True
 
@@ -94,7 +94,11 @@ class CeleryCheck(base.BaseCheck):
         try:
             insp = inspect()
             celery_stats = inspect.stats(insp)
-            print celery_stats,
+            if not celery_stats:
+                self._set_status(
+                    0,
+                    "[%s]Error: No running Celery workers were found."
+                    % self.NAME)
         except IOError as error:
             self._set_status(
                 0,

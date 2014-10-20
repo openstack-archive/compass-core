@@ -18,12 +18,23 @@
 import functools
 import lockfile
 import logging
+import os
+import sys
+
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(current_dir)
+
+
+import switch_virtualenv
 
 from multiprocessing import Pool
 
 from compass.actions import poll_switch
 from compass.actions import util
-from compass.db import database
+from compass.db.api import database
+from compass.db.api import switch as switch_api
+from compass.db.api import user as user_api
 from compass.tasks.client import celery
 from compass.utils import daemonize
 from compass.utils import flags
@@ -37,47 +48,58 @@ flags.add('switch_ips',
 flags.add_bool('async',
                help='ryn in async mode',
                default=True)
-flags.add('thread_pool_size',
+flags.add('thread_pool_size', type='int',
           help='thread pool size when run in noasync mode',
-          default='4')
-flags.add('run_interval',
+          default=4)
+flags.add('run_interval', type='int',
           help='run interval in seconds',
           default=setting.POLLSWITCH_INTERVAL)
 
 
 def pollswitches(switch_ips):
     """poll switch."""
-    poll_switch_ips = []
-    with database.session():
-        poll_switch_ips = util.update_switch_ips(switch_ips)
+    user = user_api.get_user_object(setting.COMPASS_ADMIN_EMAIL)
+    poll_switches = []
+    all_switches = dict([
+        (switch['ip'], switch['credentials'])
+        for switch in switch_api.list_switches(user)
+    ])
+    if switch_ips:
+        poll_switches = dict([
+            (switch_ip, all_switches[switch_ip])
+            for switch_ip in switch_ips
+            if switch_ip in all_switches
+        ])
+    else:
+        poll_switches = all_switches
 
     if flags.OPTIONS.async:
-        for poll_switch_ip in poll_switch_ips:
+        for switch_ip, switch_credentials in poll_switches.items():
             celery.send_task(
                 'compass.tasks.pollswitch',
-                (poll_switch_ip,)
+                (user.email, switch_ip, switch_credentials)
             )
 
     else:
         try:
-            pool = Pool(processes=int(flags.OPTIONS.thread_pool_size))
-            for poll_switch_ip in poll_switch_ips:
+            pool = Pool(processes=flags.OPTIONS.thread_pool_size)
+            for switch_ip, switch_credentials in poll_switches.items():
                 pool.apply_async(
                     poll_switch.poll_switch,
-                    (poll_switch_ip,)
+                    (user.email, switch_ip, switch_credentials)
                 )
-
             pool.close()
             pool.join()
         except Exception as error:
             logging.error('failed to poll switches %s',
-                          poll_switch_ips)
+                          poll_switches)
             logging.exception(error)
 
 
 if __name__ == '__main__':
     flags.init()
     logsetting.init()
+    database.init()
     logging.info('run poll_switch')
     daemonize.daemonize(
         functools.partial(

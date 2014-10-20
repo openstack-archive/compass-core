@@ -1,0 +1,407 @@
+#set ha_vip = $getVar('ha_vip')
+#set ha_proxy_role = $getVar('os_ha', None)
+#set ha_proxy_nic = $ha_proxy_role.management.interface
+
+#set controller_role = $get_role('os_compute_controller', $getVar('os_ceph_controller', None))
+
+## Contoller node management IP/interface
+#set controller_ip = $controller_role.management.ip
+#set controller_nic = $controller_role.management.interface
+
+## Compute node management IP/interface
+#set compute_role = $getVar('os_compute_worker', None)
+#set compute_nic = $compute_role.management.interface
+
+## Network server/worker node IP/interface
+#set network_server_role = $get_role('os_network_server', [$controller_role])
+#set network_worker_role = $get_role('os_network_worker', [$compute_role])
+
+#set network_server_ip = $network_server_role.management.ip
+#set network_server_nic = $network_server_role.management.interface
+
+## Network worker node management IP/interface
+#set network_worker_ip = $network_worker_role.management.ip
+#set network_worker_nic = $network_worker_role.management.interface
+#set network_worker_public_nic = $network_worker_role.external.interface
+#set network_worker_tenant_nic = $network_worker_role.tenant.interface
+
+## Database node management IP
+#set db_role = $get_role('os_ops_database', $controller_role)
+#set db_ip = $db_role.management.ip
+#set db_nic = $db_role.management.interface
+
+## Message queue node management IP/interface
+#set msg_queue_role = $get_role('os_ops_messaging', $controller_role)
+#set msg_queue_ip = $msg_queue_role.management.ip
+
+## Identity (keystone) node IP/interface
+#set identity_role = $get_role('os_identity', $controller_role)
+#set identity_ip = $identity_role.management.ip
+#set identity_nic = $identity_role.management.interface
+
+## Glance node management IP/interface
+#set glance_role = $get_role('os_ceph_image', $controller_role)
+#set glance_ip = $glance_role.management.ip
+#set glance_nic = $glance_role.management.interface
+
+## Cinder node management IP/interface
+#set cinder_role = $get_role('os_block_storage_controller', $controller_role)
+#set cinder_controller_ip = $cinder_role.management.ip
+#set cinder_controller_nic = $cinder_role.management.interface
+
+## Dashboard node management IP/interface
+#set dash_role = $get_role('os_dashboard', $controller_role)
+#set dash_ip = $dash_role.management.ip
+
+#def get_role($role_name, $default_roles=None)
+    #set target_role = $getVar($role_name, None)
+    #if $target_role is None and $default_roles is not None
+        #if isinstance($default_roles, list)
+            #for $role in $default_roles
+                #if $role is not None
+                    #set target_role = $role
+                    #break
+                #end if
+            #end for
+        #else
+            #set target_role = $default_roles
+        #end if
+    #end if
+    #return $target_role
+#end def
+{
+  "name": "testing",
+  "description": "Environment used in Ceph and Openstack Icehouse",
+  "cookbook_versions": {
+  },
+  "json_class": "Chef::Environment",
+  "chef_type": "environment",
+  "default_attributes": {
+    "ceph": {
+      "keystone environment": "openstack-ceph",
+      "radosgw domain": "test-ceph1",
+      "is_keystone_integration": true,
+      "config": {
+        "fsid": "82850ab3-f2b7-4eed-b6c2-29178a005750",
+        "global": {
+          "public network": "10.145.88.0/23",
+          "cluster network": "172.16.100.0/24",
+          "osd pool default pg num": "512",
+          "osd pool default pgp num": "512",
+          "osd pool default size": "2",
+          "max open files": "131072"
+        },
+        "osd": {
+          "osd journal size": "10000",
+          "filestore xattr use omap": true,
+          "osd mkfs type": "xfs",
+          "osd mount options xfs": "rw,noatime,inode64,logbsize=256k,delaylog",
+          "osd mkfs options xfs": "-f -i size=2048",
+          "filestore max inline xattr size": "254",
+          "filestore max inline xattrs": "6",
+          "osd_op_threads": "20",
+          "filestore_queue_max_ops": "500",
+          "filestore_queue_committing_max_ops": "5000",
+          "journal_max_write_entries": "1000",
+          "journal_queue_max_ops": "3000",
+          "objecter_inflight_ops": "10240",
+          "filestore_queue_max_bytes": "1048576000",
+          "filestore_queue_committing_max_bytes": "1048576000",
+          "journal_max_write_bytes": "1048576000",
+          "journal_queue_max_bytes": "1048576000",
+          "ms_dispatch_throttle_bytes": "1048576000",
+          "objecter_infilght_op_bytes": "1048576000",
+          "filestore_max_sync_interval": "10",
+          "filestore_flusher": "false",
+          "filestore_flush_min": "0",
+          "filestore_sync_flush": true
+        }
+      }
+    },
+    "haproxy": {
+      "incoming_address": "$ha_vip"
+    },
+    "keepalived": {
+      "vip": {
+        "ipaddress": "$ha_vip",
+        "interface": "$ha_proxy_nic"
+      }
+    },
+    "mysql": {
+      "server_root_password": "test",
+      "server_debian_password": "root",
+      "server_repl_password": "root",
+      "allow_remote_root": true,
+      "root_network_acl": "%"
+    },
+    "collectd": {
+      "server": {
+        "host": "metrics",
+        "port": "4242",
+        "protocol": "tcp"
+      }
+    },
+    "openstack": {
+      "auth": {
+        "validate_certs": false
+      },
+      "block-storage": {
+        "syslog": {
+          "use": false
+        },
+        "api": {
+          "ratelimit": "False"
+        },
+        "debug": true,
+        "volume": {
+          "driver": "cinder.volume.drivers.rbd.RBDDriver"
+        },
+        "rbd_pool": "volumes",
+        "rbd_secret_uuid": "8b8441cc-949c-43ce-8bbc-f50e3bfeeaee",
+        "rbd_ceph_conf": "/etc/ceph/ceph.conf",
+        "rbd_flatten_volume_from_snapshot": false,
+        "rbd_max_clone_depth": 5,
+        "glance_api_version": 2
+      },
+      "dashboard": {
+        "use_ssl": "false"
+      },
+      "compute": {
+        "syslog": {
+          "use": false
+        },
+        "libvirt": {
+          "bind_interface": "$compute_nic",
+          "images_type": "rbd",
+          "images_rbd_pool": "vms"
+        },
+        "novnc_proxy": {
+          "bind_interface": "$compute_nic"
+        },
+        "xvpvnc_proxy": {
+          "bind_interface": "$compute_nic"
+        },
+        "ratelimit": {
+          "api": {
+            "enabled": false
+          },
+          "volume": {
+            "enabled": false
+          }
+        },
+        "network": {
+          "service_type": "neutron"
+        }
+      },
+      "network": {
+        "verbose": "True",
+        "debug": "True",
+        "service_plugins": [
+          "router"
+        ],
+        "ml2": {
+          "type_drivers": "gre",
+          "tenant_network_types": "gre",
+          "tunnel_id_ranges": "1:1000",
+          "enable_security_group": "True"
+        },
+        "openvswitch": {
+          "tenant_network_type": "gre",
+          "enable_tunneling": "True",
+          "tunnel_id_ranges": "1:1000",
+          "bind_interface": "$network_worker_tenant_nic"
+        },
+        "l3": {
+            "external_network_bridge_interface": "$network_worker_public_nic"
+        }
+      },
+      "db": {
+        "bind_interface": "$db_nic",
+        "compute": {
+          "host": "$db_ip"
+        },
+        "identity": {
+          "host": "$db_ip"
+        },
+        "image": {
+          "host": "$db_ip"
+        },
+        "network": {
+          "host": "$db_ip"
+        },
+        "volume": {
+          "host": "$db_ip"
+        },
+        "dashboard": {
+          "host": "$db_ip"
+        }
+      },
+      "developer_mode": true,
+      "endpoints": {
+        "db": {
+          "host": "$db_ip"
+        },
+        "mq": {
+          "host": "$msg_queue_ip"
+        },
+        "compute-api": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "8774",
+          "path": "/v2/%(tenant_id)s"
+        },
+        "compute-api-bind": {
+          "bind_interface": "$controller_nic"
+        },
+        "compute-ec2-admin": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "8773",
+          "path": "/services/Admin"
+        },
+        "compute-ec2-api": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "8773",
+          "path": "/services/Cloud"
+        },
+        "compute-novnc": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "6080",
+          "path": "/vnc_auto.html"
+        },
+        "compute-novnc-bind": {
+          "bind_interface": "$controller_nic"
+        },
+        "compute-vnc-bind": {
+          "bind_interface" : "$compute_nic"
+        },
+        "vnc_bind": {
+          "bind_interface": "$controller_nic"
+        },
+        "image-api": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "9292",
+          "path": "/v2"
+        },
+        "image-api-bind": {
+          "bind_interface": "$glance_nic"
+        },
+        "image-registry": {
+           "bind_interface": "$glance_nic"
+        },
+        "image-registry-bind": {
+          "bind_interface": "$glance_nic"
+        },
+        "identity-bind": {
+          "bind_interface": "$identity_nic"
+        },
+        "identity-api": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "5000",
+          "path": "/v2.0"
+        },
+        "identity-admin": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "35357",
+          "path": "/v2.0"
+        },
+        "block-storage-api": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "8776",
+          "path": "/v1/%(tenant_id)s"
+        },
+        "block-storage-api-bind": {
+          "bind_interface": "$cinder_controller_nic"
+        },
+        "network-api": {
+          "host": "$ha_vip",
+          "scheme": "http",
+          "port": "9696",
+          "path": ""
+        },
+        "network-api-bind": {
+          "bind_interface": "$network_server_nic"
+        }
+      },
+      "identity": {
+        "admin_user": "admin",
+        "bind_interface": "$identity_nic",
+        "catalog": {
+          "backend": "sql"
+        },
+        "debug": true,
+        "roles": [
+          "admin",
+          "member"
+        ],
+        "syslog": {
+          "use": false
+        },
+        "tenants": [
+          "admin",
+          "service",
+          "demo"
+        ],
+        "token": {
+          "backend": "sql"
+        },
+        "users": {
+          "admin": {
+            "password": "admin",
+            "default_tenant": "admin",
+            "roles": {
+              "admin": [
+                "admin"
+              ]
+            }
+          },
+          "demo": {
+            "password": "demo",
+            "default_tenant": "demo",
+            "roles": {
+              "member": [
+                "demo"
+              ]
+            }
+          }
+        }
+      },
+      "image": {
+        "api": {
+          "bind_interface": "$glance_nic",
+          "default_store": "rbd"
+        },
+        "debug": true,
+        "registry": {
+          "bind_interface": "$glance_nic"
+        },
+        "syslog": {
+          "use": false
+        },
+        "upload_image": {
+          "cirros": "http://download.cirros-cloud.net/0.3.2/cirros-0.3.2-x86_64-disk.img"
+        },
+        "upload_images": [
+          "cirros"
+        ]
+      },
+      "memcached_servers": [
+        "$identity_ip:11211"
+      ],
+      "mq": {
+        "user": "guest",
+        "password": "test",
+        "vhost": "/nova",
+        "network": {
+          "service_type": "rabbitmq"
+        }
+      }
+    }
+  }
+}

@@ -12,11 +12,7 @@ function mac_address() {
 }
 
 function tear_down_machines() {
-    if [[ -z $NO_TEAR_DOWN ]] || [[ $PRE_CLEAN == true ]]; then
-        virtmachines=$(virsh list | awk '{print$2}'| tail -n +3)
-    else
-        virtmachines=
-    fi
+    virtmachines=$(virsh list --name)
     for virtmachine in $virtmachines; do
         echo "destroy $virtmachine"
         virsh destroy $virtmachine
@@ -25,11 +21,7 @@ function tear_down_machines() {
             exit 1
         fi
     done
-    if [[ -z $NO_TEAR_DOWN ]] || [[ $PRE_CLEAN == true ]]; then
-        virtmachines=$(virsh list --all | awk '{print$2}'| tail -n +3)
-    else
-        virtmachines=
-    fi
+    virtmachines=$(virsh list --all --name)
     for virtmachine in $virtmachines; do
         echo "undefine $virtmachine"
         virsh undefine $virtmachine
@@ -46,33 +38,25 @@ source ${REGTEST_DIR}/${REGTEST_CONF}
 source `which virtualenvwrapper.sh`
 workon compass-core
 
-declare -A roles_list
 machines=''
 
-for roles in ${HOST_ROLES//;/ }; do
-    roles_list[${#roles_list[@]}]=${roles}
-done
-echo "role list: ${roles_list[@]}"
-roles_offset=0
-host_roles_list=''
-
-PRE_CLEAN=true tear_down_machines
+tear_down_machines
 
 echo "setup $VIRT_NUM virt machines"
 for i in `seq $VIRT_NUM`; do
-    if [[ ! -e /home/pxe${i}.raw ]]; then
+    if [[ ! -e /tmp/pxe${i}.raw ]]; then
         echo "create image for instance pxe$i"
-        qemu-img create -f raw /home/pxe${i}.raw ${VIRT_DISK}
+        qemu-img create -f raw /tmp/pxe${i}.raw ${VIRT_DISK}
         if [[ "$?" != "0" ]]; then
-            echo "create image /home/pxe${i}.raw failed"
+            echo "create image /tmp/pxe${i}.raw failed"
             exit 1
         fi 
     else
         echo "recreate image for instance pxe$i"
-        rm -rf /home/pxe${i}.raw
-        qemu-img create -f raw /home/pxe${i}.raw ${VIRT_DISK}
+        rm -rf /tmp/pxe${i}.raw
+        qemu-img create -f raw /tmp/pxe${i}.raw ${VIRT_DISK}
         if [[ "$?" != "0" ]]; then
-            echo "create image /home/pxe${i}.raw failed"
+            echo "create image /tmp/pxe${i}.raw failed"
             exit 1
         fi 
     fi
@@ -84,7 +68,7 @@ for i in `seq $VIRT_NUM`; do
         --network=bridge:installation \
         --network=bridge:installation \
         --name pxe${i} --ram=${VIRT_MEM} \
-        --disk /home/pxe${i}.raw,format=raw \
+        --disk /tmp/pxe${i}.raw,format=raw \
         --vcpus=${VIRT_CPUS} \
         --graphics vnc,listen=0.0.0.0 \
         --noautoconsole \
@@ -120,23 +104,9 @@ for i in `seq $VIRT_NUM`; do
     else
         machines="${machines},${mac}"
     fi
-
-    if [ $roles_offset -lt ${#roles_list[@]} ]; then
-        host_roles="host${i}=${roles_list[$roles_offset]}"
-        roles_offset=$(expr $roles_offset + 1)
-    else
-        host_roles="host${i}="
-    fi
-
-    if [ -z "$host_roles_list" ]; then
-        host_roles_list="$host_roles"
-    else
-        host_roles_list="${host_roles_list};$host_roles"
-    fi
 done
 
 echo "machines: $machines"
-echo "host roles: $host_roles_list"
 virsh list
 
 # Avoid infinite relative symbolic links
@@ -146,14 +116,23 @@ fi
 if [[ ! -L compass_logs ]]; then
     ln -s /var/log/compass compass_logs
 fi
-if [[ ! -e compass_logs/squid_access.log ]]; then
-    ln -s /var/log/squid/access.log compass_logs/squid_access.log
+if [[ ! -L chef_logs ]]; then
+    ln -s /var/log/chef chef_logs
 fi
 CLIENT_SCRIPT=/opt/compass/bin/client.py
-/opt/compass/bin/refresh.sh
-if [[ "$?" != "0" ]]; then
-    echo "failed to refresh"
-    exit 1 
+if [[ "$CLEAN_OLD_DATA" == "0" || "$CLEAN_OLD_DATA" == "false" ]]; then
+    echo "keep old deployment data"
+else
+    rm -rf /var/log/compass/*
+    /opt/compass/bin/refresh.sh
+    if [[ "$?" != "0" ]]; then
+        echo "failed to refresh"
+        exit 1
+    fi
+    /opt/compass/bin/clean_nodes.sh
+    /opt/compass/bin/clean_clients.sh
+    /opt/compass/bin/clean_environments.sh
+    /opt/compass/bin/remove_systems.sh
 fi
 
 if [[ "$USE_POLL_SWITCHES" == "0" || "$USE_POLL_SWITCHES" == "false" ]]; then
@@ -164,7 +143,7 @@ if [[ "$USE_POLL_SWITCHES" == "0" || "$USE_POLL_SWITCHES" == "false" ]]; then
         echo "switch,${switch_ip},huawei,${SWITCH_VERSION},${SWITCH_COMMUNITY},under_monitoring" >> ${TMP_SWITCH_MACHINE_FILE}
         switch_port=1
         for mac in ${machines//,/ }; do
-            echo "machine,${switch_ip},${switch_port},1,${mac}" >> ${TMP_SWITCH_MACHINE_FILE}
+            echo "machine,${switch_ip},${switch_port},${mac}" >> ${TMP_SWITCH_MACHINE_FILE}
             let switch_port+=1
         done
         break
@@ -173,11 +152,15 @@ if [[ "$USE_POLL_SWITCHES" == "0" || "$USE_POLL_SWITCHES" == "false" ]]; then
     cat $TMP_SWITCH_MACHINE_FILE
     echo "======================================================="
     /opt/compass/bin/manage_db.py set_switch_machines --switch_machines_file ${TMP_SWITCH_MACHINE_FILE}
+    if [[ "$?" != "0" ]]; then
+        echo "failed to set switch machines"
+        exit 1
+    fi
 else
     POLL_SWITCHES_FLAG="poll_switches"
 fi
 
-${CLIENT_SCRIPT} --logfile= --loglevel=info --logdir= --adapter_os_name="${ADAPTER_OS_NAME_PATTERN}" --adapter_target_system="${ADAPTER_TARGET_SYSTEM_NAME}" --networking="${NETWORKING}" --partitions="${PARTITION}" --credentials="${SECURITY}" --host_roles="${host_roles_list}" --dashboard_role="${DASHBOARD_ROLE}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG}
+${CLIENT_SCRIPT} --logfile= --loglevel=debug --logdir= --compass_server="${COMPASS_SERVER_URL}" --compass_user_email="${COMPASS_USER_EMAIL}" --compass_user_password="${COMPASS_USER_PASSWORD}" --cluster_name="${CLUSTER_NAME}" --language="${LANGUAGE}" --timezone="${TIMEZONE}" --hostnames="${HOSTNAMES}" --partitions="${PARTITIONS}" --subnets="${SUBNETS}" --adapter_os_pattern="${ADAPTER_OS_PATTERN}" --adapter_name="${ADAPTER_NAME}" --adapter_target_system_pattern="${ADAPTER_TARGET_SYSTEM_PATTERN}" --adapter_flavor_pattern="${ADAPTER_FLAVOR_PATTERN}" --http_proxy="${PROXY}" --https_proxy="${PROXY}" --no_proxy="${IGNORE_PROXY}" --ntp_server="${NTP_SERVER}" --dns_servers="${NAMESERVERS}" --domain="${DOMAIN}" --search_path="${SEARCH_PATH}" --default_gateway="${GATEWAY}" --server_credential="${SERVER_CREDENTIAL}" --local_repo_url="${LOCAL_REPO_URL}" --os_config_json_file="${OS_CONFIG_FILENAME}" --service_credentials="${SERVICE_CREDENTIALS}" --console_credentials="${CONSOLE_CREDENTIALS}" --host_networks="${HOST_NETWORKS}" --network_mapping="${NETWORK_MAPPING}" --package_config_json_file="${PACKAGE_CONFIG_FILENAME}" --host_roles="${HOST_ROLES}" --default_roles="${DEFAULT_ROLES}" --switch_ips="${SWITCH_IPS}" --machines="${machines}" --switch_credential="${SWITCH_CREDENTIAL}" --deployment_timeout="${DEPLOYMENT_TIMEOUT}" --${POLL_SWITCHES_FLAG} --dashboard_url="${DASHBOARD_URL}"
 rc=$?
 deactivate
 # Tear down machines after the test
@@ -186,12 +169,12 @@ if [[ $rc != 0 ]]; then
     echo "deployment failed"
     exit 1
 fi
-if [[ $tempest == true ]]; then
-    ./tempest_run.sh
-    if [[ $? != 0 ]]; then
-        tear_down_machines
-        echo "tempest failed"
-        exit 1
-    fi
-    tear_down_machines 
-fi
+#if [[ $tempest == true ]]; then
+#    ./tempest_run.sh
+#    if [[ $? != 0 ]]; then
+#        tear_down_machines
+#        echo "tempest failed"
+#        exit 1
+#    fi
+#    tear_down_machines 
+#fi

@@ -1,10 +1,11 @@
+#!/usr/bin/python
 # Copyright 2014 Huawei Technologies Co. Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,1592 +14,2367 @@
 # limitations under the License.
 
 """Define all the RestfulAPI entry points."""
+
+import datetime
+import functools
 import logging
 import netaddr
-import re
+import requests
 import simplejson as json
-import sys
-
-from flask import flash
-from flask import redirect
-from flask import render_template
-from flask import request
-from flask import session as app_session
-from flask import url_for
-
-from flask.ext.restful import Resource
-from sqlalchemy.sql import and_
-from sqlalchemy.sql import or_
-
-from compass.api import app
-from compass.api import auth
-from compass.api import errors
-from compass.api import login_manager
-from compass.api import util
-from compass.db import database
-from compass.db.model import Adapter
-from compass.db.model import Cluster as ModelCluster
-from compass.db.model import ClusterHost as ModelClusterHost
-from compass.db.model import ClusterState
-from compass.db.model import HostState
-from compass.db.model import Machine as ModelMachine
-from compass.db.model import Role
-from compass.db.model import Switch as ModelSwitch
-from compass.db.model import SwitchConfig
-from compass.db.model import User as ModelUser
-from compass.tasks.client import celery
 
 from flask.ext.login import current_user
 from flask.ext.login import login_required
 from flask.ext.login import login_user
 from flask.ext.login import logout_user
+from flask import request
 
-from flask.ext.wtf import Form
-from wtforms.fields import BooleanField
-from wtforms.fields import PasswordField
-from wtforms.fields import TextField
-from wtforms.validators import DataRequired
+from compass.api import app
+from compass.api import auth_handler
+from compass.api import exception_handler
+from compass.api import utils
+from compass.db.api import adapter_holder as adapter_api
+from compass.db.api import cluster as cluster_api
+from compass.db.api import database
+from compass.db.api import host as host_api
+from compass.db.api import machine as machine_api
+from compass.db.api import metadata_holder as metadata_api
+from compass.db.api import network as network_api
+from compass.db.api import permission as permission_api
+from compass.db.api import switch as switch_api
+from compass.db.api import user as user_api
+from compass.db.api import user_log as user_log_api
+from compass.utils import flags
+from compass.utils import logsetting
+from compass.utils import setting_wrapper as setting
+from compass.utils import util
 
 
-@login_manager.header_loader
-def load_user_from_token(token):
-    """Return a user object from token."""
-    duration = app.config['REMEMBER_COOKIE_DURATION']
-    max_age = 0
-    if sys.version_info > (2, 6):
-        max_age = duration.total_seconds()
+def log_user_action(func):
+    @functools.wraps(func)
+    def decorated_api(*args, **kwargs):
+        user_log_api.log_user_action(current_user.id, request.path)
+        return func(*args, **kwargs)
+    return decorated_api
+
+
+def _clean_data(data, keys):
+    for key in keys:
+        if key in data:
+            del data[key]
+
+
+def _replace_data(data, key_mapping):
+    for key, replaced_key in key_mapping.items():
+        if key in data:
+            data[replaced_key] = data[key]
+            del data[key]
+
+
+def _get_data(data, key):
+    if key in data:
+        if isinstance(data[key], list):
+            if data[key]:
+                if len(data[key]) == 1:
+                    return data[key][0]
+                else:
+                    raise exception_handler.BadRequest(
+                        '%s declared multi times %s in request' % (
+                            key, data[key]
+                        )
+                    )
+            else:
+                return None
+        else:
+            return data[key]
     else:
-        max_age = (duration.microseconds + (
-            duration.seconds + duration.days * 24 * 3600) * 1e6) / 1e6
-
-    user_id = auth.get_user_info_from_token(token, max_age)
-    if not user_id:
-        logging.info("No user can be found from the token!")
         return None
 
-    user = User.query.filter_by(id=user_id)
-    return user
+
+def _get_data_list(data, key):
+    if key in data:
+        if isinstance(data[key], list):
+            return data[key]
+        else:
+            return [data[key]]
+    else:
+        return []
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    """Load user from user ID."""
-    return ModelUser.query.get(user_id)
+def _get_request_data():
+    if request.data:
+        try:
+            return json.loads(request.data)
+        except Exception:
+            raise exception_handler.BadRequest(
+                'request data is not json formatted: %s' % request.data
+            )
+    else:
+        return {}
 
 
-@app.route('/restricted')
-def restricted():
-    return render_template('restricted.jinja')
+def _get_request_data_as_list():
+    if request.data:
+        try:
+            return json.loads(request.data)
+        except Exception:
+            raise exception_handler.BadRequest(
+                'request data is not json formatted: %s' % request.data
+            )
+    else:
+        return []
 
 
-@app.errorhandler(403)
-def forbidden_403(exception):
-    """Unathenticated user page."""
-    return render_template('forbidden.jinja'), 403
+def _bool_converter(value):
+    if not value:
+        return True
+    if value in ['False', 'false', '0']:
+        return False
+    return True
 
 
-@app.route('/logout')
+def _int_converter(value):
+    try:
+        return int(value)
+    except Exception:
+        raise exception_handler.BadRequest(
+            '%r type is not int' % value
+        )
+
+
+def _get_request_args(**kwargs):
+    args = dict(request.args)
+    logging.debug('origin request args: %s', args)
+    for key, value in args.items():
+        if key in kwargs:
+            converter = kwargs[key]
+            if isinstance(value, list):
+                args[key] = [converter(item) for item in value]
+            else:
+                args[key] = converter(value)
+    logging.debug('request args: %s', args)
+    return args
+
+
+def _group_data_action(data, **data_callbacks):
+    if not data:
+        raise exception_handler.BadRequest(
+            'no action to take'
+        )
+    unsupported_keys = list(set(data) - set(data_callbacks))
+    if unsupported_keys:
+        raise exception_handler.BadMethod(
+            'unsupported actions: %s' % unsupported_keys
+        )
+    callback_datas = {}
+    for data_key, data_value in data.items():
+        callback = data_callbacks[data_key]
+        callback_datas.setdefault(id(callback), {})[data_key] = data_value
+    if len(callback_datas) > 1:
+        raise exception_handler.BadRequest(
+            'multi actions are not supported'
+        )
+    callback_ids = {}
+    for data_key, data_callback in data_callbacks.items():
+        callback_ids[id(data_callback)] = data_callback
+    for callback_id, callback_data in callback_datas.items():
+        return callback_ids[callback_id](**callback_data)
+
+
+def _wrap_response(func, response_code):
+    def wrapped_func(*args, **kwargs):
+        return utils.make_json_response(
+            response_code,
+            func(*args, **kwargs)
+        )
+    return wrapped_func
+
+
+def _reformat_host_networks(networks):
+    network_mapping = {}
+    for network in networks:
+        if 'interface' in network:
+            network_mapping[network['interface']] = network
+    return network_mapping
+
+
+def _reformat_host(host):
+    if isinstance(host, list):
+        return [_reformat_host(item) for item in host]
+    if 'networks' in host:
+        host['networks'] = _reformat_host_networks(host['networks'])
+    return host
+
+
+def _login(use_cookie):
+    """User login helper function."""
+    data = _get_request_data()
+    if 'email' not in data or 'password' not in data:
+        raise exception_handler.BadRequest(
+            'missing email or password in data'
+        )
+    if 'expire_timestamp' not in data:
+        expire_timestamp = (
+            datetime.datetime.now() + app.config['REMEMBER_COOKIE_DURATION']
+        )
+    else:
+        expire_timestamp = util.parse_datetime(
+            data['expire_timestamp'], exception_handler.BadRequest
+        )
+
+    data['expire_timestamp'] = expire_timestamp
+    user = auth_handler.authenticate_user(**data)
+    if not login_user(user, remember=data.get('remember', False)):
+        raise exception_handler.UserDisabled('failed to login: %s' % user)
+
+    user_log_api.log_user_action(user.id, request.path)
+    response_data = user_api.record_user_token(
+        user, user.token, user.expire_timestamp
+    )
+    return utils.make_json_response(200, response_data)
+
+
+@app.route('/users/token', methods=['POST'])
+def get_token():
+    """Get token from email and password after user authentication."""
+    return _login(False)
+
+
+@app.route("/users/login", methods=['POST'])
+def login():
+    """User login."""
+    return _login(True)
+
+
+@app.route('/users/logout', methods=['POST'])
 @login_required
 def logout():
     """User logout."""
+    user_log_api.log_user_action(current_user.id, request.path)
+    response_data = user_api.clean_user_token(
+        current_user, current_user.token
+    )
     logout_user()
-    flash('You have logged out!')
-    return redirect(url_for('index'))
+    return utils.make_json_response(200, response_data)
 
 
-@app.route('/')
-def index():
-    """Index page."""
-    return render_template('index.jinja')
-
-
-@app.route('/token', methods=['POST'])
-def get_token():
-    """Get token from email and passowrd after user authentication."""
-    data = json.loads(request.data)
-    email = data['email']
-    password = data['password']
-
-    user = auth.authenticate_user(email, password)
-    if not user:
-        error_msg = "User cannot be found or email and password do not match!"
-        return errors.handle_invalid_user_info(
-            errors.ObjectDoesNotExist(error_msg)
-        )
-
-    token = user.get_auth_token()
-    login_user(user)
-
-    return util.make_json_response(
-        200, {"status": "OK", "token": token}
+@app.route("/users", methods=['GET'])
+@log_user_action
+@login_required
+def list_users():
+    """list users."""
+    data = _get_request_args(
+        is_admin=_bool_converter,
+        active=_bool_converter
+    )
+    return utils.make_json_response(
+        200, user_api.list_users(current_user, **data)
     )
 
 
-class LoginForm(Form):
-    """Define login form."""
-    email = TextField('Email', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    remember = BooleanField('Remember me', default=False)
-
-
-@app.route("/login", methods=['GET', 'POST'])
-def login():
-    """User login."""
-    if current_user.is_authenticated():
-        return redirect(url_for('index'))
-    else:
-        form = LoginForm()
-        if form.validate_on_submit():
-            email = form.email.data
-            password = form.password.data
-
-            user = auth.authenticate_user(email, password)
-            if not user:
-                flash('Wrong username or password!', 'error')
-                return render_template('login.jinja', form=form)
-
-            if login_user(user, remember=form.remember.data):
-                # Enable session expiration if user didnot choose to be
-                # remembered.
-                app_session.permanent = not form.remember.data
-                flash('Logged in successfully!', 'success')
-                return redirect(request.args.get('next') or url_for('index'))
-            else:
-                flash('This username is disabled!', 'error')
-
-        return render_template('login.jinja', form=form)
-
-
-class SwitchList(Resource):
-    """Query details of switches and poll swithes."""
-
-    ENDPOINT = "/switches"
-
-    SWITCHIP = 'switchIp'
-    SWITCHIPNETWORK = 'switchIpNetwork'
-    LIMIT = 'limit'
-
-    def get(self):
-        """List details of all switches filtered by some conditions.
-
-           .. note::
-              switchIp and swtichIpNetwork cannot be combined to use.
-
-        :param switchIp: switch IP address
-        :param switchIpNetwork: switch IP network
-        :param limit: the number of records excepted to return
-        """
-        qkeys = request.args.keys()
-        logging.info('SwitchList query strings : %s', qkeys)
-        switch_list = []
-
-        with database.session() as session:
-            switches = []
-            switch_ips = request.args.getlist(self.SWITCHIP)
-            switch_ip_network = request.args.get(self.SWITCHIPNETWORK,
-                                                 type=str)
-            limit = request.args.get(self.LIMIT, 0, type=int)
-
-            if switch_ips and switch_ip_network:
-                error_msg = ("switchIp and switchIpNetwork cannot be "
-                             "specified at the same time!")
-                return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg))
-
-            if limit < 0:
-                error_msg = "limit cannot be less than 1!"
-                return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg))
-
-            if switch_ips:
-                for ip_addr in switch_ips:
-                    ip_addr = str(ip_addr)
-                    if not util.is_valid_ip(ip_addr):
-                        error_msg = 'SwitchIp format is incorrect!'
-                        return errors.handle_invalid_usage(
-                            errors.UserInvalidUsage(error_msg))
-
-                    switch = session.query(ModelSwitch).filter_by(ip=ip_addr)\
-                                                       .first()
-                    if switch:
-                        switches.append(switch)
-                        logging.info('[SwitchList][get] ip %s', ip_addr)
-
-                if limit:
-                    switches = switches[:limit]
-
-            elif switch_ip_network:
-                # query all switches which belong to the same network
-                if not util.is_valid_ipnetowrk(switch_ip_network):
-                    error_msg = 'SwitchIpNetwork format is incorrect!'
-                    return errors.handle_invalid_usage(
-                        errors.UserInvalidUsage(error_msg))
-
-                def get_queried_ip_prefix(network, prefix):
-                    """Get Ip prefex as pattern used to query switches.
-
-                       .. note::
-                          Switches' Ip addresses need to match this pattern.
-                    """
-                    count = int(prefix / 8)
-                    if count == 0:
-                        count = 1
-                    return network.rsplit('.', count)[0] + '.'
-
-                ip_network = netaddr.IPNetwork(switch_ip_network)
-                ip_filter = get_queried_ip_prefix(str(ip_network.network),
-                                                  ip_network.prefixlen)
-
-                logging.info('ip_filter is %s', ip_filter)
-                result_set = []
-                if limit:
-                    result_set = session.query(ModelSwitch).filter(
-                        ModelSwitch.ip.startswith(ip_filter)
-                    ).limit(limit).all()
-                else:
-                    result_set = session.query(ModelSwitch).filter(
-                        ModelSwitch.ip.startswith(ip_filter)
-                    ).all()
-
-                for switch in result_set:
-                    ip_addr = str(switch.ip)
-                    if netaddr.IPAddress(ip_addr) in ip_network:
-                        switches.append(switch)
-                        logging.info('[SwitchList][get] ip %s', ip_addr)
-
-            if not switch_ips and not switch_ip_network:
-                if limit:
-                    switches = session.query(ModelSwitch).limit(limit).all()
-                else:
-                    switches = session.query(ModelSwitch).all()
-
-            for switch in switches:
-                switch_res = {}
-                switch_res['id'] = switch.id
-                switch_res['ip'] = switch.ip
-                switch_res['state'] = switch.state
-                if switch.state != 'under_monitoring':
-                    switch_res['err_msg'] = switch.err_msg
-                switch_res['link'] = {
-                    'rel': 'self',
-                    'href': '/'.join((self.ENDPOINT, str(switch.id)))}
-                switch_list.append(switch_res)
-        logging.info('get switch list: %s', switch_list)
-
-        return util.make_json_response(
-            200, {"status": 'OK',
-                  "switches": switch_list})
-
-    def post(self):
-        """Insert switch IP and the credential to db.
-
-           .. note::
-              Invoke a task to poll switch at the same time.
-
-        :param ip: switch IP address
-        :param credential: a dict for accessing the switch
-        """
-        ip_addr = None
-        credential = None
-        logging.debug('post switch request from curl is %s', request.data)
-        json_data = json.loads(request.data)
-        ip_addr = json_data['switch']['ip']
-        credential = json_data['switch']['credential']
-
-        logging.info('post switch ip_addr=%s credential=%s(%s)',
-                     ip_addr, credential, type(credential))
-
-        if not util.is_valid_ip(ip_addr):
-            error_msg = "Invalid IP address format!"
-            return errors.handle_invalid_usage(
-                errors.UserInvalidUsage(error_msg)
-            )
-
-        new_switch = {}
-        with database.session() as session:
-            switch = session.query(ModelSwitch).filter_by(ip=ip_addr).first()
-            logging.info('switch for ip %s: %s', ip_addr, switch)
-
-            if switch:
-                error_msg = "IP address '%s' already exists" % ip_addr
-                value = {'failedSwitch': switch.id}
-                return errors.handle_duplicate_object(
-                    errors.ObjectDuplicateError(error_msg), value
-                )
-
-            switch = ModelSwitch(ip=ip_addr)
-            switch.credential = credential
-            session.add(switch)
-            session.flush()
-            new_switch['id'] = switch.id
-            new_switch['ip'] = switch.ip
-            new_switch['state'] = switch.state
-            link = {'rel': 'self',
-                    'href': '/'.join((self.ENDPOINT, str(switch.id)))}
-            new_switch['link'] = link
-
-        celery.send_task("compass.tasks.pollswitch", (ip_addr,))
-        logging.info('new switch added: %s', new_switch)
-        return util.make_json_response(
-            202,
-            {
-                "status": "accepted",
-                "switch": new_switch
-            }
-        )
-
-
-class Switch(Resource):
-    """Get and update a single switch information."""
-    ENDPOINT = "/switches"
-
-    def get(self, switch_id):
-        """Lists details of the specified switch.
-
-        :param switch_id: switch ID in db
-        """
-        switch_res = {}
-        with database.session() as session:
-            switch = session.query(ModelSwitch).filter_by(id=switch_id).first()
-            logging.info('switch for id %s: %s', switch_id, switch)
-
-            if not switch:
-                error_msg = "Cannot find the switch with id=%s" % switch_id
-                logging.debug("[/switches/{id}]error_msg: %s", error_msg)
-
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg)
-                )
-
-            switch_res['id'] = switch.id
-            switch_res['ip'] = switch.ip
-            switch_res['state'] = switch.state
-            if switch.state != 'under_monitoring':
-                switch_res['err_msg'] = switch.err_msg
-            switch_res['link'] = {
-                'rel': 'self',
-                'href': '/'.join((self.ENDPOINT, str(switch.id)))}
-
-        logging.info('switch info for %s: %s', switch_id, switch_res)
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "switch": switch_res})
-
-    def put(self, switch_id):
-        """Update an existing switch information.
-
-        :param switch_id: the unqiue identifier of the switch
-        """
-        switch = None
-        credential = None
-        logging.debug('PUT a switch request from curl is %s', request.data)
-
-        ip_addr = None
-        switch_res = {}
-
-        with database.session() as session:
-            switch = session.query(ModelSwitch).filter_by(id=switch_id).first()
-            logging.info('PUT switch id is %s: %s', switch_id, switch)
-
-            if not switch:
-                # No switch is found.
-                error_msg = 'Cannot update a non-existing switch!'
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            json_data = json.loads(request.data)
-            credential = json_data['switch']['credential']
-
-            logging.info('PUT switch id=%s credential=%s(%s)',
-                         switch_id, credential, type(credential))
-
-            switch.credential = credential
-            switch.state = "repolling"
-            switch.err_msg = ""
-
-            ip_addr = switch.ip
-            switch_res['id'] = switch.id
-            switch_res['ip'] = switch.ip
-            switch_res['state'] = switch.state
-            link = {'rel': 'self',
-                    'href': '/'.join((self.ENDPOINT, str(switch.id)))}
-            switch_res['link'] = link
-
-        celery.send_task("compass.tasks.pollswitch", (ip_addr,))
-        return util.make_json_response(
-            202, {"status": "accepted",
-                  "switch": switch_res})
-
-    def delete(self, switch_id):
-        """No implementation.
-
-        :param switch_id: the unique identifier of the switch.
-        """
-        err_msg = "The delete API for switch has not been implemented!"
-        return errors.handle_not_allowed_method(
-            errors.MethodNotAllowed(err_msg))
-
-
-class MachineList(Resource):
-    """Query machines by filters."""
-    ENDPOINT = "/machines"
-
-    SWITCHID = 'switchId'
-    MAC = 'mac'
-    VLANID = 'vladId'
-    PORT = 'port'
-    LIMIT = 'limit'
-
-    def get(self):
-        """Lists details of machines.
-
-           .. note::
-              The machines are filtered by some conditions as
-              the following. According to SwitchConfig, machines
-              with some ports will be filtered.
-
-        :param switchId: the unique identifier of the switch
-        :param mac: the MAC address
-        :param vladId: the vlan ID
-        :param port: the port number
-        :param limit: the number of records expected to return
-        """
-        switch_id = request.args.get(self.SWITCHID, type=int)
-        mac = request.args.get(self.MAC, None, type=str)
-        vlan = request.args.get(self.VLANID, type=int)
-        port = request.args.get(self.PORT, None)
-        limit = request.args.get(self.LIMIT, 0, type=int)
-
-        with database.session() as session:
-            machines = []
-            filter_clause = []
-            if switch_id:
-                filter_clause.append('switch_id=%d' % switch_id)
-
-            if mac:
-                filter_clause.append('mac=%s' % mac)
-
-            if vlan:
-                filter_clause.append('vlan=%d' % vlan)
-
-            if port:
-                filter_clause.append('port=%s' % port)
-
-            if limit < 0:
-                error_msg = 'Limit cannot be less than 0!'
-                return errors.UserInvalidUsage(
-                    errors.UserInvalidUsage(error_msg)
-                )
-            # TODO(grace): support query filtered port
-            if filter_clause:
-                machines = session.query(ModelMachine)\
-                                  .filter(and_(*filter_clause)).all()
-            else:
-                machines = session.query(ModelMachine).all()
-
-            filter_list = session.query(ModelSwitch.id,
-                                        SwitchConfig.filter_port)\
-                                 .filter(ModelSwitch.ip == SwitchConfig.ip)\
-                                 .all()
-            ports_by_id = {}
-            for entry in filter_list:
-                s_id = entry[0]
-                f_port = entry[1]
-                ports_by_id.setdefault(s_id, []).append(f_port)
-
-            machines_result = []
-            for machine in machines:
-                if limit and len(machines_result) == limit:
-                    break
-
-                if machine.switch_id in ports_by_id:
-                    if machine.port in ports_by_id[machine.switch_id]:
-                        continue
-
-                machine_res = {}
-                machine_res['switch_ip'] = (
-                    None if not machine.switch else machine.switch.ip)
-                machine_res['id'] = machine.id
-                machine_res['mac'] = machine.mac
-                machine_res['port'] = machine.port
-                machine_res['vlan'] = machine.vlan
-                machine_res['link'] = {
-                    'rel': 'self',
-                    'href': '/'.join((self.ENDPOINT, str(machine.id)))}
-                machines_result.append(machine_res)
-
-        logging.info('machines for %s: %s', switch_id, machines_result)
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "machines": machines_result})
-
-
-class Machine(Resource):
-    """List details of the machine with specific machine id."""
-    ENDPOINT = '/machines'
-
-    def get(self, machine_id):
-        """Lists details of the specified machine.
-
-        :param machine_id: the unique identifier of the machine
-        """
-        machine_res = {}
-        with database.session() as session:
-            machine = session.query(ModelMachine)\
-                             .filter_by(id=machine_id)\
-                             .first()
-            logging.info('machine for id %s: %s', machine_id, machine)
-
-            if not machine:
-                error_msg = "Cannot find the machine with id=%s" % machine_id
-                logging.debug("[/api/machines/{id}]error_msg: %s", error_msg)
-
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            machine_res['id'] = machine.id
-            machine_res['mac'] = machine.mac
-            machine_res['port'] = machine.port
-            machine_res['vlan'] = machine.vlan
-            if machine.switch:
-                machine_res['switch_ip'] = machine.switch.ip
-            else:
-                machine_res['switch_ip'] = None
-            machine_res['link'] = {
-                'rel': 'self',
-                'href': '/'.join((self.ENDPOINT, str(machine.id)))}
-
-        logging.info('machine info for %s: %s', machine_id, machine_res)
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "machine": machine_res})
-
-
-class Cluster(Resource):
-    """Creates cluster and lists cluster details.
-
-       .. note::
-          Update and list the cluster's configuration information.
-    """
-    ENDPOINT = '/clusters'
-    SECURITY = 'security'
-    NETWORKING = 'networking'
-    PARTITION = 'partition'
-
-    def get(self, cluster_id, resource=None):
-        """Lists details of the resource specified cluster.
-
-        :param cluster_id: the unique identifier of the cluster
-        :param resource: the resource name(security, networking, partition)
-        """
-        cluster_resp = {}
-        resp = {}
-        with database.session() as session:
-            cluster = session.query(
-                ModelCluster).filter_by(id=cluster_id).first()
-            logging.debug('cluster is %s', cluster)
-            if not cluster:
-                error_msg = 'Cannot found the cluster with id=%s' % cluster_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg)
-                )
-
-            if resource:
-                # List resource details
-                if resource == self.SECURITY:
-                    cluster_resp = cluster.security
-                elif resource == self.NETWORKING:
-                    cluster_resp = cluster.networking
-                elif resource == self.PARTITION:
-                    cluster_resp = cluster.partition
-                else:
-                    error_msg = "Invalid resource name '%s'!" % resource
-                    return errors.handle_invalid_usage(
-                        errors.UserInvalidUsage(error_msg)
-                    )
-                resp = {"status": "OK",
-                        resource: cluster_resp}
-
-            else:
-                cluster_resp['clusterName'] = cluster.name
-                cluster_resp['link'] = {
-                    'rel': 'self',
-                    'href': '/'.join((self.ENDPOINT, str(cluster.id)))
-                }
-                cluster_resp['id'] = cluster.id
-                resp = {"status": "OK",
-                        "cluster": cluster_resp}
-
-        logging.info('get cluster result is %s', cluster_resp)
-        return util.make_json_response(200, resp)
-
-    def post(self):
-        """Create a new cluster.
-
-        :param name: the name of the cluster
-        :param adapter_id: the unique identifier of the adapter
-        """
-        request_data = None
-        request_data = json.loads(request.data)
-        cluster_name = request_data['cluster']['name']
-        adapter_id = request_data['cluster']['adapter_id']
-        cluster_resp = {}
-        cluster = None
-
-        with database.session() as session:
-            cluster = session.query(ModelCluster).filter_by(name=cluster_name)\
-                                                 .first()
-            if cluster:
-                error_msg = "Cluster name '%s' already exists!" % cluster.name
-                return errors.handle_duplicate_object(
-                    errors.ObjectDuplicateError(error_msg))
-
-            adapter = session.query(Adapter).filter_by(id=adapter_id).first()
-            if not adapter:
-                error_msg = "No adapter id=%s can be found!" % adapter_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            # Create a new cluster in database
-            cluster = ModelCluster(name=cluster_name, adapter_id=adapter_id)
-            session.add(cluster)
-            session.flush()
-            cluster_resp['id'] = cluster.id
-            cluster_resp['name'] = cluster.name
-            cluster_resp['adapter_id'] = cluster.adapter_id
-            cluster_resp['link'] = {
-                'rel': 'self',
-                'href': '/'.join((self.ENDPOINT, str(cluster.id)))
-            }
-
-        return util.make_json_response(
-            200,
-            {
-                "status": "OK",
-                "cluster": cluster_resp
-            }
-        )
-
-    def put(self, cluster_id, resource):
-        """Update the resource information of the specified cluster.
-
-        :param cluster_id: the unique identifier of the cluster
-        :param resource: resource name(security, networking, partition)
-        """
-        resources = {
-            self.SECURITY: {'validator': 'is_valid_security_config',
-                            'column': 'security_config'},
-            self.NETWORKING: {'validator': 'is_valid_networking_config',
-                              'column': 'networking_config'},
-            self.PARTITION: {'validator': 'is_valid_partition_config',
-                             'column': 'partition_config'},
-        }
-        request_data = json.loads(request.data)
-        with database.session() as session:
-            cluster = session.query(
-                ModelCluster).filter_by(id=cluster_id).first()
-
-            if not cluster:
-                error_msg = 'You are trying to update a non-existing cluster!'
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg)
-                )
-
-            if resource not in request_data:
-                error_msg = "Invalid resource name '%s'" % resource
-                return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg)
-                )
-
-            value = request_data[resource]
-
-            if resource not in resources.keys():
-                error_msg = "Invalid resource name '%s'" % resource
-                return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg)
-                )
-
-            validate_func = resources[resource]['validator']
-            module = globals()['util']
-            is_valid, msg = getattr(module, validate_func)(value)
-
-            if is_valid:
-                column = resources[resource]['column']
-                session.query(ModelCluster).filter_by(id=cluster_id).update(
-                    {column: json.dumps(value)}
-                )
-            else:
-                return errors.handle_mssing_input(
-                    errors.InputMissingError(msg)
-                )
-
-        return util.make_json_response(
-            200, {"status": "OK"}
-        )
-
-
-@app.route("/clusters", methods=['GET'])
-def list_clusters():
-    """Lists the details of all clusters."""
-    endpoint = '/clusters'
-    state = request.args.get('state', None, type=str)
-    results = []
-    with database.session() as session:
-        clusters = []
-        if not state:
-            # Get all clusters
-            clusters = session.query(ModelCluster).all()
-
-        elif state == 'undeployed':
-            clusters_state = session.query(ClusterState.id).all()
-            cluster_ids = [t[0] for t in clusters_state]
-            # The cluster has not been deployed yet
-            clusters = session.query(ModelCluster)\
-                              .filter(~ModelCluster.id.in_(cluster_ids))\
-                              .all()
-        elif state == 'installing':
-            # The deployment of this cluster is in progress.
-            clusters = session.query(
-                ModelCluster
-            ).filter(
-                ModelCluster.id == ClusterState.id,
-                or_(
-                    ClusterState.state == 'INSTALLING',
-                    ClusterState.state == 'UNINITIALIZED'
-                )
-            ).all()
-        elif state == 'failed':
-            # The deployment of this cluster is failed.
-            clusters = session.query(
-                ModelCluster
-            ).filter(
-                ModelCluster.id == ClusterState.id,
-                ClusterState.state == 'ERROR'
-            ).all()
-        elif state == 'successful':
-            clusters = session.query(
-                ModelCluster
-            ).filter(
-                ModelCluster.id == ClusterState.id,
-                ClusterState.state == 'READY'
-            ).all()
-
-        if clusters:
-            for cluster in clusters:
-                cluster_res = {}
-                cluster_res['clusterName'] = cluster.name
-                cluster_res['id'] = cluster.id
-                cluster_res['link'] = {
-                    "href": "/".join((endpoint, str(cluster.id))),
-                    "rel": "self"}
-                results.append(cluster_res)
-
-    return util.make_json_response(
-        200, {
-            "status": "OK",
-            "clusters": results
-        }
+@app.route("/users", methods=['POST'])
+@log_user_action
+@login_required
+def add_user():
+    """add user."""
+    data = _get_request_data()
+    user_dict = user_api.add_user(current_user, **data)
+    return utils.make_json_response(
+        200, user_dict
     )
 
 
-@app.route("/clusters/<int:cluster_id>/action", methods=['POST'])
-def execute_cluster_action(cluster_id):
-    """Execute the specified  action to the cluster.
+@app.route("/users/<int:user_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_user(user_id):
+    """Get user."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200, user_api.get_user(current_user, user_id, **data)
+    )
 
-    :param cluster_id: the unique identifier of the cluster
-    :param addHosts: the action of adding excepted hosts to the cluster
-    :param removeHosts: the action of removing expected hosts from the cluster
-    :param replaceAllHosts: the action of removing all existing hosts in
-                            cluster and add new hosts
-    :param deploy: the action of starting to deploy
-    """
-    def _add_hosts(cluster_id, hosts):
-        """Add cluster host(s) to the cluster by cluster_id."""
 
-        cluseter_hosts = []
-        available_machines = []
-        failed_machines = []
-        with database.session() as session:
-            failed_machines = []
-            for host in hosts:
-                # Check if machine exists
-                machine = session.query(
-                    ModelMachine).filter_by(id=host).first()
-                if not machine:
-                    error_msg = "Machine id=%s does not exist!" % host
-                    return errors.handle_not_exist(
-                        errors.ObjectDoesNotExist(error_msg)
-                    )
+@app.route("/current-user", methods=['GET'])
+@log_user_action
+@login_required
+def show_current_user():
+    """Get user."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200, user_api.get_current_user(current_user, **data)
+    )
 
-                clusterhost = session.query(
-                    ModelClusterHost).filter_by(machine_id=host).first()
-                if clusterhost:
-                    # Machine is already used
-                    failed_machines.append(clusterhost.machine_id)
-                    continue
 
-                # Add the available machine to available_machines list
-                available_machines.append(machine)
+@app.route("/users/<int:user_id>", methods=['PUT'])
+@log_user_action
+@login_required
+def update_user(user_id):
+    """Update user."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        user_api.update_user(
+            current_user,
+            user_id,
+            **data
+        )
+    )
 
-            if failed_machines:
-                value = {
-                    'failedMachines': failed_machines
-                }
-                error_msg = "Conflict!"
-                return errors.handle_duplicate_object(
-                    errors.ObjectDuplicateError(error_msg), value
+
+@app.route("/users/<int:user_id>", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_user(user_id):
+    """Delete user."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        user_api.del_user(
+            current_user, user_id, **data
+        )
+    )
+
+
+@app.route("/users/<int:user_id>/permissions", methods=['GET'])
+@log_user_action
+@login_required
+def list_user_permissions(user_id):
+    """Get user permissions."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200, user_api.get_permissions(current_user, user_id, **data)
+    )
+
+
+@app.route("/users/<int:user_id>/action", methods=['POST'])
+@log_user_action
+@login_required
+def take_user_action(user_id):
+    """Take user action."""
+    data = _get_request_data()
+    update_permissions_func = _wrap_response(
+        functools.partial(
+            user_api.update_permissions, current_user, user_id
+        ),
+        200
+    )
+
+    def disable_user(disable_user=None):
+        return user_api.update_user(
+            current_user, user_id, active=False
+        )
+
+    disable_user_func = _wrap_response(
+        disable_user,
+        200
+    )
+
+    def enable_user(enable_user=None):
+        return user_api.update_user(
+            current_user, user_id, active=True
+        )
+
+    enable_user_func = _wrap_response(
+        enable_user,
+        200
+    )
+    return _group_data_action(
+        data,
+        add_permissions=update_permissions_func,
+        remove_permissions=update_permissions_func,
+        set_permissions=update_permissions_func,
+        enable_user=enable_user_func,
+        disable_user=disable_user_func
+    )
+
+
+@app.route(
+    '/users/<int:user_id>/permissions/<int:permission_id>',
+    methods=['GET']
+)
+@log_user_action
+@login_required
+def show_user_permission(user_id, permission_id):
+    """Get a specific user permission."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        user_api.get_permission(
+            current_user, user_id, permission_id,
+            **data
+        )
+    )
+
+
+@app.route("/users/<int:user_id>/permissions", methods=['POST'])
+@log_user_action
+@login_required
+def add_user_permission(user_id):
+    """Add permission to a specific user."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        user_api.add_permission(
+            current_user, user_id,
+            **data
+        )
+    )
+
+
+@app.route(
+    '/users/<int:user_id>/permissions/<int:permission_id>',
+    methods=['DELETE']
+)
+@log_user_action
+@login_required
+def delete_user_permission(user_id, permission_id):
+    """Delete a specific user permission."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        user_api.del_permission(
+            current_user, user_id, permission_id,
+            **data
+        )
+    )
+
+
+@app.route("/permissions", methods=['GET'])
+@log_user_action
+@login_required
+def list_permissions():
+    """List permissions."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        permission_api.list_permissions(current_user, **data)
+    )
+
+
+@app.route("/permissions/<int:permission_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_permission(permission_id):
+    """Get permission."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        permission_api.get_permission(current_user, permission_id, **data)
+    )
+
+
+def _filter_timestamp(data):
+    timestamp_filter = {}
+    start = _get_data(data, 'timestamp_start')
+    if start is not None:
+        timestamp_filter['ge'] = util.parse_datetime(
+            start, exception_handler.BadRequest
+        )
+    end = _get_data(data, 'timestamp_end')
+    if end is not None:
+        timestamp_filter['le'] = util.parse_datetime(
+            end, exception_handler.BadRequest)
+    range = _get_data_list(data, 'timestamp_range')
+    if range:
+        timestamp_filter['between'] = []
+        for value in range:
+            timestamp_filter['between'].append(
+                util.parse_datetime_range(
+                    value, exception_handler.BadRequest
                 )
-
-            for machine, host in zip(available_machines, hosts):
-                host = ModelClusterHost(cluster_id=cluster_id,
-                                        machine_id=machine.id)
-                session.add(host)
-                session.flush()
-                cluster_res = {}
-                cluster_res['id'] = host.id
-                cluster_res['machine_id'] = machine.id
-                cluseter_hosts.append(cluster_res)
-
-        logging.info('cluster_hosts result is %s', cluseter_hosts)
-        return util.make_json_response(
-            200, {
-                "status": "OK",
-                "cluster_hosts": cluseter_hosts
-            }
-        )
-
-    def _remove_hosts(cluster_id, hosts):
-        """Remove existing cluster host from the cluster."""
-
-        removed_hosts = []
-        with database.session() as session:
-            failed_hosts = []
-            for host_id in hosts:
-                host = session.query(
-                    ModelClusterHost
-                ).filter_by(
-                    id=host_id, cluster_id=cluster_id
-                ).first()
-
-                if not host:
-                    failed_hosts.append(host_id)
-                    continue
-
-                host_res = {
-                    "id": host_id,
-                    "machine_id": host.machine_id
-                }
-                removed_hosts.append(host_res)
-
-            if failed_hosts:
-                error_msg = 'Hosts do not exist! Or not in this cluster'
-                value = {
-                    "failedHosts": failed_hosts
-                }
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg), value
-                )
-
-            filter_clause = []
-            for host_id in hosts:
-                filter_clause.append('id=%s' % host_id)
-
-            # Delete the requested hosts from database
-            session.query(ModelClusterHost).filter(
-                or_(*filter_clause)
-            ).delete(synchronize_session='fetch')
-
-        return util.make_json_response(
-            200, {
-                "status": "OK",
-                "cluster_hosts": removed_hosts
-            }
-        )
-
-    def _replace_all_hosts(cluster_id, hosts):
-        """Remove all existing hosts from the cluster and add new ones."""
-
-        with database.session() as session:
-            # Delete all existing hosts of the cluster
-            session.query(ModelClusterHost).filter_by(
-                cluster_id=cluster_id).delete()
-
-        return _add_hosts(cluster_id, hosts)
-
-    def _deploy(cluster_id, hosts):
-        """Deploy the cluster."""
-
-        deploy_hosts_info = []
-        deploy_cluster_info = {}
-        with database.session() as session:
-            if not hosts:
-                # Deploy all hosts in the cluster
-                cluster_hosts = session.query(
-                    ModelClusterHost).filter_by(cluster_id=cluster_id).all()
-
-                if not cluster_hosts:
-                    # No host belongs to this cluster
-                    error_msg = (
-                        'Cannot find any host in cluster id=%s' % cluster_id)
-                    return errors.handle_not_exist(
-                        errors.ObjectDoesNotExist(error_msg))
-
-                for host in cluster_hosts:
-                    if not host.mutable:
-                        # The host is not allowed to modified
-                        error_msg = (
-                            'The host id=%s is not allowed to be '
-                            'modified now!'
-                        ) % host.id
-                        return errors.UserInvalidUsage(
-                            errors.UserInvalidUsage(error_msg))
-
-                    hosts.append(host.id)
-
-            deploy_cluster_info["cluster_id"] = int(cluster_id)
-            deploy_cluster_info["url"] = '/clusters/%s/progress' % cluster_id
-
-            for host_id in hosts:
-                host_info = {}
-                progress_url = '/cluster_hosts/%s/progress' % host_id
-                host_info["host_id"] = host_id
-                host_info["url"] = progress_url
-                deploy_hosts_info.append(host_info)
-
-            # Lock cluster hosts and its cluster
-            session.query(ModelClusterHost).filter_by(
-                cluster_id=cluster_id).update({'mutable': False})
-            session.query(ModelCluster).filter_by(
-                id=cluster_id).update({'mutable': False})
-
-            # Clean up cluster_state and host_state table
-            session.query(ClusterState).filter_by(id=cluster_id).delete()
-            for host_id in hosts:
-                session.query(HostState).filter_by(id=host_id).delete()
-
-        celery.send_task("compass.tasks.deploy", ({cluster_id: hosts},))
-        return util.make_json_response(
-            202, {
-                "status": "accepted",
-                "deployment": {
-                    "cluster": deploy_cluster_info,
-                    "hosts": deploy_hosts_info
-                }
-            }
-        )
-
-    request_data = None
-    with database.session() as session:
-        cluster = session.query(ModelCluster).filter_by(id=cluster_id).first()
-        if not cluster:
-            error_msg = 'Cluster id=%s does not exist!'
-            return errors.handle_not_exist(
-                errors.ObjectDoesNotExist(error_msg)
             )
+    data['timestamp'] = timestamp_filter
+    _clean_data(
+        data,
+        [
+            'timestamp_start', 'timestamp_end',
+            'timestamp_range'
+        ]
+    )
 
-        if not cluster.mutable:
-            # The cluster cannot be deploy again
-            error_msg = ("The cluster id=%s is not allowed to "
-                         "modified or deployed!" % cluster_id)
-            return errors.handle_invalid_usage(
-                errors.UserInvalidUsage(error_msg))
 
-    request_data = json.loads(request.data)
-    action = request_data.keys()[0]
-    value = request_data.get(action)
-
-    if 'addHosts' in request_data:
-        return _add_hosts(cluster_id, value)
-
-    elif 'removeHosts' in request_data:
-        return _remove_hosts(cluster_id, value)
-
-    elif 'deploy' in request_data:
-        return _deploy(cluster_id, value)
-
-    elif 'replaceAllHosts' in request_data:
-        return _replace_all_hosts(cluster_id, value)
-    else:
-        return errors.handle_invalid_usage(
-            errors.UserInvalidUsage('%s action is not support!' % action)
+@app.route("/users/logs", methods=['GET'])
+@log_user_action
+@login_required
+def list_all_user_actions():
+    """List all users actions."""
+    data = _get_request_args()
+    _filter_timestamp(data)
+    return utils.make_json_response(
+        200,
+        user_log_api.list_actions(
+            current_user, **data
         )
+    )
 
 
-class ClusterHostConfig(Resource):
-    """Lists and update/delete cluster host configurations."""
-
-    def get(self, host_id):
-        """Lists configuration details of the specified cluster host.
-
-        :param host_id: the unique identifier of the host
-        """
-        config_res = {}
-        with database.session() as session:
-            host = session.query(
-                ModelClusterHost).filter_by(id=host_id).first()
-            if not host:
-                # The host does not exist.
-                error_msg = "The host id=%s does not exist!" % host_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            config_res = host.config
-
-        logging.debug("The config of host id=%s is %s", host_id, config_res)
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "config": config_res})
-
-    def put(self, host_id):
-        """Update configuration of the specified cluster host.
-
-        :param host_id: the unique identifier of the host
-        """
-        with database.session() as session:
-            host = session.query(
-                ModelClusterHost).filter_by(id=host_id).first()
-            if not host:
-                error_msg = "The host id=%s does not exist!" % host_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            logging.debug("cluster config put request.data %s", request.data)
-            request_data = json.loads(request.data)
-            if not request_data:
-                error_msg = "request data is %s" % request_data
-                return errors.handle_mssing_input(
-                    errors.InputMissingError(error_msg))
-
-            if not host.mutable:
-                error_msg = "The host 'id=%s' is not mutable!" % host_id
-                return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg))
-
-            #Valid if keywords in request_data are all correct
-            if 'hostname' in request_data:
-                hostname = request_data['hostname']
-                cluster_id = host.cluster_id
-                test_host = session.query(ModelClusterHost)\
-                                   .filter_by(cluster_id=cluster_id,
-                                              hostname=hostname).first()
-                if test_host and test_host.id != int(host_id):
-                    error_msg = ("Hostname '%s' has been used for other host "
-                                 "in the cluster, cluster ID is %s! %s %s"
-                                 % (hostname, cluster_id,
-                                    test_host.id, host_id))
-
-                    return errors.handle_invalid_usage(
-                        errors.UserInvalidUsage(error_msg))
-
-                session.query(ModelClusterHost).filter_by(id=host_id)\
-                       .update({"hostname": request_data['hostname']})
-                del request_data['hostname']
-
-            try:
-                util.valid_host_config(request_data)
-            except errors.UserInvalidUsage as exc:
-                return errors.handle_invalid_usage(exc)
-
-            host.config = request_data
-
-            return util.make_json_response(
-                200, {"status": "OK"})
-
-    def delete(self, host_id, subkey):
-        """Delete one attribute of the specified cluster host.
-
-        :param host_id: the unique identifier of the host
-        :param subkey: the attribute name in configuration
-        """
-        available_delete_keys = ['roles']
-        with database.session() as session:
-            host = session.query(
-                ModelClusterHost).filter_by(id=host_id).first()
-            if not host:
-                error_msg = "The host id=%s does not exist!" % host_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            if subkey not in available_delete_keys:
-                error_msg = "subkey %s is not supported!" % subkey
-                return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg))
-
-            if not host.mutable:
-                error_msg = "The host 'id=%s' is not mutable!" % host_id
-                return errors.handle_invalid_usage(
-                    errors.UserInvalidUsage(error_msg))
-
-            config = json.loads(host.config_data)
-            # Set the subkey's value to ""
-            util.update_dict_value(subkey, config)
-            host.config = config
-
-        return util.make_json_response(
-            200, {"status": "OK"})
+@app.route("/users/<int:user_id>/logs", methods=['GET'])
+@log_user_action
+@login_required
+def list_user_actions(user_id):
+    """List user actions."""
+    data = _get_request_args()
+    _filter_timestamp(data)
+    return utils.make_json_response(
+        200,
+        user_log_api.list_user_actions(
+            current_user, user_id, **data
+        )
+    )
 
 
-class ClusterHost(Resource):
-    """List details of the cluster host by host id."""
-    ENDPOINT = '/clusterhosts'
-
-    def get(self, host_id):
-        """Lists details of the specified cluster host.
-
-        :param host_id: the unique identifier of the host
-        """
-        host_res = {}
-        with database.session() as session:
-            host = session.query(
-                ModelClusterHost).filter_by(id=host_id).first()
-            if not host:
-                error_msg = "The host id=%s does not exist!" % host_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            host_res['hostname'] = host.hostname
-            host_res['mutable'] = host.mutable
-            host_res['id'] = host.id
-            host_res['switch_ip'] = host.machine.switch.ip
-            host_res['link'] = {
-                "href": '/'.join((self.ENDPOINT, str(host.id))),
-                "rel": "self"
-            }
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "cluster_host": host_res})
+@app.route("/users/logs", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_all_user_actions():
+    """Delete all user actions."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        user_log_api.del_actions(
+            current_user, **data
+        )
+    )
 
 
-@app.route("/clusterhosts", methods=['GET'])
-def list_clusterhosts():
-    """Lists details of all cluster hosts.
-
-       .. note::
-          the cluster hosts are optionally filtered by some conditions.
-
-    :param hostname: the name of the host
-    :param clstername: the name of the cluster
-    """
-    endpoint = '/clusterhosts'
-    key_hostname = 'hostname'
-    key_clustername = 'clustername'
-
-    hosts_list = []
-    hostname = request.args.get(key_hostname, None, type=str)
-    clustername = request.args.get(key_clustername, None, type=str)
-    with database.session() as session:
-        hosts = None
-        if hostname and clustername:
-            hosts = session.query(
-                ModelClusterHost
-            ).join(ModelCluster).filter(
-                ModelClusterHost.hostname == hostname,
-                ModelCluster.name == clustername
-            ).all()
-
-        elif hostname:
-            hosts = session.query(
-                ModelClusterHost).filter_by(hostname=hostname).all()
-        elif clustername:
-            cluster = session.query(
-                ModelCluster).filter_by(name=clustername).first()
-            if cluster:
-                hosts = cluster.hosts
-
-        else:
-            hosts = session.query(ModelClusterHost).all()
-
-        if hosts:
-            for host in hosts:
-                host_res = {}
-                host_res['hostname'] = host.hostname
-                host_res['mutable'] = host.mutable
-                host_res['id'] = host.id
-                host_res['switch_ip'] = host.machine.switch.ip
-                host_res['link'] = {
-                    "href": '/'.join((endpoint, str(host.id))),
-                    "rel": "self"}
-                hosts_list.append(host_res)
-
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "cluster_hosts": hosts_list})
+@app.route("/users/<int:user_id>/logs", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_user_actions(user_id):
+    """Delete user actions."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        user_log_api.del_user_actions(
+            current_user, user_id, **data
+        )
+    )
 
 
-@app.route("/adapters/<int:adapter_id>", methods=['GET'])
-def list_adapter(adapter_id):
-    """Lists details of the specified adapter.
-
-    :param adapter_id: the unique identifier of the adapter
-    """
-    endpoint = '/adapters'
-    adapter_res = {}
-    with database.session() as session:
-        adapter = session.query(Adapter).filter_by(id=adapter_id).first()
-
-        if not adapter:
-            error_msg = "Adapter id=%s does not exist!" % adapter_id
-            return errors.handle_not_exist(
-                errors.ObjectDoesNotExist(error_msg))
-
-        adapter_res['name'] = adapter.name
-        adapter_res['os'] = adapter.os
-        adapter_res['id'] = adapter.id
-        adapter_res['target_system'] = adapter.target_system,
-        adapter_res['link'] = {
-            "href": "/".join((endpoint, str(adapter.id))),
-            "rel": "self"}
-
-    return util.make_json_response(
-        200, {"status": "OK",
-              "adapter": adapter_res})
-
-
-@app.route("/adapters/<int:adapter_id>/roles", methods=['GET'])
-def list_adapter_roles(adapter_id):
-    """Lists details of all roles of the specified adapter
-
-    :param adapter_id: the unique identifier of the adapter
-    """
-    roles_list = []
-    with database.session() as session:
-        adapter_q = session.query(
-            Adapter).filter_by(id=adapter_id).first()
-        if not adapter_q:
-            error_msg = "Adapter id=%s does not exist!" % adapter_id
-            return errors.handle_not_exist(
-                errors.ObjectDoesNotExist(error_msg)
+def _filter_ip(data):
+    ip_filter = {}
+    switch_ips = _get_data_list(data, 'switchIp')
+    if switch_ips:
+        ip_filter['eq'] = []
+        for switch_ip in switch_ips:
+            ip_filter['eq'].append(long(netaddr.IPAddress(switch_ip)))
+    switch_start = _get_data(data, 'switchIpStart')
+    if switch_start is not None:
+        ip_filter['ge'] = long(netaddr.IPAddress(switch_start))
+    switch_end = _get_data(data, 'switchIpEnd')
+    if switch_end is not None:
+        ip_filter['lt'] = long(netaddr.IPAddress(switch_end))
+    switch_nets = _get_data_list(data, 'switchIpNetwork')
+    if switch_nets:
+        ip_filter['between'] = []
+        for switch_net in switch_nets:
+            network = netaddr.IPNetwork(switch_net)
+            ip_filter['between'].append((network.first, network.last))
+    switch_ranges = _get_data_list(data, 'switchIpRange')
+    if switch_ranges:
+        ip_filter.setdefault('between', [])
+        for switch_range in switch_ranges:
+            ip_start, ip_end = switch_range.split(',')
+            ip_filter['between'].append(
+                long(netaddr.IPAddress(ip_start)),
+                long(netaddr.IPAddress(ip_end))
             )
+    if ip_filter:
+        data['ip_int'] = ip_filter
+    _clean_data(
+        data,
+        [
+            'switchIp', 'switchIpStart', 'switchIpEnd',
+            'switchIpNetwork', 'switchIpRange'
+        ]
+    )
 
-        roles = session.query(
-            Role, Adapter
-        ).filter(
-            Adapter.id == adapter_id,
-            Adapter.target_system == Role.target_system
-        ).all()
 
-        for role, _ in roles:
-            role_res = {}
-            role_res['name'] = role.name
-            role_res['description'] = role.description
-            roles_list.append(role_res)
+@app.route("/switches", methods=['GET'])
+@log_user_action
+@login_required
+def list_switches():
+    """List switches."""
+    data = _get_request_args()
+    _filter_ip(data)
+    return utils.make_json_response(
+        200,
+        switch_api.list_switches(
+            current_user, **data
+        )
+    )
 
-    return util.make_json_response(
-        200, {
-            "status": "OK",
-            "roles": roles_list
-        }
+
+@app.route("/switches/<int:switch_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_switch(switch_id):
+    """Get switch."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200, switch_api.get_switch(current_user, switch_id, **data)
+    )
+
+
+@app.route("/switches", methods=['POST'])
+@log_user_action
+@login_required
+def add_switch():
+    """add switch."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.add_switch(current_user, **data)
+    )
+
+
+@app.route("/switches/<int:switch_id>", methods=['PUT'])
+@log_user_action
+@login_required
+def update_switch(switch_id):
+    """update switch."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.update_switch(current_user, switch_id, **data)
+    )
+
+
+@app.route("/switches/<int:switch_id>", methods=['PATCH'])
+@log_user_action
+@login_required
+def patch_switch(switch_id):
+    """patch switch."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.patch_switch(current_user, switch_id, **data)
+    )
+
+
+@app.route("/switches/<int:switch_id>", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_switch(switch_id):
+    """delete switch."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.del_switch(current_user, switch_id, **data)
+    )
+
+
+@app.route("/switch-filters", methods=['GET'])
+@log_user_action
+@login_required
+def list_switch_filters():
+    """List switch filters."""
+    data = _get_request_args()
+    _filter_ip(data)
+    return utils.make_json_response(
+        200,
+        switch_api.list_switch_filters(
+            current_user, **data
+        )
+    )
+
+
+@app.route("/switch-filters/<int:switch_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_switch_filters(switch_id):
+    """Get switch filters."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200, switch_api.get_switch_filters(current_user, switch_id, **data)
+    )
+
+
+@app.route("/switch-filters/<int:switch_id>", methods=['PUT'])
+@log_user_action
+@login_required
+def update_switch_filters(switch_id):
+    """update switch filters."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.update_switch_filters(current_user, switch_id, **data)
+    )
+
+
+@app.route("/switch-filters/<int:switch_id>", methods=['PATCH'])
+@log_user_action
+@login_required
+def patch_switch_filters(switch_id):
+    """patch switch filters."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.patch_switch_filter(current_user, switch_id, **data)
+    )
+
+
+def _filter_port(data):
+    port_filter = {}
+    ports = _get_data_list(data, 'port')
+    if ports:
+        port_filter['eq'] = ports
+    port_start = _get_data(data, 'portStart')
+    if port_start is not None:
+        port_filter['resp_ge'] = int(port_start)
+    port_end = _get_data(data, 'portEnd')
+    if port_end is not None:
+        port_filter['resp_lt'] = int(port_end)
+    port_ranges = _get_data_list(data, 'portRange')
+    if port_ranges:
+        port_filter['resp_range'] = []
+        for port_range in port_ranges:
+            port_start, port_end = port_range.split(',')
+            port_filter['resp_range'].append(
+                (int(port_start), int(port_end))
+            )
+    port_prefix = _get_data(data, 'portPrefix')
+    if port_prefix:
+        port_filter['startswith'] = port_prefix
+    port_suffix = _get_data(data, 'portSuffix')
+    if port_suffix:
+        port_filter['endswith'] = port_suffix
+    if port_filter:
+        data['port'] = port_filter
+    _clean_data(
+        data,
+        [
+            'portStart', 'portEnd', 'portRange',
+            'portPrefix', 'portSuffix'
+        ]
+    )
+
+
+def _filter_general(data, key):
+    general_filter = {}
+    general = _get_data_list(data, key)
+    if general:
+        general_filter['resp_in'] = general
+        data[key] = general_filter
+
+
+def _filter_tag(data):
+    tag_filter = {}
+    tags = _get_data_list(data, 'tag')
+    if tags:
+        tag_filter['resp_in'] = []
+        for tag in tags:
+            tag_filter['resp_in'].append(
+                util.parse_request_arg_dict(tag)
+            )
+        data['tag'] = tag_filter
+
+
+def _filter_location(data):
+    location_filter = {}
+    locations = _get_data_list(data, 'location')
+    if locations:
+        location_filter['resp_in'] = []
+        for location in locations:
+            location_filter['resp_in'].append(
+                util.parse_request_arg_dict(location)
+            )
+        data['location'] = location_filter
+
+
+@app.route("/switches/<int:switch_id>/machines", methods=['GET'])
+@log_user_action
+@login_required
+def list_switch_machines(switch_id):
+    """Get switch machines."""
+    data = _get_request_args(vlans=_int_converter)
+    _filter_port(data)
+    _filter_general(data, 'vlans')
+    _filter_tag(data)
+    _filter_location(data)
+    return utils.make_json_response(
+        200,
+        switch_api.list_switch_machines(
+            current_user, switch_id, **data
+        )
+    )
+
+
+@app.route("/switches/<int:switch_id>/machines-hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_switch_machines_hosts(switch_id):
+    """Get switch machines or hosts."""
+    data = _get_request_args(vlans=_int_converter, os_id=_int_converter)
+    _filter_port(data)
+    _filter_general(data, 'vlans')
+    _filter_tag(data)
+    _filter_location(data)
+    _filter_general(data, 'os_name')
+    _filter_general(data, 'os_id')
+    return utils.make_json_response(
+        200,
+        switch_api.list_switch_machines_hosts(
+            current_user, switch_id, **data
+        )
+    )
+
+
+@app.route("/switches/<int:switch_id>/machines", methods=['POST'])
+@log_user_action
+@login_required
+def add_switch_machine(switch_id):
+    """add switch machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.add_switch_machine(current_user, switch_id, **data)
+    )
+
+
+@app.route(
+    '/switches/<int:switch_id>/machines/<int:machine_id>',
+    methods=['GET']
+)
+@log_user_action
+@login_required
+def show_switch_machine(switch_id, machine_id):
+    """get switch machine."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        switch_api.get_switch_machine(
+            current_user, switch_id, machine_id, **data
+        )
+    )
+
+
+@app.route(
+    '/switches/<int:switch_id>/machines/<int:machine_id>',
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_switch_machine(switch_id, machine_id):
+    """update switch machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.update_switch_machine(
+            current_user, switch_id, machine_id, **data
+        )
+    )
+
+
+@app.route(
+    '/switches/<int:switch_id>/machines/<int:machine_id>',
+    methods=['PATCH']
+)
+@log_user_action
+@login_required
+def patch_switch_machine(switch_id, machine_id):
+    """patch switch machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.patch_switch_machine(
+            current_user, switch_id, machine_id, **data
+        )
+    )
+
+
+@app.route(
+    '/switches/<int:switch_id>/machines/<int:machine_id>',
+    methods=['DELETE']
+)
+@log_user_action
+@login_required
+def delete_switch_machine(switch_id, machine_id):
+    """Delete switch machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.del_switch_machine(
+            current_user, switch_id, machine_id, **data
+        )
+    )
+
+
+@app.route("/switches/<int:switch_id>/action", methods=['POST'])
+@log_user_action
+@login_required
+def take_switch_action(switch_id):
+    """update switch."""
+    data = _get_request_data()
+    poll_switch_machines_func = _wrap_response(
+        functools.partial(
+            switch_api.poll_switch_machines, current_user, switch_id
+        ),
+        202
+    )
+    update_switch_machines_func = _wrap_response(
+        functools.partial(
+            switch_api.update_switch_machines, current_user, switch_id
+        ),
+        200
+    )
+    return _group_data_action(
+        data,
+        find_machines=poll_switch_machines_func,
+        add_machines=update_switch_machines_func,
+        remove_machines=update_switch_machines_func,
+        set_machines=update_switch_machines_func
+    )
+
+
+@app.route("/machines/<int:machine_id>/action", methods=['POST'])
+@log_user_action
+@login_required
+def take_machine_action(machine_id):
+    """update machine."""
+    data = _get_request_data()
+    tag_func = _wrap_response(
+        functools.partial(
+            machine_api.update_machine, current_user, machine_id
+        ),
+        200
+    )
+    poweron_func = _wrap_response(
+        functools.partial(
+            machine_api.poweron_machine, current_user, machine_id
+        ),
+        202
+    )
+    poweroff_func = _wrap_response(
+        functools.partial(
+            machine_api.poweroff_machine, current_user, machine_id
+        ),
+        202
+    )
+    reset_func = _wrap_response(
+        functools.partial(
+            machine_api.reset_machine, current_user, machine_id
+        ),
+        202
+    )
+    return _group_data_action(
+        data,
+        tag=tag_func,
+        poweron=poweron_func,
+        poweroff=poweroff_func,
+        reset=reset_func
+    )
+
+
+@app.route("/switch-machines", methods=['GET'])
+@log_user_action
+@login_required
+def list_switchmachines():
+    """List switch machines."""
+    data = _get_request_args(vlans=_int_converter)
+    _filter_ip(data)
+    _filter_port(data)
+    _filter_general(data, 'vlans')
+    _filter_tag(data)
+    _filter_location(data)
+    return utils.make_json_response(
+        200,
+        switch_api.list_switchmachines(
+            current_user, **data
+        )
+    )
+
+
+@app.route("/switches-machines-hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_switchmachines_hosts():
+    """List switch machines or hosts."""
+    data = _get_request_args(vlans=_int_converter, os_id=_int_converter)
+    _filter_ip(data)
+    _filter_port(data)
+    _filter_general(data, 'vlans')
+    _filter_tag(data)
+    _filter_location(data)
+    _filter_general(data, 'os_name')
+    _filter_general(data, 'os_id')
+    return utils.make_json_response(
+        200,
+        switch_api.list_switchmachines_hosts(
+            current_user, **data
+        )
+    )
+
+
+@app.route(
+    '/switch-machines/<int:switch_machine_id>',
+    methods=['GET']
+)
+@log_user_action
+@login_required
+def show_switchmachine(switch_machine_id):
+    """get switch machine."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        switch_api.get_switchmachine(
+            current_user, switch_machine_id, **data
+        )
+    )
+
+
+@app.route(
+    '/switch-machines/<int:switch_machine_id>',
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_switchmachine(switch_machine_id):
+    """update switch machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.update_switchmachine(
+            current_user, switch_machine_id, **data
+        )
+    )
+
+
+@app.route('/switch-machines/<int:switch_machine_id>', methods=['PATCH'])
+@log_user_action
+@login_required
+def patch_switchmachine(switch_machine_id):
+    """patch switch machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.patch_switchmachine(
+            current_user, switch_machine_id, **data
+        )
+    )
+
+
+@app.route("/switch-machines/<int:switch_machine_id>", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_switchmachine(switch_machine_id):
+    """Delete switch machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.del_switchmachine(
+            current_user, switch_machine_id, **data
+        )
+    )
+
+
+@app.route("/machines", methods=['GET'])
+@log_user_action
+@login_required
+def list_machines():
+    """List machines."""
+    data = _get_request_args()
+    _filter_tag(data)
+    _filter_location(data)
+    return utils.make_json_response(
+        200,
+        machine_api.list_machines(
+            current_user, **data
+        )
+    )
+
+
+@app.route("/machines/<int:machine_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_machine(machine_id):
+    """Get machine."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        machine_api.get_machine(
+            current_user, machine_id, **data
+        )
+    )
+
+
+@app.route("/machines/<int:machine_id>", methods=['PUT'])
+@log_user_action
+@login_required
+def update_machine(machine_id):
+    """update machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        machine_api.update_machine(
+            current_user, machine_id, **data
+        )
+    )
+
+
+@app.route("/machines/<int:machine_id>", methods=['PATCH'])
+@log_user_action
+@login_required
+def patch_machine(machine_id):
+    """patch machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        machine_api.patch_machine(
+            current_user, machine_id, **data
+        )
+    )
+
+
+@app.route("/machines/<int:machine_id>", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_machine(machine_id):
+    """Delete machine."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        machine_api.del_machine(
+            current_user, machine_id, **data
+        )
+    )
+
+
+@app.route("/subnets", methods=['GET'])
+@log_user_action
+@login_required
+def list_subnets():
+    """List subnets."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        network_api.list_subnets(
+            current_user, **data
+        )
+    )
+
+
+@app.route("/subnets/<int:subnet_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_subnet(subnet_id):
+    """Get subnet."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        network_api.get_subnet(
+            current_user, subnet_id, **data
+        )
+    )
+
+
+@app.route("/subnets", methods=['POST'])
+@log_user_action
+@login_required
+def add_subnet():
+    """add subnet."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        network_api.add_subnet(current_user, **data)
+    )
+
+
+@app.route("/subnets/<int:subnet_id>", methods=['PUT'])
+@log_user_action
+@login_required
+def update_subnet(subnet_id):
+    """update subnet."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        network_api.update_subnet(
+            current_user, subnet_id, **data
+        )
+    )
+
+
+@app.route("/subnets/<int:subnet_id>", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_subnet(subnet_id):
+    """Delete subnet."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        network_api.del_subnet(
+            current_user, subnet_id, **data
+        )
     )
 
 
 @app.route("/adapters", methods=['GET'])
-def list_adapters():
-    """Lists details of the adapters, optionally filtered by adapter name.
-
-    :param name: the name of the adapter
-    """
-    endpoint = '/adapters'
-    name = request.args.get('name', type=str)
-    adapter_list = []
-    adapter_res = {}
-    with database.session() as session:
-        adapters = []
-        if name:
-            adapters = session.query(Adapter).filter_by(name=name).all()
-        else:
-            adapters = session.query(Adapter).all()
-
-        for adapter in adapters:
-            adapter_res = {}
-            adapter_res['name'] = adapter.name
-            adapter_res['os'] = adapter.os
-            adapter_res['target_system'] = adapter.target_system
-            adapter_res['id'] = adapter.id
-            adapter_res['link'] = {
-                "href": "/".join((endpoint, str(adapter.id))),
-                "rel": "self"}
-            adapter_list.append(adapter_res)
-
-    return util.make_json_response(
-        200, {"status": "OK",
-              "adapters": adapter_list})
-
-
-class HostInstallingProgress(Resource):
-    """Get host installing progress information."""
-
-    def get(self, host_id):
-        """Lists progress details of a specific cluster host.
-
-        :param host_id: the unique identifier of the host
-        """
-        progress_result = {}
-        with database.session() as session:
-            host = session.query(ModelClusterHost).filter_by(id=host_id)\
-                                                  .first()
-            if not host:
-                error_msg = "The host id=%s does not exist!" % host_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            if not host.state:
-                progress_result = {
-                    'id': host_id,
-                    'state': 'UNINITIALIZED',
-                    'percentage': 0,
-                    'message': "Waiting..............",
-                    'severity': "INFO",
-                }
-            else:
-                progress_result['id'] = host_id
-                progress_result['state'] = host.state.state
-                progress_result['percentage'] = host.state.progress
-                progress_result['message'] = host.state.message
-                progress_result['severity'] = host.state.severity
-
-        logging.info('progress result for %s: %s', host_id, progress_result)
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "progress": progress_result})
-
-
-class ClusterInstallingProgress(Resource):
-    """Get cluster installing progress information."""
-
-    def get(self, cluster_id):
-        """Lists progress details of a specific cluster.
-
-        :param cluster_id: the unique identifier of the cluster
-        """
-        progress_result = {}
-        with database.session() as session:
-            cluster = session.query(ModelCluster).filter_by(id=cluster_id)\
-                                                 .first()
-            if not cluster:
-                error_msg = "The cluster id=%s does not exist!" % cluster_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg))
-
-            if not cluster.state:
-                progress_result = {
-                    'id': cluster_id,
-                    'state': 'UNINITIALIZED',
-                    'percentage': 0,
-                    'message': "Waiting..............",
-                    'severity': "INFO"
-                }
-            else:
-                progress_result['id'] = cluster_id
-                progress_result['state'] = cluster.state.state
-                progress_result['percentage'] = cluster.state.progress
-                progress_result['message'] = cluster.state.message
-                progress_result['severity'] = cluster.state.severity
-
-        logging.info('progress result for cluster %s: %s',
-                     cluster_id, progress_result)
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "progress": progress_result})
-
-
-class DashboardLinks(Resource):
-    """Lists dashboard links."""
-    ENDPOINT = "/dashboardlinks/"
-
-    def get(self):
-        """Return a list of dashboard links.
-        """
-        cluster_id = request.args.get('cluster_id', None)
-        logging.info('get cluster links with cluster_id=%s', cluster_id)
-        links = {}
-        with database.session() as session:
-            hosts = session.query(
-                ModelClusterHost
-            ).filter_by(cluster_id=cluster_id).all()
-            if not hosts:
-                error_msg = "Cannot find hosts in cluster id=%s" % cluster_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg)
-                )
-
-            for host in hosts:
-                config = host.config
-                if (
-                    'has_dashboard_roles' in config and
-                    config['has_dashboard_roles']
-                ):
-                    ip_addr = config.get(
-                        'networking', {}
-                    ).get(
-                        'interfaces', {}
-                    ).get(
-                        'management', {}
-                    ).get(
-                        'ip', ''
-                    )
-                    roles = config.get('roles', [])
-                    for role in roles:
-                        links[role] = 'http://%s' % ip_addr
-
-        return util.make_json_response(
-            200, {
-                "status": "OK",
-                "dashboardlinks": links
-            }
-        )
-
-
-class User(Resource):
-    ENDPOINT = '/users'
-
-    @login_required
-    def get(self, user_id):
-        """Get user's information for specified ID."""
-        resp = {}
-        with database.session() as session:
-            user = session.query(ModelUser).filter_by(id=user_id).first()
-
-            if not user:
-                error_msg = "Cannot find the User which id is %s" % user_id
-                return errors.handle_not_exist(
-                    errors.ObjectDoesNotExist(error_msg)
-                )
-            resp['id'] = user_id
-            resp['email'] = user.email
-            resp['link'] = {
-                "href": "/".join((self.ENDPOINT, str(user_id))),
-                "rel": "self"
-            }
-
-        return util.make_json_response(
-            200, {"status": "OK",
-                  "user": resp}
-        )
-
-
-TABLES = {
-    'switch_config': {
-        'name': SwitchConfig,
-        'columns': ['id', 'ip', 'filter_port']
-    },
-    'switch': {
-        'name': ModelSwitch,
-        'columns': ['id', 'ip', 'credential_data']
-    },
-    'machine': {
-        'name': ModelMachine,
-        'columns': ['id', 'mac', 'port', 'vlan', 'switch_id']
-    },
-    'cluster': {
-        'name': ModelCluster,
-        'columns': [
-            'id', 'name', 'security_config',
-            'networking_config', 'partition_config',
-            'adapter_id', 'state'
-        ]
-    },
-    'cluster_host': {
-        'name': ModelClusterHost,
-        'columns': [
-            'id', 'cluster_id', 'hostname', 'machine_id',
-            'config_data', 'state'
-        ]
-    },
-    'adapter': {
-        'name': Adapter,
-        'columns': ['id', 'name', 'os', 'target_system']
-    },
-    'role': {
-        'name': Role,
-        'columns': ['id', 'name', 'target_system', 'description']
-    }
-}
-
-
+@log_user_action
 @login_required
-@app.route("/export/<string:tname>", methods=['GET'])
-def export_csv(tname):
-    """export to csv file."""
-    if tname not in TABLES:
-        error_msg = "Table '%s' is not supported to export or wrong table name"
-        return util.handle_invalid_usage(
-            errors.UserInvalidUsage(error_msg)
+def list_adapters():
+    """List adapters."""
+    data = _get_request_args()
+    _filter_general(data, 'name')
+    _filter_general(data, 'distributed_system_name')
+    _filter_general(data, 'os_installer_name')
+    _filter_general(data, 'package_installer_name')
+    return utils.make_json_response(
+        200,
+        adapter_api.list_adapters(
+            current_user, **data
         )
-
-    table = TABLES[tname]['name']
-    colnames = TABLES[tname]['columns']
-    t_headers = []
-    rows = []
-    with database.session() as session:
-        records = session.query(table).all()
-        # Get headers of the table
-        if not records:
-            t_headers = colnames
-        else:
-            first_record = records[0]
-            for col in colnames:
-                value = getattr(first_record, col)
-                if re.match(r'^{(.*:.*[,]*)}', str(value)):
-                    # value is dict
-                    util.get_headers_from_dict(t_headers, col,
-                                               json.loads(value))
-                else:
-                    t_headers.append(col)
-
-        # Get columns values
-        for entry in records:
-            tmp = []
-            for col in colnames:
-                value = None
-                if col == 'state':
-                    value = entry.state.state if entry.state else None
-                    tmp.append(value)
-                    continue
-                else:
-                    value = str(json.loads(json.dumps(getattr(entry, col))))
-
-                if re.match(r'^{(.*:.*[,]*)}', value):
-                    util.get_col_val_from_dict(tmp, json.loads(value))
-                else:
-                    tmp.append(value)
-
-            rows.append(tmp)
-
-    if tname == 'cluster_host':
-        t_headers.append('deploy_action')
-        for row in rows:
-            row.append(0)
-
-    result = ','.join(str(x) for x in t_headers)
-
-    for row in rows:
-        row = ','.join(str(x) for x in row)
-        result = '\n'.join((result, row))
-
-    return util.make_csv_response(200, result, tname)
+    )
 
 
-util.add_resource(SwitchList, '/switches')
-util.add_resource(Switch, '/switches/<int:switch_id>')
-util.add_resource(MachineList, '/machines')
-util.add_resource(Machine, '/machines/<int:machine_id>')
-util.add_resource(Cluster,
-                  '/clusters',
-                  '/clusters/<int:cluster_id>',
-                  '/clusters/<int:cluster_id>/<string:resource>')
-util.add_resource(ClusterHostConfig,
-                  '/clusterhosts/<int:host_id>/config',
-                  '/clusterhosts/<int:host_id>/config/<string:subkey>')
-util.add_resource(ClusterHost, '/clusterhosts/<int:host_id>')
-util.add_resource(HostInstallingProgress,
-                  '/clusterhosts/<int:host_id>/progress')
-util.add_resource(ClusterInstallingProgress,
-                  '/clusters/<int:cluster_id>/progress')
-util.add_resource(DashboardLinks, '/dashboardlinks')
-util.add_resource(User,
-                  '/users',
-                  '/users/<int:user_id>')
+@app.route("/adapters/<int:adapter_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_adapter(adapter_id):
+    """Get adapter."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        adapter_api.get_adapter(
+            current_user, adapter_id, **data
+        )
+    )
+
+
+@app.route("/adapters/<int:adapter_id>/metadata", methods=['GET'])
+@log_user_action
+@login_required
+def show_adapter_metadata(adapter_id):
+    """Get adapter metadata."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        metadata_api.get_package_metadata(
+            current_user, adapter_id, **data
+        )
+    )
+
+
+@app.route("/oses/<int:os_id>/metadata", methods=['GET'])
+@log_user_action
+@login_required
+def show_os_metadata(os_id):
+    """Get os metadata."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        metadata_api.get_os_metadata(
+            current_user, os_id, **data
+        )
+    )
+
+
+@app.route(
+    "/adapters/<int:adapter_id>/oses/<int:os_id>/metadata",
+    methods=['GET']
+)
+@log_user_action
+@login_required
+def show_adapter_os_metadata(adapter_id, os_id):
+    """Get adapter metadata."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        metadata_api.get_package_os_metadata(
+            current_user, adapter_id, os_id, **data
+        )
+    )
+
+
+@app.route("/clusters", methods=['GET'])
+@log_user_action
+@login_required
+def list_clusters():
+    """List clusters."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.list_clusters(
+            current_user, **data
+        )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_cluster(cluster_id):
+    """Get cluster."""
+    data = _get_request_args(adapter_id=_int_converter)
+    return utils.make_json_response(
+        200,
+        cluster_api.get_cluster(
+            current_user, cluster_id, **data
+        )
+    )
+
+
+@app.route("/clusters", methods=['POST'])
+@log_user_action
+@login_required
+def add_cluster():
+    """add cluster."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.add_cluster(current_user, **data)
+    )
+
+
+@app.route("/clusters/<int:cluster_id>", methods=['PUT'])
+@log_user_action
+@login_required
+def update_cluster(cluster_id):
+    """update cluster."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_cluster(
+            current_user, cluster_id, **data
+        )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_cluster(cluster_id):
+    """Delete cluster."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.del_cluster(
+            current_user, cluster_id, **data
+        )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/config", methods=['GET'])
+@log_user_action
+@login_required
+def show_cluster_config(cluster_id):
+    """Get cluster config."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_cluster_config(
+            current_user, cluster_id, **data
+        )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/metadata", methods=['GET'])
+@log_user_action
+@login_required
+def show_cluster_metadata(cluster_id):
+    """Get cluster config."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_cluster_metadata(
+            current_user, cluster_id, **data
+        )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/config", methods=['PUT'])
+@log_user_action
+@login_required
+def update_cluster_config(cluster_id):
+    """update cluster config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_cluster_config(current_user, cluster_id, **data)
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/config", methods=['PATCH'])
+@log_user_action
+@login_required
+def patch_cluster_config(cluster_id):
+    """patch cluster config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.patch_cluster_config(current_user, cluster_id, **data)
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/config", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_cluster_config(cluster_id):
+    """Delete cluster config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.del_cluster_config(
+            current_user, cluster_id, **data
+        )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/action", methods=['POST'])
+@log_user_action
+@login_required
+def take_cluster_action(cluster_id):
+    """take cluster action."""
+    data = _get_request_data()
+    update_cluster_hosts_func = _wrap_response(
+        functools.partial(
+            cluster_api.update_cluster_hosts, current_user, cluster_id
+        ),
+        200
+    )
+    review_cluster_func = _wrap_response(
+        functools.partial(
+            cluster_api.review_cluster, current_user, cluster_id
+        ),
+        200
+    )
+    deploy_cluster_func = _wrap_response(
+        functools.partial(
+            cluster_api.deploy_cluster, current_user, cluster_id
+        ),
+        202
+    )
+    return _group_data_action(
+        data,
+        add_hosts=update_cluster_hosts_func,
+        set_hosts=update_cluster_hosts_func,
+        remove_hosts=update_cluster_hosts_func,
+        review=review_cluster_func,
+        deploy=deploy_cluster_func
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/state", methods=['GET'])
+@log_user_action
+@login_required
+def get_cluster_state(cluster_id):
+    """Get cluster state."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_cluster_state(
+            current_user, cluster_id, **data
+        )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_cluster_hosts(cluster_id):
+    """Get cluster hosts."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        _reformat_host(cluster_api.list_cluster_hosts(
+            current_user, cluster_id, **data
+        ))
+    )
+
+
+@app.route("/clusterhosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_clusterhosts():
+    """Get cluster hosts."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        _reformat_host(cluster_api.list_clusterhosts(
+            current_user, **data
+        ))
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/hosts/<int:host_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_cluster_host(cluster_id, host_id):
+    """Get clusterhost."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        _reformat_host(cluster_api.get_cluster_host(
+            current_user, cluster_id, host_id, **data
+        ))
+    )
+
+
+@app.route("/clusterhosts/<int:clusterhost_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_clusterhost(clusterhost_id):
+    """Get clusterhost."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        _reformat_host(cluster_api.get_clusterhost(
+            current_user, clusterhost_id, **data
+        ))
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/hosts", methods=['POST'])
+@log_user_action
+@login_required
+def add_cluster_host(cluster_id):
+    """update cluster hosts."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.add_cluster_host(current_user, cluster_id, **data)
+    )
+
+
+@app.route(
+    '/clusters/<int:cluster_id>/hosts/<int:host_id>',
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_cluster_host(cluster_id, host_id):
+    """Update cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_cluster_host(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route(
+    '/clusterhosts/<int:clusterhost_id>',
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_clusterhost(clusterhost_id):
+    """Update cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_clusterhost(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    '/clusters/<int:cluster_id>/hosts/<int:host_id>',
+    methods=['PATCH']
+)
+@log_user_action
+@login_required
+def patch_cluster_host(cluster_id, host_id):
+    """Update cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.patch_cluster_host(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route(
+    '/clusterhosts/<int:clusterhost_id>',
+    methods=['PATCH']
+)
+@log_user_action
+@login_required
+def patch_clusterhost(clusterhost_id):
+    """Update cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.patch_clusterhost(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    '/clusters/<int:cluster_id>/hosts/<int:host_id>',
+    methods=['DELETE']
+)
+@log_user_action
+@login_required
+def delete_cluster_host(cluster_id, host_id):
+    """Delete cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.del_cluster_host(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route(
+    '/clusterhosts/<int:clusterhost_id>',
+    methods=['DELETE']
+)
+@log_user_action
+@login_required
+def delete_clusterhost(clusterhost_id):
+    """Delete cluster host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.del_clusterhost(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    "/clusters/<int:cluster_id>/hosts/<int:host_id>/config",
+    methods=['GET']
+)
+@log_user_action
+@login_required
+def show_cluster_host_config(cluster_id, host_id):
+    """Get clusterhost config."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_cluster_host_config(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['GET'])
+@log_user_action
+@login_required
+def show_clusterhost_config(clusterhost_id):
+    """Get clusterhost config."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_clusterhost_config(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    "/clusters/<int:cluster_id>/hosts/<int:host_id>/config",
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_cluster_host_config(cluster_id, host_id):
+    """update clusterhost config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_cluster_host_config(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['PUT'])
+@log_user_action
+@login_required
+def update_clusterhost_config(clusterhost_id):
+    """update clusterhost config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_clusterhost_config(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    "/clusters/<int:cluster_id>/hosts/<int:host_id>/config",
+    methods=['PATCH']
+)
+@log_user_action
+@login_required
+def patch_cluster_host_config(cluster_id, host_id):
+    """patch clusterhost config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.patch_cluster_host_config(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route("/clusterhosts/<int:clusterhost_id>", methods=['PATCH'])
+@log_user_action
+@login_required
+def patch_clusterhost_config(clusterhost_id):
+    """patch clusterhost config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.patch_clusterhost_config(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    "/clusters/<int:cluster_id>/hosts/<int:host_id>/config",
+    methods=['DELETE']
+)
+@log_user_action
+@login_required
+def delete_cluster_host_config(cluster_id, host_id):
+    """Delete clusterhost config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.del_clusterhost_config(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_clusterhost_config(clusterhost_id):
+    """Delete clusterhost config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.del_clusterhost_config(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    "/clusters/<int:cluster_id>/hosts/<int:host_id>/state",
+    methods=['GET']
+)
+@log_user_action
+@login_required
+def show_cluster_host_state(cluster_id, host_id):
+    """Get clusterhost state."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_cluster_host_state(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route("/clusterhosts/<int:clusterhost_id>/state", methods=['GET'])
+@log_user_action
+@login_required
+def show_clusterhost_state(clusterhost_id):
+    """Get clusterhost state."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        cluster_api.get_clusterhost_state(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route(
+    "/clusters/<int:cluster_id>/hosts/<int:host_id>/state",
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_cluster_host_state(cluster_id, host_id):
+    """update clusterhost state."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_clusterhost_state(
+            current_user, cluster_id, host_id, **data
+        )
+    )
+
+
+@app.route("/clusterhosts/<int:clusterhost_id>/state", methods=['PUT'])
+@log_user_action
+@login_required
+def update_clusterhost_state(clusterhost_id):
+    """update clusterhost state."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_clusterhost_state(
+            current_user, clusterhost_id, **data
+        )
+    )
+
+
+@app.route("/hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_hosts():
+    """List hosts."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        _reformat_host(host_api.list_hosts(
+            current_user, **data
+        ))
+    )
+
+
+@app.route("/hosts/<int:host_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_host(host_id):
+    """Get host."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        _reformat_host(host_api.get_host(
+            current_user, host_id, **data
+        ))
+    )
+
+
+@app.route("/machines-hosts", methods=['GET'])
+@log_user_action
+@login_required
+def list_machines_or_hosts():
+    """Get host."""
+    data = _get_request_args(os_id=_int_converter)
+    _filter_tag(data)
+    _filter_location(data)
+    _filter_general(data, 'os_name')
+    _filter_general(data, 'os_id')
+    return utils.make_json_response(
+        200,
+        _reformat_host(host_api.list_machines_or_hosts(
+            current_user, **data
+        ))
+    )
+
+
+@app.route("/machines-hosts/<int:host_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_machine_or_host(host_id):
+    """Get host."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        _reformat_host(host_api.get_machine_or_host(
+            current_user, host_id, **data
+        ))
+    )
+
+
+@app.route("/hosts/<int:host_id>", methods=['PUT'])
+@log_user_action
+@login_required
+def update_host(host_id):
+    """update host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.update_host(
+            current_user, host_id, **data
+        )
+    )
+
+
+@app.route("/hosts", methods=['PUT'])
+@log_user_action
+@login_required
+def update_hosts():
+    """update hosts."""
+    data = _get_request_data_as_list()
+    return utils.make_json_response(
+        200,
+        host_api.update_hosts(
+            current_user, data
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_host(host_id):
+    """Delete host."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.del_host(
+            current_user, host_id, **data
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/clusters", methods=['GET'])
+@log_user_action
+@login_required
+def get_host_clusters(host_id):
+    """Get host clusters."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        host_api.get_host_clusters(
+            current_user, host_id, **data
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/config", methods=['GET'])
+@log_user_action
+@login_required
+def show_host_config(host_id):
+    """Get host config."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        host_api.get_host_config(
+            current_user, host_id, **data
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/config", methods=['PUT'])
+@log_user_action
+@login_required
+def update_host_config(host_id):
+    """update host config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.update_host_config(current_user, host_id, **data)
+    )
+
+
+@app.route("/hosts/<int:host_id>", methods=['PATCH'])
+@log_user_action
+@login_required
+def patch_host_config(host_id):
+    """patch host config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.patch_host_config(current_user, host_id, **data)
+    )
+
+
+@app.route("/hosts/<int:host_id>/config", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_host_config(host_id):
+    """Delete host config."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.del_host_config(
+            current_user, host_id, **data
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/networks", methods=['GET'])
+@log_user_action
+@login_required
+def list_host_networks(host_id):
+    """list host networks."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        _reformat_host_networks(
+            host_api.list_host_networks(
+                current_user, host_id, **data
+            )
+        )
+    )
+
+
+@app.route("/host/networks", methods=['GET'])
+@log_user_action
+@login_required
+def list_hostnetworks():
+    """list host networks."""
+    data = _get_request_args(
+        is_mgmt=_bool_converter,
+        is_promiscuous=_bool_converter
+    )
+    return utils.make_json_response(
+        200,
+        _reformat_host_networks(
+            host_api.list_hostnetworks(current_user, **data)
+        )
+    )
+
+
+@app.route(
+    "/hosts/<int:host_id>/networks/<int:host_network_id>",
+    methods=['GET']
+)
+@log_user_action
+@login_required
+def show_host_network(host_id, host_network_id):
+    """Get host network."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        host_api.get_host_network(
+            current_user, host_id, host_network_id, **data
+        )
+    )
+
+
+@app.route("/host/networks/<int:host_network_id>", methods=['GET'])
+@log_user_action
+@login_required
+def show_hostnetwork(host_network_id):
+    """Get host network."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        host_api.get_hostnetwork(
+            current_user, host_network_id, **data
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/networks", methods=['POST'])
+@log_user_action
+@login_required
+def add_host_network(host_id):
+    """add host network."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200, host_api.add_host_network(current_user, host_id, **data)
+    )
+
+
+@app.route("/hosts/networks", methods=['PUT'])
+@log_user_action
+@login_required
+def update_host_networks():
+    """add host networks."""
+    data = _get_request_data_as_list()
+    return utils.make_json_response(
+        200, host_api.add_host_networks(
+            current_user, data)
+    )
+
+
+@app.route(
+    "/hosts/<int:host_id>/networks/<int:host_network_id>",
+    methods=['PUT']
+)
+@log_user_action
+@login_required
+def update_host_network(host_id, host_network_id):
+    """update host network."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.update_host_network(
+            current_user, host_id, host_network_id, **data
+        )
+    )
+
+
+@app.route("/host-networks/<int:host_network_id>", methods=['PUT'])
+@log_user_action
+@login_required
+def update_hostnetwork(host_network_id):
+    """update host network."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.update_hostnetwork(
+            current_user, host_network_id, **data
+        )
+    )
+
+
+@app.route(
+    "/hosts/<int:host_id>/networks/<int:host_network_id>",
+    methods=['DELETE']
+)
+@log_user_action
+@login_required
+def delete_host_network(host_id, host_network_id):
+    """Delete host network."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.del_host_network(
+            current_user, host_id, host_network_id, **data
+        )
+    )
+
+
+@app.route("/host-networks/<int:host_network_id>", methods=['DELETE'])
+@log_user_action
+@login_required
+def delete_hostnetwork(host_network_id):
+    """Delete host network."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.del_hostnetwork(
+            current_user, host_network_id, **data
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/state", methods=['GET'])
+@log_user_action
+@login_required
+def show_host_state(host_id):
+    """Get host state."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        host_api.get_host_state(
+            current_user, host_id, **data
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/state", methods=['PUT'])
+@log_user_action
+@login_required
+def update_host_state(host_id):
+    """update host state."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.update_host_state(
+            current_user, host_id, **data
+        )
+    )
+
+
+def _poweron_host(*args, **kwargs):
+    return utils.make_json_response(
+        202,
+        host_api.poweron_host(
+            *args, **kwargs
+        )
+    )
+
+
+def _poweroff_host(*args, **kwargs):
+    return utils.make_json_response(
+        202,
+        host_api.poweroff_host(
+            *args, **kwargs
+        )
+    )
+
+
+def _reset_host(*args, **kwargs):
+    return utils.make_json_response(
+        202,
+        host_api.reset_host(
+            *args, **kwargs
+        )
+    )
+
+
+@app.route("/hosts/<int:host_id>/action", methods=['POST'])
+@log_user_action
+@login_required
+def take_host_action(host_id):
+    """take host action."""
+    data = _get_request_data()
+    poweron_func = _wrap_response(
+        functools.partial(
+            host_api.poweron_host, current_user, host_id
+        ),
+        202
+    )
+    poweroff_func = _wrap_response(
+        functools.partial(
+            host_api.poweroff_host, current_user, host_id
+        ),
+        202
+    )
+    reset_func = _wrap_response(
+        functools.partial(
+            host_api.reset_host, current_user, host_id
+        )
+    )
+    return _group_data_action(
+        data,
+        poweron=poweron_func,
+        poweroff=poweroff_func,
+        reset=reset_func,
+    )
+
+
+def _get_headers(*keys):
+    headers = {}
+    for key in keys:
+        if key in request.headers:
+            headers[key] = request.headers[key]
+    return headers
+
+
+def _get_response_json(response):
+    try:
+        return response.json()
+    except ValueError:
+        return response.text
+
+
+@app.route("/proxy/<path:url>", methods=['GET'])
+@log_user_action
+@login_required
+def proxy_get(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding', app.config['AUTH_HEADER_NAME'],
+        'Cookie'
+    )
+    response = requests.get(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        params=_get_request_args(),
+        headers=headers,
+        stream=True
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/proxy/<path:url>", methods=['POST'])
+@log_user_action
+@login_required
+def proxy_post(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding',
+        'Cookie'
+    )
+    response = requests.post(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        data=request.data,
+        headers=headers
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/proxy/<path:url>", methods=['PUT'])
+@log_user_action
+@login_required
+def proxy_put(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding',
+        'Cookie'
+    )
+    response = requests.put(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        data=request.data,
+        headers=headers
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/proxy/<path:url>", methods=['PATCH'])
+@log_user_action
+@login_required
+def proxy_patch(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding',
+        'Cookie'
+    )
+    response = requests.patch(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        data=request.data,
+        headers=headers
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/proxy/<path:url>", methods=['DELETE'])
+@log_user_action
+@login_required
+def proxy_delete(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding',
+        'Cookie'
+    )
+    response = requests.delete(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        headers=headers
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+def init():
+    logging.info('init flask')
+    database.init()
+    adapter_api.load_adapters()
+    metadata_api.load_metadatas()
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    flags.init()
+    logsetting.init()
+    init()
+    app.run(host='0.0.0.0')

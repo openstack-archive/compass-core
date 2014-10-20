@@ -13,10 +13,9 @@
 # limitations under the License.
 
 """Health Check module for Package Installer."""
-
+import logging
 import os
 import requests
-import subprocess
 
 from compass.actions.health_check import base
 from compass.actions.health_check import setting as health_check_setting
@@ -29,18 +28,40 @@ class PackageInstallerCheck(base.BaseCheck):
 
     def run(self):
         """do health check."""
-        installer = self.config.PACKAGE_INSTALLER
-        method_name = "self." + installer + "_check()"
+        method_name = "self." + self.package_installer['name'] + "_check()"
         return eval(method_name)
 
     def chef_check(self):
-        """Checks chef setting, cookbooks, databags and roles."""
-        for data_type in ['Cookbook', 'Role', 'Databag']:
-            self.check_chef_data(data_type)
-            if self.code != 1:
-                return (self.code, self.messages)
+        """Checks chef setting, cookbooks and roles."""
+        chef_data_map = {
+            'CookBook': health_check_setting.COOKBOOKS,
+            'Role': health_check_setting.ROLES,
+        }
 
+        total_missing = []
+        for data_type in chef_data_map.keys():
+            total_missing.append(self.check_chef_data(data_type,
+                                 chef_data_map[data_type]))
             print "[Done]"
+
+        missing = False
+        for item in total_missing:
+            if item[1] != []:
+                missing = True
+                break
+
+        if missing is True:
+            messages = []
+            for item in total_missing:
+                messages.append("[%s]:%s"
+                                % (item[0],
+                                   ', '.join(missed for missed in item[1])))
+            self._set_status(
+                0,
+                "[%s]Error: Missing modules on chef server: "
+                "%s." % (
+                    self.NAME,
+                    ' ;'.join(message for message in messages)))
 
         self.check_chef_config_dir()
         print "[Done]"
@@ -52,7 +73,7 @@ class PackageInstallerCheck(base.BaseCheck):
 
         return (self.code, self.messages)
 
-    def check_chef_data(self, data_type):
+    def check_chef_data(self, data_type, github_url):
         """Checks if chef cookbooks/roles/databags are correct.
 
         :param data_type  : chef data type
@@ -69,52 +90,39 @@ class PackageInstallerCheck(base.BaseCheck):
             self._set_status(
                 0,
                 "[%s]Error: pychef is not installed." % self.NAME)
-            return
+
+            return self.get_status()
 
         api = chef.autoconfigure()
+
+        github = set([
+            item['name']
+            for item in requests.get(github_url).json()
+        ])
         if data_type == 'CookBook':
-            local = set([
-                name for name in os.listdir('/var/chef/cookbooks')
-                if name
-            ])
-            try:
-                server = set(api['/cookbooks'].keys())
-            except Exception:
-                self._set_status(
-                    0,
-                    "[%s]Error: pychef fails to get cookbooks" % self.NAME)
-                return
+            local = set(os.listdir('/var/chef/cookbooks'))
         elif data_type == 'Role':
             local = set([
-                name[:-3] for name in os.listdir('/var/chef/roles')
-                if name.endswith('.rb')
+                name for name, item in chef.Role.list(api=api).iteritems()
             ])
-            try:
-                server = set(api['/roles'].keys())
-            except Exception:
-                self._set_status(
-                    0,
-                    "[%s]Error: pychef fails to get roles" % self.NAME)
-                return
+            github = set([
+                item['name'].replace(".rb", "").replace(".json", "")
+                for item in requests.get(github_url).json()
+            ])
         else:
             local = set([
-                name for name in os.listdir('/var/chef/databags')
-                if name
+                item for item in eval(
+                    'chef.' + data_type + '.list(api=api)'
+                )
             ])
-            try:
-                server = set(api['/data'].keys())
-            except Exception:
-                self._set_status(
-                    0,
-                    "[%s]Error: pychef fails to get databags" % self.NAME)
-                return
+        logging.info('github %s: %s', data_type, github)
+        logging.info('local %s: %s', data_type, local)
+        diff = github - local
 
-        diff = server - local
-
-        if len(diff) > 0:
-            self._set_status(
-                0,
-                "[%s]Error: %s diff: %s" % (self.NAME, diff))
+        if len(diff) <= 0:
+            return (data_type, [])
+        else:
+            return (data_type, list(diff))
 
     def check_chef_config_dir(self):
         """Validates chef configuration directories."""
@@ -123,9 +131,9 @@ class PackageInstallerCheck(base.BaseCheck):
         message = health_check_utils.check_path(self.NAME, '/etc/chef-server/')
         if not message == "":
             self._set_status(0, message)
-            return
 
         message = health_check_utils.check_path(self.NAME, '/opt/chef-server/')
         if not message == "":
             self._set_status(0, message)
-            return
+
+        return None

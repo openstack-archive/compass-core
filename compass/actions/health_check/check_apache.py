@@ -79,11 +79,7 @@ class ApacheCheck(base.BaseCheck):
                 % self.NAME)
         try:
             html = urllib2.urlopen('http://localhost')
-            content = html.geturl()
-            if "http://localhost/ods/ods.html" != content:
-                self._set_status(
-                    0,
-                    "[%s]Error: Compass web is not redirected by Apache.")
+            html.geturl()
         except Exception:
             self._set_status(
                 0,

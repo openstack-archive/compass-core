@@ -28,18 +28,18 @@ class DnsCheck(base.BaseCheck):
 
     def run(self):
         """do health check."""
-        installer = self.config.OS_INSTALLER
-        method_name = "self.check_" + installer + "_dns()"
+        method_name = "self.check_" + self.os_installer['name'] + "_dns()"
         return eval(method_name)
 
     def check_cobbler_dns(self):
         """Checks if Cobbler has taken over DNS service."""
         try:
             remote = xmlrpclib.Server(
-                self.config.COBBLER_INSTALLER_URL,
+                self.os_installer['cobbler_url'],
                 allow_none=True)
+            credentials = self.os_installer['credentials']
             remote.login(
-                *self.config.COBBLER_INSTALLER_TOKEN)
+                credentials['username'], credentials['password'])
         except Exception:
             self._set_status(0,
                              "[%s]Error: Cannot login to Cobbler "

@@ -1,0 +1,2 @@
+#!/bin/bash
+/opt/compass/bin/client.py --switch_ips=172.29.8.40 --machines=00:0c:29:a7:ea:4b --adapter_name=os_only --adapter_flavor_pattern= --subnets=10.145.88.0/23,172.16.0.0/16 --cluster_name=cluster1 --domain=ods.com --default_gateway=10.145.88.1 --service_credentials= --console_credentials= --hostnames=host1 --host_networks="host1:eth0=10.145.89.201|is_mgmt,eth1=172.16.100.201|is_promiscuous" --partitions="/var=50%,/home=30%" --network_mapping= --host_roles= --dashboard_url=

@@ -19,11 +19,14 @@ import re
 
 from compass.hdsdiscovery.error import TimeoutError
 from compass.hdsdiscovery import utils
+from compass.utils import setting_wrapper as setting
+from compass.utils import util
 
 
 UNREACHABLE = 'unreachable'
 NOTSUPPORTED = 'notsupported'
 ERROR = 'error'
+REPOLLING = 'repolling'
 
 
 class HDManager(object):
@@ -98,8 +101,11 @@ class HDManager(object):
         :return a tuple (vendor, switch_state, error)
         """
 
-        # Returen appliance plugin once we see 127.0.0.1 ass switch ip
-        if host == '127.0.0.1':
+        switch_lists = util.load_configs(setting.SWITCH_LIST_DIR)
+        switch_list = None
+        for item in switch_lists:
+            switch_list = item['SWITCH_LIST']
+        if host in switch_list:
             return ("appliance", "Found", "")
 
         # TODO(grace): Why do we need to have valid IP?
@@ -147,7 +153,7 @@ class HDManager(object):
             logging.debug("[get_vendor] No vendor found! <==================")
             return (None, NOTSUPPORTED, "Not supported switch vendor!")
 
-        return (vendor, "Found", "")
+        return (vendor, REPOLLING, "")
 
     def get_sys_info(self, host, credential):
         """get sys info."""

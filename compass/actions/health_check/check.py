@@ -36,12 +36,12 @@ class BootCheck(base.BaseCheck):
         status['celery'] = self._check_celery()
         status['dhcp'] = self._check_dhcp()
         status['dns'] = self._check_dns()
-#        status['hds'] = self._check_hds()
+        status['hds'] = self._check_hds()
         status['os_installer'] = self._check_os_installer()
         status['package_installer'] = self._check_package_installer()
         status['squid'] = self._check_squid()
         status['tftp'] = self._check_tftp()
-#        status['other'] = self._check_misc()
+        status['other'] = self._check_misc()
 
         return status
 

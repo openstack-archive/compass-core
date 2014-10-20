@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+# compassd          Compass daemon
+##################################
+
+# LSB header
+
+### BEGIN INIT INFO
+# Provides: compassd
+# Required-Start: $network $httpd 
+# Default-Start: 3 4 5
+# Default-Stop: 0 1 2 6
+# Short-Description: compassd
+# Description: Compass daemon service
+#              
+### END INIT INFO
+
+# chkconfig header
+
+# chkconfig: 345 98 98
+# description:  This is a daemon that provides Compass daemon service
+#
+# Checking Sanity
+DEBIAN=/etc/debian_version
+SUSE=/etc/SuSE-release
+CELERY=/opt/compass/bin/celery
+
+if [ -f $DEBIAN ]; then
+    . /lib/lsb/init-functions
+elif [ -f $SUSE -a -r /etc/rc.status ]; then
+    . /etc/rc.status
+else
+    . /etc/rc.d/init.d/functions
+fi
+
+RETVAL=0
+start() {
+    echo -n "Starting Compass Celeryd: "
+    if [ -f $SUSE ]; then
+        startproc -f -p /var/run/celery-worker.pid -l /tmp/celery-worker.log "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY worker"
+        rc_status -v
+        RETVAL=$?
+    elif [ -f $DEBIAN ]; then
+        start_daemon -p /var/run/celery-worker.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY worker &>/tmp/celery-worker.log & echo \$! > /var/run/celery-worker.pid"
+        RETVAL=$?
+    else
+        daemon --pidfile /var/run/celery-worker.pid "C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY worker &>/tmp/celery-worker.log & echo \$! > /var/run/celery-worker.pid"
+        RETVAL=$?
+    fi
+    echo
+    return $RETVAL
+}
+
+stop() {
+    echo -n "Stopping Compass Celeryd: "
+    if [ -f $SUSE ]; then
+        killproc -t 10 -p /var/run/celery-worker.pid $CELERY
+        rc_status -v
+        RETVAL=$?
+    elif [ -f $DEBIAN ]; then
+        killproc -p /var/run/celery-worker.pid $CELERY -TERM
+        RETVAL=$?
+    else
+        killproc -p /var/run/celery-worker.pid -d 30 $CELERY
+        RETVAL=$?
+    fi
+    echo
+}
+
+restart() {
+   stop
+   start
+}
+case "$1" in
+    start|stop|restart)
+        $1
+        ;;
+    status)
+        echo -n "Checking compass celeryd: "
+        if [ -f $SUSE ]; then
+            checkproc -v -p /var/run/celery-worker.pid $CELERY
+            rc_status -v
+            RETVAL=$?
+        elif [ -f $DEBIAN ]; then
+            status_of_proc -p /var/run/celery-worker.pid $CELERY
+            RETVAL=$?
+        else
+            status -p /var/run/celery-worker.pid $CELERY
+            RETVAL=$?
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
+exit $RETVAL

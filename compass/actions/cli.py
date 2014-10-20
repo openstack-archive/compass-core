@@ -13,10 +13,16 @@
 # limitations under the License.
 
 """Compass Command Line Interface"""
+import logging
 import subprocess
 import sys
 
 from compass.actions.health_check import check
+from compass.db.api import database
+
+from compass.utils import flags
+from compass.utils import logsetting
+from compass.utils import setting_wrapper as setting
 from compass.utils.util import pretty_print
 
 
@@ -165,10 +171,9 @@ class BootCLI(object):
 
 def main():
     """Compass cli entry point."""
+    flags.init()
+    logsetting.init()
+    database.init()
     cli = BootCLI()
     output = cli.run(sys.argv)
     return sys.exit(output)
-
-
-if __name__ == "__main__":
-    main()

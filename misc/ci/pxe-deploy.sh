@@ -1,6 +1,7 @@
 #!/bin/bash -xe
 ln -s /var/log/cobbler/anamon cobbler_logs
 ln -s /var/log/compass compass_logs
+ln -s /var/log/chef chef_logs
 cp compass-core/compass/apiclient/example.py /tmp/test.py
 chmod +x /tmp/test.py
 virsh destroy pxe01

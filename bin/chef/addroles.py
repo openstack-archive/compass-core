@@ -20,6 +20,13 @@ import os
 import os.path
 import sys
 
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(current_dir)
+
+
+import switch_virtualenv
+
 from compass.utils import flags
 from compass.utils import logsetting
 
@@ -37,7 +44,7 @@ def main():
     roles_dir = flags.OPTIONS.roles_dir
 
     for item in os.listdir(roles_dir):
-        if item.endswith('.rb'):
+        if item.endswith('.rb') or item.endswith('.json'):
             rolelist.append(os.path.join(roles_dir, item))
         else:
             logging.info('ignore %s in %s', item, roles_dir)

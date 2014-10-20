@@ -1,15 +1,7 @@
 Compass
 =======
 
-
 A Deoployment Automation System. See Wiki page at https://wiki.openstack.org/wiki/Compass.
-
-Two other related github repos are:
-
- * compass-web: http://github.com/stackforge/compass-web. The frontend layer of the Compass. It is built with client side MVC model with JavaScript.
- * compass-adapters: http://github.com/stackforge/compass-adapters. The add-on modules for Compass adapters. Currently, this hosts Cobbler related data file (kickstart, snippet, etc), and chef cookbooks for OpenStack and other software packages.
-
-Note: We are currently actively developing an improved version of Compass on dev/experimental branch. The target release date is end of August.
 
 How to install Compass?
 -----------------------

@@ -19,27 +19,21 @@ import os
 import os.path
 import sys
 
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(current_dir)
+
+
+import switch_virtualenv
+
 from flask.ext.script import Manager
 
-from compass.actions import clean_deployment
-from compass.actions import clean_installing_progress
 from compass.actions import deploy
 from compass.actions import reinstall
-from compass.actions import search
 from compass.api import app
-from compass.config_management.utils import config_manager
-from compass.db import database
-from compass.db.model import Adapter
-from compass.db.model import Cluster
-from compass.db.model import ClusterHost
-from compass.db.model import ClusterState
-from compass.db.model import HostState
-from compass.db.model import LogProgressingHistory
-from compass.db.model import Machine
-from compass.db.model import Role
-from compass.db.model import Switch
-from compass.db.model import SwitchConfig
-from compass.db.model import User
+from compass.db.api import database
+from compass.db.api import switch as switch_api
+from compass.db.api import user as user_api
 from compass.tasks.client import celery
 from compass.utils import flags
 from compass.utils import logsetting
@@ -84,17 +78,6 @@ app_manager = Manager(app, usage="Perform database operations")
 
 
 TABLE_MAPPING = {
-    'role': Role,
-    'adapter': Adapter,
-    'switch': Switch,
-    'switch_config': SwitchConfig,
-    'machine': Machine,
-    'hoststate': HostState,
-    'clusterstate': ClusterState,
-    'cluster': Cluster,
-    'clusterhost': ClusterHost,
-    'logprogressinghistory': LogProgressingHistory,
-    'user': User
 }
 
 
@@ -120,135 +103,25 @@ def checkdb():
 @app_manager.command
 def createdb():
     """Creates database from sqlalchemy models."""
+    database.init()
+    try:
+        database.drop_db()
+    except Exception:
+        pass
+
+    if setting.DATABASE_TYPE == 'file':
+        if os.path.exists(setting.DATABASE_FILE):
+            os.remove(setting.DATABASE_FILE)
     database.create_db()
+    if setting.DATABASE_TYPE == 'file':
+        os.chmod(setting.DATABASE_FILE, 0o777)
 
 
 @app_manager.command
 def dropdb():
     """Drops database from sqlalchemy models."""
+    database.init()
     database.drop_db()
-
-
-@app_manager.command
-def createtable():
-    """Create database table."""
-    if not flags.OPTIONS.table_name:
-        print 'flag --table_name is missing'
-        return
-
-    table_name = flags.OPTIONS.table_name
-    if table_name not in TABLE_MAPPING:
-        print '--table_name should be in %s' % TABLE_MAPPING.keys()
-        return
-
-    database.create_table(TABLE_MAPPING[table_name])
-
-
-@app_manager.command
-def droptable():
-    """Drop database table."""
-    if not flags.OPTIONS.table_name:
-        print 'flag --table_name is missing'
-        return
-
-    table_name = flags.OPTIONS.table_name
-    if table_name not in TABLE_MAPPING:
-        print '--table_name should be in %s' % TABLE_MAPPING.keys()
-        return
-
-    database.drop_table(TABLE_MAPPING[table_name])
-
-
-@app_manager.command
-def sync_from_installers():
-    """set adapters in Adapter table from installers."""
-    with database.session():
-        manager = config_manager.ConfigManager()
-        manager.update_adapters_from_installers()
-
-
-@app_manager.command
-def sync_switch_configs():
-    """Set switch configs in SwitchConfig table from setting.
-
-    .. note::
-       the switch config is stored in SWITCHES list in setting config.
-       for each entry in the SWITCHES, its type is dict and must contain
-       fields 'switch_ips' and 'filter_ports'.
-       The format of switch_ips is
-       <ip_blocks>.<ip_blocks>.<ip_blocks>.<ip_blocks>.
-       ip_blocks consists of ip_block separated by comma.
-       ip_block can be an integer and a range of integer like xx-xx.
-       The example of switch_ips is like: xxx.xxx.xxx-yyy,xxx-yyy.xxx,yyy
-       The format of filter_ports consists of list of
-       <port_prefix><port_range> separated by comma. port_range can be an
-       integer or a rnage of integer like xx-xx.
-       The example of filter_ports is like: ae1-5,20-40.
-    """
-    with database.session():
-        manager = config_manager.ConfigManager()
-        manager.update_switch_filters()
-
-
-@app_manager.command
-def clean_clusters():
-    """Delete clusters and hosts.
-
-    .. note::
-       The clusters and hosts are defined in --clusters.
-       the clusters flag is as clusterid:hostname1,hostname2,...;...
-    """
-    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
-    if flags.OPTIONS.async:
-        celery.send_task('compass.tasks.clean_deployment', (cluster_hosts,))
-    else:
-        clean_deployment.clean_deployment(cluster_hosts)
-
-
-@app_manager.command
-def clean_installation_progress():
-    """Clean clusters and hosts installation progress.
-
-    .. note::
-       The cluster and hosts is defined in --clusters.
-       The clusters flags is as clusterid:hostname1,hostname2,...;...
-    """
-    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
-    if flags.OPTIONS.async:
-        celery.send_task('compass.tasks.clean_installing_progress',
-                         (cluster_hosts,))
-    else:
-        clean_installing_progress.clean_installing_progress(cluster_hosts)
-
-
-@app_manager.command
-def reinstall_clusters():
-    """Reinstall hosts in clusters.
-
-    .. note::
-       The hosts are defined in --clusters.
-       The clusters flag is as clusterid:hostname1,hostname2,...;...
-    """
-    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
-    if flags.OPTIONS.async:
-        celery.send_task('compass.tasks.reinstall', (cluster_hosts,))
-    else:
-        reinstall.reinstall(cluster_hosts)
-
-
-@app_manager.command
-def deploy_clusters():
-    """Deploy hosts in clusters.
-
-    .. note::
-       The hosts are defined in --clusters.
-       The clusters flag is as clusterid:hostname1,hostname2,...;...
-    """
-    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
-    if flags.OPTIONS.async:
-        celery.send_task('compass.tasks.deploy', (cluster_hosts,))
-    else:
-        deploy.deploy(cluster_hosts)
 
 
 @app_manager.command
@@ -266,53 +139,57 @@ def set_switch_machines():
     if not flags.OPTIONS.switch_machines_file:
         print 'flag --switch_machines_file is missing'
         return
-
+    database.init()
     switches, switch_machines = util.get_switch_machines_from_file(
         flags.OPTIONS.switch_machines_file)
-    with database.session():
-        manager = config_manager.ConfigManager()
-        manager.update_switch_and_machines(switches, switch_machines)
+    user = user_api.get_user_object(
+        setting.COMPASS_ADMIN_EMAIL
+    )
+    switch_mapping = {}
+    for switch in switches:
+        added_switch = switch_api.add_switch(
+            user, False, **switch
+        )
+        switch_mapping[switch['ip']] = added_switch['id']
+    for switch_ip, machines in switch_machines.items():
+        if switch_ip not in switch_mapping:
+            print 'switch ip %s not found' % switch_ip
+            sys.exit(1)
+        switch_id = switch_mapping[switch_ip]
+        for machine in machines:
+            switch_api.add_switch_machine(
+                user, switch_id, False, **machine
+            )
 
 
 @app_manager.command
-def search_cluster_hosts():
-    """Search cluster hosts by properties.
+def reinstall_clusters():
+    """Reinstall hosts in clusters.
 
     .. note::
-       --search_cluster_properties defines what properties are used to search.
-       the format of search_cluster_properties is as
-       <property_name>=<property_value>;... If no search properties are set,
-       It will returns properties of all hosts.
-       --print_cluster_properties defines what properties to print.
-       the format of print_cluster_properties is as
-       <property_name>;...
-       --search_host_properties defines what properties are used to search.
-       the format of search_host_properties is as
-       <property_name>=<property_value>;... If no search properties are set,
-       It will returns properties of all hosts.
-       --print_host_properties defines what properties to print.
-       the format of print_host_properties is as
-       <property_name>;...
-
+       The hosts are defined in --clusters.
+       The clusters flag is as clusterid:hostname1,hostname2,...;...
     """
-    cluster_properties = util.get_properties_from_str(
-        flags.OPTIONS.search_cluster_properties)
-    cluster_properties_name = util.get_properties_name_from_str(
-        flags.OPTIONS.print_cluster_properties)
-    host_properties = util.get_properties_from_str(
-        flags.OPTIONS.search_host_properties)
-    host_properties_name = util.get_properties_name_from_str(
-        flags.OPTIONS.print_host_properties)
-    cluster_hosts = util.get_clusters_from_str(flags.OPTIONS.clusters)
-    cluster_properties, cluster_host_properties = search.search(
-        cluster_hosts, cluster_properties,
-        cluster_properties_name, host_properties,
-        host_properties_name)
-    print 'clusters properties:'
-    util.print_properties(cluster_properties)
-    for clusterid, host_properties in cluster_host_properties.items():
-        print 'hosts properties under cluster %s' % clusterid
-        util.print_properties(host_properties)
+    cluster_hosts = flags.OPTIONS.clusters
+    if flags.OPTIONS.async:
+        celery.send_task('compass.tasks.reinstall', (cluster_hosts,))
+    else:
+        reinstall.reinstall(cluster_hosts)
+
+
+@app_manager.command
+def deploy_clusters():
+    """Deploy hosts in clusters.
+
+    .. note::
+       The hosts are defined in --clusters.
+       The clusters flag is as clusterid:hostname1,hostname2,...;...
+    """
+    cluster_hosts = flags.OPTIONS.clusters
+    if flags.OPTIONS.async:
+        celery.send_task('compass.tasks.deploy', (cluster_hosts,))
+    else:
+        deploy.deploy(cluster_hosts)
 
 
 if __name__ == "__main__":

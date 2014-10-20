@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Copyright 2014 Huawei Technologies Co. Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,11 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""test util module.
-
-   .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
-"""
+import datetime
 import os
 import unittest2
 
@@ -32,154 +29,286 @@ from compass.utils import logsetting
 from compass.utils import util
 
 
-class TestDictMerge(unittest2.TestCase):
-    """Test dict merge."""
+class TestParseDatetime(unittest2.TestCase):
+    """Test parse datetime."""
 
     def setUp(self):
-        super(TestDictMerge, self).setUp()
-        logsetting.init()
+        super(TestParseDatetime, self).setUp()
 
     def tearDown(self):
-        super(TestDictMerge, self).tearDown()
+        super(TestParseDatetime, self).tearDown()
 
-    def test_simple_merge(self):
-        """simple test of merge
-           merge_dict performs in-place merge of rhs to lhs
-        """
+    def test_correct_format(self):
+        date_time = '2014-7-10 9:10:40'
+        parsed_datetime = util.parse_datetime(date_time)
+        expected_datetime = datetime.datetime(2014, 7, 10, 9, 10, 40)
+        self.assertEqual(parsed_datetime, expected_datetime)
+
+
+class TestParseDatetimeRange(unittest2.TestCase):
+    """Test parse datetime range."""
+
+    def setUp(self):
+        super(TestParseDatetimeRange, self).setUp()
+
+    def tearDown(self):
+        super(TestParseDatetimeRange, self).tearDown()
+
+    def test_both_start_end_datetime(self):
+        range = '2014-7-10 9:10:40,2014-7-11 9:10:40'
+        parsed_datetime_range = util.parse_datetime_range(range)
+        expected_datetime_range = (
+            datetime.datetime(2014, 7, 10, 9, 10, 40),
+            datetime.datetime(2014, 7, 11, 9, 10, 40)
+        )
+        self.assertEqual(expected_datetime_range, parsed_datetime_range)
+
+    def test_none_start(self):
+        range = ',2014-7-11 9:10:40'
+        parsed_datetime_range = util.parse_datetime_range(range)
+        expected_datetime_range = (
+            None,
+            datetime.datetime(2014, 7, 11, 9, 10, 40)
+        )
+        self.assertEqual(expected_datetime_range, parsed_datetime_range)
+
+    def test_none_end(self):
+        range = '2014-7-10 9:10:40,'
+        parsed_datetime_range = util.parse_datetime_range(range)
+        expected_datetime_range = (
+            datetime.datetime(2014, 7, 10, 9, 10, 40),
+            None
+        )
+        self.assertEqual(expected_datetime_range, parsed_datetime_range)
+
+    def test_none_both(self):
+        range = ','
+        parsed_datetime_range = util.parse_datetime_range(range)
+        expected_datetime_range = (None, None)
+        self.assertEqual(expected_datetime_range, parsed_datetime_range)
+
+
+class TestParseRequestArgDict(unittest2.TestCase):
+    """Test parse request arg dict."""
+
+    def setUp(self):
+        super(TestParseRequestArgDict, self).setUp()
+
+    def tearDown(self):
+        super(TestParseRequestArgDict, self).tearDown()
+
+    def test_single_pair(self):
+        arg = 'a=b'
+        parsed_arg_dict = util.parse_request_arg_dict(arg)
+        expected_arg_dict = {'a': 'b'}
+        self.assertEqual(parsed_arg_dict, expected_arg_dict)
+
+
+class TestMergeDict(unittest2.TestCase):
+    """Test merge dict."""
+
+    def setUp(self):
+        super(TestMergeDict, self).setUp()
+
+    def tearDown(self):
+        super(TestMergeDict, self).tearDown()
+
+    def test_single_merge(self):
         lhs = {1: 1}
         rhs = {2: 2}
-        util.merge_dict(lhs, rhs)
-        self.assertEqual(lhs, {1: 1, 2: 2})
+        merged_dict = util.merge_dict(lhs, rhs)
+        expected_dict = {1: 1, 2: 2}
+        self.assertEqual(merged_dict, expected_dict)
 
     def test_recursive_merge(self):
-        """test merge recursively."""
         lhs = {1: {2: 3}}
         rhs = {1: {3: 4}}
-        util.merge_dict(lhs, rhs)
-        self.assertEqual(lhs, {1: {2: 3, 3: 4}})
+        merged_dict = util.merge_dict(lhs, rhs)
+        expected_dict = {1: {2: 3, 3: 4}}
+        self.assertEqual(merged_dict, expected_dict)
 
-    def test_merge_override(self):
-        """test merge override."""
+    def test_single_merge_override(self):
         lhs = {1: 1}
         rhs = {1: 2}
-        util.merge_dict(lhs, rhs)
-        self.assertEqual(lhs, {1: 2})
+        merged_dict = util.merge_dict(lhs, rhs)
+        expected_dict = {1: 2}
+        self.assertEqual(merged_dict, expected_dict)
 
+    def test_recursive_merge_override(self):
         lhs = {1: {2: 3, 3: 5}}
         rhs = {1: {2: 4, 4: 6}}
-        util.merge_dict(lhs, rhs)
-        self.assertEqual(lhs, {1: {2: 4, 3: 5, 4: 6}})
+        merged_dict = util.merge_dict(lhs, rhs)
+        expected_dict = {1: {2: 4, 3: 5, 4: 6}}
+        self.assertEqual(merged_dict, expected_dict)
 
-    def test_merge_not_override(self):
-        """test merge not override."""
+    def test_single_merge_no_override(self):
         lhs = {1: 1}
         rhs = {1: 2}
-        util.merge_dict(lhs, rhs, False)
-        self.assertEqual(lhs, {1: 1})
+        merged_dict = util.merge_dict(lhs, rhs, False)
+        expected_dict = {1: 1}
+        self.assertEqual(merged_dict, expected_dict)
 
+    def test_recursive_merge_no_override(self):
         lhs = {1: {2: 3, 3: 5}}
         rhs = {1: {2: 4, 4: 6}}
-        util.merge_dict(lhs, rhs, False)
-        self.assertEqual(lhs, {1: {2: 3, 3: 5, 4: 6}})
+        merged_dict = util.merge_dict(lhs, rhs, False)
+        expected_dict = {1: {2: 3, 3: 5, 4: 6}}
+        self.assertEqual(merged_dict, expected_dict)
 
-    def test_change_after_merge(self):
-        """test change after merge."""
+    def test_merge_dict_with_list(self):
         lhs = {1: {2: 3}}
         rhs = {1: {3: [4, 5, 6]}}
-        util.merge_dict(lhs, rhs)
-        self.assertEqual(lhs, {1: {2: 3, 3: [4, 5, 6]}})
-        self.assertEqual(rhs, {1: {3: [4, 5, 6]}})
-        rhs[1][3].append(7)
-        self.assertEqual(lhs, {1: {2: 3, 3: [4, 5, 6]}})
-        self.assertEqual(rhs, {1: {3: [4, 5, 6, 7]}})
+        merged_dict = util.merge_dict(lhs, rhs)
+        expected_dict = {1: {2: 3, 3: [4, 5, 6]}}
+        self.assertEqual(merged_dict, expected_dict)
 
-    def test_lhs_rhs_notdict(self):
-        """test merge not dict."""
+    def test_inputs_not_dict(self):
+        """test inputs not dict."""
         lhs = [1, 2, 3]
         rhs = {1: 2}
-        self.assertRaises(TypeError, util.merge_dict, (lhs, rhs))
+        merged = util.merge_dict(lhs, rhs)
+        expected = {1: 2}
+        self.assertEqual(merged, expected)
+
+        lhs = [1, 2, 3]
+        rhs = {1: 2}
+        merged = util.merge_dict(lhs, rhs, False)
+        expected = [1, 2, 3]
+        self.assertEqual(merged, expected)
+
         lhs = {1: 2}
         rhs = [1, 2, 3]
-        self.assertRaises(TypeError, util.merge_dict, (lhs, rhs))
+        merged = util.merge_dict(lhs, rhs)
+        expected = [1, 2, 3]
+        self.assertEqual(merged, expected)
+
+        lhs = {1: 2}
+        rhs = [1, 2, 3]
+        merged = util.merge_dict(lhs, rhs, False)
+        expected = {1: 2}
+        self.assertEqual(merged, expected)
 
 
-class TestOrderKeys(unittest2.TestCase):
-    """test order keys."""
+class TestEncrypt(unittest2.TestCase):
+    """Test encrypt."""
 
-    def test_simple_order_keys(self):
-        """test simple order keys."""
-        keys = [1, 2, 3, 4, 5]
-        orders = [3, 4, 5]
-        ordered_keys = util.order_keys(keys, orders)
-        self.assertEqual(ordered_keys, [3, 4, 5, 1, 2])
+    def setUp(self):
+        super(TestEncrypt, self).setUp()
 
-    def test_order_keys_with_dot(self):
-        """test order keys with dot in it."""
-        keys = [1, 2, 3, 4, 5]
-        orders = [3, 4, '.', 5]
-        ordered_keys = util.order_keys(keys, orders)
-        self.assertEqual(ordered_keys, [3, 4, 1, 2, 5])
-
-    def test_order_keys_with_multidot(self):
-        """test order keys with multi dots in it."""
-        keys = [1, 2, 3, 4, 5]
-        orders = [3, '.', 4, '.', 5]
-        ordered_keys = util.order_keys(keys, orders)
-        self.assertEqual(ordered_keys, [3, 1, 2, 4, 5])
-
-    def test_others_in_orders(self):
-        """test other key in order."""
-        keys = [1, 2, 3, 4, 5]
-        orders = [3, '.', 5, 6]
-        ordered_keys = util.order_keys(keys, orders)
-        self.assertEqual(ordered_keys, [3, 1, 2, 4, 5])
-
-    def test_keys_orders_notlist(self):
-        """test keys not in order."""
-        keys = {1: 1}
-        orders = [3, 4, 5]
-        self.assertRaises(TypeError, util.order_keys, keys, orders)
-
-        keys = [1, 2, 3, 4, 5]
-        orders = {3: 3}
-        self.assertRaises(TypeError, util.order_keys, keys, orders)
+    def tearDown(self):
+        super(TestEncrypt, self).tearDown()
 
 
-class TestIsInstanceOf(unittest2.TestCase):
-    """test isinstanceof function."""
-    def test_isinstance(self):
-        """test isinstance."""
-        self.assertTrue(util.is_instance({}, [dict, list]))
-        self.assertFalse(util.is_instance({}, [str, list]))
-        self.assertFalse(util.is_instance({}, []))
+class TestParseTimeInterval(unittest2.TestCase):
+    """Test parse time interval."""
+
+    def setUp(self):
+        super(TestParseTimeInterval, self).setUp()
+
+    def tearDown(self):
+        super(TestParseTimeInterval, self).tearDown()
 
 
-class TestGetListWithPossibility(unittest2.TestCase):
-    """test get list with possibility."""
+class TestLoadConfigs(unittest2.TestCase):
+    """Test load configs."""
 
-    def test_simple_case(self):
-        """test simple case."""
-        lists = [['role1'], ['role2'], ['role3']]
-        self.assertEqual(util.flat_lists_with_possibility(lists),
-                         ['role1', 'role2', 'role3'])
-        lists = [['role1', 'role1'], ['role2'], ['role3']]
-        self.assertEqual(util.flat_lists_with_possibility(lists),
-                         ['role1', 'role2', 'role3', 'role1'])
-        lists = [['role1', 'role1', 'role1'], ['role2', 'role2'], ['role3']]
-        self.assertEqual(util.flat_lists_with_possibility(lists),
-                         ['role1', 'role2', 'role3',
-                          'role1', 'role2', 'role1'])
-        lists = [['role1', 'role1', 'role1', 'role1'],
-                 ['role2', 'role2'], ['role3']]
-        self.assertEqual(util.flat_lists_with_possibility(lists),
-                         ['role1', 'role2', 'role3', 'role1',
-                          'role1', 'role2', 'role1'])
-        lists = [['role3'],
-                 ['role2', 'role2'],
-                 ['role1', 'role1', 'role1', 'role1']]
-        self.assertEqual(util.flat_lists_with_possibility(lists),
-                         ['role1', 'role2', 'role3', 'role1',
-                          'role1', 'role2', 'role1'])
+    def setUp(self):
+        super(TestLoadConfigs, self).setUp()
+        self.TEST_UTIL_HOME = os.path.dirname(os.path.realpath(__file__))
+
+    def tearDown(self):
+        super(TestLoadConfigs, self).tearDown()
+
+    def test_load_no_suffix(self):
+        loaded = util.load_configs(
+            self.TEST_UTIL_HOME + '/data/test_no_suffix'
+        )
+        expected = []
+        self.assertEqual(loaded, expected)
+
+    def test_load_conf(self):
+        loaded = util.load_configs(
+            self.TEST_UTIL_HOME + '/data/test_load_conf'
+        )
+        expected = [{'TEST': True, 'PROD': False}]
+        self.assertEqual(loaded, expected)
+
+    def test_load_confs(self):
+        loaded = util.load_configs(
+            self.TEST_UTIL_HOME + '/data/test_load_confs'
+        )
+        expected = [
+            {
+                'TEST': True,
+                'PROD': False
+            },
+            {
+                'UTIL_TEST': 'unittest'
+            }
+        ]
+        loaded.sort()
+        expected.sort()
+        self.assertTrue(loaded, expected)
+
+    def test_load_confs_global_env(self):
+        loaded = util.load_configs(
+            self.TEST_UTIL_HOME + '/data/test_load_confs',
+            env_globals={'TEST': False}
+        )
+        expected = [
+            {
+                'UTIL_TEST': 'unittest'
+            },
+            {
+                'TEST': True,
+                'PROD': False
+            }
+        ]
+        loaded.sort()
+        expected.sort()
+        self.assertTrue(loaded, expected)
+
+    def test_load_confs_local_env(self):
+        loaded = util.load_configs(
+            self.TEST_UTIL_HOME + '/data/test_load_confs',
+            env_globals={'TEST': True}
+        )
+        expected = [
+            {
+                'TEST': True,
+                'UTIL_TEST': 'unittest'
+            },
+            {
+                'TEST': True,
+                'PROD': False
+            }]
+        loaded.sort()
+        expected.sort()
+        self.assertTrue(loaded, expected)
+
+    def test_load_confs_local_env_no_override(self):
+        loaded = util.load_configs(
+            self.TEST_UTIL_HOME + '/data/test_load_confs',
+            env_globals={'TEST': False}
+        )
+        expected = [
+            {
+                'TEST': False,
+                'UTIL_TEST': 'unittest'
+            },
+            {
+                'TEST': True,
+                'PROD': False
+            }
+        ]
+        loaded.sort()
+        expected.sort()
+        self.assertTrue(loaded, expected)
+
+    def test_load_conf_error(self):
+        err_dir = 'non-exist/dir'
+        loaded = util.load_configs(err_dir)
+        self.assertEqual([], loaded)
 
 
 if __name__ == '__main__':

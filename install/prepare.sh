@@ -1,99 +1,31 @@
 #!/bin/bash
 # prepare the installation
 
-copy2dir()
-{
-    repo=$1
-    destdir=$2
-    git_branch=master
-    if [[ "$repo" =~ (git|http|https|ftp):// ]]; then
-        if [[ -d $destdir || -L $destdir ]]; then
-            cd $destdir
-            git status &> /dev/null
-            if [ $? -ne 0 ]; then
-                echo "$destdir is not git repo"
-                rm -rf $destdir
-            else
-                echo "$destdir is git repo"
-            fi
-            cd -
-        fi
-
-        if [[ -d $destdir || -L $destdir ]]; then
-            echo "$destdir exists"
-            cd $destdir
-            git remote set-url origin $repo
-            git remote update
-            if [ $? -ne 0 ]; then
-                echo "failed to git remote update $repo in $destdir"
-                exit 1
-            else
-                echo "git remote update $repo in $destdir succeeded"
-            fi
-            git reset --hard
-            git clean -x -f
-            git checkout $git_branch
-            git reset --hard remotes/origin/$git_branch
-        else
-            echo "create $destdir"
-            mkdir -p $destdir
-            git clone $repo $destdir
-            if [ $? -ne 0 ]; then
-                echo "failed to git clone $repo $destdir"
-                exit 1
-            else
-                echo "git clone $repo $destdir suceeded"
-            fi
-            cd $destdir
-            git reset --hard remotes/origin/$git_branch
-        fi
-        if [[ ! -z $ZUUL_REF || ! -z $GERRIT_REFSPEC ]]; then
-            if [[ ! -z $ZUUL_REF ]]; then
-                git_repo=$ZUUL_URL/$3
-                git_ref=$ZUUL_REF
-                git_branch=$ZUUL_BRANCH
-            elif [[ ! -z $GERRIT_REFSPEC ]]; then
-                git_repo=https://$GERRIT_HOST/$3
-                git_ref=$GERRIT_REFSPEC
-                git_branch=$GERRIT_BRANCH
-            fi
-            git reset --hard remotes/origin/$git_branch
-            git fetch $git_repo $git_ref && git checkout FETCH_HEAD
-            if [ $? -ne 0 ]; then
-                echo "failed to git fetch $git_repo $git_ref"
-            fi
-            git clean -x -f
-        fi
-    else
-        sudo rm -rf $destdir
-        sudo cp -rf $repo $destdir
-        if [ $? -ne 0 ]; then
-            echo "failed to copy $repo to $destdir"
-            exit 1
-        else
-            echo "copy $repo to $destdir succeeded"
-        fi
-    fi
-    if [[ ! -d $destdir && ! -L $destdir ]]; then
-        echo "$destdir does not exist"
-        exit 1
-    else
-        echo "$destdir is ready"
-    fi
-    cd $SCRIPT_DIR
-}
+### BEGIN OF SCRIPT ###
+echo "prepare installation"
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+source $DIR/install.conf
+if [ -f $DIR/env.conf ]; then
+    source $DIR/env.conf
+else
+    echo "failed to load environment"
+    exit 1
+fi
+source $DIR/install_func.sh
 
 # Create backup dir
 sudo mkdir -p /root/backup
 
 # update /etc/hosts
+echo "update /etc/hosts"
 sudo cp -rn /etc/hosts /root/backup/hosts
 sudo rm -f /etc/hosts
 sudo cp -rf $COMPASSDIR/misc/hosts /etc/hosts
-sudo sed -i "s/\$ipaddr \$hostname/$ipaddr $HOSTNAME/g" /etc/hosts
+sudo sed -i "s/\$ipaddr \$hostname/$IPADDR $HOSTNAME/g" /etc/hosts
 sudo chmod 644 /etc/hosts
 
 # update rsyslog
+echo "update rsyslog"
 sudo cp -rn /etc/rsyslog.conf /root/backup/
 sudo rm -f /etc/rsyslog.conf
 sudo cp -rf $COMPASSDIR/misc/rsyslog/rsyslog.conf /etc/rsyslog.conf
@@ -108,12 +40,14 @@ else
 fi
 
 # update logrotate.d
+echo "update logrotate config"
 sudo cp -rn /etc/logrotate.d /root/backup/
 rm -f /etc/logrotate.d/*
 sudo cp -rf $COMPASSDIR/misc/logrotate.d/* /etc/logrotate.d/
 sudo chmod 644 /etc/logrotate.d/*
 
 # update ntp conf
+echo "update ntp config"
 sudo cp -rn /etc/ntp.conf /root/backup/
 sudo rm -f /etc/ntp.conf
 sudo cp -rf $COMPASSDIR/misc/ntp/ntp.conf /etc/ntp.conf
@@ -130,10 +64,14 @@ else
 fi
 
 # update squid conf
+echo "update squid config"
 sudo cp -rn /etc/squid/squid.conf /root/backup/
 sudo rm -f /etc/squid/squid.conf 
 sudo cp $COMPASSDIR/misc/squid/squid.conf /etc/squid/
-subnet_escaped=$(echo $SUBNET | sed -e 's/[\/&]/\\&/g')
+export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
+export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')
+subnet=${netaddr}/${netprefix}
+subnet_escaped=$(echo $subnet | sed -e 's/[\/&]/\\&/g')
 sudo sed -i "s/acl localnet src \$subnet/acl localnet src $subnet_escaped/g" /etc/squid/squid.conf
 sudo chmod 644 /etc/squid/squid.conf
 sudo mkdir -p /var/squid/cache
@@ -148,16 +86,20 @@ else
 fi
 
 #update mysqld
+echo "update mysqld"
 sudo service mysqld restart
 MYSQL_USER=${MYSQL_USER:-root}
-MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-}
+MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-root}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
 MYSQL_SERVER=${MYSQL_SERVER:-127.0.0.1}
 MYSQL_PORT=${MYSQL_PORT:-3306}
-MYSQL_DATABASE=${MYSQL_DATABASE:-db}
+MYSQL_DATABASE=${MYSQL_DATABASE:-compass}
 # first time set mysql password
-sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} password ${MYSQL_PASSWORD}
 sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} -p"${MYSQL_OLD_PASSWORD}" password ${MYSQL_PASSWORD}
+if [[ "$?" != "0" ]]; then
+echo "setting up mysql initial password"
+sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} password ${MYSQL_PASSWORD}
+fi
 mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "show databases;"
 if [[ "$?" != "0" ]]; then
     echo "mysql password set failed"
@@ -179,7 +121,7 @@ if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1
 else
-    echo "mysqld conf is updated" 
+    echo "mysqld conf is updated"
 fi
 
 cd $SCRIPT_DIR
@@ -193,9 +135,10 @@ if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" || exit $?
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" dev/experimental || exit $?
 
 if [ "$tempest" == "true" ]; then
+    echo "download tempest packages"
     if [[ ! -e /tmp/tempest ]]; then
         git clone http://git.openstack.org/openstack/tempest /tmp/tempest
         if [[ "$?" != "0" ]]; then
@@ -240,10 +183,11 @@ fi
 
 source `which virtualenvwrapper.sh`
 if ! lsvirtualenv |grep compass-core>/dev/null; then
-    mkvirtualenv compass-core
+    mkvirtualenv --system-site-packages compass-core
 fi
-workon compass-core
 cd $COMPASSDIR
+workon compass-core
+echo "install compass requirements"
 pip install -U -r requirements.txt
 if [[ "$?" != "0" ]]; then
     echo "failed to install compass requiremnts"
@@ -260,68 +204,14 @@ else
     deactivate
 fi
 
-download()
-{
-    url=$1
-    package=${2:-$(basename $url)}
-    action=${3:-""}
-    if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
-        echo "$package already exists"
-    else
-        if [[ "$url" =~ (http|https|ftp):// ]]; then
-            echo "downloading $url to /tmp/${package}"
-            curl -L -o /tmp/${package}.tmp $url
-            if [[ "$?" != "0" ]]; then
-                echo "failed to download $package"
-                exit 1
-            else
-                echo "successfully download $package"
-                mv -f /tmp/${package}.tmp /tmp/${package}
-            fi
-        else
-            cp -rf $url /tmp/${package}
-        fi
-        if [[ ! -f /tmp/${package} && ! -L /tmp/${package} ]]; then
-            echo "/tmp/$package is not created"
-            exit 1
-        fi
-    fi
-    if [[ "$action" == "install" ]]; then
-        echo "install /tmp/$package"
-        sudo rpm -Uvh /tmp/$package
-        if [[ "$?" != "0" ]]; then
-            echo "failed to install $package"
-            exit 1
-        else
-            echo "$package is installed"
-        fi
-    elif [[ "$action" == "copy" ]]; then
-        echo "copy /tmp/$package to $destdir"
-        destdir=$4
-        sudo cp /tmp/$package $destdir
-    elif [[ "$action" == "unzip" ]]; then
-        unzipped_package=${package%%.zip}
-        destdir=$4
-        echo "unzip /tmp/$package to /tmp/$unzipped_package and copy to $destdir"
-        sudo rm -rf /tmp/$unzipped_package
-        pushd `pwd`
-        cd /tmp
-        sudo unzip -o /tmp/$package
-        popd
-        sudo cp -rf /tmp/$unzipped_package/. $destdir
-    fi
-}
-
-# download js mvc
-download http://github.com/downloads/bitovi/javascriptmvc/$JS_MVC.zip $JS_MVC.zip unzip $WEB_HOME/public/ || exit $?
-
 # download cobbler related packages
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 iproute-2.6.32-31.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm"
+ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
+yum-plugin-priorities-1.1.30-14.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.noarch.rpm"
 
 for f in $centos_ppa_repo_packages; do
     download http://rpmfind.net/linux/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/os/${IMAGE_ARCH}/Packages/$f $f || exit $?
@@ -349,7 +239,11 @@ download $CHEF_SRV chef-server || exit $?
 download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
 download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
 
+# download local repo
+download -f https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz || exit $?
+
 # Install net-snmp
+echo "install snmp config"
 if [[ ! -e /etc/snmp ]]; then
     sudo mkdir -p /etc/snmp
 fi
@@ -365,6 +259,7 @@ sudo mkdir -p /var/lib/net-snmp/mib_indexes
 sudo chmod 755 /var/lib/net-snmp/mib_indexes
 
 # generate ssh key
+echo "generate ssh key"
 if [[ ! -e $HOME/.ssh ]]; then
     sudo mkdir -p $HOME/.ssh
 fi

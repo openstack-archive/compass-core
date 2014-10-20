@@ -1,7 +1,0 @@
-id,cluster_id,hostname,machine_id,config_data.networking.interfaces.management.ip,config_data.networking.interfaces.tenant.ip,config_data.roles,state,deploy_action
-1,1,host_01,1,10.120.1.100,192.168.1.100,['base'],READY,0
-2,1,host_02,2,10.120.1.101,192.168.1.101,['base'],READY,0
-3,1,host_03,3,10.120.1.102,192.168.1.102,['base'],READY,0
-4,2,host_01,4,10.120.2.100,192.168.2.100,['base'],ERROR,0
-5,2,host_02,5,10.120.2.101,192.168.2.101,['base'],READY,0
-6,2,host_03,6,10.120.2.102,192.168.2.102,['base'],ERROR,0

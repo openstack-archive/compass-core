@@ -52,6 +52,12 @@ LOGLEVEL_MAPPING = {
     'critical': logging.CRITICAL,
 }
 
+logging.addLevelName(LOGLEVEL_MAPPING['fine'], 'fine')
+logging.addLevelName(LOGLEVEL_MAPPING['finest'], 'finest')
+
+# disable logging when logsetting.init not called
+logging.getLogger().setLevel(logging.CRITICAL)
+
 
 def init():
     """Init loggsetting. It should be called after flags.init."""

@@ -1,9 +1,9 @@
 #!/bin/bash -x
 if [[ ! -e /tmp/pxe01.raw ]]; then
-    qemu-img create -f raw /home/pxe01.raw 30G
+    qemu-img create -f raw /tmp/pxe01.raw 20G
 else
     rm -rf /tmp/pxe01.raw
-    qemu-img create -f raw /home/pxe01.raw 30G
+    qemu-img create -f raw /tmp/pxe01.raw 20G
 fi
 virsh list |grep pxe01
 vmrc=$?
@@ -17,7 +17,7 @@ virt-install --accelerate --hvm --connect qemu:///system \
     --network=bridge:installation,mac=00:11:20:30:40:01 --pxe \
     --network=network:default \
     --name pxe01 --ram=8192 \
-    --disk /home/pxe01.raw,format=raw \
+    --disk /tmp/pxe01.raw,format=raw \
     --vcpus=10 \
     --graphics vnc,listen=0.0.0.0 --noautoconsole \
     --os-type=linux --os-variant=rhel6

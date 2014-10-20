@@ -77,12 +77,38 @@ def _between_condition(col_attr, value):
     return None
 
 
+def model_order_by(query, model, order_by):
+    if not order_by:
+        return query
+    order_by_cols = []
+    for key in order_by:
+        if isinstance(key, tuple):
+            key, is_desc = key
+        else:
+            is_desc = False
+        if isinstance(key, basestring):
+            if hasattr(model, key):
+                col_attr = getattr(model, key)
+            else:
+                continue
+        else:
+            col_attr = key
+        if is_desc:
+            order_by_cols.append(col_attr.desc())
+        else:
+            order_by_cols.append(col_attr)
+    return query.order_by(*order_by_cols)
+
+
 def model_filter(query, model, **filters):
     for key, value in filters.items():
-        if hasattr(model, key):
-            col_attr = getattr(model, key)
+        if isinstance(key, basestring):
+            if hasattr(model, key):
+                col_attr = getattr(model, key)
+            else:
+                continue
         else:
-            continue
+            col_attr = key
         if isinstance(value, list):
             query = query.filter(col_attr.in_(value))
         elif isinstance(value, dict):
@@ -505,15 +531,21 @@ def add_db_object(session, table, exception_when_existing=True,
         return db_object
 
 
-def list_db_objects(session, table, **filters):
+def list_db_objects(session, table, order_by=[], **filters):
     """List db objects."""
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s list db objects by filters %s in table %s',
             session, filters, table.__name__
         )
-        db_objects = model_filter(
-            model_query(session, table), table, **filters
+        db_objects = model_order_by(
+            model_filter(
+                model_query(session, table),
+                table,
+                **filters
+            ),
+            table,
+            order_by
         ).all()
         logging.debug(
             'session %s got listed db objects: %s',

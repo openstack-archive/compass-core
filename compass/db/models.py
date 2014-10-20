@@ -121,7 +121,7 @@ class HelperMixin(object):
 
 
 class MetadataMixin(HelperMixin):
-    name = Column(String(80))
+    name = Column(String(80), nullable=False)
     display_name = Column(String(80))
     path = Column(String(256))
     description = Column(Text)
@@ -309,7 +309,7 @@ class MetadataMixin(HelperMixin):
 
 class FieldMixin(HelperMixin):
     id = Column(Integer, primary_key=True)
-    field = Column(String(80), unique=True)
+    field = Column(String(80), unique=True, nullable=False)
     field_type_data = Column(
         'field_type',
         Enum(
@@ -395,8 +395,8 @@ class FieldMixin(HelperMixin):
 
 
 class InstallerMixin(HelperMixin):
-    name = Column(String(80))
-    alias = Column(String(80), unique=True)
+    name = Column(String(80), nullable=False)
+    alias = Column(String(80), unique=True, nullable=False)
     settings = Column(JSONEncoded, default={})
 
     def validate(self):
@@ -468,12 +468,12 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         ForeignKey('host.id', onupdate='CASCADE', ondelete='CASCADE')
     )
     interface = Column(
-        String(80))
+        String(80), nullable=False)
     subnet_id = Column(
         Integer,
         ForeignKey('subnet.id', onupdate='CASCADE', ondelete='CASCADE')
     )
-    ip_int = Column(BigInteger, unique=True)
+    ip_int = Column(BigInteger, unique=True, nullable=False)
     is_mgmt = Column(Boolean, default=False)
     is_promiscuous = Column(Boolean, default=False)
 
@@ -543,7 +543,7 @@ class ClusterHostLogHistory(BASE, LogHistoryMixin):
         ForeignKey('clusterhost.id', onupdate='CASCADE', ondelete='CASCADE'),
         primary_key=True
     )
-    filename = Column(String(80), primary_key=True)
+    filename = Column(String(80), primary_key=True, nullable=False)
     cluster_id = Column(
         Integer,
         ForeignKey('cluster.id')
@@ -573,7 +573,7 @@ class HostLogHistory(BASE, LogHistoryMixin):
         Integer,
         ForeignKey('host.id', onupdate='CASCADE', ondelete='CASCADE'),
         primary_key=True)
-    filename = Column(String(80), primary_key=True)
+    filename = Column(String(80), primary_key=True, nullable=False)
 
     def __init__(self, id, filename, **kwargs):
         self.id = id
@@ -754,7 +754,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @hostname.expression
     def hostname(cls):
-        return cls.host.name
+        return Host.hostname
 
     @property
     def distributed_system_installed(self):
@@ -897,7 +897,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
     """Host table."""
     __tablename__ = 'host'
 
-    name = Column(String(80), unique=True)
+    name = Column(String(80), unique=True, nullable=True)
     os_id = Column(Integer, ForeignKey('os.id'))
     config_step = Column(String(80), default='')
     os_config = Column(JSONEncoded, default={})
@@ -954,10 +954,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
 
     @hybrid_property
     def hostname(self):
-        if self.name == str(self.id):
-            return None
-        else:
-            return self.name
+        return self.name
 
     @hostname.expression
     def hostname(cls):
@@ -988,12 +985,8 @@ class Host(BASE, TimestampMixin, HelperMixin):
 
     def __init__(self, id, **kwargs):
         self.id = id
-        self.name = str(self.id)
         self.state = HostState()
         super(Host, self).__init__(**kwargs)
-
-    def initialize(self):
-        super(Host, self).initialize()
 
     def update(self):
         creator = self.creator
@@ -1160,7 +1153,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     __tablename__ = 'cluster'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(80), unique=True)
+    name = Column(String(80), unique=True, nullable=False)
     reinstall_distributed_system = Column(Boolean, default=True)
     config_step = Column(String(80), default='')
     os_id = Column(Integer, ForeignKey('os.id'))
@@ -1184,7 +1177,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     deployed_package_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
     adapter_id = Column(Integer, ForeignKey('adapter.id'))
-    adapter_name = Column(String(80), nullable=True)
+    adapter_name = Column(String(80))
     creator_id = Column(Integer, ForeignKey('user.id'))
     owner = Column(String(80))
     clusterhosts = relationship(
@@ -1240,12 +1233,6 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
                 self.flavor_name = flavor.name
             else:
                 self.flavor_name = None
-        else:
-            self.adapter_name = None
-            self.distributed_system = None
-            self.distributed_system_name = None
-            self.flavor = None
-            self.flavor_name = None
         super(Cluster, self).update()
 
     def validate(self):
@@ -1403,7 +1390,7 @@ class Permission(BASE, HelperMixin, TimestampMixin):
     __tablename__ = 'permission'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(80), unique=True)
+    name = Column(String(80), unique=True, nullable=False)
     alias = Column(String(100))
     description = Column(Text)
     user_permissions = relationship(
@@ -1427,7 +1414,7 @@ class UserToken(BASE, HelperMixin):
         Integer,
         ForeignKey('user.id', onupdate='CASCADE', ondelete='CASCADE')
     )
-    token = Column(String(256), unique=True)
+    token = Column(String(256), unique=True, nullable=False)
     expire_timestamp = Column(
         DateTime, default=lambda: datetime.datetime.now()
     )
@@ -1473,7 +1460,7 @@ class User(BASE, HelperMixin, TimestampMixin):
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True)
-    email = Column(String(80), unique=True)
+    email = Column(String(80), unique=True, nullable=False)
     crypted_password = Column('password', String(225))
     firstname = Column(String(80))
     lastname = Column(String(80))
@@ -1699,7 +1686,7 @@ class Machine(BASE, HelperMixin, TimestampMixin):
     """Machine table."""
     __tablename__ = 'machine'
     id = Column(Integer, primary_key=True)
-    mac = Column(String(24), unique=True)
+    mac = Column(String(24), unique=True, nullable=False)
     ipmi_credentials = Column(JSONEncoded, default={})
     tag = Column(JSONEncoded, default={})
     location = Column(JSONEncoded, default={})
@@ -1787,7 +1774,7 @@ class Switch(BASE, HelperMixin, TimestampMixin):
     """Switch table."""
     __tablename__ = 'switch'
     id = Column(Integer, primary_key=True)
-    ip_int = Column('ip', BigInteger, unique=True)
+    ip_int = Column('ip', BigInteger, unique=True, nullable=False)
     credentials = Column(JSONEncoded, default={})
     vendor = Column(String(256), nullable=True)
     state = Column(Enum('initialized', 'unreachable', 'notsupported',
@@ -2075,7 +2062,7 @@ class OperatingSystem(BASE, HelperMixin):
         ForeignKey('os.id', onupdate='CASCADE', ondelete='CASCADE'),
         nullable=True
     )
-    name = Column(String(80), unique=True)
+    name = Column(String(80), unique=True, nullable=False)
     deployable = Column(Boolean, default=False)
 
     metadatas = relationship(
@@ -2190,7 +2177,7 @@ class AdapterFlavor(BASE, HelperMixin):
         Integer,
         ForeignKey('adapter.id', onupdate='CASCADE', ondelete='CASCADE')
     )
-    name = Column(String(80))
+    name = Column(String(80), nullable=False)
     display_name = Column(String(80))
     template = Column(String(80))
     _ordered_flavor_roles = Column(
@@ -2269,7 +2256,7 @@ class AdapterRole(BASE, HelperMixin):
 
     __tablename__ = "adapter_role"
     id = Column(Integer, primary_key=True)
-    name = Column(String(80))
+    name = Column(String(80), nullable=False)
     display_name = Column(String(80))
     description = Column(Text)
     optional = Column(Boolean, default=False)
@@ -2377,7 +2364,7 @@ class Adapter(BASE, HelperMixin):
     __tablename__ = 'adapter'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(80), unique=True)
+    name = Column(String(80), unique=True, nullable=False)
     display_name = Column(String(80))
     parent_id = Column(
         Integer,
@@ -2548,9 +2535,6 @@ class Adapter(BASE, HelperMixin):
     def to_dict(self):
         dict_info = super(Adapter, self).to_dict()
         dict_info.update({
-            'roles': [
-                role.to_dict() for role in self.adapter_roles
-            ],
             'supported_oses': [
                 adapter_os.to_dict()
                 for adapter_os in self.adapter_supported_oses
@@ -2585,7 +2569,7 @@ class DistributedSystem(BASE, HelperMixin):
         ),
         nullable=True
     )
-    name = Column(String(80), unique=True)
+    name = Column(String(80), unique=True, nullable=False)
     deployable = Column(Boolean, default=False)
 
     adapters = relationship(
@@ -2650,8 +2634,8 @@ class Subnet(BASE, TimestampMixin, HelperMixin):
     __tablename__ = 'subnet'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(80), unique=True)
-    subnet = Column(String(80), unique=True)
+    name = Column(String(80), unique=True, nullable=True)
+    subnet = Column(String(80), unique=True, nullable=False)
 
     host_networks = relationship(
         HostNetwork,
@@ -2664,7 +2648,8 @@ class Subnet(BASE, TimestampMixin, HelperMixin):
         self.subnet = subnet
         super(Subnet, self).__init__(**kwargs)
 
-    def initialize(self):
+    def to_dict(self):
+        dict_info = super(Subnet, self).to_dict()
         if not self.name:
-            self.name = self.subnet
-        super(Subnet, self).initialize()
+            dict_info['name'] = self.subnet
+        return dict_info

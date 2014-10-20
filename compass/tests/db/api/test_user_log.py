@@ -54,7 +54,7 @@ class TestListUserActions(BaseTest):
         )
         self.assertEqual(
             1,
-            user_action['user_id']
+            user_action[0]['user_id']
         )
 
     def test_list_none_user_actions(self):
@@ -66,7 +66,7 @@ class TestListUserActions(BaseTest):
             self.user_object,
             2
         )
-        self.assertEqual([], user_action['logs'])
+        self.assertEqual([], user_action)
 
 
 class TestListActions(BaseTest):
@@ -109,7 +109,7 @@ class TestDelUserActions(BaseTest):
             self.user_object,
             self.user_object.id
         )
-        self.assertEqual([], del_user_action['logs'])
+        self.assertEqual([], del_user_action)
 
 
 class TestDelActions(BaseTest):

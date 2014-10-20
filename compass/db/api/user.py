@@ -367,7 +367,7 @@ def update_user(session, updater, user_id, **kwargs):
         allowed_fields |= set(ADMIN_UPDATED_FIELDS)
     if updater.id == user_id:
         allowed_fields |= set(SELF_UPDATED_FIELDS)
-    unsupported_fields = allowed_fields - set(kwargs)
+    unsupported_fields = set(kwargs) - allowed_fields
     if unsupported_fields:
             # The user is not allowed to update a user.
         raise exception.Forbidden(

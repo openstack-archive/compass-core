@@ -35,40 +35,15 @@ def log_user_action(session, user_id, action):
     )
 
 
-def _compress_response(actions, user_id):
-    user_actions = []
-    for action in actions:
-        action_dict = action.to_dict()
-        del action_dict['user_id']
-        user_actions.append(action_dict)
-    return {'user_id': user_id, 'logs': user_actions}
-
-
-def _compress_response_by_user(actions):
-    actions_by_user = {}
-    for action in actions:
-        action_dict = action.to_dict()
-        user_id = action_dict['user_id']
-        del action_dict['user_id']
-        actions_by_user.setdefault(user_id, []).append(action_dict)
-
-    return [
-        {'user_id': user_id, 'logs': user_actions}
-        for user_id, user_actions in actions_by_user.items()
-    ]
-
-
 @utils.supported_filters(optional_support_keys=USER_SUPPORTED_FIELDS)
 @user_api.check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_user_actions(session, lister, user_id, **filters):
     """list user actions."""
-    return _compress_response(
-        utils.list_db_objects(
-            session, models.UserLog, user_id=user_id, **filters
-        ),
-        user_id
+    return utils.list_db_objects(
+        session, models.UserLog, order_by=['timestamp'],
+        user_id=user_id, **filters
     )
 
 
@@ -78,35 +53,28 @@ def list_user_actions(session, lister, user_id, **filters):
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_actions(session, lister, **filters):
     """list actions."""
-    return _compress_response_by_user(
-        utils.list_db_objects(
-            session, models.UserLog, **filters
-        )
+    return utils.list_db_objects(
+        session, models.UserLog, order_by=['timestamp'], **filters
     )
 
 
-@utils.supported_filters(optional_support_keys=USER_SUPPORTED_FIELDS)
+@utils.supported_filters()
 @user_api.check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_user_actions(session, deleter, user_id, **filters):
     """delete user actions."""
-    return _compress_response(
-        utils.del_db_objects(
-            session, models.UserLog, user_id=user_id, **filters
-        ),
-        user_id
+    return utils.del_db_objects(
+        session, models.UserLog, user_id=user_id, **filters
     )
 
 
-@utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
+@utils.supported_filters()
 @user_api.check_user_admin()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_actions(session, deleter, **filters):
     """delete actions."""
-    return _compress_response_by_user(
-        utils.del_db_objects(
-            session, models.UserLog, **filters
-        )
+    return utils.del_db_objects(
+        session, models.UserLog, **filters
     )

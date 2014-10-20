@@ -58,10 +58,6 @@ ADDED_MACHINES_FIELDS = ['mac', 'port']
 OPTIONAL_ADDED_MACHINES_FIELDS = [
     'vlans', 'ipmi_credentials', 'tag', 'location'
 ]
-OPTIONAL_CHECK_FILTER_FIELDS = [
-    'filter_type', 'ports', 'port_prefix', 'port_suffix',
-    'port_start', 'port_end'
-]
 ADDED_SWITCH_MACHINES_FIELDS = ['port', 'vlans']
 UPDATED_MACHINES_FIELDS = [
     'port', 'vlans', 'ipmi_credentials',
@@ -104,18 +100,7 @@ RESP_CLUSTER_FIELDS = [
 
 def _check_filters(switch_filters):
     logging.debug('check filters: %s', switch_filters)
-    switch_filters = models.Switch.parse_filters(switch_filters)
-    for switch_filter in switch_filters:
-        _check_filter_internal(**switch_filter)
-
-
-@utils.supported_filters(
-    optional_support_keys=OPTIONAL_CHECK_FILTER_FIELDS
-)
-def _check_filter_internal(
-    **switch_filter
-):
-    pass
+    models.Switch.parse_filters(switch_filters)
 
 
 def _check_vlans(vlans):
@@ -791,7 +776,7 @@ def _update_machine_internal(session, switch_id, machine_id, **kwargs):
 
 
 def _add_machines(session, switch, machines):
-    for machine in machines.items():
+    for machine in machines:
         _update_machine_internal(
             session, switch.id, **machine
         )
@@ -809,7 +794,7 @@ def _set_machines(session, switch, machines):
         session, models.SwitchMachine,
         switch_id=switch.id
     )
-    for switch_machine in machines.items():
+    for switch_machine in machines:
         _update_machine_internal(
             session, switch.id, **switch_machine
         )

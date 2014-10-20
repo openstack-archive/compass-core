@@ -720,17 +720,6 @@ class TestAdapterAPI(ApiTestCase):
         return_value = self.get(url)
         self.assertEqual(return_value.status_code, 404)
 
-    def test_show_adapter_roles(self):
-        # get adapter role successfully
-        url = '/adapters/%s/roles' % self.adapter_id
-        return_value = self.get(url)
-        self.assertEqual(return_value.status_code, 200)
-
-        # give a non-existed id
-        url = '/adapters/99/roles'
-        return_value = self.get(url)
-        self.assertEqual(return_value.status_code, 404)
-
 
 class TestHostAPI(ApiTestCase):
     """Test host api."""
@@ -784,13 +773,15 @@ class TestHostAPI(ApiTestCase):
         url = '/hosts/1/networks'
         datas = [
             {
-                'ip': '179049563',
+                'interface': 'eth0',
+                'ip': '10.172.20.91',
                 'subnet_id': 1,
                 'is_mgmt': False,
                 'is_promiscuous': False
             },
             {
-                'ip': '179049582',
+                'interface': 'eth1',
+                'ip': '10.172.20.110',
                 'subnet_id': 1,
                 'is_mgmt': False,
                 'is_promiscuous': False
@@ -883,7 +874,7 @@ class TestHostAPI(ApiTestCase):
         return_value = self.get(url)
         resp = json.loads(return_value.get_data())
         count = len(resp)
-        self.assertEqual(count, 1)
+        self.assertEqual(count, 2)
         self.assertEqual(return_value.status_code, 200)
 
     def test_show_host_network(self):

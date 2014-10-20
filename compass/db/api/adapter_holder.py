@@ -128,15 +128,3 @@ def get_adapter_internal(session, adapter_id):
 def get_adapter(session, getter, adapter_id, **kwargs):
     """get adapter."""
     return get_adapter_internal(session, adapter_id)
-
-
-@utils.supported_filters([])
-@database.run_in_session()
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_LIST_ADAPTERS
-)
-@utils.wrap_to_dict(RESP_ROLES_FIELDS)
-def get_adapter_roles(session, getter, adapter_id, **kwargs):
-    """get adapter roles."""
-    adapter = get_adapter_internal(session, adapter_id)
-    return adapter.get('roles', [])

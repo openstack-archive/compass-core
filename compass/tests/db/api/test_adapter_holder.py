@@ -143,49 +143,6 @@ class TestGetAdapter(AdapterTestCase):
         )
 
 
-class TestGetAdapterRoles(AdapterTestCase):
-    """Test get adapter roles."""
-
-    def setUp(self):
-        super(TestGetAdapterRoles, self).setUp()
-
-    def tearDown(self):
-        super(TestGetAdapterRoles, self).tearDown()
-
-    def test_get_adapter_roles(self):
-        adapter_roles = adapter.get_adapter_roles(
-            self.user_object,
-            self.adapter_id
-        )
-        result = []
-        for adapter_role in adapter_roles:
-            for k, v in adapter_role.items():
-                if k == 'display_name':
-                    result.append(v)
-        expected = [
-            'compute node',
-            'network node',
-            'storage node',
-            'image node',
-            'vnc proxy node',
-            'controller node',
-            'message queue node',
-            'database node',
-            'ha proxy node',
-            'all in one compute'
-        ]
-        self.assertIsNotNone(adapter_roles)
-        self.assertListEqual(result, expected)
-
-    def test_adapter_non_exist(self):
-        self.assertRaises(
-            exception.RecordNotExists,
-            adapter.get_adapter_roles,
-            self.user_object,
-            99
-        )
-
-
 if __name__ == '__main__':
     flags.init()
     logsetting.init()

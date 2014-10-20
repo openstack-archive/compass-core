@@ -189,16 +189,19 @@ def _wrap_response(func, response_code):
     return wrapped_func
 
 
+def _reformat_host_networks(networks):
+    network_mapping = {}
+    for network in networks:
+        if 'interface' in network:
+            network_mapping[network['interface']] = network
+    return network_mapping
+
+
 def _reformat_host(host):
     if isinstance(host, list):
         return [_reformat_host(item) for item in host]
     if 'networks' in host:
-        networks = host['networks']
-        network_mapping = {}
-        for network in networks:
-            if 'interface' in network:
-                network_mapping[network['interface']] = network
-        host['networks'] = network_mapping
+        host['networks'] = _reformat_host_networks(host['networks'])
     return host
 
 
@@ -355,21 +358,29 @@ def take_user_action(user_id):
         ),
         200
     )
+
+    def disable_user(disable_user=None):
+        return user_api.update_user(
+            current_user, user_id, active=False
+        )
+
     disable_user_func = _wrap_response(
-        functools.partial(
-            user_api.update_user, current_user, user_id, active=False
-        ),
+        disable_user,
         200
     )
+
+    def enable_user(enable_user=None):
+        return user_api.update_user(
+            current_user, user_id, active=True
+        )
+
     enable_user_func = _wrap_response(
-        functools.partial(
-            user_api.update_user, current_user, user_id, active=True
-        ),
+        enable_user,
         200
     )
     return _group_data_action(
         data,
-        add_permission=update_permissions_func,
+        add_permissions=update_permissions_func,
         remove_permissions=update_permissions_func,
         set_permissions=update_permissions_func,
         enable_user=enable_user_func,
@@ -399,7 +410,7 @@ def show_user_permission(user_id, permission_id):
 @log_user_action
 @login_required
 def add_user_permission(user_id):
-    """Delete a specific user permission."""
+    """Add permission to a specific user."""
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -518,7 +529,6 @@ def list_user_actions(user_id):
 def delete_all_user_actions():
     """Delete all user actions."""
     data = _get_request_data()
-    _filter_timestamp(data)
     return utils.make_json_response(
         200,
         user_log_api.del_actions(
@@ -533,7 +543,6 @@ def delete_all_user_actions():
 def delete_user_actions(user_id):
     """Delete user actions."""
     data = _get_request_data()
-    _filter_timestamp(data)
     return utils.make_json_response(
         200,
         user_log_api.del_user_actions(
@@ -933,17 +942,20 @@ def take_machine_action(machine_id):
     poweron_func = _wrap_response(
         functools.partial(
             machine_api.poweron_machine, current_user, machine_id
-        )
+        ),
+        202
     )
     poweroff_func = _wrap_response(
         functools.partial(
             machine_api.poweroff_machine, current_user, machine_id
-        )
+        ),
+        202
     )
     reset_func = _wrap_response(
         functools.partial(
             machine_api.reset_machine, current_user, machine_id
-        )
+        ),
+        202
     )
     return _group_data_action(
         data,
@@ -1223,20 +1235,6 @@ def show_adapter(adapter_id):
     return utils.make_json_response(
         200,
         adapter_api.get_adapter(
-            current_user, adapter_id, **data
-        )
-    )
-
-
-@app.route("/adapters/<int:adapter_id>/roles", methods=['GET'])
-@log_user_action
-@login_required
-def show_adapter_roles(adapter_id):
-    """Get adapter roles."""
-    data = _get_request_args()
-    return utils.make_json_response(
-        200,
-        adapter_api.get_adapter_roles(
             current_user, adapter_id, **data
         )
     )
@@ -2000,7 +1998,12 @@ def list_host_networks(host_id):
     """list host networks."""
     data = _get_request_args()
     return utils.make_json_response(
-        200, host_api.list_host_networks(current_user, host_id, **data)
+        200,
+        _reformat_host_networks(
+            host_api.list_host_networks(
+                current_user, host_id, **data
+            )
+        )
     )
 
 
@@ -2014,7 +2017,10 @@ def list_hostnetworks():
         is_promiscuous=_bool_converter
     )
     return utils.make_json_response(
-        200, host_api.list_hostnetworks(current_user, **data)
+        200,
+        _reformat_host_networks(
+            host_api.list_hostnetworks(current_user, **data)
+        )
     )
 
 
@@ -2298,6 +2304,31 @@ def proxy_put(url):
         'Cookie'
     )
     response = requests.put(
+        '%s/%s' % (setting.PROXY_URL_PREFIX, url),
+        data=request.data,
+        headers=headers
+    )
+    logging.debug(
+        'proxy %s response: %s',
+        url, response.text
+    )
+    return utils.make_json_response(
+        response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/proxy/<path:url>", methods=['PATCH'])
+@log_user_action
+@login_required
+def proxy_patch(url):
+    """proxy url."""
+    headers = _get_headers(
+        'Content-Type', 'Accept-Encoding',
+        'Content-Encoding', 'Accept', 'User-Agent',
+        'Content-MD5', 'Transfer-Encoding',
+        'Cookie'
+    )
+    response = requests.patch(
         '%s/%s' % (setting.PROXY_URL_PREFIX, url),
         data=request.data,
         headers=headers

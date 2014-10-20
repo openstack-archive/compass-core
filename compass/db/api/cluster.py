@@ -29,14 +29,15 @@ from compass.utils import util
 
 
 SUPPORTED_FIELDS = [
-    'name', 'os_name', 'distributed_system_name', 'owner', 'adapter_id'
+    'name', 'os_name', 'distributed_system_name', 'owner',
+    'adapter_name', 'flavor_name'
 ]
 SUPPORTED_CLUSTERHOST_FIELDS = []
 RESP_FIELDS = [
     'id', 'name', 'os_name', 'os_id', 'distributed_system_id',
     'reinstall_distributed_system', 'flavor',
     'distributed_system_name', 'distributed_system_installed',
-    'owner', 'adapter_id',
+    'owner', 'adapter_id', 'adapter_name', 'flavor_name',
     'created_at', 'updated_at'
 ]
 RESP_CLUSTERHOST_FIELDS = [
@@ -691,27 +692,25 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
         cluster_roles = []
         cluster = clusterhost.cluster
         flavor = cluster.flavor
-        if not flavor:
-            raise exception.InvalidParameter(
-                'not flavor in cluster %s' % cluster.name
-            )
-        for flavor_roles in flavor.flavor_roles:
-            cluster_roles.append(flavor_roles.role.name)
-        for role in roles:
-            if role not in cluster_roles:
-                raise exception.InvalidParameter(
-                    'role %s is not in cluster roles %s' % (
-                        role, cluster_roles
-                    )
-                )
-    if 'roles' in kwargs:
-        roles = kwargs['roles']
-        flavor = clusterhost.cluster.flavor
         if not roles:
-            if flavor and flavor.flavor_roles:
+            if flavor:
                 raise exception.InvalidParameter(
                     'roles %s is empty' % roles
                 )
+        else:
+            if not flavor:
+                raise exception.InvalidParameter(
+                    'not flavor in cluster %s' % cluster.name
+                )
+            for flavor_roles in flavor.flavor_roles:
+                cluster_roles.append(flavor_roles.role.name)
+            for role in roles:
+                if role not in cluster_roles:
+                    raise exception.InvalidParameter(
+                        'role %s is not in cluster roles %s' % (
+                            role, cluster_roles
+                        )
+                    )
 
     @utils.input_validates(
         roles=roles_validates,

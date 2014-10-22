@@ -43,5 +43,6 @@ sudo chkconfig sshd on
 sudo chkconfig rsyslog on
 sudo chkconfig ntpd on
 sudo chkconfig redis on
+sudo chkconfig mysqld on
 sudo chkconfig iptables off
 sudo chkconfig ip6tables off

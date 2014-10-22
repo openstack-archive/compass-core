@@ -101,10 +101,12 @@ class HDManager(object):
         :return a tuple (vendor, switch_state, error)
         """
 
-        switch_lists = util.load_configs(setting.SWITCH_LIST_DIR)
-        switch_list = None
-        for item in switch_lists:
-            switch_list = item['SWITCH_LIST']
+        switch_lists = util.load_configs(setting.MACHINE_LIST_DIR)
+        switch_list = []
+        for items in switch_lists:
+            for item in items['MACHINE_LIST']:
+                for k, v in item.items():
+                    switch_list.append(k)
         if host in switch_list:
             return ("appliance", "Found", "")
 

@@ -102,9 +102,10 @@ class HDManager(object):
         """
 
         switch_lists = util.load_configs(setting.SWITCH_LIST_DIR)
-        switch_list = None
+        switch_list = []
         for item in switch_lists:
-            switch_list = item['SWITCH_LIST']
+            if item and 'SWITCH_LIST' in item and item['SWITCH_LIST']:
+                switch_list.extend(item['SWITCH_LIST'])
         if host in switch_list:
             return ("appliance", "Found", "")
 

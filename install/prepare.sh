@@ -135,7 +135,7 @@ if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" dev/experimental || exit $?
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" || exit $?
 
 if [ "$tempest" == "true" ]; then
     echo "download tempest packages"

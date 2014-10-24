@@ -486,6 +486,9 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         self.interface = interface
         super(HostNetwork, self).__init__(**kwargs)
 
+    def __str__(self):
+        return 'HostNetwork[%s=%s]' % (self.interface, self.ip)
+
     @property
     def ip(self):
         return str(netaddr.IPAddress(self.ip_int))
@@ -558,6 +561,11 @@ class ClusterHostLogHistory(BASE, LogHistoryMixin):
         self.filename = filename
         super(ClusterHostLogHistory, self).__init__(**kwargs)
 
+    def __str__(self):
+        return 'ClusterHostLogHistory[%s:%s]' % (
+            self.clusterhost_id, self.filename
+        )
+
     def initialize(self):
         self.cluster_id = self.clusterhost.cluster_id
         self.host_id = self.clusterhost.host_id
@@ -580,6 +588,9 @@ class HostLogHistory(BASE, LogHistoryMixin):
         self.filename = filename
         super(HostLogHistory, self).__init__(**kwargs)
 
+    def __str__(self):
+        return 'HostLogHistory[%s:%s]' % (self.id, self.filename)
+
 
 class ClusterHostState(BASE, StateMixin):
     """ClusterHost state table."""
@@ -593,6 +604,11 @@ class ClusterHostState(BASE, StateMixin):
         ),
         primary_key=True
     )
+
+    def __str__(self):
+        return 'ClusterHostState[%s state %s percentage %s]' % (
+            self.id, self.state, self.percentage
+        )
 
     def update(self):
         super(ClusterHostState, self).update()
@@ -654,6 +670,9 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         self.host_id = host_id
         self.state = ClusterHostState()
         super(ClusterHost, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'ClusterHost[%s:%s]' % (self.clusterhost_id, self.name)
 
     def update(self):
         if self.host.reinstall_os:
@@ -866,6 +885,11 @@ class HostState(BASE, StateMixin):
         primary_key=True
     )
 
+    def __str__(self):
+        return 'HostState[%s state %s percentage %s]' % (
+            self.id, self.state, self.percentage
+        )
+
     def update(self):
         super(HostState, self).update()
         host = self.host
@@ -943,6 +967,9 @@ class Host(BASE, TimestampMixin, HelperMixin):
         cascade='all, delete-orphan',
         backref=backref('host')
     )
+
+    def __str__(self):
+        return 'Host[%s:%s]' % (self.id, self.name)
 
     @hybrid_property
     def mac(self):
@@ -1089,6 +1116,11 @@ class ClusterState(BASE, StateMixin):
         default=0
     )
 
+    def __str__(self):
+        return 'ClusterState[%s state %s percentage %s]' % (
+            self.id, self.state, self.percentage
+        )
+
     def to_dict(self):
         dict_info = super(ClusterState, self).to_dict()
         dict_info['status'] = {
@@ -1198,6 +1230,9 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         self.name = name
         self.state = ClusterState()
         super(Cluster, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'Cluster[%s:%s]' % (self.id, self.name)
 
     def initialize(self):
         super(Cluster, self).initialize()
@@ -1375,6 +1410,9 @@ class UserPermission(BASE, HelperMixin, TimestampMixin):
         self.user_id = user_id
         self.permission_id = permission_id
 
+    def __str__(self):
+        return 'UserPermission[%s:%s]' % (self.id, self.name)
+
     @hybrid_property
     def name(self):
         return self.permission.name
@@ -1403,6 +1441,9 @@ class Permission(BASE, HelperMixin, TimestampMixin):
     def __init__(self, name, **kwargs):
         self.name = name
         super(Permission, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'Permission[%s:%s]' % (self.id, self.name)
 
 
 class UserToken(BASE, HelperMixin):
@@ -1497,6 +1538,9 @@ class User(BASE, HelperMixin, TimestampMixin):
         self.email = email
         super(User, self).__init__(**kwargs)
 
+    def __str__(self):
+        return 'User[%s]' % self.email
+
     def validate(self):
         super(User, self).validate()
         if not self.crypted_password:
@@ -1528,12 +1572,6 @@ class User(BASE, HelperMixin, TimestampMixin):
         ]
         return dict_info
 
-    def __str__(self):
-        return '%s[email:%s,is_admin:%s,active:%s]' % (
-            self.__class__.__name__,
-            self.email, self.is_admin, self.active
-        )
-
 
 class SwitchMachine(BASE, HelperMixin, TimestampMixin):
     """Switch Machine table."""
@@ -1559,6 +1597,11 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
         self.switch_id = switch_id
         self.machine_id = machine_id
         super(SwitchMachine, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'SwitchMachine[%s port %s]' % (
+            self.switch_machine_id, self.port
+        )
 
     def validate(self):
         super(SwitchMachine, self).validate()
@@ -1709,6 +1752,9 @@ class Machine(BASE, HelperMixin, TimestampMixin):
         self.mac = mac
         super(Machine, self).__init__(**kwargs)
 
+    def __str__(self):
+        return 'Machine[%s:%s]' % (self.id, self.mac)
+
     def validate(self):
         super(Machine, self).validate()
         try:
@@ -1788,6 +1834,9 @@ class Switch(BASE, HelperMixin, TimestampMixin):
         cascade='all, delete-orphan',
         backref=backref('switch')
     )
+
+    def __str__(self):
+        return 'Switch[%s:%s]' % (self.id, self.ip)
 
     @classmethod
     def parse_filters(cls, filters):
@@ -2094,6 +2143,9 @@ class OperatingSystem(BASE, HelperMixin):
         self.name = name
         super(OperatingSystem, self).__init__()
 
+    def __str__(self):
+        return 'OperatingSystem[%s:%s]' % (self.id, self.name)
+
     @property
     def root_metadatas(self):
         return [
@@ -2199,6 +2251,9 @@ class AdapterFlavor(BASE, HelperMixin):
         UniqueConstraint('name', 'adapter_id', name='constraint'),
     )
 
+    def __str__(self):
+        return 'AdapterFlavor[%s:%s]' % (self.id, self.name)
+
     @property
     def ordered_flavor_roles(self):
         flavor_roles = dict([
@@ -2284,6 +2339,9 @@ class AdapterRole(BASE, HelperMixin):
         self.name = name
         self.adapter_id = adapter_id
         super(AdapterRole, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'AdapterRole[%s:%s]' % (self.id, self.name)
 
     def initialize(self):
         if not self.description:
@@ -2592,6 +2650,9 @@ class DistributedSystem(BASE, HelperMixin):
         self.name = name
         super(DistributedSystem, self).__init__()
 
+    def __str__(self):
+        return 'DistributedSystem[%s:%s]' % (self.id, self.name)
+
 
 class OSInstaller(BASE, InstallerMixin):
     """OS installer table."""
@@ -2612,6 +2673,9 @@ class OSInstaller(BASE, InstallerMixin):
         self.alias = alias
         super(OSInstaller, self).__init__(**kwargs)
 
+    def __str__(self):
+        return 'OSInstaller[%s:%s]' % (self.id, self.alias)
+
 
 class PackageInstaller(BASE, InstallerMixin):
     """package installer table."""
@@ -2627,6 +2691,9 @@ class PackageInstaller(BASE, InstallerMixin):
     def __init__(self, alias, **kwargs):
         self.alias = alias
         super(PackageInstaller, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'PackageInstaller[%s:%s]' % (self.id, self.alias)
 
 
 class Subnet(BASE, TimestampMixin, HelperMixin):
@@ -2647,6 +2714,9 @@ class Subnet(BASE, TimestampMixin, HelperMixin):
     def __init__(self, subnet, **kwargs):
         self.subnet = subnet
         super(Subnet, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'Subnet[%s:%s]' % (self.id, self.subnet)
 
     def to_dict(self):
         dict_info = super(Subnet, self).to_dict()

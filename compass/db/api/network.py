@@ -125,4 +125,18 @@ def del_subnet(session, deleter, subnet_id, **kwargs):
     subnet = utils.get_db_object(
         session, models.Subnet, id=subnet_id
     )
+    if subnet.host_networks:
+        host_networks = [
+            '%s:%s=%s' % (
+                host_network.host.name, host_network.interface,
+                host_network.ip
+            )
+            for host_network in subnet.host_networks
+        ]
+        raise exception.NotAcceptable(
+            'subnet %s contains host networks %s' % (
+                subnet.subnet, host_networks
+            )
+        )
+
     return utils.del_db_object(session, subnet)

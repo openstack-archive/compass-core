@@ -21,6 +21,7 @@ import logging
 from celery.signals import celeryd_init
 from celery.signals import setup_logging
 
+from compass.actions import delete
 from compass.actions import deploy
 from compass.actions import poll_switch
 from compass.actions import update_progress
@@ -82,8 +83,10 @@ def pollswitch(
 def deploy_cluster(deployer_email, cluster_id, clusterhost_ids):
     """Deploy the given cluster.
 
-    :param cluster_hosts: the cluster and hosts of each cluster to deploy.
-    :type cluster_hosts: dict of int to list of int
+    :param cluster_id: id of the cluster
+    :type cluster_id: int
+    :param clusterhost_ids: the id of the hosts in the cluster
+    :type clusterhost_ids: list of int
     """
     try:
         deploy.deploy(cluster_id, clusterhost_ids, deployer_email)
@@ -95,10 +98,72 @@ def deploy_cluster(deployer_email, cluster_id, clusterhost_ids):
 def reinstall_cluster(installer_email, cluster_id, clusterhost_ids):
     """reinstall the given cluster.
 
-    :param cluster_hosts: the cluster and hosts of each cluster to reinstall.
-    :type cluster_hosts: dict of int to list of int
+    :param cluster_id: id of the cluster
+    :type cluster_id: int
+    :param clusterhost_ids: the id of the hosts in the cluster
+    :type clusterhost_ids: list of int
     """
-    pass
+    try:
+        deploy.redeploy(cluster_id, clusterhost_ids, installer_email)
+    except Exception as error:
+        logging.exception(error)
+
+
+@celery.task(name='compass.tasks.delete_cluster')
+def delete_cluster(
+    deleter_email, cluster_id, clusterhost_ids,
+    delete_underlying_host=False
+):
+    """Delete the given cluster.
+
+    :param cluster_id: id of the cluster
+    :type cluster_id: int
+    :param clusterhost_ids: the id of the hosts in the cluster
+    :type clusterhost_ids: list of int
+    """
+    try:
+        delete.delete_cluster(
+            cluster_id, clusterhost_ids, deleter_email,
+            delete_underlying_host=delete_underlying_host
+        )
+    except Exception as error:
+        logging.exception(error)
+
+
+@celery.task(name='compass.tasks.delete_cluster_host')
+def delete_cluster_host(
+    deleter_email, cluster_id, host_id,
+    delete_underlying_host=False
+):
+    """Delte the given cluster host.
+
+    :param cluster_id: id of the cluster
+    :type cluster_id: int
+    :param host_id: id of the host
+    :type host_id: int
+    """
+    try:
+        delete.delete_cluster_host(
+            cluster_id, host_id, deleter_email,
+            delete_underlying_host=delete_underlying_host
+        )
+    except Exception as error:
+        logging.exception(error)
+
+
+@celery.task(name='compass.tasks.delete_host')
+def delete_host(deleter_email, host_id):
+    """Delete the given host.
+
+    :param host_id: id of the host
+    :type host_id: int
+    """
+    try:
+        delete.delete_host(
+            host_id, deleter_email
+        )
+    except Exception as error:
+        logging.exception(error)
 
 
 @celery.task(name='compass.tasks.poweron_host')

@@ -16,11 +16,8 @@
 
 """binary to deploy a cluster by compass client api."""
 import logging
-import netaddr
 import os
 import re
-import requests
-import simplejson as json
 import socket
 import sys
 import time
@@ -31,6 +28,10 @@ sys.path.append(current_dir)
 
 
 import switch_virtualenv
+
+import netaddr
+import requests
+import simplejson as json
 
 from compass.apiclient.restful import Client
 from compass.utils import flags

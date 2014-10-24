@@ -16,7 +16,6 @@
 
 """main script to run as service to update hosts installing progress."""
 import functools
-import lockfile
 import logging
 import os
 import sys
@@ -27,6 +26,8 @@ sys.path.append(current_dir)
 
 
 import switch_virtualenv
+
+import lockfile
 
 from compass.actions import update_progress
 from compass.db.api import database

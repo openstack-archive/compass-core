@@ -72,6 +72,8 @@ class ApiTestCase(unittest2.TestCase):
         self.test_client = application.test_client()
 
         celery.current_app.send_task = mock.Mock()
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task = mock.Mock()
         url = '/users/token'
         data = self.USER_CREDENTIALS
         request_data = json.dumps(data)
@@ -385,7 +387,7 @@ class TestClusterAPI(ApiTestCase):
         # delete a cluster sucessfully
         url = '/clusters/1'
         return_value = self.delete(url)
-        self.assertEqual(return_value.status_code, 200)
+        self.assertEqual(return_value.status_code, 202)
 
     def test_list_cluster_hosts(self):
         # list cluster_hosts successfully
@@ -451,7 +453,7 @@ class TestClusterAPI(ApiTestCase):
         # delete a cluster_host successfully
         url = '/clusters/1/hosts/1'
         return_value = self.delete(url)
-        self.assertEqual(return_value.status_code, 200)
+        self.assertEqual(return_value.status_code, 202)
 
         # give a non-existed cluster_id
         url = '/clusters/99/hosts/1'
@@ -862,7 +864,7 @@ class TestHostAPI(ApiTestCase):
         # delete a host successfully
         url = '/hosts/2'
         return_value = self.delete(url)
-        self.assertEqual(return_value.status_code, 200)
+        self.assertEqual(return_value.status_code, 202)
 
         # give a non-existed id
         url = '/hosts/99'

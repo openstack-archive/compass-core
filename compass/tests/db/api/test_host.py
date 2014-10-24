@@ -267,11 +267,11 @@ class TestListMachinesOrHosts(HostTestCase):
             self.assertIn(item, ['newname1', 'newname2'])
 
     def test_list_machines(self):
-        host.del_host(
+        host.del_host_from_database(
             self.user_object,
             self.host_ids[0]
         )
-        host.del_host(
+        host.del_host_from_database(
             self.user_object,
             self.host_ids[1]
         )
@@ -327,7 +327,7 @@ class TestGetMachineOrHost(HostTestCase):
         self.assertEqual(get_host['mac'], '28:6e:d4:46:c4:25')
 
     def test_get_machine(self):
-        host.del_host(
+        host.del_host_from_database(
             self.user_object,
             self.host_ids[0]
         )
@@ -448,17 +448,13 @@ class TestDelHost(HostTestCase):
         super(TestDelHost, self).tearDown()
 
     def test_del_host(self):
-        host.del_host(
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task = mock.Mock()
+        del_host = host.del_host(
             self.user_object,
             self.host_ids[0]
         )
-        del_host = host.list_hosts(
-            self.user_object
-        )
-        ids = []
-        for item in del_host:
-            ids.append(item['id'])
-        self.assertNotIn(self.host_ids[0], ids)
+        self.assertIsNotNone(del_host['status'])
 
     def test_is_host_editable(self):
         host.update_host_state(

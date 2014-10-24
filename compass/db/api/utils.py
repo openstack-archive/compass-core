@@ -462,12 +462,12 @@ def get_db_object(session, table, exception_when_missing=True, **kwargs):
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s get db object %s from table %s',
-            session, kwargs, table.__name__)
+            id(session), kwargs, table.__name__)
         db_object = model_filter(
             model_query(session, table), table, **kwargs
         ).first()
         logging.debug(
-            'session %s got db object %s', session, db_object
+            'session %s got db object %s', id(session), db_object
         )
         if db_object:
             return db_object
@@ -488,7 +488,7 @@ def add_db_object(session, table, exception_when_existing=True,
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s add object %s atributes %s to table %s',
-            session, args, kwargs, table.__name__)
+            id(session), args, kwargs, table.__name__)
         argspec = inspect.getargspec(table.__init__)
         arg_names = argspec.args[1:]
         arg_defaults = argspec.defaults
@@ -526,7 +526,7 @@ def add_db_object(session, table, exception_when_existing=True,
         db_object.initialize()
         db_object.validate()
         logging.debug(
-            'session %s db object %s added', session, db_object
+            'session %s db object %s added', id(session), db_object
         )
         return db_object
 
@@ -536,7 +536,7 @@ def list_db_objects(session, table, order_by=[], **filters):
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s list db objects by filters %s in table %s',
-            session, filters, table.__name__
+            id(session), filters, table.__name__
         )
         db_objects = model_order_by(
             model_filter(
@@ -549,7 +549,7 @@ def list_db_objects(session, table, order_by=[], **filters):
         ).all()
         logging.debug(
             'session %s got listed db objects: %s',
-            session, db_objects
+            id(session), db_objects
         )
         return db_objects
 
@@ -559,7 +559,7 @@ def del_db_objects(session, table, **filters):
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s delete db objects by filters %s in table %s',
-            session, filters, table.__name__
+            id(session), filters, table.__name__
         )
         query = model_filter(
             model_query(session, table), table, **filters
@@ -567,7 +567,7 @@ def del_db_objects(session, table, **filters):
         db_objects = query.all()
         query.delete(synchronize_session=False)
         logging.debug(
-            'session %s db objects %s deleted', session, db_objects
+            'session %s db objects %s deleted', id(session), db_objects
         )
         return db_objects
 
@@ -577,7 +577,7 @@ def update_db_objects(session, table, **filters):
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s update db objects by filters %s in table %s',
-            session, filters, table.__name__)
+            id(session), filters, table.__name__)
         db_objects = model_filter(
             model_query(session, table), table, **filters
         ).all()
@@ -587,7 +587,8 @@ def update_db_objects(session, table, **filters):
             db_object.update()
             db_object.validate()
         logging.debug(
-            'session %s db objects %s updated', session, db_objects
+            'session %s db objects %s updated',
+            id(session), db_objects
         )
         return db_objects
 
@@ -597,7 +598,7 @@ def update_db_object(session, db_object, **kwargs):
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s update db object %s by value %s',
-            session, db_object, kwargs
+            id(session), db_object, kwargs
         )
         for key, value in kwargs.items():
             setattr(db_object, key, value)
@@ -605,7 +606,8 @@ def update_db_object(session, db_object, **kwargs):
         db_object.update()
         db_object.validate()
         logging.debug(
-            'session %s db object %s updated', session, db_object
+            'session %s db object %s updated',
+            id(session), db_object
         )
         return db_object
 
@@ -615,12 +617,12 @@ def del_db_object(session, db_object):
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s delete db object %s',
-            session, db_object
+            id(session), db_object
         )
         session.delete(db_object)
         logging.debug(
             'session %s db object %s deleted',
-            session, db_object
+            id(session), db_object
         )
         return db_object
 

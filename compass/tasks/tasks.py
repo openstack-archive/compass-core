@@ -21,6 +21,7 @@ import logging
 from celery.signals import celeryd_init
 from celery.signals import setup_logging
 
+from compass.actions import clean
 from compass.actions import delete
 from compass.actions import deploy
 from compass.actions import poll_switch
@@ -166,6 +167,32 @@ def delete_host(deleter_email, host_id, cluster_ids):
         )
     except Exception as error:
         logging.exception(error)
+
+
+@celery.task(name='compass.tasks.clean_os_installer')
+def clean_os_installer(
+    os_installer_name, os_installer_settings
+):
+    """Clean os installer."""
+    try:
+        clean.clean_os_installer(
+            os_installer_name, os_installer_settings
+        )
+    except Exception as error:
+        logging.excception(error)
+
+
+@celery.task(name='compass.tasks.clean_package_installer')
+def clean_package_installer(
+    package_installer_name, package_installer_settings
+):
+    """Clean package installer."""
+    try:
+        clean.clean_package_installer(
+            package_installer_name, package_installer_settings
+        )
+    except Exception as error:
+        logging.excception(error)
 
 
 @celery.task(name='compass.tasks.poweron_host')

@@ -125,6 +125,12 @@ else
 fi
 
 cd $SCRIPT_DIR
+remote_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+if [[ "$?" != "0" ]]; then
+    remote_branch="origin/master"
+fi
+local_branch=$(echo ${remote_branch} | sed -e 's/origin\///g')
+
 if [ -z $WEB_SOURCE ]; then
     echo "web source $WEB_SOURCE is not set"
     exit 1
@@ -135,7 +141,7 @@ if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" dev/experimental || exit $?
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" ${local_branch} || exit $?
 
 if [ "$tempest" == "true" ]; then
     echo "download tempest packages"

@@ -56,8 +56,11 @@ def delete_clusters():
         if clustername
     ]
     user = user_api.get_user_object(setting.COMPASS_ADMIN_EMAIL)
+    list_cluster_args = {}
+    if clusternames:
+        list_cluster_args['name'] = clusternames
     clusters = cluster_api.list_clusters(
-        user, name=clusternames
+        user, **list_cluster_args
     )
     delete_underlying_host = flags.OPTIONS.delete_hosts
     for cluster in clusters:

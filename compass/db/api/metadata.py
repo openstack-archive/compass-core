@@ -301,17 +301,28 @@ def _validate_self(
     metadata, whole_check,
     **kwargs
 ):
+    logging.debug('validate config self %s', config_path)
     if '_self' not in metadata:
         if isinstance(config, dict):
             _validate_config(
                 config_path, config, metadata, whole_check, **kwargs
             )
         return
-    field_type = metadata['_self'].get('field_type', 'basestring')
+    field_type = metadata['_self'].get('field_type', basestring)
     if not isinstance(config, field_type):
         raise exception.InvalidParameter(
             '%s config type is not %s' % (config_path, field_type)
         )
+    is_required = metadata['_self'].get(
+        'is_required', False
+    )
+    required_in_whole_config = metadata['_self'].get(
+        'required_in_whole_config', False
+    )
+    if isinstance(config, basestring):
+        if config == '' and not is_required and not required_in_whole_config:
+            # ignore empty config when it is optional
+            return
     required_in_options = metadata['_self'].get(
         'required_in_options', False
     )
@@ -333,6 +344,7 @@ def _validate_self(
                     '%s config is not in %s' % (config_path, options)
                 )
     validator = metadata['_self'].get('validator', None)
+    logging.debug('validate by validator %s', validator)
     if validator:
         if not validator(config_key, config, **kwargs):
             raise exception.InvalidParameter(
@@ -348,6 +360,7 @@ def _validate_config(
     config_path, config, metadata, whole_check,
     **kwargs
 ):
+    logging.debug('validate config %s', config_path)
     generals = {}
     specified = {}
     for key, value in metadata.items():

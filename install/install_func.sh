@@ -151,9 +151,9 @@ download()
         if [[ "$downloaded" == "0" ]]; then
 	    echo "downloading $url to /tmp/${package}"
 	    if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
-                curl -L -z /tmp/${package} -o /tmp/${package}.tmp $url
+                curl -f -L -z /tmp/${package} -o /tmp/${package}.tmp $url
 	    else
-		curl -L -o /tmp/${package}.tmp $url
+		curl -f -L -o /tmp/${package}.tmp $url
 	    fi
             if [[ "$?" != "0" ]]; then
                 echo "failed to download $package"

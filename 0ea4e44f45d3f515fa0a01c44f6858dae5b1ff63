@@ -1,0 +1,8 @@
+Verified+2: Jenkins
+Code-Review+2: Shuo Yang <shuo.yang@huawei.com>
+Workflow+1: Shuo Yang <shuo.yang@huawei.com>
+Submitted-by: Jenkins
+Submitted-at: Thu, 30 Oct 2014 19:01:54 +0000
+Reviewed-on: https://review.openstack.org/132090
+Project: stackforge/compass-core
+Branch: refs/heads/dev/experimental

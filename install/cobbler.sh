@@ -195,6 +195,7 @@ else
 fi
 
 # create centos repo
+sudo rm -rf /var/lib/cobbler/repo_mirror/centos_ppa_repo
 sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_ppa_repo
 found_centos_ppa_repo=0
 for repo in $(cobbler repo list); do
@@ -219,7 +220,7 @@ fi
 cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
-openssh-clients-5.3p1-104.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 iproute-2.6.32-31.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
@@ -253,6 +254,7 @@ else
 fi
 
 # create ubuntu repo
+sudo rm -rf /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo
 sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo
 found_ubuntu_ppa_repo=0
 for repo in $(cobbler repo list); do

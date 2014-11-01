@@ -67,6 +67,11 @@ def delete_clusters():
         cluster_id = cluster['id']
         hosts = cluster_api.list_cluster_hosts(user, cluster_id)
         host_id_list = [host['id'] for host in hosts]
+        logging.info(
+            'delete cluster %s and cluster hosts %s',
+            cluster_id, host_id_list
+        )
+        logging.info('delete underlying host? %s', delete_underlying_host)
         if flags.OPTIONS.async:
             celery.send_task(
                 'compass.tasks.delete_cluster',

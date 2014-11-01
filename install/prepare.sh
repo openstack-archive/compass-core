@@ -256,7 +256,7 @@ fi
 
 # download local repo
 if [[ $LOCAL_REPO = "y" ]]; then
-    download -f https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz || exit $?
+    download https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz || exit $?
 fi
 
 # Install net-snmp

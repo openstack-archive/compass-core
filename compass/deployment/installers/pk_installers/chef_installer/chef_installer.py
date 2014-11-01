@@ -549,7 +549,7 @@ class ChefInstaller(PKInstaller):
 
     def _clean_log(self, log_dir_prefix, node_name):
         log_dir = os.path.join(log_dir_prefix, node_name)
-        shutil.rmtree(log_dir, False)
+        shutil.rmtree(log_dir, True)
 
     def get_supported_dist_systems(self):
         """get target systems from chef. All target_systems for compass will

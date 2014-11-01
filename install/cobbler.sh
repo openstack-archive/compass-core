@@ -241,11 +241,7 @@ libgt-0.3.11-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_
 liblogging-1.0.4-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 rsyslog-7.6.3-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
 for f in $centos_ppa_repo_rsyslog_packages; do
-    if [ "$REGION" == "asia" ]; then
-        download http://mirrors.yun-idc.com/epel/${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
-    else
-        download http://rpms.adiscon.com/v7-stable/epel-${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
-    fi
+    download http://rpms.adiscon.com/v7-stable/epel-${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
 done
 
 # download chef client for centos ppa repo

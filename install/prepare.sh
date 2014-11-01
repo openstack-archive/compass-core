@@ -174,6 +174,7 @@ if [ "$tempest" == "true" ]; then
         mkvirtualenv tempest
     fi
     workon tempest
+    rm -rf ${WORKON_HOME}/compass-core/build
     cd /tmp/tempest
     pip install -e .
     pip install sqlalchemy
@@ -193,6 +194,7 @@ if ! lsvirtualenv |grep compass-core>/dev/null; then
 fi
 cd $COMPASSDIR
 workon compass-core
+rm -rf ${WORKON_HOME}/compass-core/build
 echo "install compass requirements"
 pip install -U -r requirements.txt
 if [[ "$?" != "0" ]]; then
@@ -256,7 +258,7 @@ fi
 
 # download local repo
 if [[ $LOCAL_REPO = "y" ]]; then
-    download -f https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz || exit $?
+    download https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz || exit $?
 fi
 
 # Install net-snmp

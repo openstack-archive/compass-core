@@ -549,10 +549,13 @@ def add_clusterhost_internal(
         session, models.Host, False, id=machine_id
     )
     if host:
-        if host_api.is_host_editable(
-            session, host, cluster.creator,
-            reinstall_os_set=kwargs.get('reinstall_os', False),
-            exception_when_not_editable=False
+        if (
+            host_dict and
+            host_api.is_host_editable(
+                session, host, cluster.creator,
+                reinstall_os_set=kwargs.get('reinstall_os', False),
+                exception_when_not_editable=False
+            )
         ):
             if 'name' in host_dict:
                 hostname = host_dict['name']
@@ -719,6 +722,38 @@ def add_cluster_host(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
 def _update_clusterhost(session, updater, clusterhost, **kwargs):
+    clusterhost_dict = {}
+    host_dict = {}
+    for key, value in kwargs.items():
+        if key in UPDATED_HOST_FIELDS:
+            host_dict[key] = value
+        else:
+            clusterhost_dict[key] = value
+
+    if host_dict:
+        from compass.db.api import host as host_api
+        host = clusterhost.host
+        if host_api.is_host_editable(
+            session, host, clusterhost.cluster.creator,
+            reinstall_os_set=kwargs.get('reinstall_os', False),
+            exception_when_not_editable=False
+        ):
+            if 'name' in host_dict:
+                hostname = host_dict['name']
+                host_by_name = utils.get_db_object(
+                    session, models.Host, False, name=hostname
+                )
+                if host_by_name and host_by_name.id != host.id:
+                    raise exception.InvalidParameter(
+                        'host name %s exists in host %s' % (
+                            hostname, host_by_name.id
+                        )
+                    )
+            utils.update_db_object(
+                session, host,
+                **host_dict
+            )
+
     def roles_validates(roles):
         cluster_roles = []
         cluster = clusterhost.cluster
@@ -759,7 +794,7 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS,
+    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS),
     ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
@@ -775,7 +810,7 @@ def update_cluster_host(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS,
+    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS),
     ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()

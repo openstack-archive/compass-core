@@ -140,13 +140,13 @@ class DeployManager(object):
         self.redeploy_os()
         self.redeploy_target_system()
 
-    def remove_hosts(self, package_only=False):
+    def remove_hosts(self, package_only=False, delete_cluster=False):
         """Remove hosts from both OS and/or package installlers server side."""
         if self.os_installer and not package_only:
             self.os_installer.delete_hosts()
 
         if self.pk_installer:
-            self.pk_installer.delete_hosts()
+            self.pk_installer.delete_hosts(delete_cluster=delete_cluster)
 
     def _get_hosts_for_os_installation(self, hosts_info):
         """Get info of hosts which need to install/reinstall OS."""

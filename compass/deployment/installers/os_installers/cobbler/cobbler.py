@@ -302,8 +302,10 @@ class CobblerInstaller(OSInstaller):
 
     def delete_hosts(self):
         hosts_id_list = self.config_manager.get_host_id_list()
+        logging.debug('delete hosts %s', hosts_id_list)
         for host_id in hosts_id_list:
             self.delete_single_host(host_id)
+        self._sync()
 
     def delete_single_host(self, host_id):
         """Delete the host from cobbler server and clean up the installation
@@ -311,11 +313,12 @@ class CobblerInstaller(OSInstaller):
         """
         hostname = self.config_manager.get_hostname(host_id)
         try:
-            log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[self.NAME]
+            log_dir_prefix = compass_setting.INSTALLATION_LOGDIR[NAME]
             self._clean_system(hostname)
             self._clean_log(log_dir_prefix, hostname)
         except Exception as ex:
-            logging.info("Deleting host got exception: %s", ex.message)
+            logging.error("Deleting host got exception: %s", ex)
+            logging.exception(ex)
 
     def _get_host_tmpl_vars_dict(self, host_id, global_vars_dict, **kwargs):
         """Generate template variables dictionary.

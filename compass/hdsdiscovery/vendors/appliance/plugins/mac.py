@@ -27,7 +27,9 @@ class Mac(base.BaseSnmpMacPlugin):
     """Processes MAC address."""
 
     def __init__(self, host, credential):
-        return
+        self.host = host
+        #self.credential = credential
+        #return
 
     def scan(self):
         """Implemnets the scan method in BasePlugin class.
@@ -36,8 +38,11 @@ class Mac(base.BaseSnmpMacPlugin):
             Dummy scan function for compass appliance.
             Returns fixed mac addresses.
         """
-        mac_lists = util.load_configs(setting.MAC_LIST_DIR)
         mac_list = None
-        for item in mac_lists:
-            mac_list = item['MAC_LIST']
+        machine_lists = util.load_configs(setting.MACHINE_LIST_DIR)
+        for items in machine_lists:
+            for item in items['MACHINE_LIST']:
+                for k, v in item.items():
+                    if k == self.host:
+                        mac_list = v
         return mac_list

@@ -317,15 +317,45 @@ def update_hosts(session, updater, data=[]):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_DEL_HOST
 )
-@utils.wrap_to_dict(RESP_FIELDS)
+@utils.wrap_to_dict(['status', 'host'], host=RESP_FIELDS)
 def del_host(session, deleter, host_id, **kwargs):
     """Delete a host."""
+    from compass.db.api import cluster as cluster_api
+    from compass.tasks import client as celery_client
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
     is_host_editable(
         session, host, deleter,
         reinstall_os_set=True
+    )
+    cluster_ids = []
+    for clusterhost in host.clusterhosts:
+        cluster_api.is_cluster_editable(
+            session, clusterhost.cluster, deleter,
+            reinstall_distributed_system_set=True
+        )
+        cluster_ids.append(clusterhost.cluster_id)
+
+    celery_client.celery.send_task(
+        'compass.tasks.delete_host',
+        (
+            deleter.email, host_id, cluster_ids
+        )
+    )
+    return {
+        'status': 'delete action sent',
+        'host': host,
+    }
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_HOST
+)
+def del_host_from_database(session, deleter, host_id):
+    host = utils.get_db_object(
+        session, models.Host, id=host_id
     )
     return utils.del_db_object(session, host)
 

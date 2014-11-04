@@ -16,7 +16,6 @@
 
 """main script to poll machines which is connected to the switches."""
 import functools
-import lockfile
 import logging
 import os
 import sys
@@ -28,6 +27,7 @@ sys.path.append(current_dir)
 
 import switch_virtualenv
 
+import lockfile
 from multiprocessing import Pool
 
 from compass.actions import poll_switch

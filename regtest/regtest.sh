@@ -79,8 +79,6 @@ for i in `seq $VIRT_NUM`; do
         exit 1
     fi
 
-    echo "make pxe${i} reboot if installation failing."
-    sed -i "/<boot dev='hd'\/>/ a\    <bios useserial='yes' rebootTimeout='0'\/>" /etc/libvirt/qemu/pxe${i}.xml
     echo "check pxe${i} state"
     state=$(virsh domstate pxe${i})
     if [[ "$state" == "running" ]]; then
@@ -91,6 +89,10 @@ for i in `seq $VIRT_NUM`; do
             exit 1
         fi
     fi
+
+    echo "make pxe${i} reboot if installation failing."
+    sed -i "/<boot dev='hd'\/>/ a\    <bios useserial='yes' rebootTimeout='0'\/>" /etc/libvirt/qemu/pxe${i}.xml
+    virsh define /etc/libvirt/qemu/pxe${i}.xml
 
     echo "start pxe${i}"
     virsh start pxe${i}

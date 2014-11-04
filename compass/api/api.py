@@ -1346,7 +1346,7 @@ def delete_cluster(cluster_id):
     """Delete cluster."""
     data = _get_request_data()
     return utils.make_json_response(
-        200,
+        202,
         cluster_api.del_cluster(
             current_user, cluster_id, **data
         )
@@ -1613,7 +1613,7 @@ def delete_cluster_host(cluster_id, host_id):
     """Delete cluster host."""
     data = _get_request_data()
     return utils.make_json_response(
-        200,
+        202,
         cluster_api.del_cluster_host(
             current_user, cluster_id, host_id, **data
         )
@@ -1630,7 +1630,7 @@ def delete_clusterhost(clusterhost_id):
     """Delete cluster host."""
     data = _get_request_data()
     return utils.make_json_response(
-        200,
+        202,
         cluster_api.del_clusterhost(
             current_user, clusterhost_id, **data
         )
@@ -1918,7 +1918,7 @@ def delete_host(host_id):
     """Delete host."""
     data = _get_request_data()
     return utils.make_json_response(
-        200,
+        202,
         host_api.del_host(
             current_user, host_id, **data
         )

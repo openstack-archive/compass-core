@@ -128,6 +128,13 @@ def patch_machine(session, updater, machine_id, **kwargs):
 def del_machine(session, deleter, machine_id, **kwargs):
     """Delete a machine."""
     machine = utils.get_db_object(session, models.Machine, id=machine_id)
+    if machine.host:
+        host = machine.host
+        raise exception.NotAcceptable(
+            'machine %s has host %s on it' % (
+                machine.mac, host.name
+            )
+        )
     return utils.del_db_object(session, machine)
 
 

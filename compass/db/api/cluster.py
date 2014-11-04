@@ -753,6 +753,14 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
                 session, host,
                 **host_dict
             )
+        else:
+            logging.debug(
+                'ignore no editable host %s', host.id
+            )
+    else:
+        logging.debug(
+            'nothing to update for host %s', host.id
+        )
 
     def roles_validates(roles):
         cluster_roles = []

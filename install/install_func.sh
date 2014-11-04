@@ -69,12 +69,18 @@ copy2dir()
             git_repo=$ZUUL_URL/$ZUUL_PROJECT
             git_ref=$ZUUL_REF
             git reset --hard remotes/origin/$git_branch
-            git fetch $git_repo $git_ref && git checkout FETCH_HEAD
+            git fetch $git_repo $git_ref
             if [ $? -ne 0 ]; then
                 echo "failed to git fetch $git_repo $git_ref"
 		cd -
 		exit 1
             fi
+	    git merge FETCH_HEAD
+	    if [ $? -ne 0 ]; then
+		echo "failed to git merge $git_ref"
+		cd -
+		exit 1
+	    fi
             git clean -x -f
         fi
 	cd -

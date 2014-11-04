@@ -730,9 +730,9 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
         else:
             clusterhost_dict[key] = value
 
+    host = clusterhost.host
     if host_dict:
         from compass.db.api import host as host_api
-        host = clusterhost.host
         if host_api.is_host_editable(
             session, host, clusterhost.cluster.creator,
             reinstall_os_set=kwargs.get('reinstall_os', False),
@@ -753,6 +753,14 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
                 session, host,
                 **host_dict
             )
+        else:
+            logging.debug(
+                'ignore no editable host %s', host.id
+            )
+    else:
+        logging.debug(
+            'nothing to update for host %s', host.id
+        )
 
     def roles_validates(roles):
         cluster_roles = []

@@ -18,6 +18,7 @@ import logging
 
 from compass.actions import util
 from compass.db.api import cluster as cluster_api
+from compass.db.api import host as host_api
 from compass.db.api import user as user_db
 from compass.deployment.deploy_manager import DeployManager
 from compass.deployment.utils import constants as const
@@ -44,6 +45,9 @@ def delete_cluster(
         for host_id in host_id_list:
             cluster_api.update_cluster_host_state(
                 user, cluster_id, host_id, state='ERROR'
+            )
+            host_api.update_host_state(
+                user, host_id, state='ERROR'
             )
         cluster_api.update_cluster_state(
             user, cluster_id, state='ERROR'

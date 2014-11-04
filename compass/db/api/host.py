@@ -220,14 +220,20 @@ def is_host_editable(
 ):
     if reinstall_os_set:
         if host.state.state == 'INSTALLING':
+            logging.debug('installing host is not editable')
             return _conditional_exception(
                 host, exception_when_not_editable
             )
     elif not host.reinstall_os:
+        logging.debug(
+            'host is not editable when not reinstall os')
         return _conditional_exception(
             host, exception_when_not_editable
         )
     if not user.is_admin and host.creator_id != user.id:
+        logging.debug(
+            'user do not have permission to edit host'
+        )
         return _conditional_exception(
             host, exception_when_not_editable
         )

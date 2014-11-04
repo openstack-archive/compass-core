@@ -11,6 +11,11 @@
   },
   "json_class": "Chef::Environment",
   "chef_type": "environment",
+  "override_attributes": {
+    "compass": {
+        "cluster_id": "$id"
+    }
+  },
   "default_attributes": {
     "local_repo": "",
     "mysql": {

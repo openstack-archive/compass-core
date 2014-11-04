@@ -195,6 +195,7 @@ else
 fi
 
 # create centos repo
+sudo rm -rf /var/lib/cobbler/repo_mirror/centos_ppa_repo
 sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_ppa_repo
 found_centos_ppa_repo=0
 for repo in $(cobbler repo list); do
@@ -220,12 +221,17 @@ cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+openssh-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 iproute-2.6.32-31.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 yum-plugin-priorities-1.1.30-14.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.noarch.rpm"
 for f in $centos_ppa_repo_packages; do
-    download ftp://rpmfind.net/linux/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION_MAJOR}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
+    if [ "$REGION" == "asia" ]; then
+        download http://mirrors.yun-idc.com/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
+    else
+        download ftp://rpmfind.net/linux/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
+    fi
 done
 
 centos_ppa_repo_rsyslog_packages="
@@ -235,7 +241,7 @@ libgt-0.3.11-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_
 liblogging-1.0.4-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 rsyslog-7.6.3-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
 for f in $centos_ppa_repo_rsyslog_packages; do
-    download http://rpms.adiscon.com/v7-stable/epel-{CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
+    download http://rpms.adiscon.com/v7-stable/epel-${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
 done
 
 # download chef client for centos ppa repo
@@ -252,6 +258,7 @@ else
 fi
 
 # create ubuntu repo
+sudo rm -rf /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo
 sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo
 found_ubuntu_ppa_repo=0
 for repo in $(cobbler repo list); do
@@ -313,7 +320,11 @@ fi
 
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
-download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+if [ "$REGION" == "asia" ]; then
+    download "$CENTOS_IMAGE_SOURCE_ASIA" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+else
+    download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+fi
 sudo mkdir -p /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} ") -eq 0 ]; then
     sudo mount -o loop /var/lib/cobbler/iso/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
@@ -326,8 +337,11 @@ if [ $(mount | grep -c "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} ") -eq 0 
 else
     echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already mounted"
 fi
-
-download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+if [ "$REGION" == "asia" ]; then
+    download "$UBUNTU_IMAGE_SOURCE_ASIA" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+else
+    download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+fi
 sudo mkdir -p /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} ") -eq 0 ]; then
     sudo mount -o loop /var/lib/cobbler/iso/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}

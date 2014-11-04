@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Validator methods."""
+import logging
 import netaddr
 import re
 import socket
@@ -23,87 +24,162 @@ from compass.utils import util
 
 def is_valid_ip(name, ip_addr, **kwargs):
     """Valid the format of an IP address."""
+    if isinstance(ip_addr, list):
+        return all([
+            is_valid_ip(name, item, **kwargs) for item in ip_addr
+        ])
     try:
         netaddr.IPAddress(ip_addr)
     except Exception:
+        logging.debug('%s invalid ip addr %s', name, ip_addr)
         return False
     return True
 
 
 def is_valid_network(name, ip_network, **kwargs):
     """Valid the format of an Ip network."""
+    if isinstance(ip_network, list):
+        return all([
+            is_valid_network(name, item, **kwargs) for item in ip_network
+        ])
     try:
         netaddr.IPNetwork(ip_network)
     except Exception:
+        logging.debug('%s invalid network %s', name, ip_network)
         return False
-    return False
+    return True
 
 
 def is_valid_netmask(name, ip_addr, **kwargs):
     """Valid the format of a netmask."""
+    if isinstance(ip_addr, list):
+        return all([
+            is_valid_netmask(name, item, **kwargs) for item in ip_addr
+        ])
     if not is_valid_ip(ip_addr):
         return False
     ip = netaddr.IPAddress(ip_addr)
     if ip.is_netmask():
         return True
-    else:
-        return False
+    logging.debug('%s invalid netmask %s', name, ip_addr)
+    return False
 
 
 def is_valid_gateway(name, ip_addr, **kwargs):
     """Valid the format of gateway."""
+    if isinstance(ip_addr, list):
+        return all([
+            is_valid_gateway(name, item, **kwargs) for item in ip_addr
+        ])
     if not is_valid_ip(ip_addr):
         return False
     ip = netaddr.IPAddress(ip_addr)
     if ip.is_private() or ip.is_public():
         return True
-    else:
-        return False
+    logging.debug('%s invalid gateway %s', name, ip_addr)
+    return False
 
 
 def is_valid_dns(name, dns, **kwargs):
     """Valid the format of DNS."""
+    if isinstance(dns, list):
+        return all([is_valid_dns(name, item, **kwargs) for item in dns])
     if is_valid_ip(dns):
         return True
     try:
         socket.gethostbyname_ex(dns)
     except Exception:
+        logging.debug('%s invalid dns name %s', name, dns)
         return False
     return True
 
 
+def is_valid_url(name, url, **kwargs):
+    """Valid the format of url."""
+    if isinstance(url, list):
+        return all([
+            is_valid_url(name, item, **kwargs) for item in url
+        ])
+    if re.match(
+        r'^(http|https|ftp)://([0-9A-Za-z_-]+)(\.[0-9a-zA-Z_-]+)*'
+        r'(:\d+)?(/[0-9a-zA-Z_-]+)*$',
+        url
+    ):
+        return True
+    logging.debug(
+        '%s invalid url %s', name, url
+    )
+    return False
+
+
+def is_valid_domain(name, domain, **kwargs):
+    """Validate the format of domain."""
+    if isinstance(domain, list):
+        return all([
+            is_valid_domain(name, item, **kwargs) for item in domain
+        ])
+    if re.match(
+        r'^([0-9a-zA-Z_-]+)(\.[0-9a-zA-Z_-]+)*$',
+        domain
+    ):
+        return True
+    logging.debug(
+        '%s invalid domain %s', name, domain
+    )
+    return False
+
+
 def is_valid_username(name, username, **kwargs):
     """Valid the format of username."""
-    return bool(username)
+    if bool(username):
+        return True
+    logging.debug(
+        '%s username is empty', name
+    )
 
 
 def is_valid_password(name, password, **kwargs):
     """Valid the format of password."""
-    return bool(password)
+    if bool(password):
+        return True
+    logging.debug('%s password is empty', name)
+    return False
 
 
 def is_valid_partition(name, partition, **kwargs):
     """Valid the format of partition name."""
     if name != 'swap' and not name.startswith('/'):
+        logging.debug(
+            '%s is not started with / or swap', name
+        )
         return False
     if 'size' not in partition and 'percentage' not in partition:
+        logging.debug(
+            '%s partition does not contain sie or percentage',
+            name
+        )
         return False
     return True
 
 
 def is_valid_percentage(name, percentage, **kwargs):
     """Valid the percentage."""
-    return 0 <= percentage <= 100
+    if 0 <= percentage <= 100:
+        return True
+    logging.debug('%s invalid percentage %s', name, percentage)
 
 
 def is_valid_port(name, port, **kwargs):
     """Valid the format of port."""
-    return 0 < port < 65536
+    if 0 < port < 65536:
+        return True
+    logging.debug('%s invalid port %s', name, port)
 
 
 def is_valid_size(name, size, **kwargs):
-    if re.match(r'(\d+)(K|M|G|T)?', size):
+    if re.match(r'^(\d+)(K|M|G|T)$', size):
         return True
+    logging.debug('%s invalid size %s', name, size)
     return False
 
 

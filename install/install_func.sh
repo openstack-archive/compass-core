@@ -41,21 +41,18 @@ copy2dir()
             git clean -x -f
             git checkout $git_branch
             git reset --hard remotes/origin/$git_branch
+	    git clean -x -f -d -q
 	    cd -
         else
             echo "create $destdir"
             mkdir -p $destdir
-            git clone $repo $destdir
+            git clone $repo $destdir -b $git_branch
             if [ $? -ne 0 ]; then
                 echo "failed to git clone $repo $destdir"
                 exit 1
             else
                 echo "git clone $repo $destdir suceeded"
             fi
-            cd $destdir
-	    git checkout $git_branch
-            git reset --hard remotes/origin/$git_branch
-	    cd -
         fi
 	cd $destdir
         if [[ -z $ZUUL_PROJECT ]]; then
@@ -154,9 +151,9 @@ download()
         if [[ "$downloaded" == "0" ]]; then
 	    echo "downloading $url to /tmp/${package}"
 	    if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
-                curl -L -z /tmp/${package} -o /tmp/${package}.tmp $url
+                curl -f -L -z /tmp/${package} -o /tmp/${package}.tmp $url
 	    else
-		curl -L -o /tmp/${package}.tmp $url
+		curl -f -L -o /tmp/${package}.tmp $url
 	    fi
             if [[ "$?" != "0" ]]; then
                 echo "failed to download $package"

@@ -87,6 +87,7 @@ sudo mkdir -p /var/lib/redis/
 sudo chown -R redis:root /var/lib/redis
 sudo mkdir -p /var/run/redis
 sudo chown -R redis:root /var/run/redis
+killall -9 redis-server
 sudo service redis restart
 echo "Checking if redis is running"
 sudo service redis status
@@ -153,8 +154,8 @@ else
     echo "compass-progress-updated has already started"
 fi
 
-#compass check
-#if [[ "$?" != "0" ]]; then
-#    echo "compass check failed"
-#    exit 1
-#fi
+compass check
+if [[ "$?" != "0" ]]; then
+    echo "compass check failed"
+    # exit 1
+fi

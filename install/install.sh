@@ -158,6 +158,9 @@ loadvars()
         done
     fi
 }
+echo -e "\x1b[32mAvailable Regions are asia/america, other REGIONs please use default: america\x1b[37m"
+loadvars REGION "america"
+
 
 loadvars NIC "eth0"
 sudo ifconfig $NIC

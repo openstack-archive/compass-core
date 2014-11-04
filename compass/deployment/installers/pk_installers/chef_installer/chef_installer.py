@@ -135,16 +135,40 @@ class ChefInstaller(PKInstaller):
 
         return node
 
-    def delete_hosts(self):
+    def delete_hosts(self, delete_cluster=False):
         hosts_id_list = self.config_manager.get_host_id_list()
         for host_id in hosts_id_list:
             self.delete_node(host_id)
+        if delete_cluster:
+            self.delete_environment()
+
+    def delete_environment(self):
+        adapter_name = self.config_manager.get_adapter_name()
+        cluster_name = self.config_manager.get_clustername()
+        env_name = self.get_env_name(adapter_name, cluster_name)
+        env = self.get_create_environment(env_name)
+        if env:
+            self._delete_environment(env)
 
     def delete_node(self, host_id):
         fullname = self.config_manager.get_host_fullname(host_id)
         node = self.get_create_node(fullname)
         if node:
             self._delete_node(node)
+
+    def _delete_environment(self, env):
+        """clean env attributes about arget system."""
+        import chef
+        if env is None:
+            raise Exception("env is None, cannot delete a bnone env.")
+        env_name = env.name
+        try:
+            env.delete()
+        except Exception as error:
+            logging.debug(
+                'failed to delete env %s, error: %s',
+                env_name, error
+            )
 
     def _delete_node(self, node):
         """clean node attributes about target system."""
@@ -525,7 +549,7 @@ class ChefInstaller(PKInstaller):
 
     def _clean_log(self, log_dir_prefix, node_name):
         log_dir = os.path.join(log_dir_prefix, node_name)
-        shutil.rmtree(log_dir, False)
+        shutil.rmtree(log_dir, True)
 
     def get_supported_dist_systems(self):
         """get target systems from chef. All target_systems for compass will

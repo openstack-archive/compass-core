@@ -79,17 +79,29 @@ for i in `seq $VIRT_NUM`; do
         exit 1
     fi
 
-    echo "make pxe${i} reboot if installation failing."
-    sed -i "/<boot dev='hd'\/>/ a\    <bios useserial='yes' rebootTimeout='0'\/>" /etc/libvirt/qemu/pxe${i}.xml
     echo "check pxe${i} state"
     state=$(virsh domstate pxe${i})
+    echo "pxe${i} state is ${state}"
     if [[ "$state" == "running" ]]; then
         echo "pxe${i} is already running"
         virsh destroy pxe${i}
         if [[ "$?" != "0" ]]; then
             echo "detroy intsance pxe${i} failed"
             exit 1
+	else
+	    echo "pxe${i} is detroyed"
         fi
+    fi
+
+    echo "make pxe${i} reboot if installation failing."
+    sed -i "/<boot dev='hd'\/>/ a\    <bios useserial='yes' rebootTimeout='0'\/>" /etc/libvirt/qemu/pxe${i}.xml
+    virsh define /etc/libvirt/qemu/pxe${i}.xml
+    virsh dumpxml pxe${i} | grep "<bios useserial='yes' rebootTimeout='0'\/>"
+    if [[ "$?" != "0" ]]; then
+	echo "pxe${i} auto reboot is not enabled"
+	exit 1
+    else
+	echo "pxe${i} auto reboot is enabled"
     fi
 
     echo "start pxe${i}"

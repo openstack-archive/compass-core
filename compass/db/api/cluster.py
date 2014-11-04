@@ -292,15 +292,46 @@ def update_cluster(session, updater, cluster_id, **kwargs):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_DEL_CLUSTER
 )
-@utils.wrap_to_dict(RESP_FIELDS)
+@utils.wrap_to_dict(
+    ['status', 'cluster', 'hosts'],
+    cluster=RESP_FIELDS,
+    hosts=RESP_CLUSTERHOST_FIELDS
+)
 def del_cluster(session, deleter, cluster_id, **kwargs):
     """Delete a cluster."""
+    from compass.tasks import client as celery_client
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
     is_cluster_editable(
         session, cluster, deleter,
         reinstall_distributed_system_set=True
+    )
+    clusterhosts = []
+    for clusterhost in cluster.clusterhosts:
+        clusterhosts.append(clusterhost)
+
+    celery_client.celery.send_task(
+        'compass.tasks.delete_cluster',
+        (
+            deleter.email, cluster_id,
+            [clusterhost.host_id for clusterhost in clusterhosts]
+        )
+    )
+    return {
+        'status': 'delete action sent',
+        'cluster': cluster,
+        'hosts': clusterhosts
+    }
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_CLUSTER
+)
+def del_cluster_from_database(session, deleter, cluster_id):
+    cluster = utils.get_db_object(
+        session, models.Cluster, id=cluster_id
     )
     return utils.del_db_object(session, cluster)
 
@@ -518,10 +549,13 @@ def add_clusterhost_internal(
         session, models.Host, False, id=machine_id
     )
     if host:
-        if host_api.is_host_editable(
-            session, host, cluster.creator,
-            reinstall_os_set=kwargs.get('reinstall_os', False),
-            exception_when_not_editable=False
+        if (
+            host_dict and
+            host_api.is_host_editable(
+                session, host, cluster.creator,
+                reinstall_os_set=kwargs.get('reinstall_os', False),
+                exception_when_not_editable=False
+            )
         ):
             if 'name' in host_dict:
                 hostname = host_dict['name']
@@ -688,6 +722,38 @@ def add_cluster_host(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
 def _update_clusterhost(session, updater, clusterhost, **kwargs):
+    clusterhost_dict = {}
+    host_dict = {}
+    for key, value in kwargs.items():
+        if key in UPDATED_HOST_FIELDS:
+            host_dict[key] = value
+        else:
+            clusterhost_dict[key] = value
+
+    if host_dict:
+        from compass.db.api import host as host_api
+        host = clusterhost.host
+        if host_api.is_host_editable(
+            session, host, clusterhost.cluster.creator,
+            reinstall_os_set=kwargs.get('reinstall_os', False),
+            exception_when_not_editable=False
+        ):
+            if 'name' in host_dict:
+                hostname = host_dict['name']
+                host_by_name = utils.get_db_object(
+                    session, models.Host, False, name=hostname
+                )
+                if host_by_name and host_by_name.id != host.id:
+                    raise exception.InvalidParameter(
+                        'host name %s exists in host %s' % (
+                            hostname, host_by_name.id
+                        )
+                    )
+            utils.update_db_object(
+                session, host,
+                **host_dict
+            )
+
     def roles_validates(roles):
         cluster_roles = []
         cluster = clusterhost.cluster
@@ -728,7 +794,7 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS,
+    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS),
     ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
@@ -744,7 +810,7 @@ def update_cluster_host(
 
 
 @utils.supported_filters(
-    optional_support_keys=UPDATED_CLUSTERHOST_FIELDS,
+    optional_support_keys=(UPDATED_HOST_FIELDS + UPDATED_CLUSTERHOST_FIELDS),
     ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
@@ -802,9 +868,10 @@ def patch_clusterhost(
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_DEL_CLUSTER_HOST
 )
-@utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
+@utils.wrap_to_dict(['status', 'host'], host=RESP_CLUSTERHOST_FIELDS)
 def del_cluster_host(session, deleter, cluster_id, host_id, **kwargs):
     """Delete cluster host."""
+    from compass.tasks import client as celery_client
     clusterhost = utils.get_db_object(
         session, models.ClusterHost,
         cluster_id=cluster_id, host_id=host_id
@@ -813,9 +880,27 @@ def del_cluster_host(session, deleter, cluster_id, host_id, **kwargs):
         session, clusterhost.cluster, deleter,
         reinstall_distributed_system_set=True
     )
-    return utils.del_db_object(
-        session, clusterhost
+    celery_client.celery.send_task(
+        'compass.tasks.delete_cluster_host',
+        (
+            deleter.email, cluster_id, host_id
+        )
     )
+    return {
+        'status': 'delete action sent',
+        'host': clusterhost,
+    }
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_CLUSTER_HOST
+)
+def del_cluster_host_from_database(session, deleter, cluster_id, host_id):
+    clusterhost = utils.get_db_object(
+        session, models.ClusterHost, id=cluster_id, host_id=host_id
+    )
+    return utils.del_db_object(session, clusterhost)
 
 
 @utils.supported_filters([])
@@ -823,9 +908,10 @@ def del_cluster_host(session, deleter, cluster_id, host_id, **kwargs):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_DEL_CLUSTER_HOST
 )
-@utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
+@utils.wrap_to_dict(['status', 'host'], host=RESP_CLUSTERHOST_FIELDS)
 def del_clusterhost(session, deleter, clusterhost_id, **kwargs):
     """Delete cluster host."""
+    from compass.tasks import client as celery_client
     clusterhost = utils.get_db_object(
         session, models.ClusterHost,
         clusterhost_id=clusterhost_id
@@ -834,9 +920,27 @@ def del_clusterhost(session, deleter, clusterhost_id, **kwargs):
         session, clusterhost.cluster, deleter,
         reinstall_distributed_system_set=True
     )
-    return utils.del_db_object(
-        session, clusterhost
+    celery_client.celery.send_task(
+        'compass.tasks.delete_cluster_host',
+        (
+            deleter.email, clusterhost.cluster_id, clusterhost.host_id
+        )
     )
+    return {
+        'status': 'delete action sent',
+        'host': clusterhost,
+    }
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_DEL_CLUSTER_HOST
+)
+def del_clusterhost_from_database(session, deleter, clusterhost_id):
+    clusterhost = utils.get_db_object(
+        session, models.ClusterHost, clusterhost_id=clusterhost_id
+    )
+    return utils.del_db_object(session, clusterhost)
 
 
 @utils.supported_filters([])

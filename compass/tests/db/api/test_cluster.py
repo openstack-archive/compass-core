@@ -383,15 +383,13 @@ class TestDelCluster(ClusterTestCase):
         super(TestDelCluster, self).setUp()
 
     def test_del_cluster(self):
-        cluster.del_cluster(
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task = mock.Mock()
+        del_cluster = cluster.del_cluster(
             self.user_object,
             self.cluster_id
         )
-        del_clusters = cluster.list_clusters(self.user_object)
-        cluster_ids = []
-        for del_cluster in del_clusters:
-            cluster_ids.append(del_cluster['id'])
-        self.assertNotIn(self.cluster_id, cluster_ids)
+        self.assertIsNotNone(del_cluster['status'])
 
     def test_is_cluster_editable(self):
         #state is INSTALLING
@@ -907,19 +905,14 @@ class TestDelClusterHost(ClusterTestCase):
         super(TestDelClusterHost, self).tearDown()
 
     def test_del_cluster_host(self):
-        cluster.del_cluster_host(
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task = mock.Mock()
+        del_clusterhost = cluster.del_cluster_host(
             self.user_object,
             self.cluster_id,
             self.host_id[0]
         )
-        del_cluster_host = cluster.list_cluster_hosts(
-            self.user_object,
-            self.cluster_id
-        )
-        result = []
-        for item in del_cluster_host:
-            result.append(item['hostname'])
-        self.assertNotIn('newname1', result)
+        self.assertIsNotNone(del_clusterhost)
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
@@ -946,15 +939,13 @@ class TestDelClusterhost(ClusterTestCase):
         super(TestDelClusterhost, self).tearDown()
 
     def test_del_clusterhost(self):
-        cluster.del_clusterhost(
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task = mock.Mock()
+        del_clusterhost = cluster.del_clusterhost(
             self.user_object,
             self.clusterhost_id[0]
         )
-        del_clusterhost = cluster.list_clusterhosts(self.user_object)
-        result = []
-        for item in del_clusterhost:
-            result.append(item['hostname'])
-        self.assertNotIn('newname1', result)
+        self.assertIsNotNone(del_clusterhost)
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(

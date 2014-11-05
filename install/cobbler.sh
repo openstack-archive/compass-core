@@ -230,7 +230,7 @@ for f in $centos_ppa_repo_packages; do
     if [ "$REGION" == "asia" ]; then
         download http://mirrors.yun-idc.com/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
     else
-        download ftp://rpmfind.net/linux/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
+        download http://mirror.centos.org/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
     fi
 done
 

@@ -22,11 +22,13 @@ sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
 if [[ $LOCAL_REPO = "y" ]]; then
     echo "setting up local repo"
     mkdir -p /tmp/repo
-    if [[ "$REGION" == "asia" ]]; then
-        download $LOCAL_REPO_ASIA local_repo.tar.gz unzip /tmp/repo || exit $?
-    else
-        download https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz unzip /tmp/repo || exit $?
+    fastesturl $LOCAL_REPO_ASIA $LOCAL_REPO_US
+    if [[ "$?" != "0" ]]; then
+        echo "failed to determine the fastest local repo source"
+        exit 1
     fi
+    read -r LOCAL_REPO_SOURCE</tmp/url
+    download $LOCAL_REPO_SOURCE local_repo.tar.gz unzip /tmp/repo || exit $?
     mv -f /tmp/repo/local_repo/* /var/www/compass_web/v2/
     if [[ "$?" != "0" ]]; then
 	echo "failed to setup local repo"

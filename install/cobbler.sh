@@ -218,6 +218,12 @@ fi
 
 # download packages
 cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+fastesturl http://mirrors.hustunique.com http://mirror.centos.org
+if [[ "$?" != "0" ]]; then
+    echo "failed to determine the fastest url for downloading centos ppa packages"
+    exit 1
+fi
+read -r PPA_REPO_URL</tmp/url
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
@@ -227,11 +233,7 @@ wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_I
 ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 yum-plugin-priorities-1.1.30-14.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.noarch.rpm"
 for f in $centos_ppa_repo_packages; do
-    if [ "$REGION" == "asia" ]; then
-        download http://mirrors.yun-idc.com/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
-    else
-        download http://mirror.centos.org/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
-    fi
+    download $PPA_REPO_URL/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
 done
 
 centos_ppa_repo_rsyslog_packages="
@@ -320,11 +322,13 @@ fi
 
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
-if [ "$REGION" == "asia" ]; then
-    download "$CENTOS_IMAGE_SOURCE_ASIA" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
-else
-    download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+fastesturl $CENTOS_IMAGE_SOURCE_ASIA $CENTOS_SOURCE_MIRROR
+if [[ "$?" != "0" ]]; then
+    echo "failed to determine the fastest source for centos iso"
+    exit 1
 fi
+read -r CENTOS_SOURCE</tmp/url
+download "$CENTOS_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
 sudo mkdir -p /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} ") -eq 0 ]; then
     sudo mount -o loop /var/lib/cobbler/iso/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
@@ -337,11 +341,14 @@ if [ $(mount | grep -c "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} ") -eq 0 
 else
     echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already mounted"
 fi
-if [ "$REGION" == "asia" ]; then
-    download "$UBUNTU_IMAGE_SOURCE_ASIA" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
-else
-    download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
+
+fastesturl $UBUNTU_IMAGE_SOURCE_ASIA $UBUNTU_IMAGE_SOURCE
+if [[ "$?" != "0" ]]; then
+    echo "failed to determine the fastest source for ubuntu iso"
+    exit 1
 fi
+read -r UBUNTU_SOURCE</tmp/url
+download "$UBUNTU_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
 sudo mkdir -p /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} ") -eq 0 ]; then
     sudo mount -o loop /var/lib/cobbler/iso/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}

@@ -213,6 +213,12 @@ else
 fi
 
 # download cobbler related packages
+fastesturl "http://mirrors.hustunique.com" "http://mirror.centos.org"
+if [[ "$?" != "0" ]]; then
+    echo "failed to determine the fastest source for centos ppa rpms"
+    exit 1
+fi
+read -r CENTOS_PPA_SOURCE</tmp/url
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
@@ -222,11 +228,7 @@ ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENT
 yum-plugin-priorities-1.1.30-14.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.noarch.rpm"
 
 for f in $centos_ppa_repo_packages; do
-    if [ "$REGION" == "asia" ]; then
-        download http://mirrors.yun-idc.com/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f || exit $?
-    else
-        download http://mirror.centos.org/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f || exit $?
-    fi
+    download $CENTOS_PPA_SOURCE/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f || exit $?
 done
 
 centos_ppa_repo_rsyslog_packages="
@@ -248,19 +250,32 @@ download $UBUNTU_CHEF_CLIENT `basename $UBUNTU_CHEF_CLIENT` || exit $?
 download $CHEF_SRV chef-server || exit $?
 
 # download os images
-if [ "$REGION" == "asia" ]; then
-    download "$CENTOS_IMAGE_SOURCE_ASIA" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
-    download "$UBUNTU_IMAGE_SOURCE_ASIA" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
-else
-    download "$CENTOS_IMAGE_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
-    download "$UBUNTU_IMAGE_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
+fastesturl $CENTOS_IMAGE_SOURCE $CENTOS_IMAGE_SOURCE_ASIA
+if [[ "$?" != "0" ]]; then
+    echo "failed to determine the fastest source for centos image"
+    exit 1
 fi
+read -r CENTOS_ISO_SOURCE</tmp/url
+download $CENTOS_ISO_SOURCE ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
+
+fastesturl $UBUNTU_IMAGE_SOURCE $UBUNTU_IMAGE_SOURCE_ASIA
+if [[ "$?" != "0" ]]; then
+    echo "failed to determine the fastest source for ubuntu image"
+    exit 1
+fi
+read -r UBUNTU_ISO_SOURCE</tmp/url
+download $UBUNTU_ISO_SOURCE ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
 
 # download local repo
 if [[ $LOCAL_REPO = "y" ]]; then
-    download https://s3-us-west-1.amazonaws.com/compass-local-repo/local_repo.tar.gz local_repo.tar.gz || exit $?
+    fastesturl $LOCAL_REPO_US $LOCAL_REPO_ASIA
+    if [[ "$?" != "0" ]]; then
+        echo "failed to determine the fastest source for local repo"
+        exit 1
+    fi
+    read -r LOCAL_REPO_SOURCE</tmp/url
+    download $LOCAL_REPO_SOURCE local_repo.tar.gz || exit $?
 fi
-
 # Install net-snmp
 echo "install snmp config"
 if [[ ! -e /etc/snmp ]]; then

@@ -119,6 +119,15 @@ else
 fi
 figlet -ctf slant Compass Installer
 
+# Install bc
+sudo yum -y install bc >& /dev/null
+if [[ "$?" != "0" ]]; then
+    echo "failed to install bc"
+    exit 1
+else
+    echo "bc is installed"
+fi
+
 while [ $1 ]; do
   flags=$1
   param=${flags/'--'/''}
@@ -158,9 +167,6 @@ loadvars()
         done
     fi
 }
-echo -e "\x1b[32mAvailable Regions are asia/america, other REGIONs please use default: america\x1b[37m"
-loadvars REGION "america"
-
 
 loadvars NIC "eth0"
 sudo ifconfig $NIC

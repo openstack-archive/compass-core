@@ -1,6 +1,24 @@
 #!/bin/bash
 #
 
+fastesturl()
+{
+    shortest=99999
+    fastest_url=""
+    while [ $1 ]; do
+        url=$1
+        short_url=$(echo $url|cut -d '/' -f3)
+        time=`curl -o /dev/null -s -w %{time_total} $short_url`
+        if [ $(echo "$shortest > $time" | bc) -eq 1 ]; then
+            shortest=$time
+            echo "$url" > /tmp/url
+            fastest_url=$url
+        fi
+        shift
+    done
+    echo "$fastest_url is the fastest source, using it"
+}
+
 copy2dir()
 {
     repo=$1

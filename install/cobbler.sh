@@ -106,13 +106,17 @@ CBLR_PASSWD=${CBLR_PASSWD:-"cobbler"}
 
 # update cobbler config
 sudo cp -rn /var/lib/cobbler/snippets /root/backup/cobbler/
+sudo cp -rn /var/lib/cobbler/scripts /root/backup/cobbler
 sudo cp -rn /var/lib/cobbler/kickstarts/ /root/backup/cobbler/
 sudo cp -rn /var/lib/cobbler/triggers /root/backup/cobbler/
 sudo rm -rf /var/lib/cobbler/snippets/*
 sudo cp -rf $ADAPTERS_HOME/cobbler/snippets/* /var/lib/cobbler/snippets/
+sudo cp -rf $ADAPTERS_HOME/cobbler/scripts/* /var/lib/cobbler/scripts/
 sudo cp -rf $ADAPTERS_HOME/cobbler/triggers/* /var/lib/cobbler/triggers/
 sudo chmod 777 /var/lib/cobbler/snippets
+sudo chmod 777 /var/lib/cobbler/scripts
 sudo chmod -R 666 /var/lib/cobbler/snippets/*
+sudo chmod -R 666 /var/lib/cobbler/scripts/*
 sudo chmod -R 755 /var/lib/cobbler/triggers
 sudo rm -f /var/lib/cobbler/kickstarts/default.ks
 sudo rm -f /var/lib/cobbler/kickstarts/default.seed
@@ -397,7 +401,7 @@ for distro in $(cobbler distro list); do
 done
 
 if [ "$found_ubuntu_distro" == "0" ]; then
-    sudo cobbler import --path=/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --name=${UBUNTU_IMAGE_NAME} --arch=${UBUNTU_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
+    sudo cobbler import --path=/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --name=${UBUNTU_IMAGE_NAME} --arch=${UBUNTU_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu --kopts="netcfg/choose_interface=auto"
     if [[ "$?" != "0" ]]; then
         echo "failed to import /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1
@@ -406,7 +410,7 @@ if [ "$found_ubuntu_distro" == "0" ]; then
     fi
 else
     echo "distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed"
-    sudo cobbler distro edit --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --arch=${UBUNTU_IMAGE_ARCH} --breed=ubuntu
+    sudo cobbler distro edit --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --arch=${UBUNTU_IMAGE_ARCH} --breed=ubuntu --kopts="netcfg/choose_interface=auto"
     if [[ "$?" != "0" ]]; then
         echo "failed to edit distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1

@@ -33,6 +33,10 @@ if [[ "$?" != "0" ]]; then
 fi
 
 sudo pip install virtualenvwrapper
+if [[ "$?" != "0" ]]; then
+    echo "failed to install virtualenvwrapper"
+    exit 1
+fi
 
 sudo chkconfig httpd on
 sudo chkconfig squid on

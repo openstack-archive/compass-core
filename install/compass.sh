@@ -154,6 +154,7 @@ else
     echo "compass-progress-updated has already started"
 fi
 
+sleep 10
 compass check
 if [[ "$?" != "0" ]]; then
     echo "compass check failed"

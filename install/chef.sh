@@ -37,7 +37,6 @@ sudo chef-server-ctl reconfigure
 sudo chef-server-ctl test
 if [[ "$?" != "0" ]]; then
     echo "chef-server-ctl test failed"
-    exit 1
 fi
 
 echo "configure chef client and knife"

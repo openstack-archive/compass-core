@@ -9,6 +9,9 @@
 # log extensions
 *.log
 
+# temp files
+install/env.sh
+
 # Packages
 *.egg
 *.egg-info

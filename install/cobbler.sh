@@ -143,6 +143,13 @@ fi
 echo "disable selinux temporarily"
 echo 0 > /selinux/enforce
 
+# make log dir
+mkdir -p /var/log/cobbler
+mkdir -p /var/log/cobbler/tasks
+mkdir -p /var/log/cobbler/anamon
+chmod -R 777 /var/log/cobbler
+
+
 sudo service httpd restart
 sudo service cobblerd restart
 sudo cobbler get-loaders

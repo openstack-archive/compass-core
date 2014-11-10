@@ -76,8 +76,24 @@ sudo sed -i "s/acl localnet src \$subnet/acl localnet src $subnet_escaped/g" /et
 sudo chmod 644 /etc/squid/squid.conf
 sudo mkdir -p /var/squid/cache
 sudo chown -R squid:squid /var/squid
+sudo mkdir /var/log/squid
+sudo chmod -R 777 /var/log/squid
 sudo service squid restart
 sudo service squid status
+if [[ "$?" != "0" ]]; then
+    echo "squid is not started"
+    exit 1
+else
+    echo "squid conf is updated"
+fi
+
+mkdir -p /var/log/httpd
+chmod -R 777 /var/log/httpd
+
+mkdir -p /var/log/mysql
+chmod -R 777 /var/log/mysql
+sudo service httpd restart
+sudo service httpd status
 if [[ "$?" != "0" ]]; then
     echo "squid is not started"
     exit 1
@@ -88,6 +104,13 @@ fi
 #update mysqld
 echo "update mysqld"
 sudo service mysqld restart
+sudo service mysqld status
+if [[ "$?" != "0" ]]; then
+    echo "failed to restart mysqld"
+    exit 1
+else
+    echo "mysqld restarted"
+fi
 MYSQL_USER=${MYSQL_USER:-root}
 MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-root}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
@@ -105,15 +128,15 @@ if [[ "$?" != "0" ]]; then
     echo "mysql password set failed"
     exit 1
 else
-    echo "mysql password set successful"
+    echo "mysql password set succeeded"
 fi
 sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "drop database ${MYSQL_DATABASE}"
 sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "create database ${MYSQL_DATABASE}"
 if [[ "$?" != "0" ]]; then
-    echo "mysql database set fails"
+    echo "mysql database set failed"
     exit 1
 else
-    echo "mysql database set succeeds"
+    echo "mysql database set succeeded"
 fi
 sudo service mysqld restart
 sudo service mysqld status
@@ -121,7 +144,7 @@ if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1
 else
-    echo "mysqld conf is updated"
+    echo "mysqld is started"
 fi
 
 cd $SCRIPT_DIR

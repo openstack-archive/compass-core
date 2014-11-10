@@ -268,7 +268,7 @@ download $UBUNTU_ISO_SOURCE ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exi
 
 # download local repo
 if [[ $LOCAL_REPO = "y" ]]; then
-    fastesturl $LOCAL_REPO_US $LOCAL_REPO_ASIA
+    fastesturl $LOCAL_REPO_US $LOCAL_REPO_HUAWEI
     if [[ "$?" != "0" ]]; then
         echo "failed to determine the fastest source for local repo"
         exit 1

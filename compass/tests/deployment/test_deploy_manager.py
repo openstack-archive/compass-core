@@ -54,9 +54,3 @@ class TestDeployManager(unittest2.TestCase):
 
         test_manager = DeployManager(adapter_info, cluster_info, hosts_info)
         self.assertIsNotNone(test_manager)
-
-        # Test hepler function _get_hosts_for_os_installation return correct
-        # number of hosts config for os deployment. In config_data, two out of
-        # three hosts need to install OS.
-        hosts_list = test_manager._get_hosts_for_os_installation(hosts_info)
-        self.assertEqual(2, len(hosts_list))

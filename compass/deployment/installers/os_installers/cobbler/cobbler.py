@@ -117,7 +117,7 @@ class CobblerInstaller(OSInstaller):
                }
            }
         """
-        host_ids = self.config_manager.get_host_id_list()
+        host_ids = self.config_manager.get_hosts_id_list_for_os_installation()
         if not host_ids:
             # No hosts need to install OS
             logging.info("Cobbler: No host needs to install OS.")

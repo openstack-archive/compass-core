@@ -59,6 +59,15 @@ class BaseConfigManager(object):
 
         return self.hosts_info.keys()
 
+    def get_hosts_id_list_for_os_installation(self):
+        """Get info of hosts which need to install/reinstall OS."""
+        result = []
+        all_host_ids = self.get_host_id_list()
+        for host_id in all_host_ids:
+            if self.hosts_info[host_id][const.REINSTALL_OS_FLAG]:
+                result.append(host_id)
+        return result
+
     def get_cluster_flavor_info(self):
         return self.__get_cluster_item(const.FLAVOR, {})
 

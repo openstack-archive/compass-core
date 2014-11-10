@@ -35,12 +35,11 @@ class DeployManager(object):
 
         # Get OS installer
         os_installer_name = adapter_info[const.OS_INSTALLER][const.NAME]
-        os_hosts_info = self._get_hosts_for_os_installation(hosts_info)
         self.os_installer = DeployManager._get_installer(OSInstaller,
                                                          os_installer_name,
                                                          adapter_info,
                                                          cluster_info,
-                                                         os_hosts_info)
+                                                         hosts_info)
 
         # Get package installer
         pk_info = adapter_info.setdefault(const.PK_INSTALLER, {})
@@ -147,18 +146,6 @@ class DeployManager(object):
 
         if self.pk_installer:
             self.pk_installer.delete_hosts(delete_cluster=delete_cluster)
-
-    def _get_hosts_for_os_installation(self, hosts_info):
-        """Get info of hosts which need to install/reinstall OS."""
-        hosts_list = {}
-        for host_id in hosts_info:
-            reinstall_os_flag = hosts_info[host_id][const.REINSTALL_OS_FLAG]
-            if not reinstall_os_flag:
-                continue
-
-            hosts_list[host_id] = hosts_info[host_id]
-
-        return hosts_list
 
 
 class PowerManager(object):

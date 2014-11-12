@@ -22,7 +22,7 @@ sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
 if [[ $LOCAL_REPO = "y" ]]; then
     echo "setting up local repo"
     mkdir -p /tmp/repo
-    fastesturl $LOCAL_REPO_ASIA $LOCAL_REPO_US
+    fastesturl $LOCAL_REPO_HUAWEI $LOCAL_REPO_US
     if [[ "$?" != "0" ]]; then
         echo "failed to determine the fastest local repo source"
         exit 1

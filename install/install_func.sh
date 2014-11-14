@@ -7,8 +7,7 @@ fastesturl()
     fastest_url=""
     while [ $1 ]; do
         url=$1
-        short_url=$(echo $url|cut -d '/' -f3)
-        time=`curl -o /dev/null -s -w %{time_total} $short_url`
+        time=`curl -o /dev/null --header "Range: bytes=0-20000" -s -w %{time_total} $url`
         if [ $(echo "$shortest > $time" | bc) -eq 1 ]; then
             shortest=$time
             echo "$url" > /tmp/url

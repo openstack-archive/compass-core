@@ -414,7 +414,7 @@ for distro in $(cobbler distro list); do
 done
 
 if [ "$found_ubuntu_distro" == "0" ]; then
-    sudo cobbler import --path=/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --name=${UBUNTU_IMAGE_NAME} --arch=${UBUNTU_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu --kopts="netcfg/choose_interface=auto"
+    sudo cobbler import --path=/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --name=${UBUNTU_IMAGE_NAME} --arch=${UBUNTU_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
     if [[ "$?" != "0" ]]; then
         echo "failed to import /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1
@@ -423,7 +423,7 @@ if [ "$found_ubuntu_distro" == "0" ]; then
     fi
 else
     echo "distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed"
-    sudo cobbler distro edit --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --arch=${UBUNTU_IMAGE_ARCH} --breed=ubuntu --kopts="netcfg/choose_interface=auto"
+    sudo cobbler distro edit --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --arch=${UBUNTU_IMAGE_ARCH} --breed=ubuntu
     if [[ "$?" != "0" ]]; then
         echo "failed to edit distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1
@@ -467,7 +467,7 @@ for profile in $(cobbler profile list); do
 done
 
 if [ "$ubuntu_found_profile" == "0" ]; then
-    sudo cobbler profile add --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
+    sudo cobbler profile add --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
     if [[ "$?" != "0" ]]; then
         echo "failed to add profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1
@@ -476,7 +476,7 @@ if [ "$ubuntu_found_profile" == "0" ]; then
     fi
 else
     echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed."
-    sudo cobbler profile edit --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed
+    sudo cobbler profile edit --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
     if [[ "$?" != "0" ]]; then
         echo "failed to edit profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1

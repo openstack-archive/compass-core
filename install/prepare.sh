@@ -76,7 +76,7 @@ sudo sed -i "s/acl localnet src \$subnet/acl localnet src $subnet_escaped/g" /et
 sudo chmod 644 /etc/squid/squid.conf
 sudo mkdir -p /var/squid/cache
 sudo chown -R squid:squid /var/squid
-sudo mkdir /var/log/squid
+sudo mkdir -p /var/log/squid
 sudo chmod -R 777 /var/log/squid
 sudo service squid restart
 sudo service squid status

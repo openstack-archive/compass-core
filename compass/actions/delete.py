@@ -42,25 +42,6 @@ def delete_cluster(
 
         user = user_db.get_user_object(username)
 
-        for host_id in host_id_list:
-            cluster_api.update_cluster_host_state(
-                user, cluster_id, host_id, state='ERROR'
-            )
-            host_api.update_host_state(
-                user, host_id, state='ERROR'
-            )
-        cluster_api.update_cluster_state(
-            user, cluster_id, state='ERROR'
-        )
-
-        cluster_api.update_cluster(
-            user, cluster_id, reinstall_distributed_system=True
-        )
-        for host_id in host_id_list:
-            cluster_api.update_cluster_host(
-                user, cluster_id, host_id, reinstall_os=True
-            )
-
         cluster_info = util.ActionHelper.get_cluster_info(cluster_id, user)
         adapter_id = cluster_info[const.ADAPTER_ID]
 
@@ -69,9 +50,6 @@ def delete_cluster(
         hosts_info = util.ActionHelper.get_hosts_info(
             cluster_id, host_id_list, user)
 
-        logging.debug('adapter info: %s', adapter_info)
-        logging.debug('cluster info: %s', cluster_info)
-        logging.debug('hosts info: %s', hosts_info)
         deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
 
         deploy_manager.remove_hosts(
@@ -102,8 +80,6 @@ def delete_cluster_host(
             cluster_id, [host_id], user)
 
         deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
-        logging.debug('Created deploy manager with %s %s %s'
-                      % (adapter_info, cluster_info, hosts_info))
 
         deploy_manager.remove_hosts(
             package_only=not delete_underlying_host,
@@ -135,8 +111,6 @@ def delete_host(
 
             deploy_manager = DeployManager(
                 adapter_info, cluster_info, hosts_info)
-            logging.debug('Created deploy manager with %s %s %s'
-                          % (adapter_info, cluster_info, hosts_info))
 
             deploy_manager.remove_hosts(
                 package_only=True,
@@ -146,6 +120,3 @@ def delete_host(
         util.ActionHelper.delete_host(
             host_id, user
         )
-
-
-ActionHelper = util.ActionHelper

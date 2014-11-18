@@ -389,7 +389,7 @@ class TestDelCluster(ClusterTestCase):
             self.user_object,
             self.cluster_id
         )
-        self.assertIsNotNone(del_cluster['status'])
+        self.assertIsNotNone(del_cluster)
 
     def test_is_cluster_editable(self):
         #state is INSTALLING

@@ -226,7 +226,8 @@ def is_host_editable(
             )
     elif not host.reinstall_os:
         logging.debug(
-            'host is not editable when not reinstall os')
+            'host is not editable when not reinstall os'
+        )
         return _conditional_exception(
             host, exception_when_not_editable
         )
@@ -323,47 +324,52 @@ def update_hosts(session, updater, data=[]):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_DEL_HOST
 )
-@utils.wrap_to_dict(['status', 'host'], host=RESP_FIELDS)
-def del_host(session, deleter, host_id, **kwargs):
+@utils.wrap_to_dict(
+    RESP_FIELDS + ['status', 'host'],
+    host=RESP_FIELDS
+)
+def del_host(
+    session, deleter, host_id,
+    force=False, from_database_only=False, **kwargs
+):
     """Delete a host."""
     from compass.db.api import cluster as cluster_api
-    from compass.tasks import client as celery_client
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
+    if host.state.state != 'UNINITIALIZED' and force:
+        host.state.state = 'ERROR'
     is_host_editable(
         session, host, deleter,
         reinstall_os_set=True
     )
     cluster_ids = []
     for clusterhost in host.clusterhosts:
+        if clusterhost.state.state != 'UNINITIALIZED' and force:
+            clusterhost.state.state = 'ERROR'
         cluster_api.is_cluster_editable(
             session, clusterhost.cluster, deleter,
             reinstall_distributed_system_set=True
         )
         cluster_ids.append(clusterhost.cluster_id)
 
-    celery_client.celery.send_task(
-        'compass.tasks.delete_host',
-        (
-            deleter.email, host_id, cluster_ids
+    if host.state.state == 'UNINITIALIZED' or from_database_only:
+        return utils.del_db_object(session, host)
+    else:
+        logging.info(
+            'send del host %s task to celery', host_id
         )
-    )
-    return {
-        'status': 'delete action sent',
-        'host': host,
-    }
-
-
-@database.run_in_session()
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_DEL_HOST
-)
-def del_host_from_database(session, deleter, host_id):
-    host = utils.get_db_object(
-        session, models.Host, id=host_id
-    )
-    return utils.del_db_object(session, host)
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task(
+            'compass.tasks.delete_host',
+            (
+                deleter.email, host_id, cluster_ids
+            )
+        )
+        return {
+            'status': 'delete action sent',
+            'host': host,
+        }
 
 
 @utils.supported_filters([])

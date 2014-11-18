@@ -247,11 +247,11 @@ class ActionHelper(object):
     ):
         if delete_underlying_host:
             for host_id in host_id_list:
-                host_db.del_host_from_database(
-                    user, host_id
+                host_db.del_host(
+                    user, host_id, True, True
                 )
-        cluster_db.del_cluster_from_database(
-            user, cluster_id
+        cluster_db.del_cluster(
+            user, cluster_id, True, True
         )
 
     @staticmethod
@@ -259,17 +259,17 @@ class ActionHelper(object):
         cluster_id, host_id, user, delete_underlying_host=False
     ):
         if delete_underlying_host:
-            host_db.del_host_from_database(
-                user, host_id
+            host_db.del_host(
+                user, host_id, True, True
             )
-        cluster_db.del_cluster_host_from_database(
-            user, cluster_id, host_id
+        cluster_db.del_cluster_host(
+            user, cluster_id, host_id, True, True
         )
 
     @staticmethod
     def delete_host(host_id, user):
-        host_db.del_host_from_database(
-            user, host_id
+        host_db.del_host(
+            user, host_id, True, True
         )
 
     @staticmethod

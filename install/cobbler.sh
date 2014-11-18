@@ -414,12 +414,13 @@ for distro in $(cobbler distro list); do
 done
 
 if [ "$found_ubuntu_distro" == "0" ]; then
-    sudo cobbler import --path=/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --name=${UBUNTU_IMAGE_NAME} --arch=${UBUNTU_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu --kopts="netcfg/choose_interface=auto"
+    sudo cobbler import --path=/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --name=${UBUNTU_IMAGE_NAME} --arch=${UBUNTU_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
     if [[ "$?" != "0" ]]; then
         echo "failed to import /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1
     else
-        echo "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is imported" 
+        echo "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is imported"
+        sudo cobbler distro edit --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --arch=${UBUNTU_IMAGE_ARCH} --breed=ubuntu --kopts="netcfg/choose_interface=auto"
     fi
 else
     echo "distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed"
@@ -431,6 +432,10 @@ else
         echo "distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is updated"
     fi
 fi
+
+#yongxiang: begin
+echo "yongxiang: finish adding distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} "
+#yongxiang: end
 
 # add profile
 centos_found_profile=0

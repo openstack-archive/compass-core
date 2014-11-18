@@ -267,11 +267,11 @@ class TestListMachinesOrHosts(HostTestCase):
             self.assertIn(item, ['newname1', 'newname2'])
 
     def test_list_machines(self):
-        host.del_host_from_database(
+        host.del_host(
             self.user_object,
             self.host_ids[0]
         )
-        host.del_host_from_database(
+        host.del_host(
             self.user_object,
             self.host_ids[1]
         )
@@ -327,7 +327,7 @@ class TestGetMachineOrHost(HostTestCase):
         self.assertEqual(get_host['mac'], '28:6e:d4:46:c4:25')
 
     def test_get_machine(self):
-        host.del_host_from_database(
+        host.del_host(
             self.user_object,
             self.host_ids[0]
         )
@@ -454,7 +454,7 @@ class TestDelHost(HostTestCase):
             self.user_object,
             self.host_ids[0]
         )
-        self.assertIsNotNone(del_host['status'])
+        self.assertIsNotNone(del_host)
 
     def test_is_host_editable(self):
         host.update_host_state(

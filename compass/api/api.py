@@ -1345,12 +1345,17 @@ def update_cluster(cluster_id):
 def delete_cluster(cluster_id):
     """Delete cluster."""
     data = _get_request_data()
-    return utils.make_json_response(
-        202,
-        cluster_api.del_cluster(
-            current_user, cluster_id, **data
-        )
+    response = cluster_api.del_cluster(
+        current_user, cluster_id, **data
     )
+    if 'status' in response:
+        return utils.make_json_response(
+            202, response
+        )
+    else:
+        return utils.make_json_response(
+            200, response
+        )
 
 
 @app.route("/clusters/<int:cluster_id>/config", methods=['GET'])
@@ -1612,12 +1617,17 @@ def patch_clusterhost(clusterhost_id):
 def delete_cluster_host(cluster_id, host_id):
     """Delete cluster host."""
     data = _get_request_data()
-    return utils.make_json_response(
-        202,
-        cluster_api.del_cluster_host(
-            current_user, cluster_id, host_id, **data
-        )
+    response = cluster_api.del_cluster_host(
+        current_user, cluster_id, host_id, **data
     )
+    if 'status' in response:
+        return utils.make_json_response(
+            202, response
+        )
+    else:
+        return utils.make_json_response(
+            200, response
+        )
 
 
 @app.route(
@@ -1629,12 +1639,17 @@ def delete_cluster_host(cluster_id, host_id):
 def delete_clusterhost(clusterhost_id):
     """Delete cluster host."""
     data = _get_request_data()
-    return utils.make_json_response(
-        202,
-        cluster_api.del_clusterhost(
-            current_user, clusterhost_id, **data
-        )
+    response = cluster_api.del_clusterhost(
+        current_user, clusterhost_id, **data
     )
+    if 'status' in response:
+        return utils.make_json_response(
+            202, response
+        )
+    else:
+        return utils.make_json_response(
+            200, response
+        )
 
 
 @app.route(
@@ -1917,12 +1932,17 @@ def update_hosts():
 def delete_host(host_id):
     """Delete host."""
     data = _get_request_data()
-    return utils.make_json_response(
-        202,
-        host_api.del_host(
-            current_user, host_id, **data
-        )
+    response = host_api.del_host(
+        current_user, host_id, **data
     )
+    if 'status' in response:
+        return utils.make_json_response(
+            202, response
+        )
+    else:
+        return utils.make_json_response(
+            200, response
+        )
 
 
 @app.route("/hosts/<int:host_id>/clusters", methods=['GET'])

@@ -119,15 +119,6 @@ else
 fi
 figlet -ctf slant Compass Installer
 
-# Install bc
-sudo yum -y install bc >& /dev/null
-if [[ "$?" != "0" ]]; then
-    echo "failed to install bc"
-    exit 1
-else
-    echo "bc is installed"
-fi
-
 while [ $1 ]; do
   flags=$1
   param=${flags/'--'/''}

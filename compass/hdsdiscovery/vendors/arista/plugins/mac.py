@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Pica8 Switch Mac module."""
+"""Arista Switch Mac module."""
 from compass.hdsdiscovery.base import BaseSnmpMacPlugin
 
 

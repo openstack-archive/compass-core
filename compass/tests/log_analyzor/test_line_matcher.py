@@ -29,27 +29,6 @@ from compass.utils import flags
 from compass.utils import logsetting
 
 
-class TestProgress(unittest2.TestCase):
-    """test class for Progress class."""
-
-    def setUp(self):
-        super(TestProgress, self).setUp()
-        logsetting.init()
-
-    def tearDown(self):
-        super(TestProgress, self).tearDown()
-
-    def test_repr(self):
-        config = {
-            'progress': 0.5,
-            'message': 'dummy',
-            'severity': ''
-        }
-        expected = 'Progress[progress:0.5, message:dummy, severity:]'
-        test_line_matcher = line_matcher.Progress(**config)
-        self.assertEqual(expected, test_line_matcher.__repr__())
-
-
 class TestProgressCalculator(unittest2.TestCase):
     def setUp(self):
         super(TestProgressCalculator, self).setUp()
@@ -60,45 +39,70 @@ class TestProgressCalculator(unittest2.TestCase):
         super(TestProgressCalculator, self).tearDown()
 
     def _mock_progress(self):
-        self.progress = line_matcher.Progress(
-            progress=0.5,
-            message='',
-            severity='')
+        self.log_history = {
+            'percentage': 0.5,
+            'message': '',
+            'severity': ''
+        }
 
     def test_update_progress_progress(self):
         test_1 = {
             'progress_data': 0.7,
             'message': '',
             'severity': '',
-            'progress': self.progress
+            'log_history': self.log_history
         }
         expected_1 = 0.7
         line_matcher.ProgressCalculator.update_progress(
             **test_1)
-        self.assertEqual(expected_1, self.progress.progress)
+        self.assertEqual(expected_1, self.log_history['percentage'])
 
     def test_update_progress_other(self):
         test = {
             'progress_data': 0.5,
             'message': 'dummy',
             'severity': 'dummy',
-            'progress': self.progress
+            'log_history': self.log_history
         }
         expected_message = test['message']
         expected_severity = test['severity']
         line_matcher.ProgressCalculator.update_progress(
             **test)
-        self.assertEqual(expected_message, self.progress.message)
-        self.assertEqual(expected_severity, self.progress.severity)
+        self.assertEqual(expected_message, self.log_history['message'])
+        self.assertEqual(expected_severity, self.log_history['severity'])
 
 
 class TestIncrementalProgress(unittest2.TestCase):
     def setUp(self):
         super(TestIncrementalProgress, self).setUp()
         logsetting.init()
+        self.log_history = {
+            'percentage': 0.5,
+            'message': '',
+            'severity': ''
+        }
 
     def tearDown(self):
         super(TestIncrementalProgress, self).tearDown()
+
+    def test_update(self):
+        test_data = {
+            'min_progress': 0.3,
+            'max_progress': 0.7,
+            'incremental_ratio': 0.5
+        }
+        progress = line_matcher.IncrementalProgress(
+            **test_data)
+        message = 'dummy'
+        severity = 'dummy'
+        log_history = {
+            'percentage': 0.5,
+            'message': '',
+            'severity': ''
+        }
+        expected = 0.7
+        progress.update(message, severity, log_history)
+        self.assertEqual(expected, log_history['percentage'])
 
     def test_init(self):
         test_exceed_one = {
@@ -131,7 +135,8 @@ class TestIncrementalProgress(unittest2.TestCase):
         self.assertRaises(
             IndexError,
             line_matcher.IncrementalProgress,
-            **test_invalid_ratio)
+            **test_invalid_ratio
+        )
 
 
 class TestRelativeProgress(unittest2.TestCase):
@@ -146,7 +151,8 @@ class TestRelativeProgress(unittest2.TestCase):
         self.assertRaises(
             IndexError,
             line_matcher.RelativeProgress,
-            progress=1.1)
+            progress=1.1
+        )
 
 
 class TestLineMatcher(unittest2.TestCase):
@@ -170,8 +176,13 @@ class TestLineMatcher(unittest2.TestCase):
     def test_regex_not_match(self):
         line = 'abc'
         regex_ = r'^s'
-        progress = line_matcher.Progress(
-            progress=1, message='a', severity=' ')
+        """progress = line_matcher.Progress(
+            progress=1, message='a', severity=' ')"""
+        log_history = {
+            'percentage': 1,
+            'message': 'a',
+            'serverity': ''
+        }
         test_regex_not_match = {
             'pattern': regex_,
             'unmatch_sameline_next_matcher_name': 'usn',
@@ -185,13 +196,16 @@ class TestLineMatcher(unittest2.TestCase):
         self.assertEqual(
             expected,
             matcher.update_progress(
-                line, progress))
+                line, log_history))
 
     def test_regex_match(self):
         line = 'abc'
         regex_ = r'^a'
-        progress = line_matcher.Progress(
-            progress=1, message='a', severity=' ')
+        log_history = {
+            'percentage': 1,
+            'message': 'a',
+            'serverity': ''
+        }
         test_regex_match = {
             'pattern': regex_,
             'unmatch_sameline_next_matcher_name': 'usn',
@@ -205,12 +219,16 @@ class TestLineMatcher(unittest2.TestCase):
         self.assertEqual(
             expected,
             matcher.update_progress(
-                line, progress))
+                line, log_history)
+        )
 
     def test_wrong_message(self):
         line = 'abc'
-        progress = line_matcher.Progress(
-            progress=1, message='a', severity=' ')
+        log_history = {
+            'percentage': 1,
+            'message': 'a',
+            'serverity': ''
+        }
         test_wrong_message = {
             'pattern': r'.*.',
             'message_template': 'Installing %(package)s'
@@ -221,7 +239,8 @@ class TestLineMatcher(unittest2.TestCase):
             KeyError,
             matcher.update_progress,
             line=line,
-            progress=progress)
+            log_history=log_history
+        )
 
 if __name__ == '__main__':
     flags.init()

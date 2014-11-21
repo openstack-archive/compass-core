@@ -135,7 +135,7 @@ def poll_switch(poller_email, ip_addr, credentials,
 
         for switch in switches:
             for machine_dict in machine_dicts:
-                print 'add machine: %s' % machine_dict
+                logging.debug('add machine: %s', machine_dict)
                 switch_api.add_switch_machine(
                     poller, switch['id'], False, **machine_dict
                 )

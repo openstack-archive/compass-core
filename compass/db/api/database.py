@@ -182,7 +182,7 @@ def _setup_switch_table(switch_session):
     from compass.db.api import switch
     switch.add_switch_internal(
         switch_session, long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP)),
-        True, filters=['deny ports all']
+        True, filters=['allow ports all']
     )
 
 

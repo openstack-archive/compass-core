@@ -224,7 +224,6 @@ class TestUpdateUser(BaseTest):
             is_admin=False
         )
         user_object = user_api.get_user_object('dummy@abc.com')
-        print 'user object: %s' % user_object
         self.assertRaises(
             exception.Forbidden,
             user_api.update_user,

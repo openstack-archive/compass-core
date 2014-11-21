@@ -577,6 +577,7 @@ class TestSwitchAPI(ApiTestCase):
         url = '/switches'
         return_value = self.get(url)
         resp = json.loads(return_value.get_data())
+        print 'list switches: %s' % resp
         count = len(resp)
         self.assertEqual(count, 2)
         self.assertEqual(return_value.status_code, 200)

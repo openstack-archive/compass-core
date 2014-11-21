@@ -15,16 +15,16 @@ source $DIR/install_func.sh
 
 cd $SCRIPT_DIR
 
-mkdir -p /etc/compass
-rm -rf /etc/compass/*
-mkdir -p /opt/compass/bin
-rm -rf /opt/compass/bin/*
-mkdir -p /var/log/compass
-rm -rf /var/log/compass/*
+sudo mkdir -p /etc/compass
+sudo rm -rf /etc/compass/*
+sudo mkdir -p /opt/compass/bin
+sudo rm -rf /opt/compass/bin/*
+sudo mkdir -p /var/log/compass
+sudo rm -rf /var/log/compass/*
 sudo mkdir -p /var/log/chef
-rm -rf /var/log/chef/*
-mkdir -p /var/www/compass
-rm -rf /var/www/compass/*
+sudo rm -rf /var/log/chef/*
+sudo mkdir -p /var/www/compass
+sudo rm -rf /var/www/compass/*
 
 sudo cp -rf $COMPASSDIR/misc/apache/ods-server.conf /etc/httpd/conf.d/ods-server.conf
 sudo cp -rf $COMPASSDIR/conf/* /etc/compass/
@@ -69,7 +69,7 @@ fi
 
 sudo sed -i "s/\$ipaddr/$IPADDR/g" /etc/compass/setting
 sudo sed -i "s/\$hostname/$HOSTNAME/g" /etc/compass/setting
-sed -i "s/\$gateway/$OPTION_ROUTER/g" /etc/compass/setting
+sudo sed -i "s/\$gateway/$OPTION_ROUTER/g" /etc/compass/setting
 domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")
 sudo sed -i "s/\$domains/$domains/g" /etc/compass/setting
 
@@ -87,7 +87,8 @@ sudo mkdir -p /var/lib/redis/
 sudo chown -R redis:root /var/lib/redis
 sudo mkdir -p /var/run/redis
 sudo chown -R redis:root /var/run/redis
-killall -9 redis-server
+sudo killall -9 redis-server
+sudo rm -rf /var/run/redis/redis.pid
 sudo service redis restart
 echo "Checking if redis is running"
 sudo service redis status
@@ -108,11 +109,6 @@ if [[ "$?" != "0" ]]; then
 else
     echo "compassed service is refreshed"
 fi
-
-/opt/compass/bin/clean_nodes.sh
-/opt/compass/bin/clean_clients.sh
-/opt/compass/bin/clean_environments.sh
-/opt/compass/bin/remove_systems.sh
 
 sudo service httpd status
 if [[ "$?" != "0" ]]; then
@@ -136,7 +132,7 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-killall -9 celery
+sudo killall -9 celery
 service compass-celeryd restart
 service compass-celeryd status |grep running
 if [[ "$?" != "0" ]]; then

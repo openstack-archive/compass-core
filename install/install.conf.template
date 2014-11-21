@@ -13,6 +13,9 @@ export PACKAGE_INSTALLER=chef
 # service NIC (A bridge "installation" is used for jenkins CI)
 export NIC=installation
 
+# PXESERVER
+export PXESERVER=176.12.100.1
+
 # default local repo config is "n"
 export LOCAL_REPO=${LOCAL_REPO:-"y"}
  

@@ -12,6 +12,20 @@ else
 fi
 source $DIR/install_func.sh
 
+echo "Creating virtual NIC for PXE"
+cat << EOF > /etc/sysconfig/network-scripts/ifcfg-$NIC:dhcp
+DEVICE=$NIC:dhcp
+ONBOOT=yes
+TYPE=Ethernet
+BOOTPROTO=static
+IPADDR=$PXESERVER
+DNS1=8.8.8.8
+EOF
+
+service network restart
+echo "Add route for vip"
+route add -net $netaddr netmask $netmask gw $IPADDR 
+
 echo "Installing cobbler related packages"
 sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart reprepro
 if [[ "$?" != "0" ]]; then
@@ -52,7 +66,7 @@ sudo cp -rn /etc/cobbler/settings /root/backup/cobbler/
 sudo rm -f /etc/cobbler/settings
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/settings /etc/cobbler/settings
 sudo sed -i "s/next_server:[ \t]*\$next_server/next_server: $NEXTSERVER/g" /etc/cobbler/settings
-sudo sed -i "s/server:[ \t]*\$ipaddr/server: $IPADDR/g" /etc/cobbler/settings
+sudo sed -i "s/server:[ \t]*\$ipaddr/server: $PXESERVER/g" /etc/cobbler/settings
 sudo sed -i "s/default_name_servers:[ \t]*\['\$ipaddr'\]/default_name_servers: \['$IPADDR'\]/g" /etc/cobbler/settings
 domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")
 sudo sed -i "s/manage_forward_zones:[ \t]*\[\]/manage_forward_zones: \['$domains'\]/g" /etc/cobbler/settings
@@ -64,15 +78,15 @@ sudo chmod 644 /etc/cobbler/settings
 sudo cp -rn /etc/cobbler/dhcp.template /root/backup/cobbler/
 sudo rm -f /etc/cobbler/dhcp.template
 sudo cp -rf $ADAPTERS_HOME/cobbler/conf/dhcp.template /etc/cobbler/dhcp.template
-export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
-export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')
+export netaddr=$(ipcalc $PXESERVER $NETMASK -n |cut -f 2 -d '=')
+export netprefix=$(ipcalc $PXESERVER $NETMASK -p |cut -f 2 -d '=')
 export subnet=${netaddr}/${netprefix}
 sudo sed -i "s/subnet \$subnet netmask \$netmask/subnet $netaddr netmask $NETMASK/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option routers \$gateway/option routers $OPTION_ROUTER/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option subnet-mask \$netmask/option subnet-mask $NETMASK/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $IPADDR/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_START $IP_END/g" /etc/cobbler/dhcp.template
-sudo sed -i "s/local-address \$ipaddr/local-address $IPADDR/g" /etc/cobbler/dhcp.template
+sudo sed -i "s/local-address \$ipaddr/local-address $PXESERVER/g" /etc/cobbler/dhcp.template
 sudo chmod 644 /etc/cobbler/dhcp.template
 
 # update tftpd.template
@@ -441,7 +455,7 @@ for profile in $(cobbler profile list); do
 done
 
 if [ "$centos_found_profile" == "0" ]; then
-    sudo cobbler profile add --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+    sudo cobbler profile add --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$PXESERVER/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} compass_server=$IPADDR" --kickstart=/var/lib/cobbler/kickstarts/default.ks
     if [[ "$?" != "0" ]]; then
         echo "failed to add profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
         exit 1
@@ -450,7 +464,7 @@ if [ "$centos_found_profile" == "0" ]; then
     fi
 else
     echo "profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already existed."
-    sudo cobbler profile edit --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+    sudo cobbler profile edit --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$PXESERVER/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} compass_server=$IPADDR" --kickstart=/var/lib/cobbler/kickstarts/default.ks
     if [[ "$?" != "0" ]]; then
         echo "failed to edit profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
         exit 1
@@ -467,7 +481,7 @@ for profile in $(cobbler profile list); do
 done
 
 if [ "$ubuntu_found_profile" == "0" ]; then
-    sudo cobbler profile add --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
+    sudo cobbler profile add --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$PXESERVER/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} compass_server=$IPADDR" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
     if [[ "$?" != "0" ]]; then
         echo "failed to add profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1
@@ -476,7 +490,7 @@ if [ "$ubuntu_found_profile" == "0" ]; then
     fi
 else
     echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed."
-    sudo cobbler profile edit --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
+    sudo cobbler profile edit --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$PXESERVER/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} compass_server=$IPADDR" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
     if [[ "$?" != "0" ]]; then
         echo "failed to edit profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
         exit 1

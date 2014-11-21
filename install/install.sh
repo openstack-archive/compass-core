@@ -119,6 +119,15 @@ else
 fi
 figlet -ctf slant Compass Installer
 
+# Install bc
+sudo yum -y install bc >& /dev/null
+if [[ "$?" != "0" ]]; then
+    echo "failed to install bc"
+    exit 1
+else
+    echo "bc is installed"
+fi
+
 while [ $1 ]; do
   flags=$1
   param=${flags/'--'/''}
@@ -178,10 +187,17 @@ if [ $? -ne 0 ]; then
     echo "ip addr $IPADDR format should be x.x.x.x"
     exit 1
 fi
+
+loadvars PXESERVER 192.168.1.1
+ipcalc $PXESERVER -c
+if [ $? -ne 0 ]; then
+    echo "PXE Server $PXESERVER format should be x.x.x.x"
+    exit 1
+fi
 export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
 loadvars NETMASK ${netmask}
-export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
-export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')
+export netaddr=$(ipcalc $PXESERVER $NETMASK -n |cut -f 2 -d '=')
+export netprefix=$(ipcalc $PXESERVER $NETMASK -p |cut -f 2 -d '=')
 subnet=${netaddr}/${netprefix}
 ipcalc $subnet -c
 if [ $? -ne 0 ]; then
@@ -194,8 +210,8 @@ if [ $? -ne 0 ]; then
     echo "router $OPTION_ROUTER format should be x.x.x.x"
     exit 1
 fi
-export ip_start=$(echo "$IPADDR"|cut -f 1,2,3 -d '.')."100"
-export ip_end=$(echo "$IPADDR"|cut -f 1,2,3 -d '.')."250"
+export ip_start=$(echo "$PXESERVER"|cut -f 1,2,3 -d '.')."100"
+export ip_end=$(echo "$SERVER"|cut -f 1,2,3 -d '.')."250"
 loadvars IP_START "$ip_start"
 ipcalc $IP_START -c
 if [ $? -ne 0 ]; then
@@ -228,7 +244,7 @@ if [ $ip_range -le 0 ]; then
     exit 1
 fi
 echo "there will be at most $ip_range hosts deployed."
-loadvars NEXTSERVER $IPADDR
+loadvars NEXTSERVER $PXESERVER
 ipcalc $NEXTSERVER -c
 if [ $? -ne 0 ]; then
     echo "next server $NEXTSERVER format should be x.x.x.x"

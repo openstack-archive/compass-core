@@ -13,6 +13,9 @@ export PACKAGE_INSTALLER=chef
 # service NIC (A bridge "installation" is used for jenkins CI)
 export NIC=installation
 
+# PXESERVER
+export PXESERVER=176.12.100.1
+
 # default local repo config is "n"
 export LOCAL_REPO=${LOCAL_REPO:-"y"}
  
@@ -20,12 +23,12 @@ export LOCAL_REPO=${LOCAL_REPO:-"y"}
 export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 export NETMASK=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
 # DHCP option router  address(Default is your management interface IP address )"
-export OPTION_ROUTER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+export OPTION_ROUTER=$PXESERVER
 # The IP range for DHCP clients (Default: local subnet start from 100 to 254)
-export IP_START=`echo $IPADDR |cut -d. -f'1 2 3'`.128
-export IP_END=`echo $IPADDR |cut -d. -f'1 2 3'`.254
+export IP_START=`echo $PXESERVER |cut -d. -f'1 2 3'`.128
+export IP_END=`echo $PXESERVER |cut -d. -f'1 2 3'`.254
 # TFTP server's IP address(Default: Management Interface/eth0 IP)
-export NEXTSERVER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+export NEXTSERVER=$PXESERVER
 # the domains covered by nameserver
 export NAMESERVER_DOMAINS=ods.com
 # the repo url

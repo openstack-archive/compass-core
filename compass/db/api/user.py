@@ -190,10 +190,7 @@ class UserWrapper(UserMixin):
         self.password = crypted_password
         self.active = active
         self.is_admin = is_admin
-        if expire_timestamp:
-            self.expire_timestamp = expire_timestamp
-        else:
-            self.expire_timestamp = datetime.datetime.now()
+        self.expire_timestamp = expire_timestamp
         if not token:
             self.token = self.get_auth_token()
         else:
@@ -215,7 +212,10 @@ class UserWrapper(UserMixin):
 
     def is_authenticated(self):
         current_time = datetime.datetime.now()
-        return current_time < self.expire_timestamp
+        return (
+            not self.expire_timestamp or
+            current_time < self.expire_timestamp
+        )
 
     def __str__(self):
         return '%s[email:%s,password:%s]' % (
@@ -253,20 +253,33 @@ def get_user_object_from_token(session, token):
         session, models.User, id=user_token.user_id
     ).to_dict()
     user_dict['token'] = token
-    user_dict['expire_timestamp'] = user_token.expire_timestamp
+    expire_timestamp = user_token.expire_timestamp
+    user_dict['expire_timestamp'] = expire_timestamp
     return UserWrapper(**user_dict)
 
 
 @utils.supported_filters()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_TOKEN_FIELDS)
-def record_user_token(session, user, token, expire_timestamp):
+def record_user_token(
+    session, user, token, expire_timestamp
+):
     """record user token in database."""
-    return utils.add_db_object(
-        session, models.UserToken, True,
-        token, user_id=user.id,
-        expire_timestamp=expire_timestamp
+    user_token = utils.get_db_object(
+        session, models.UserToken, False,
+        user_id=user.id, token=token
     )
+    if not user_token:
+        return utils.add_db_object(
+            session, models.UserToken, True,
+            token, user_id=user.id,
+            expire_timestamp=expire_timestamp
+        )
+    elif expire_timestamp > user_token.expire_timestamp:
+        return utils.update_db_object(
+            session, user_token, expire_timestamp=expire_timestamp
+        )
+    return user_token
 
 
 @utils.supported_filters()

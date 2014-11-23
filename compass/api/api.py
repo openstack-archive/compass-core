@@ -57,6 +57,20 @@ def log_user_action(func):
     return decorated_api
 
 
+def update_user_token(func):
+    @functools.wraps(func)
+    def decorated_api(*args, **kwargs):
+        response = func(*args, **kwargs)
+        expire_timestamp = (
+            datetime.datetime.now() + app.config['REMEMBER_COOKIE_DURATION']
+        )
+        user_api.record_user_token(
+            current_user, current_user.token, expire_timestamp
+        )
+        return response
+    return decorated_api
+
+
 def _clean_data(data, keys):
     for key in keys:
         if key in data:
@@ -212,15 +226,13 @@ def _login(use_cookie):
         raise exception_handler.BadRequest(
             'missing email or password in data'
         )
-    if 'expire_timestamp' not in data:
+    remember = data.get('remember', False)
+    if remember:
+        expire_timestamp = None
+    else:
         expire_timestamp = (
             datetime.datetime.now() + app.config['REMEMBER_COOKIE_DURATION']
         )
-    else:
-        expire_timestamp = util.parse_datetime(
-            data['expire_timestamp'], exception_handler.BadRequest
-        )
-
     data['expire_timestamp'] = expire_timestamp
     user = auth_handler.authenticate_user(**data)
     if not login_user(user, remember=data.get('remember', False)):
@@ -260,6 +272,7 @@ def logout():
 @app.route("/users", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_users():
     """list users."""
     data = _get_request_args(
@@ -274,6 +287,7 @@ def list_users():
 @app.route("/users", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def add_user():
     """add user."""
     data = _get_request_data()
@@ -286,6 +300,7 @@ def add_user():
 @app.route("/users/<int:user_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_user(user_id):
     """Get user."""
     data = _get_request_args()
@@ -297,6 +312,7 @@ def show_user(user_id):
 @app.route("/current-user", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_current_user():
     """Get user."""
     data = _get_request_args()
@@ -308,6 +324,7 @@ def show_current_user():
 @app.route("/users/<int:user_id>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_user(user_id):
     """Update user."""
     data = _get_request_data()
@@ -324,6 +341,7 @@ def update_user(user_id):
 @app.route("/users/<int:user_id>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_user(user_id):
     """Delete user."""
     data = _get_request_data()
@@ -338,6 +356,7 @@ def delete_user(user_id):
 @app.route("/users/<int:user_id>/permissions", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_user_permissions(user_id):
     """Get user permissions."""
     data = _get_request_args()
@@ -349,6 +368,7 @@ def list_user_permissions(user_id):
 @app.route("/users/<int:user_id>/action", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def take_user_action(user_id):
     """Take user action."""
     data = _get_request_data()
@@ -394,6 +414,7 @@ def take_user_action(user_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def show_user_permission(user_id, permission_id):
     """Get a specific user permission."""
     data = _get_request_args()
@@ -409,6 +430,7 @@ def show_user_permission(user_id, permission_id):
 @app.route("/users/<int:user_id>/permissions", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def add_user_permission(user_id):
     """Add permission to a specific user."""
     data = _get_request_data()
@@ -427,6 +449,7 @@ def add_user_permission(user_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def delete_user_permission(user_id, permission_id):
     """Delete a specific user permission."""
     data = _get_request_data()
@@ -442,6 +465,7 @@ def delete_user_permission(user_id, permission_id):
 @app.route("/permissions", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_permissions():
     """List permissions."""
     data = _get_request_args()
@@ -454,6 +478,7 @@ def list_permissions():
 @app.route("/permissions/<int:permission_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_permission(permission_id):
     """Get permission."""
     data = _get_request_args()
@@ -496,6 +521,7 @@ def _filter_timestamp(data):
 @app.route("/users/logs", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_all_user_actions():
     """List all users actions."""
     data = _get_request_args()
@@ -511,6 +537,7 @@ def list_all_user_actions():
 @app.route("/users/<int:user_id>/logs", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_user_actions(user_id):
     """List user actions."""
     data = _get_request_args()
@@ -526,6 +553,7 @@ def list_user_actions(user_id):
 @app.route("/users/logs", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_all_user_actions():
     """Delete all user actions."""
     data = _get_request_data()
@@ -540,6 +568,7 @@ def delete_all_user_actions():
 @app.route("/users/<int:user_id>/logs", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_user_actions(user_id):
     """Delete user actions."""
     data = _get_request_data()
@@ -593,6 +622,7 @@ def _filter_ip(data):
 @app.route("/switches", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_switches():
     """List switches."""
     data = _get_request_args()
@@ -608,6 +638,7 @@ def list_switches():
 @app.route("/switches/<int:switch_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_switch(switch_id):
     """Get switch."""
     data = _get_request_args()
@@ -619,6 +650,7 @@ def show_switch(switch_id):
 @app.route("/switches", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def add_switch():
     """add switch."""
     data = _get_request_data()
@@ -631,6 +663,7 @@ def add_switch():
 @app.route("/switches/<int:switch_id>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_switch(switch_id):
     """update switch."""
     data = _get_request_data()
@@ -643,6 +676,7 @@ def update_switch(switch_id):
 @app.route("/switches/<int:switch_id>", methods=['PATCH'])
 @log_user_action
 @login_required
+@update_user_token
 def patch_switch(switch_id):
     """patch switch."""
     data = _get_request_data()
@@ -655,6 +689,7 @@ def patch_switch(switch_id):
 @app.route("/switches/<int:switch_id>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_switch(switch_id):
     """delete switch."""
     data = _get_request_data()
@@ -667,6 +702,7 @@ def delete_switch(switch_id):
 @app.route("/switch-filters", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_switch_filters():
     """List switch filters."""
     data = _get_request_args()
@@ -682,6 +718,7 @@ def list_switch_filters():
 @app.route("/switch-filters/<int:switch_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_switch_filters(switch_id):
     """Get switch filters."""
     data = _get_request_args()
@@ -693,6 +730,7 @@ def show_switch_filters(switch_id):
 @app.route("/switch-filters/<int:switch_id>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_switch_filters(switch_id):
     """update switch filters."""
     data = _get_request_data()
@@ -705,6 +743,7 @@ def update_switch_filters(switch_id):
 @app.route("/switch-filters/<int:switch_id>", methods=['PATCH'])
 @log_user_action
 @login_required
+@update_user_token
 def patch_switch_filters(switch_id):
     """patch switch filters."""
     data = _get_request_data()
@@ -785,6 +824,7 @@ def _filter_location(data):
 @app.route("/switches/<int:switch_id>/machines", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_switch_machines(switch_id):
     """Get switch machines."""
     data = _get_request_args(vlans=_int_converter)
@@ -803,6 +843,7 @@ def list_switch_machines(switch_id):
 @app.route("/switches/<int:switch_id>/machines-hosts", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_switch_machines_hosts(switch_id):
     """Get switch machines or hosts."""
     data = _get_request_args(vlans=_int_converter, os_id=_int_converter)
@@ -823,6 +864,7 @@ def list_switch_machines_hosts(switch_id):
 @app.route("/switches/<int:switch_id>/machines", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def add_switch_machine(switch_id):
     """add switch machine."""
     data = _get_request_data()
@@ -838,6 +880,7 @@ def add_switch_machine(switch_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def show_switch_machine(switch_id, machine_id):
     """get switch machine."""
     data = _get_request_args()
@@ -855,6 +898,7 @@ def show_switch_machine(switch_id, machine_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def update_switch_machine(switch_id, machine_id):
     """update switch machine."""
     data = _get_request_data()
@@ -872,6 +916,7 @@ def update_switch_machine(switch_id, machine_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def patch_switch_machine(switch_id, machine_id):
     """patch switch machine."""
     data = _get_request_data()
@@ -889,6 +934,7 @@ def patch_switch_machine(switch_id, machine_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def delete_switch_machine(switch_id, machine_id):
     """Delete switch machine."""
     data = _get_request_data()
@@ -903,6 +949,7 @@ def delete_switch_machine(switch_id, machine_id):
 @app.route("/switches/<int:switch_id>/action", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def take_switch_action(switch_id):
     """update switch."""
     data = _get_request_data()
@@ -930,6 +977,7 @@ def take_switch_action(switch_id):
 @app.route("/machines/<int:machine_id>/action", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def take_machine_action(machine_id):
     """update machine."""
     data = _get_request_data()
@@ -969,6 +1017,7 @@ def take_machine_action(machine_id):
 @app.route("/switch-machines", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_switchmachines():
     """List switch machines."""
     data = _get_request_args(vlans=_int_converter)
@@ -988,6 +1037,7 @@ def list_switchmachines():
 @app.route("/switches-machines-hosts", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_switchmachines_hosts():
     """List switch machines or hosts."""
     data = _get_request_args(vlans=_int_converter, os_id=_int_converter)
@@ -1012,6 +1062,7 @@ def list_switchmachines_hosts():
 )
 @log_user_action
 @login_required
+@update_user_token
 def show_switchmachine(switch_machine_id):
     """get switch machine."""
     data = _get_request_args()
@@ -1029,6 +1080,7 @@ def show_switchmachine(switch_machine_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def update_switchmachine(switch_machine_id):
     """update switch machine."""
     data = _get_request_data()
@@ -1043,6 +1095,7 @@ def update_switchmachine(switch_machine_id):
 @app.route('/switch-machines/<int:switch_machine_id>', methods=['PATCH'])
 @log_user_action
 @login_required
+@update_user_token
 def patch_switchmachine(switch_machine_id):
     """patch switch machine."""
     data = _get_request_data()
@@ -1057,6 +1110,7 @@ def patch_switchmachine(switch_machine_id):
 @app.route("/switch-machines/<int:switch_machine_id>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_switchmachine(switch_machine_id):
     """Delete switch machine."""
     data = _get_request_data()
@@ -1071,6 +1125,7 @@ def delete_switchmachine(switch_machine_id):
 @app.route("/machines", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_machines():
     """List machines."""
     data = _get_request_args()
@@ -1087,6 +1142,7 @@ def list_machines():
 @app.route("/machines/<int:machine_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_machine(machine_id):
     """Get machine."""
     data = _get_request_args()
@@ -1101,6 +1157,7 @@ def show_machine(machine_id):
 @app.route("/machines/<int:machine_id>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_machine(machine_id):
     """update machine."""
     data = _get_request_data()
@@ -1115,6 +1172,7 @@ def update_machine(machine_id):
 @app.route("/machines/<int:machine_id>", methods=['PATCH'])
 @log_user_action
 @login_required
+@update_user_token
 def patch_machine(machine_id):
     """patch machine."""
     data = _get_request_data()
@@ -1129,6 +1187,7 @@ def patch_machine(machine_id):
 @app.route("/machines/<int:machine_id>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_machine(machine_id):
     """Delete machine."""
     data = _get_request_data()
@@ -1143,6 +1202,7 @@ def delete_machine(machine_id):
 @app.route("/subnets", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_subnets():
     """List subnets."""
     data = _get_request_args()
@@ -1157,6 +1217,7 @@ def list_subnets():
 @app.route("/subnets/<int:subnet_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_subnet(subnet_id):
     """Get subnet."""
     data = _get_request_args()
@@ -1171,6 +1232,7 @@ def show_subnet(subnet_id):
 @app.route("/subnets", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def add_subnet():
     """add subnet."""
     data = _get_request_data()
@@ -1183,6 +1245,7 @@ def add_subnet():
 @app.route("/subnets/<int:subnet_id>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_subnet(subnet_id):
     """update subnet."""
     data = _get_request_data()
@@ -1197,6 +1260,7 @@ def update_subnet(subnet_id):
 @app.route("/subnets/<int:subnet_id>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_subnet(subnet_id):
     """Delete subnet."""
     data = _get_request_data()
@@ -1211,6 +1275,7 @@ def delete_subnet(subnet_id):
 @app.route("/adapters", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_adapters():
     """List adapters."""
     data = _get_request_args()
@@ -1229,6 +1294,7 @@ def list_adapters():
 @app.route("/adapters/<int:adapter_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_adapter(adapter_id):
     """Get adapter."""
     data = _get_request_args()
@@ -1243,6 +1309,7 @@ def show_adapter(adapter_id):
 @app.route("/adapters/<int:adapter_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_adapter_metadata(adapter_id):
     """Get adapter metadata."""
     data = _get_request_args()
@@ -1257,6 +1324,7 @@ def show_adapter_metadata(adapter_id):
 @app.route("/oses/<int:os_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_os_metadata(os_id):
     """Get os metadata."""
     data = _get_request_args()
@@ -1274,6 +1342,7 @@ def show_os_metadata(os_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def show_adapter_os_metadata(adapter_id, os_id):
     """Get adapter metadata."""
     data = _get_request_args()
@@ -1288,6 +1357,7 @@ def show_adapter_os_metadata(adapter_id, os_id):
 @app.route("/clusters", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_clusters():
     """List clusters."""
     data = _get_request_args()
@@ -1302,6 +1372,7 @@ def list_clusters():
 @app.route("/clusters/<int:cluster_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_cluster(cluster_id):
     """Get cluster."""
     data = _get_request_args(adapter_id=_int_converter)
@@ -1316,6 +1387,7 @@ def show_cluster(cluster_id):
 @app.route("/clusters", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def add_cluster():
     """add cluster."""
     data = _get_request_data()
@@ -1328,6 +1400,7 @@ def add_cluster():
 @app.route("/clusters/<int:cluster_id>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_cluster(cluster_id):
     """update cluster."""
     data = _get_request_data()
@@ -1342,6 +1415,7 @@ def update_cluster(cluster_id):
 @app.route("/clusters/<int:cluster_id>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_cluster(cluster_id):
     """Delete cluster."""
     data = _get_request_data()
@@ -1361,6 +1435,7 @@ def delete_cluster(cluster_id):
 @app.route("/clusters/<int:cluster_id>/config", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_cluster_config(cluster_id):
     """Get cluster config."""
     data = _get_request_args()
@@ -1375,6 +1450,7 @@ def show_cluster_config(cluster_id):
 @app.route("/clusters/<int:cluster_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_cluster_metadata(cluster_id):
     """Get cluster config."""
     data = _get_request_args()
@@ -1389,6 +1465,7 @@ def show_cluster_metadata(cluster_id):
 @app.route("/clusters/<int:cluster_id>/config", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_cluster_config(cluster_id):
     """update cluster config."""
     data = _get_request_data()
@@ -1401,6 +1478,7 @@ def update_cluster_config(cluster_id):
 @app.route("/clusters/<int:cluster_id>/config", methods=['PATCH'])
 @log_user_action
 @login_required
+@update_user_token
 def patch_cluster_config(cluster_id):
     """patch cluster config."""
     data = _get_request_data()
@@ -1413,6 +1491,7 @@ def patch_cluster_config(cluster_id):
 @app.route("/clusters/<int:cluster_id>/config", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_cluster_config(cluster_id):
     """Delete cluster config."""
     data = _get_request_data()
@@ -1427,6 +1506,7 @@ def delete_cluster_config(cluster_id):
 @app.route("/clusters/<int:cluster_id>/action", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def take_cluster_action(cluster_id):
     """take cluster action."""
     data = _get_request_data()
@@ -1461,6 +1541,7 @@ def take_cluster_action(cluster_id):
 @app.route("/clusters/<int:cluster_id>/state", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def get_cluster_state(cluster_id):
     """Get cluster state."""
     data = _get_request_args()
@@ -1475,6 +1556,7 @@ def get_cluster_state(cluster_id):
 @app.route("/clusters/<int:cluster_id>/hosts", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_cluster_hosts(cluster_id):
     """Get cluster hosts."""
     data = _get_request_args()
@@ -1489,6 +1571,7 @@ def list_cluster_hosts(cluster_id):
 @app.route("/clusterhosts", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_clusterhosts():
     """Get cluster hosts."""
     data = _get_request_args()
@@ -1503,6 +1586,7 @@ def list_clusterhosts():
 @app.route("/clusters/<int:cluster_id>/hosts/<int:host_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_cluster_host(cluster_id, host_id):
     """Get clusterhost."""
     data = _get_request_args()
@@ -1517,6 +1601,7 @@ def show_cluster_host(cluster_id, host_id):
 @app.route("/clusterhosts/<int:clusterhost_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_clusterhost(clusterhost_id):
     """Get clusterhost."""
     data = _get_request_args()
@@ -1531,6 +1616,7 @@ def show_clusterhost(clusterhost_id):
 @app.route("/clusters/<int:cluster_id>/hosts", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def add_cluster_host(cluster_id):
     """update cluster hosts."""
     data = _get_request_data()
@@ -1546,6 +1632,7 @@ def add_cluster_host(cluster_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def update_cluster_host(cluster_id, host_id):
     """Update cluster host."""
     data = _get_request_data()
@@ -1563,6 +1650,7 @@ def update_cluster_host(cluster_id, host_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def update_clusterhost(clusterhost_id):
     """Update cluster host."""
     data = _get_request_data()
@@ -1580,6 +1668,7 @@ def update_clusterhost(clusterhost_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def patch_cluster_host(cluster_id, host_id):
     """Update cluster host."""
     data = _get_request_data()
@@ -1597,6 +1686,7 @@ def patch_cluster_host(cluster_id, host_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def patch_clusterhost(clusterhost_id):
     """Update cluster host."""
     data = _get_request_data()
@@ -1614,6 +1704,7 @@ def patch_clusterhost(clusterhost_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def delete_cluster_host(cluster_id, host_id):
     """Delete cluster host."""
     data = _get_request_data()
@@ -1636,6 +1727,7 @@ def delete_cluster_host(cluster_id, host_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def delete_clusterhost(clusterhost_id):
     """Delete cluster host."""
     data = _get_request_data()
@@ -1658,6 +1750,7 @@ def delete_clusterhost(clusterhost_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def show_cluster_host_config(cluster_id, host_id):
     """Get clusterhost config."""
     data = _get_request_args()
@@ -1672,6 +1765,7 @@ def show_cluster_host_config(cluster_id, host_id):
 @app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_clusterhost_config(clusterhost_id):
     """Get clusterhost config."""
     data = _get_request_args()
@@ -1689,6 +1783,7 @@ def show_clusterhost_config(clusterhost_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def update_cluster_host_config(cluster_id, host_id):
     """update clusterhost config."""
     data = _get_request_data()
@@ -1703,6 +1798,7 @@ def update_cluster_host_config(cluster_id, host_id):
 @app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_clusterhost_config(clusterhost_id):
     """update clusterhost config."""
     data = _get_request_data()
@@ -1720,6 +1816,7 @@ def update_clusterhost_config(clusterhost_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def patch_cluster_host_config(cluster_id, host_id):
     """patch clusterhost config."""
     data = _get_request_data()
@@ -1734,6 +1831,7 @@ def patch_cluster_host_config(cluster_id, host_id):
 @app.route("/clusterhosts/<int:clusterhost_id>", methods=['PATCH'])
 @log_user_action
 @login_required
+@update_user_token
 def patch_clusterhost_config(clusterhost_id):
     """patch clusterhost config."""
     data = _get_request_data()
@@ -1751,6 +1849,7 @@ def patch_clusterhost_config(clusterhost_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def delete_cluster_host_config(cluster_id, host_id):
     """Delete clusterhost config."""
     data = _get_request_data()
@@ -1765,6 +1864,7 @@ def delete_cluster_host_config(cluster_id, host_id):
 @app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_clusterhost_config(clusterhost_id):
     """Delete clusterhost config."""
     data = _get_request_data()
@@ -1782,6 +1882,7 @@ def delete_clusterhost_config(clusterhost_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def show_cluster_host_state(cluster_id, host_id):
     """Get clusterhost state."""
     data = _get_request_args()
@@ -1796,6 +1897,7 @@ def show_cluster_host_state(cluster_id, host_id):
 @app.route("/clusterhosts/<int:clusterhost_id>/state", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_clusterhost_state(clusterhost_id):
     """Get clusterhost state."""
     data = _get_request_args()
@@ -1813,6 +1915,7 @@ def show_clusterhost_state(clusterhost_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def update_cluster_host_state(cluster_id, host_id):
     """update clusterhost state."""
     data = _get_request_data()
@@ -1827,6 +1930,7 @@ def update_cluster_host_state(cluster_id, host_id):
 @app.route("/clusterhosts/<int:clusterhost_id>/state", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_clusterhost_state(clusterhost_id):
     """update clusterhost state."""
     data = _get_request_data()
@@ -1841,6 +1945,7 @@ def update_clusterhost_state(clusterhost_id):
 @app.route("/hosts", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_hosts():
     """List hosts."""
     data = _get_request_args()
@@ -1855,6 +1960,7 @@ def list_hosts():
 @app.route("/hosts/<int:host_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_host(host_id):
     """Get host."""
     data = _get_request_args()
@@ -1869,6 +1975,7 @@ def show_host(host_id):
 @app.route("/machines-hosts", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_machines_or_hosts():
     """Get host."""
     data = _get_request_args(os_id=_int_converter)
@@ -1887,6 +1994,7 @@ def list_machines_or_hosts():
 @app.route("/machines-hosts/<int:host_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_machine_or_host(host_id):
     """Get host."""
     data = _get_request_args()
@@ -1901,6 +2009,7 @@ def show_machine_or_host(host_id):
 @app.route("/hosts/<int:host_id>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_host(host_id):
     """update host."""
     data = _get_request_data()
@@ -1915,6 +2024,7 @@ def update_host(host_id):
 @app.route("/hosts", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_hosts():
     """update hosts."""
     data = _get_request_data_as_list()
@@ -1929,6 +2039,7 @@ def update_hosts():
 @app.route("/hosts/<int:host_id>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_host(host_id):
     """Delete host."""
     data = _get_request_data()
@@ -1948,6 +2059,7 @@ def delete_host(host_id):
 @app.route("/hosts/<int:host_id>/clusters", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def get_host_clusters(host_id):
     """Get host clusters."""
     data = _get_request_args()
@@ -1962,6 +2074,7 @@ def get_host_clusters(host_id):
 @app.route("/hosts/<int:host_id>/config", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_host_config(host_id):
     """Get host config."""
     data = _get_request_args()
@@ -1976,6 +2089,7 @@ def show_host_config(host_id):
 @app.route("/hosts/<int:host_id>/config", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_host_config(host_id):
     """update host config."""
     data = _get_request_data()
@@ -1988,6 +2102,7 @@ def update_host_config(host_id):
 @app.route("/hosts/<int:host_id>", methods=['PATCH'])
 @log_user_action
 @login_required
+@update_user_token
 def patch_host_config(host_id):
     """patch host config."""
     data = _get_request_data()
@@ -2000,6 +2115,7 @@ def patch_host_config(host_id):
 @app.route("/hosts/<int:host_id>/config", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_host_config(host_id):
     """Delete host config."""
     data = _get_request_data()
@@ -2014,6 +2130,7 @@ def delete_host_config(host_id):
 @app.route("/hosts/<int:host_id>/networks", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_host_networks(host_id):
     """list host networks."""
     data = _get_request_args()
@@ -2030,6 +2147,7 @@ def list_host_networks(host_id):
 @app.route("/host/networks", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def list_hostnetworks():
     """list host networks."""
     data = _get_request_args(
@@ -2050,6 +2168,7 @@ def list_hostnetworks():
 )
 @log_user_action
 @login_required
+@update_user_token
 def show_host_network(host_id, host_network_id):
     """Get host network."""
     data = _get_request_args()
@@ -2064,6 +2183,7 @@ def show_host_network(host_id, host_network_id):
 @app.route("/host/networks/<int:host_network_id>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_hostnetwork(host_network_id):
     """Get host network."""
     data = _get_request_args()
@@ -2078,6 +2198,7 @@ def show_hostnetwork(host_network_id):
 @app.route("/hosts/<int:host_id>/networks", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def add_host_network(host_id):
     """add host network."""
     data = _get_request_data()
@@ -2089,6 +2210,7 @@ def add_host_network(host_id):
 @app.route("/hosts/networks", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_host_networks():
     """add host networks."""
     data = _get_request_data_as_list()
@@ -2104,6 +2226,7 @@ def update_host_networks():
 )
 @log_user_action
 @login_required
+@update_user_token
 def update_host_network(host_id, host_network_id):
     """update host network."""
     data = _get_request_data()
@@ -2118,6 +2241,7 @@ def update_host_network(host_id, host_network_id):
 @app.route("/host-networks/<int:host_network_id>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_hostnetwork(host_network_id):
     """update host network."""
     data = _get_request_data()
@@ -2135,6 +2259,7 @@ def update_hostnetwork(host_network_id):
 )
 @log_user_action
 @login_required
+@update_user_token
 def delete_host_network(host_id, host_network_id):
     """Delete host network."""
     data = _get_request_data()
@@ -2149,6 +2274,7 @@ def delete_host_network(host_id, host_network_id):
 @app.route("/host-networks/<int:host_network_id>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def delete_hostnetwork(host_network_id):
     """Delete host network."""
     data = _get_request_data()
@@ -2163,6 +2289,7 @@ def delete_hostnetwork(host_network_id):
 @app.route("/hosts/<int:host_id>/state", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def show_host_state(host_id):
     """Get host state."""
     data = _get_request_args()
@@ -2177,6 +2304,7 @@ def show_host_state(host_id):
 @app.route("/hosts/<int:host_id>/state", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def update_host_state(host_id):
     """update host state."""
     data = _get_request_data()
@@ -2218,6 +2346,7 @@ def _reset_host(*args, **kwargs):
 @app.route("/hosts/<int:host_id>/action", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def take_host_action(host_id):
     """take host action."""
     data = _get_request_data()
@@ -2264,6 +2393,7 @@ def _get_response_json(response):
 @app.route("/proxy/<path:url>", methods=['GET'])
 @log_user_action
 @login_required
+@update_user_token
 def proxy_get(url):
     """proxy url."""
     headers = _get_headers(
@@ -2290,6 +2420,7 @@ def proxy_get(url):
 @app.route("/proxy/<path:url>", methods=['POST'])
 @log_user_action
 @login_required
+@update_user_token
 def proxy_post(url):
     """proxy url."""
     headers = _get_headers(
@@ -2315,6 +2446,7 @@ def proxy_post(url):
 @app.route("/proxy/<path:url>", methods=['PUT'])
 @log_user_action
 @login_required
+@update_user_token
 def proxy_put(url):
     """proxy url."""
     headers = _get_headers(
@@ -2340,6 +2472,7 @@ def proxy_put(url):
 @app.route("/proxy/<path:url>", methods=['PATCH'])
 @log_user_action
 @login_required
+@update_user_token
 def proxy_patch(url):
     """proxy url."""
     headers = _get_headers(
@@ -2365,6 +2498,7 @@ def proxy_patch(url):
 @app.route("/proxy/<path:url>", methods=['DELETE'])
 @log_user_action
 @login_required
+@update_user_token
 def proxy_delete(url):
     """proxy url."""
     headers = _get_headers(

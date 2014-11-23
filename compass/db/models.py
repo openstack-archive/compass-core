@@ -1456,9 +1456,7 @@ class UserToken(BASE, HelperMixin):
         ForeignKey('user.id', onupdate='CASCADE', ondelete='CASCADE')
     )
     token = Column(String(256), unique=True, nullable=False)
-    expire_timestamp = Column(
-        DateTime, default=lambda: datetime.datetime.now()
-    )
+    expire_timestamp = Column(DateTime, nullable=True)
 
     def __init__(self, token, **kwargs):
         self.token = token
@@ -2200,6 +2198,9 @@ class AdapterFlavorRole(BASE, HelperMixin):
         self.role_id = role_id
         super(AdapterFlavorRole, self).__init__()
 
+    def __str__(self):
+        return 'AdapterFlavorRole[%s:%s]' % (self.flavor_id, self.role_id)
+
     def validate(self):
         super(AdapterFlavorRole, self).validate()
         flavor_adapter_id = self.flavor.adapter_id
@@ -2507,6 +2508,9 @@ class Adapter(BASE, HelperMixin):
     ):
         self.name = name
         super(Adapter, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'Adapter[%s:%s]' % (self.id, self.name)
 
     def initialize(self):
         if not self.display_name:

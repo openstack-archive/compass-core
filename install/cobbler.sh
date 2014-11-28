@@ -235,12 +235,7 @@ fi
 
 # download packages
 cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
-fastesturl http://mirrors.hustunique.com http://mirror.centos.org
-if [[ "$?" != "0" ]]; then
-    echo "failed to determine the fastest url for downloading centos ppa packages"
-    exit 1
-fi
-read -r PPA_REPO_URL</tmp/url
+PPA_REPO_URL=`fastesturl http://mirrors.hustunique.com http://mirror.centos.org`
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
@@ -339,12 +334,7 @@ fi
 
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
-fastesturl $CENTOS_IMAGE_SOURCE_ASIA $CENTOS_SOURCE_MIRROR
-if [[ "$?" != "0" ]]; then
-    echo "failed to determine the fastest source for centos iso"
-    exit 1
-fi
-read -r CENTOS_SOURCE</tmp/url
+CENTOS_SOURCE=`fastesturl $CENTOS_IMAGE_SOURCE_ASIA $CENTOS_IMAGE_SOURCE`
 download "$CENTOS_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
 sudo mkdir -p /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} ") -eq 0 ]; then
@@ -359,12 +349,7 @@ else
     echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already mounted"
 fi
 
-fastesturl $UBUNTU_IMAGE_SOURCE_ASIA $UBUNTU_IMAGE_SOURCE
-if [[ "$?" != "0" ]]; then
-    echo "failed to determine the fastest source for ubuntu iso"
-    exit 1
-fi
-read -r UBUNTU_SOURCE</tmp/url
+UBUNTU_SOURCE=`fastesturl $UBUNTU_IMAGE_SOURCE_ASIA $UBUNTU_IMAGE_SOURCE`
 download "$UBUNTU_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
 sudo mkdir -p /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} ") -eq 0 ]; then

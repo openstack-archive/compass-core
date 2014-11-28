@@ -236,12 +236,7 @@ else
 fi
 
 # download cobbler related packages
-fastesturl "http://mirrors.hustunique.com" "http://mirror.centos.org"
-if [[ "$?" != "0" ]]; then
-    echo "failed to determine the fastest source for centos ppa rpms"
-    exit 1
-fi
-read -r CENTOS_PPA_SOURCE</tmp/url
+CENTOS_PPA_SOURCE=`fastesturl "http://mirrors.hustunique.com" "http://mirror.centos.org"`
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
@@ -265,38 +260,25 @@ for f in $centos_ppa_repo_rsyslog_packages; do
     download http://rpms.adiscon.com/v7-stable/epel-${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f || exit $?
 done
 
-download $CHEF_CLIENT `basename $CHEF_CLIENT` || exit $?
-download $CENTOS_CHEF_CLIENT `basename $CENTOS_CHEF_CLIENT` || exit $?
-download $UBUNTU_CHEF_CLIENT `basename $UBUNTU_CHEF_CLIENT` || exit $?
+CENTOS_CHEF_CLIENT_SOURCE=`fastesturl "$CENTOS_CHEF_CLIENT" "$CENTOS_CHEF_CLIENT_HUAWEI"`
+download $CENTOS_CHEF_CLIENT_SOURCE `basename $CENTOS_CHEF_CLIENT_SOURCE` || exit $?
+UBUNTU_CHEF_CLIENT_SOURCE=`fastesturl "$UBUNTU_CHEF_CLIENT" "$UBUNTU_CHEF_CLIENT_HUAWEI"`
+download $UBUNTU_CHEF_CLIENT_SOURCE `basename $UBUNTU_CHEF_CLIENT_SOURCE` || exit $?
 
 # download chef related packages
-download $CHEF_SRV chef-server || exit $?
+CHEF_SRV_SOURCE=`fastesturl "$CHEF_SRV" "$CHEF_SRV_HUAWEI"`
+download $CHEF_SRV_SOURCE chef-server || exit $?
 
 # download os images
-fastesturl $CENTOS_IMAGE_SOURCE $CENTOS_IMAGE_SOURCE_ASIA
-if [[ "$?" != "0" ]]; then
-    echo "failed to determine the fastest source for centos image"
-    exit 1
-fi
-read -r CENTOS_ISO_SOURCE</tmp/url
+CENTOS_ISO_SOURCE=`fastesturl $CENTOS_IMAGE_SOURCE $CENTOS_IMAGE_SOURCE_ASIA`
 download $CENTOS_ISO_SOURCE ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
 
-fastesturl $UBUNTU_IMAGE_SOURCE $UBUNTU_IMAGE_SOURCE_ASIA
-if [[ "$?" != "0" ]]; then
-    echo "failed to determine the fastest source for ubuntu image"
-    exit 1
-fi
-read -r UBUNTU_ISO_SOURCE</tmp/url
+UBUNTU_ISO_SOURCE=`fastesturl $UBUNTU_IMAGE_SOURCE $UBUNTU_IMAGE_SOURCE_ASIA`
 download $UBUNTU_ISO_SOURCE ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
 
 # download local repo
 if [[ $LOCAL_REPO = "y" ]]; then
-    fastesturl $LOCAL_REPO_US $LOCAL_REPO_HUAWEI
-    if [[ "$?" != "0" ]]; then
-        echo "failed to determine the fastest source for local repo"
-        exit 1
-    fi
-    read -r LOCAL_REPO_SOURCE</tmp/url
+    LOCAL_REPO_SOURCE=`fastesturl $LOCAL_REPO_US $LOCAL_REPO_HUAWEI`
     download $LOCAL_REPO_SOURCE local_repo.tar.gz || exit $?
 fi
 # Install net-snmp

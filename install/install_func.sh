@@ -5,17 +5,24 @@ fastesturl()
 {
     shortest=99999
     fastest_url=""
+    good_code=[200,206]
     while [ $1 ]; do
         url=$1
-        time=`curl -o /dev/null --header "Range: bytes=0-20000" -s -w %{time_total} $url`
-        if [ $(echo "$shortest > $time" | bc) -eq 1 ]; then
-            shortest=$time
-            echo "$url" > /tmp/url
-            fastest_url=$url
+        result=($(curl --max-time 10 -o /dev/null --header "Range: bytes=0-20000" -s -w "%{http_code} %{time_total}" $url))
+        code=${result[0]}
+        time=${result[1]}
+        if [[ ${good_code[*]} =~ $code ]]; then
+            if [ $(echo "$shortest > $time" | bc) -eq 1 ]; then
+                shortest=$time
+                fastest_url=$url
+            fi
         fi
         shift
     done
-    echo "$fastest_url is the fastest source, using it"
+    if [[ -z $fastest_url ]]; then
+        exit 1
+    fi
+    echo "$fastest_url"
 }
 
 copy2dir()

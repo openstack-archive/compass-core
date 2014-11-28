@@ -19,7 +19,8 @@ sudo mkdir -p /root/backup/chef
 
 sudo rpm -q chef-server
 if [[ "$?" != "0" ]]; then
-    download $CHEF_SRV chef-server install || exit $?
+    CHEF_SRV_SOURCE=`fastesturl "$CHEF_SRV" "$CHEF_SRV_HUAWEI"`
+    download $CHEF_SRV_SOURCE chef-server install || exit $?
 else
     echo "chef-server has already installed"
 fi
@@ -43,7 +44,8 @@ echo "configure chef client and knife"
 # configure chef client and knife
 rpm -q chef
 if [[ "$?" != "0" ]]; then
-    download $CHEF_CLIENT `basename $CHEF_CLIENT` install || exit $?
+    CENTOS_CHEF_CLIENT_SOURCE=`fastesturl "$CENTOS_CHEF_CLIENT" "$CENTOS_CHEF_CLIENT_HUAWEI"`
+    download $CENTOS_CHEF_CLIENT_SOURCE `basename $CENTOS_CHEF_CLIENT_SOURCE` install || exit $?
 else
     echo "chef has already installed"
 fi

@@ -84,6 +84,7 @@ deactivate
 sudo mkdir -p /var/log/redis
 sudo chown -R redis:root /var/log/redis
 sudo mkdir -p /var/lib/redis/
+sudo rm -rf /var/lib/redis/*
 sudo chown -R redis:root /var/lib/redis
 sudo mkdir -p /var/run/redis
 sudo chown -R redis:root /var/run/redis

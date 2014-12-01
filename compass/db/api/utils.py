@@ -20,10 +20,12 @@ import logging
 import netaddr
 import re
 
+from sqlalchemy import and_
 from sqlalchemy import or_
 
 from compass.db import exception
 from compass.db import models
+from compass.utils import util
 
 
 def model_query(session, model):
@@ -53,18 +55,21 @@ def _one_item_list_condition_func(col_attr, value, condition_func):
         return None
 
 
-def _model_filter_by_condition(
-        query, col_attr, value, condition_func,
-        list_condition_func=_default_list_condition_func):
+def _model_condition_func(
+    col_attr, value,
+    item_condition_func,
+    list_condition_func=_default_list_condition_func
+):
     if isinstance(value, list):
-        condition = list_condition_func(
-            col_attr, value, condition_func
+        if not value:
+            return None
+        if len(value) == 1:
+            return item_condition_func(col_attr, value)
+        return list_condition_func(
+            col_attr, value, item_condition_func
         )
     else:
-        condition = condition_func(col_attr, value)
-    if condition is not None:
-        query = query.filter(condition)
-    return query
+        return item_condition_func(col_attr, value)
 
 
 def _between_condition(col_attr, value):
@@ -100,6 +105,108 @@ def model_order_by(query, model, order_by):
     return query.order_by(*order_by_cols)
 
 
+def _model_condition(col_attr, value):
+    if isinstance(value, list):
+        basetype_values = []
+        composite_values = []
+        for item in value:
+            if util.is_instance(item, [list, dict]):
+                composite_values.append(item)
+            else:
+                basetype_values.append(item)
+        conditions = []
+        if basetype_values:
+            if len(basetype_values) == 1:
+                condition = (col_attr == basetype_values[0])
+            else:
+                condition = col_attr.in_(basetype_values)
+            conditions.append(condition)
+        for composite_value in composite_values:
+            condition = _model_condition(col_attr, composite_value)
+            if condition is not None:
+                conditions.append(condition)
+        if not conditions:
+            return None
+        if len(conditions) == 1:
+            return conditions[0]
+        return or_(*conditions)
+    elif isinstance(value, dict):
+        conditions = []
+        if 'eq' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['eq'],
+                lambda attr, data: attr == data,
+                lambda attr, data, item_condition_func: attr.in_(data)
+            ))
+        if 'lt' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['lt'],
+                lambda attr, data: attr < data,
+                _one_item_list_condition_func
+            ))
+        if 'gt' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['gt'],
+                lambda attr, data: attr > data,
+                _one_item_list_condition_func
+            ))
+        if 'le' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['le'],
+                lambda attr, data: attr <= data,
+                _one_item_list_condition_func
+            ))
+        if 'ge' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['ge'],
+                lambda attr, data: attr >= data,
+                _one_item_list_condition_func
+            ))
+        if 'ne' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['ne'],
+                lambda attr, data: attr != data,
+                lambda attr, data, item_condition_func: attr.notin_(data)
+            ))
+        if 'in' in value:
+            conditions.append(col_attr.in_(value['in']))
+        if 'notin' in value:
+            conditions.append(col_attr.notin_(value['notin']))
+        if 'startswith' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['startswith'],
+                lambda attr, data: attr.like('%s%%' % data)
+            ))
+        if 'endswith' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['endswith'],
+                lambda attr, data: attr.like('%%%s' % data)
+            ))
+        if 'like' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['like'],
+                lambda attr, data: attr.like('%%%s%%' % data)
+            ))
+        if 'between' in value:
+            conditions.append(_model_condition_func(
+                col_attr, value['between'],
+                _between_condition
+            ))
+        conditions = [
+            condition
+            for condition in conditions
+            if condition is not None
+        ]
+        if not conditions:
+            return None
+        if len(conditions) == 1:
+            return conditions[0]
+        return and_(conditions)
+    else:
+        condition = (col_attr == value)
+        return condition
+
+
 def model_filter(query, model, **filters):
     for key, value in filters.items():
         if isinstance(key, basestring):
@@ -109,69 +216,9 @@ def model_filter(query, model, **filters):
                 continue
         else:
             col_attr = key
-        if isinstance(value, list):
-            query = query.filter(col_attr.in_(value))
-        elif isinstance(value, dict):
-            if 'eq' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['eq'],
-                    lambda attr, data: attr == data,
-                    lambda attr, data, condition_func: attr.in_(data)
-                )
-            if 'lt' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['lt'],
-                    lambda attr, data: attr < data,
-                    _one_item_list_condition_func
-                )
-            if 'gt' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['gt'],
-                    lambda attr, data: attr > data,
-                    _one_item_list_condition_func
-                )
-            if 'le' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['le'],
-                    lambda attr, data: attr <= data,
-                    _one_item_list_condition_func
-                )
-            if 'ge' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['ge'],
-                    lambda attr, data: attr >= data,
-                    _one_item_list_condition_func
-                )
-            if 'ne' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['ne'], None,
-                    lambda attr, data, condition_func: ~attr.in_(data)
-                )
-            if 'in' in value:
-                query = query.filter(col_attr.in_(value['in']))
-            if 'startswith' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['startswith'],
-                    lambda attr, data: attr.like('%s%%' % data)
-                )
-            if 'endswith' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['endswith'],
-                    lambda attr, data: attr.like('%%%s' % data)
-                )
-            if 'like' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['like'],
-                    lambda attr, data: attr.like('%%%s%%' % data)
-                )
-            if 'between' in value:
-                query = _model_filter_by_condition(
-                    query, col_attr, value['between'],
-                    _between_condition
-                )
-        else:
-            query = query.filter(col_attr == value)
-
+        condition = _model_condition(col_attr, value)
+        if condition is not None:
+            query = query.filter(condition)
     return query
 
 
@@ -221,6 +268,10 @@ def wrap_to_dict(support_keys=[], **filters):
 
 def _wrapper_dict(data, support_keys, **filters):
     """Helper for warpping db object into dictionary."""
+    logging.info(
+        'wrap dict %s by support_keys=%s filters=%s',
+        data, support_keys, filters
+    )
     if isinstance(data, list):
         return [
             _wrapper_dict(item, support_keys, **filters)
@@ -509,6 +560,9 @@ def add_db_object(session, table, exception_when_existing=True,
 
         new_object = False
         if db_object:
+            logging.debug(
+                'got db object %s: %s', db_keys, db_object
+            )
             if exception_when_existing:
                 raise exception.DuplicatedRecord(
                     '%s exists in table %s' % (db_keys, table.__name__)

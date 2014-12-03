@@ -158,5 +158,5 @@ sleep 10
 compass check
 if [[ "$?" != "0" ]]; then
     echo "compass check failed"
-    # exit 1
+    exit 1
 fi

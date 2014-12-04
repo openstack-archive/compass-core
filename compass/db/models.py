@@ -681,6 +681,8 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
                     self.state.state = 'INITIALIZED'
                 else:
                     self.state.state = 'UNINITIALIZED'
+        self.cluster.update()
+        self.host.update()
         self.state.update()
         super(ClusterHost, self).update()
 
@@ -1117,6 +1119,9 @@ class ClusterState(BASE, StateMixin):
         Integer,
         default=0
     )
+
+    def __init__(self, **kwargs):
+        super(ClusterState, self).__init__(**kwargs)
 
     def __str__(self):
         return 'ClusterState[%s state %s percentage %s]' % (

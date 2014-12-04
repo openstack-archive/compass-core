@@ -1415,8 +1415,12 @@ def update_cluster_hosts(
         _add_clusterhosts(session, cluster, **add_hosts)
     if set_hosts is not None:
         _set_clusterhosts(session, cluster, **set_hosts)
+    clusterhosts = utils.list_db_objects(
+        session, models.ClusterHost, cluster_id=cluster.id
+    )
+    logging.info('updated clusterhosts: %s', clusterhosts)
     return {
-        'hosts': cluster.clusterhosts
+        'hosts': clusterhosts
     }
 
 

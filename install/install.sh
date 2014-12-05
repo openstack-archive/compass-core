@@ -247,6 +247,7 @@ if [[ -z $LOCAL_REPO ]]; then
     done
 fi
 loadvars NAMESERVER_DOMAINS "ods.com"
+loadvars NAMESERVER_REVERSE_ZONES "unused"
 loadvars WEB_SOURCE 'http://git.openstack.org/stackforge/compass-web'
 loadvars ADAPTERS_SOURCE 'http://git.openstack.org/stackforge/compass-adapters'
 

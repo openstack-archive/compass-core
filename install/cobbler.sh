@@ -56,6 +56,10 @@ sudo sed -i "s/server:[ \t]*\$ipaddr/server: $IPADDR/g" /etc/cobbler/settings
 sudo sed -i "s/default_name_servers:[ \t]*\['\$ipaddr'\]/default_name_servers: \['$IPADDR'\]/g" /etc/cobbler/settings
 domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")
 sudo sed -i "s/manage_forward_zones:[ \t]*\[\]/manage_forward_zones: \['$domains'\]/g" /etc/cobbler/settings
+if [[ "$NAMESERVER_REVERSE_ZONES" != "unused" ]]; then
+    reverse_zones=$(echo $NAMESERVER_REVERSE_ZONES | sed "s/,/','/g")
+    sudo sed -i "s/manage_reverse_zones:[ \t]*\[\]/manage_reverse_zones: \['$reverse_zones'\]/g" /etc/cobbler/settings
+fi
 export cobbler_passwd=$(openssl passwd -1 -salt 'huawei' '123456')
 sudo sed -i "s,^default_password_crypted:[ \t]\+\"\(.*\)\",default_password_crypted: \"$cobbler_passwd\",g" /etc/cobbler/settings
 sudo chmod 644 /etc/cobbler/settings

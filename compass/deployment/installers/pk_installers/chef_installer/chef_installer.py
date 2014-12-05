@@ -158,7 +158,6 @@ class ChefInstaller(PKInstaller):
 
     def _delete_environment(self, env):
         """clean env attributes about arget system."""
-        import chef
         if env is None:
             raise Exception("env is None, cannot delete a bnone env.")
         env_name = env.name

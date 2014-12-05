@@ -25,6 +25,7 @@ import os
 import simplejson as json
 
 from compass.deployment.installers.config_manager import BaseConfigManager
+from compass.utils import util
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -120,11 +121,11 @@ class BaseInstaller(object):
             elif mapping_to:
                 output[mapping_to] = config_value
 
-    def get_config_from_template(self, tmpl_dir, vars_dict):
-        logging.debug("template path is %s", tmpl_dir)
+    def get_config_from_template(self, tmpl_path, vars_dict):
+        logging.debug("template path is %s", tmpl_path)
         logging.debug("vars_dict is %s", vars_dict)
 
-        if not os.path.exists(tmpl_dir) or not vars_dict:
+        if not os.path.exists(tmpl_path) or not vars_dict:
             logging.info("Template dir or vars_dict is None!")
             return {}
 
@@ -137,9 +138,21 @@ class BaseInstaller(object):
                 searchList.append(temp)
         searchList.append(copy_vars_dict)
 
-        tmpl = Template(file=tmpl_dir, searchList=searchList)
+        # Load base template first if it exists
+        base_config = {}
+        base_tmpl_path = os.path.join(os.path.dirname(tmpl_path), 'base.tmpl')
+        if os.path.isfile(base_tmpl_path) and base_tmpl_path != tmpl_path:
+            base_tmpl = Template(file=base_tmpl_path, searchList=searchList)
+            base_config = json.loads(base_tmpl.respond(), encoding='utf-8')
+            base_config = json.loads(json.dumps(base_config), encoding='utf-8')
+
+        # Load specific template for current adapter
+        tmpl = Template(file=tmpl_path, searchList=searchList)
         config = json.loads(tmpl.respond(), encoding='utf-8')
         config = json.loads(json.dumps(config), encoding='utf-8')
+
+        # Merge the two outputs
+        config = util.merge_dict(base_config, config)
 
         logging.debug("get_config_from_template resulting %s", config)
         return config

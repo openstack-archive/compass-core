@@ -28,6 +28,8 @@ export IP_END=`echo $IPADDR |cut -d. -f'1 2 3'`.254
 export NEXTSERVER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 # the domains covered by nameserver
 export NAMESERVER_DOMAINS=ods.com
+export NAMESERVER_REVERSE_ZONES=unused
+
 # the repo url
 export WEB_SOURCE='http://git.openstack.org/stackforge'/compass-web
 export ADAPTERS_SOURCE='http://git.openstack.org/stackforge/compass-adapters'

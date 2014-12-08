@@ -91,6 +91,21 @@
 #set dash_role = $get_role('os_dashboard', $controller)
 #set dash_ip = $dash_role.management.ip
 
+## Set services credentials
+#set db_pass = $getDictValue('service_credentials/mysql/password', 'root')
+#set mq_username = $getDictValue('service_credentials/rabbitmq/username', 'guest')
+#set mq_pass = $getDictValue('service_credentials/rabbitmq/password', 'guest')
+
+## Set Openstack neutron config
+#set tenant_network_type = $getDictValue('neutron_config/openvswitch/tenant_network_type', 'gre')
+#set enable_tunneling = True
+#set bridge_mappings = 'physnet1:br-eth1'
+#if $tenant_network_type != 'gre'
+    #set enable_tunneling = False
+    #set bridge_mappings = ''
+#end if
+
+## Utility functions definition
 #def get_role($role_name, $default_roles=None)
     #set target_role = $getVar($role_name, None)
     #if $target_role is None and $default_roles is not None
@@ -106,6 +121,26 @@
         #end if
     #end if
     #return $target_role
+#end def
+
+#def getDictValue($path, $default_value="")                                                                                                                                                   >
+    #set keys = str($path).split('/')
+    #set value = $getVar($keys[0], {})
+
+    #if not $value
+        #return $default_value
+    #else
+        #for $key in $keys[1:]
+            #try
+                #set value = $value[$key]
+            #except
+                #return $default_value
+            #end try
+        #end for
+    #end if
+
+    #return $value
+
 #end def
 {
   "name": "ceph_base_tmpl",
@@ -157,9 +192,9 @@
       "osd_devices": $devices
     },
     "mysql": {
-      "server_root_password": "test",
-      "server_debian_password": "root",
-      "server_repl_password": "root",
+      "server_root_password": "$db_pass",
+      "server_debian_password": "$db_pass",
+      "server_repl_password": "$db_pass",
       "allow_remote_root": true,
       "root_network_acl": "%"
     },
@@ -234,15 +269,18 @@
           "router"
         ],
         "ml2": {
-          "type_drivers": "gre",
-          "tenant_network_types": "gre",
+          "type_drivers": "$tenant_network_type",
+          "tenant_network_types": "$tenant_network_type",
+          "network_vlan_ranges": "physnet1:2700:2999",
           "tunnel_id_ranges": "1:1000",
           "enable_security_group": "True"
         },
         "openvswitch": {
-          "tenant_network_type": "gre",
-          "enable_tunneling": "True",
+          "tenant_network_type": "$tenant_network_type",
+          "enable_tunneling": "$enable_tunneling",
           "tunnel_id_ranges": "1:1000",
+          "network_vlan_ranges": "physnet1:2700:2999",
+          "bridge_mappings": "$bridge_mappings",
           "bind_interface": "$network_worker_tenant_nic"
         },
         "l3": {
@@ -452,8 +490,8 @@
         ]
       },
       "mq": {
-        "user": "guest",
-        "password": "test",
+        "user": "$mq_username",
+        "password": "$mq_pass",
         "vhost": "/nova",
         "network": {
           "service_type": "rabbitmq"

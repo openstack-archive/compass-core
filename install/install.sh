@@ -13,10 +13,10 @@ if [ -f $LOCKFILE ]; then
     LOCKED_PID=$(cat $LOCKFILE | head -n 1)
     ps -p $LOCKED_PID &> /dev/null
     if [[ "$?" != "0" ]]; then
-	echo "the progress of pid $LOCKED_PID does not exist"
+	echo "the progress of pid $LOCKED_PID does not exist: `ps -p $LOCKED_PID`"
 	rm -f $LOCKFILE
     else
-	echo "the progress of pid $LOCKED_PID is running"
+	echo "the progress of pid $LOCKED_PID is running: `ps -p $LOCKED_PID`"
 	exit 1
     fi
 else

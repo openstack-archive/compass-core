@@ -28,12 +28,17 @@ if [[ $LOCAL_REPO = "y" ]]; then
         exit 1
     fi
     read -r LOCAL_REPO_SOURCE</tmp/url
-    download $LOCAL_REPO_SOURCE local_repo.tar.gz unzip /tmp/repo || exit $?
+    LOCAL_REPO_DIR=`dirname $LOCAL_REPO_SOURCE`
+    download ${LOCAL_REPO_DIR}/local_repo.tar.gz local_repo.tar.gz unzip /tmp/repo || exit $?
     mv -f /tmp/repo/local_repo/* /var/www/compass_web/v2/
     if [[ "$?" != "0" ]]; then
 	echo "failed to setup local repo"
 	exit 1
     fi
+    donwload ${LOCAL_REPO_DIR}/centos_repo.tar.gz centos_repo.tar.gz unzip /var/www/compass_web/v2/ || exit $?
+    download ${LOCAL_REPO_DIR}/ubuntu_repo.tar.gz ubuntu_repo.tar.gz unzip /var/www/compass_web/v2/ || exit $?
+    download ${LOCAL_REPO_DIR}/gem_repo.tar.gz gem_repo.tar.gz unzip /var/www/compass_web/v2/ || exit $?
+    download ${LOCAL_REPO_DIR}/cirros-0.3.2-x86_64-disk.img cirros-0.3.2-x86_64-disk.img copy /var/www/compass_web/v2/ || exit $?
 fi
 
 sudo service httpd restart

@@ -34,6 +34,10 @@ if [[ $LOCAL_REPO = "y" ]]; then
 	echo "failed to setup local repo"
 	exit 1
     fi
+    donwload $LOCAL_REPO_SOURCE centos_repo.tar.gz unzip /var/www/compass_web/v2/ || exit $?
+    download $LOCAL_REPO_SOURCE ubuntu_repo.tar.gz unzip /var/www/compass_web/v2/ || exit $?
+    download $LOCAL_REPO_SOURCE gem_repo.tar.gz unzip /var/www/compass_web/v2/ || exit $?
+    download $LOCAL_REPO_SOURCE cirros-0.3.2-x86_64-disk.img copy /var/www/compass_web/v2/ || exit $?
 fi
 
 sudo service httpd restart

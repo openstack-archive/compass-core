@@ -281,6 +281,10 @@ download $UBUNTU_ISO_SOURCE ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exi
 if [[ $LOCAL_REPO = "y" ]]; then
     LOCAL_REPO_SOURCE=`fastesturl $LOCAL_REPO_US $LOCAL_REPO_HUAWEI`
     download $LOCAL_REPO_SOURCE local_repo.tar.gz || exit $?
+    donwload $LOCAL_REPO_SOURCE centos_repo.tar.gz || exit $?
+    download $LOCAL_REPO_SOURCE ubuntu_repo.tar.gz || exit $?
+    download $LOCAL_REPO_SOURCE gem_repo.tar.gz || exit $?
+    download $LOCAL_REPO_SOURCE cirros-0.3.2-x86_64-disk.img
 fi
 # Install net-snmp
 echo "install snmp config"

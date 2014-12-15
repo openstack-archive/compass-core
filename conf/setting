@@ -6,10 +6,8 @@ DATABASE_SERVER = '127.0.0.1:3306'
 DATABASE_NAME = 'compass'
 SQLALCHEMY_DATABASE_URI = '%s://%s:%s@%s/%s' % (DATABASE_TYPE, DATABASE_USER, DATABASE_PASSWORD, DATABASE_SERVER, DATABASE_NAME)
 SQLALCHEMY_DATABASE_POOL_TYPE = 'instant'
-INSTALLATION_LOGDIR = {
-    'CobblerInstaller': '/var/log/cobbler/anamon',
-    'ChefInstaller': '/var/log/chef'
-}
+COBBLER_INSTALLATION_LOGDIR = '/var/log/cobbler/anamon'
+CHEF_INSTALLATION_LOGDIR = '/var/log/chef'
 DEFAULT_LOGLEVEL = 'info'
 DEFAULT_LOGDIR = '/var/log/compass'
 DEFAULT_LOGINTERVAL = 6

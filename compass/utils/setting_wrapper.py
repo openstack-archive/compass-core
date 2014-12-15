@@ -27,9 +27,11 @@ import os.path
 CONFIG_DIR = '/etc/compass'
 SQLALCHEMY_DATABASE_URI = 'sqlite://'
 SQLALCHEMY_DATABASE_POOL_TYPE = 'static'
+COBBLER_INSTALLATION_LOGDIR = '/var/log/cobbler/anamon'
+CHEF_INSTALLATION_LOGDIR = '/var/log/chef'
 INSTALLATION_LOGDIR = {
-    'CobblerInstaller': '/var/log/cobbler/anamon',
-    'ChefInstaller': '/var/log/chef'
+    'CobblerInstaller': COBBLER_INSTALLATION_LOGDIR,
+    'ChefInstaller': CHEF_INSTALLATION_LOGDIR
 }
 CLUSTERHOST_INATALLATION_LOGDIR_NAME = 'name'
 HOST_INSTALLATION_LOGDIR_NAME = 'name'

@@ -26,8 +26,8 @@ class AdapterItemMatcher(object):
     def __init__(self, file_matchers):
         self.file_matchers_ = file_matchers
 
-    def __str__(self):
-        return '%s[file_matchers: %s, min_progress: %s, max_progress: %s]' % (
+    def __repr__(self):
+        return '%r[file_matchers: %r]' % (
             self.__class__.__name__, self.file_matchers_
         )
 
@@ -66,14 +66,14 @@ class OSMatcher(object):
         os_pattern, item_matcher,
         file_reader_factory
     ):
-        self.name_ = os_installer_name
+        self.name_ = re.compile(os_installer_name)
         self.os_regex_ = re.compile(os_pattern)
         self.matcher_ = item_matcher
         self.file_reader_factory_ = file_reader_factory
 
     def __repr__(self):
-        return '%s[name:%s, os_pattern:%s, matcher:%s]' % (
-            self.__class__.__name__, self.name_,
+        return '%r[name:%r, os_pattern:%r, matcher:%r]' % (
+            self.__class__.__name__, self.name_.pattern,
             self.os_regex_.pattern, self.matcher_)
 
     def match(self, os_installer_name, os_name):
@@ -82,7 +82,7 @@ class OSMatcher(object):
             return False
         else:
             return all([
-                self.name_ == os_installer_name,
+                self.name_.match(os_installer_name),
                 self.os_regex_.match(os_name)
             ])
 
@@ -105,9 +105,9 @@ class PackageMatcher(object):
         self.file_reader_factory_ = file_reader_factory
 
     def __repr__(self):
-        return '%s[name:%s, target_system:%s, matcher:%s]' % (
-            self.__class__.__name__, self.name_,
-            self.target_system_, self.matcher_)
+        return '%s[name:%s, ds_pattern:%s, matcher:%s]' % (
+            self.__class__.__name__, self.name_.pattern,
+            self.ds_regex_.pattern, self.matcher_)
 
     def match(self, package_installer_name, distributed_system_name):
         """Check if the package matcher is acceptable."""

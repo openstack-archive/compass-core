@@ -172,8 +172,8 @@ class LineMatcher(object):
         self.match_sameline_ = match_sameline_next_matcher_name
         self.match_nextline_ = match_nextline_next_matcher_name
 
-    def __str__(self):
-        return '%s[pattern:%r, message_template:%r, severity:%r]' % (
+    def __repr__(self):
+        return '%r[pattern:%r, message_template:%r, severity:%r]' % (
             self.__class__.__name__, self.regex_.pattern,
             self.message_template_, self.severity_)
 

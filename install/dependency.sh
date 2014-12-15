@@ -26,6 +26,8 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
+sudo pip install --upgrade setuptools
+
 sudo easy_install --upgrade pip
 if [[ "$?" != "0" ]]; then
     echo "failed to install easy install"

@@ -112,11 +112,10 @@ class FileReader(object):
                         yield partial_line
                         partial_line = self.log_history_['partial_line']
                     else:
+                        self.log_history_['partial_line'] = partial_line
                         break
                 if partial_line:
-                    self.log_history_['partial_line'] = ''
                     yield partial_line
-                    partial_line = self.log_history_['partial_line']
 
         except Exception as error:
             logging.error('failed to processing file %s', self.pathname_)
@@ -176,10 +175,10 @@ class FileMatcher(object):
         self.progress_diff_ = max_progress - min_progress
         self.filename_ = filename
 
-    def __str__(self):
+    def __repr__(self):
         return (
-            '%s[ filename: %s, progress:[%s:%s], '
-            'line_matchers: %s]' % (
+            '%r[filename: %r, progress:[%r:%r], '
+            'line_matchers: %r]' % (
                 self.__class__.__name__, self.filename_,
                 self.min_progress_,
                 self.max_progress_, self.line_matchers_)

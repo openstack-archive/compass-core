@@ -22,6 +22,7 @@ else
     find /usr/lib -name manage_bind.py |xargs  perl -pi.old -e 's/(\s+)(self\.logger\s+\= logger)/$1$2\n$1if self\.logger is None:\n$1    import clogger\n$1    self\.logger = clogger.Logger\(\)/'
 fi
 
+# cobbler snippet uses netaddr to calc subnet and ip addr
 sudo pip install netaddr
 if [[ "$?" != "0" ]]; then
     echo "failed to install pip packages"
@@ -163,7 +164,6 @@ mkdir -p /var/log/cobbler/tasks
 mkdir -p /var/log/cobbler/anamon
 chmod -R 777 /var/log/cobbler
 
-
 sudo service httpd restart
 sudo service cobblerd restart
 sudo cobbler get-loaders
@@ -215,96 +215,221 @@ else
     exit 1
 fi
 
+PPA_REPO_URL=`fastesturl http://mirror.centos.org http://mirrors.hustunique.com`
 # create centos repo
-sudo rm -rf /var/lib/cobbler/repo_mirror/centos_ppa_repo
-sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_ppa_repo
-found_centos_ppa_repo=0
-for repo in $(cobbler repo list); do
-    if [ "$repo" == "centos_ppa_repo" ]; then
-        found_centos_ppa_repo=1
-    fi
-done
+if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
+    sudo rm -rf /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo
+    sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo
+    found_centos_6_5_ppa_repo=0
+    for repo in $(cobbler repo list); do
+        if [ "$repo" == "centos_6_5_ppa_repo" ]; then
+            found_centos_6_5_ppa_repo=1
+        fi
+    done
 
-if [ "$found_centos_ppa_repo" == "0" ]; then
-    sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_ppa_repo --name=centos_ppa_repo --mirror-locally=Y --arch=${CENTOS_IMAGE_ARCH}
+    if [ "$found_centos_6_5_ppa_repo" == "0" ]; then
+        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo --name=centos_6_5_ppa_repo --mirror-locally=Y --arch=x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add centos_6_5_ppa_repo"
+            exit 1
+        else
+            echo "centos_6_5_ppa_repo is added"
+        fi
+    else
+        echo "repo centos_6_5_ppa_repo has already existed."
+    fi
+
+    # download packages
+    cd /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo/
+    centos_6_5_ppa_repo_packages="
+ntp-4.2.6p5-1.el6.centos.x86_64.rpm
+openssh-clients-5.3p1-94.el6.x86_64.rpm
+iproute-2.6.32-31.el6.x86_64.rpm
+wget-1.12-1.8.el6.x86_64.rpm
+ntpdate-4.2.6p5-1.el6.centos.x86_64.rpm
+yum-plugin-priorities-1.1.30-14.el6.noarch.rpm
+parted-2.1-21.el6.x86_64.rpm"
+    for f in $centos_6_5_ppa_repo_packages; do
+        download -u $PPA_REPO_URL/centos/6.5/os/x86_64/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo/ || exit $?
+    done
+
+    centos_6_5_ppa_repo_rsyslog_packages="
+json-c-0.10-2.el6.x86_64.rpm
+libestr-0.1.9-1.el6.x86_64.rpm
+libgt-0.3.11-1.el6.x86_64.rpm
+liblogging-1.0.4-1.el6.x86_64.rpm
+rsyslog-7.6.3-1.el6.x86_64.rpm"
+
+    for f in $centos_6_5_ppa_repo_rsyslog_packages; do
+        download -u http://rpms.adiscon.com/v7-stable/epel-6/x86_64/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo/ || exit $?
+    done
+
+    # download chef client for centos ppa repo
+    download -u $CENTOS_6_5_CHEF_CLIENT -u $CENTOS_6_5_CHEF_CLIENT_HUAWEI `basename $CENTOS_6_5_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo/
+
+    # create centos repo
+    cd ..
+    sudo createrepo centos_6_5_ppa_repo
     if [[ "$?" != "0" ]]; then
-        echo "failed to add centos_ppa_repo"
+        echo "failed to createrepo centos_6_5_ppa_repo"
         exit 1
     else
-        echo "centos_ppa_repo is added"
+        echo "centos_6_5_ppa_repo is created"
     fi
-else
-    echo "repo centos_ppa_repo has already existed."
 fi
 
-# download packages
-cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
-PPA_REPO_URL=`fastesturl http://mirrors.hustunique.com http://mirror.centos.org`
-centos_ppa_repo_packages="
-ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
-openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-openssh-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-iproute-2.6.32-31.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
-yum-plugin-priorities-1.1.30-14.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.noarch.rpm
-parted-2.1-21.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
+if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
+    sudo rm -rf /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo
+    sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo
+    found_centos_6_6_ppa_repo=0
+    for repo in $(cobbler repo list); do
+        if [ "$repo" == "centos_6_6_ppa_repo" ]; then
+            found_centos_6_6_ppa_repo=1
+        fi
+    done
 
-for f in $centos_ppa_repo_packages; do
-    download $PPA_REPO_URL/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
-done
+    if [ "$found_centos_6_6_ppa_repo" == "0" ]; then
+        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo --name=centos_6_6_ppa_repo --mirror-locally=Y --arch=x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add centos_6_6_ppa_repo"
+            exit 1
+        else
+            echo "centos_6_6_ppa_repo is added"
+        fi
+    else
+        echo "repo centos_6_6_ppa_repo has already existed."
+    fi
 
-centos_ppa_repo_rsyslog_packages="
-json-c-0.10-2.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-libestr-0.1.9-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-libgt-0.3.11-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-liblogging-1.0.4-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-rsyslog-7.6.3-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
-for f in $centos_ppa_repo_rsyslog_packages; do
-    download http://rpms.adiscon.com/v7-stable/epel-${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
-done
+    # download packages
+    cd /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo/
+    centos_6_6_ppa_repo_packages="
+ntp-4.2.6p5-1.el6.centos.x86_64.rpm
+openssh-5.3p1-104.el6.x86_64.rpm
+openssh-clients-5.3p1-104.el6.x86_64.rpm
+iproute-2.6.32-32.el6_5.x86_64.rpm
+wget-1.12-5.el6.x86_64.rpm
+ntpdate-4.2.6p5-1.el6.centos.x86_64.rpm
+yum-plugin-priorities-1.1.30-30.el6.noarch.rpm
+parted-2.1-25.el6.x86_64.rpm"
+    for f in $centos_6_6_ppa_repo_packages; do
+        download -u $PPA_REPO_URL/centos/6.6/os/x86_64/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo/ || exit $?
+    done
 
-# download chef client for centos ppa repo
-CENTOS_CHEF_CLIENT_SOURCE=`fastesturl "$CENTOS_CHEF_CLIENT" "$CENTOS_CHEF_CLIENT_HUAWEI"`
-download $CENTOS_CHEF_CLIENT_SOURCE `basename $CENTOS_CHEF_CLIENT_SOURCE` copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+    centos_6_6_ppa_repo_rsyslog_packages="
+json-c-0.10-2.el6.x86_64.rpm
+libestr-0.1.9-1.el6.x86_64.rpm
+libgt-0.3.11-1.el6.x86_64.rpm
+liblogging-1.0.4-1.el6.x86_64.rpm
+rsyslog-7.6.3-1.el6.x86_64.rpm"
 
-# create centos repo
-cd ..
-sudo createrepo centos_ppa_repo
-if [[ "$?" != "0" ]]; then
-    echo "failed to createrepo centos_ppa_repo"
-    exit 1
-else
-    echo "centos_ppa_repo is created"
+    for f in $centos_6_6_ppa_repo_rsyslog_packages; do
+        download -u http://rpms.adiscon.com/v7-stable/epel-6/x86_64/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo/ || exit $?
+    done
+
+    download -u $CENTOS_6_6_CHEF_CLIENT -u $CENTOS_6_6_CHEF_CLIENT_HUAWEI $CENTOS_6_6_CHEF_CLIENT_SOURCE `basename $CENTOS_6_6_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo/
+
+    cd ..
+    sudo createrepo centos_6_6_ppa_repo
+    if [[ "$?" != "0" ]]; then
+        echo "failed to createrepo centos_6_6_ppa_repo"
+        exit 1
+    else
+        echo "centos_6_6_ppa_repo is created"
+    fi
 fi
+
+if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
+    sudo rm -rf /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo
+    sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo
+    found_centos_7_0_ppa_repo=0
+    for repo in $(cobbler repo list); do
+        if [ "$repo" == "centos_7_0_ppa_repo" ]; then
+            found_centos_7_0_ppa_repo=1
+        fi
+    done
+
+    if [ "$found_centos_7_0_ppa_repo" == "0" ]; then
+        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo --name=centos_7_0_ppa_repo --mirror-locally=Y --arch=x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add centos_7_0_ppa_repo"
+            exit 1
+        else
+            echo "centos_7_0_ppa_repo is added"
+        fi
+    else
+        echo "repo centos_7_0_ppa_repo has already existed."
+    fi
+
+    # download packages
+    cd /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo/
+    centos_7_0_ppa_repo_packages="
+ntp-4.2.6p5-18.el7.centos.x86_64.rpm
+openssh-6.4p1-8.el7.x86_64.rpm
+openssh-clients-6.4p1-8.el7.x86_64.rpm
+iproute-3.10.0-13.el7.x86_64.rpm
+wget-1.14-10.el7.x86_64.rpm
+ntpdate-4.2.6p5-18.el7.centos.x86_64.rpm
+yum-plugin-priorities-1.1.31-24.el7.noarch.rpm
+json-c-0.11-3.el7.x86_64.rpm
+parted-3.1-17.el7.x86_64.rpm"
+    for f in $centos_7_0_ppa_repo_packages; do
+        download -u $PPA_REPO_URL/centos/7.0.1406/os/x86_64/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo/ || exit $?
+    done
+
+    centos_7_0_ppa_repo_rsyslog_packages="
+libestr-0.1.9-1.el7.x86_64.rpm
+libgt-0.3.11-1.el7.x86_64.rpm
+liblogging-1.0.4-1.el7.x86_64.rpm
+rsyslog-7.6.3-1.el7.x86_64.rpm"
+
+    for f in $centos_7_0_ppa_repo_rsyslog_packages; do
+        download -u http://rpms.adiscon.com/v7-stable/epel-7/x86_64/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo/ || exit $?
+    done
+
+    # download chef client for centos ppa repo
+    CENTOS_7_0_CHEF_CLIENT_SOURCE=`fastesturl "$CENTOS_7_0_CHEF_CLIENT" "$CENTOS_7_0_CHEF_CLIENT_HUAWEI"`
+    download -u $CENTOS_7_0_CHEF_CLIENT -u $CENTOS_7_0_CHEF_CLIENT_HUAWEI `basename $CENTOS_7_0_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo/
+
+    # create centos repo
+    cd ..
+    sudo createrepo centos_7_0_ppa_repo
+    if [[ "$?" != "0" ]]; then
+        echo "failed to createrepo centos_7_0_ppa_repo"
+        exit 1
+    else
+        echo "centos_7_0_ppa_repo is created"
+    fi
+fi
+
 
 # create ubuntu repo
-sudo rm -rf /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo
-sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo
-found_ubuntu_ppa_repo=0
-for repo in $(cobbler repo list); do
-    if [ "$repo" == "ubuntu_ppa_repo" ]; then
-        found_ubuntu_ppa_repo=1
-    fi
-done
+if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
+    sudo rm -rf /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo
+    sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo
+    found_ubuntu_12_04_ppa_repo=0
+    for repo in $(cobbler repo list); do
+        if [ "$repo" == "ubuntu_12_04_ppa_repo" ]; then
+            found_ubuntu_12_04_ppa_repo=1
+        fi
+    done
 
-if [ "$found_ubuntu_ppa_repo" == "0" ]; then
-    sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/ubuntu_ppa_repo --name=ubuntu_ppa_repo --mirror-locally=Y --arch=${UBUNTU_IMAGE_ARCH} --apt-dists=ppa --apt-components=main
-    if [[ "$?" != "0" ]]; then
-        echo "failed to add ubuntu_ppa_repo"
-        exit 1
+    if [ "$found_ubuntu_12_04_ppa_repo" == "0" ]; then
+        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo --name=ubuntu_12_04_ppa_repo --mirror-locally=Y --arch=x86_64 --apt-dists=ppa --apt-components=main
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add ubuntu_12_04_ppa_repo"
+            exit 1
+        else
+            echo "ubuntu_12_04_ppa_repo is added"
+        fi
     else
-        echo "ubuntu_ppa_repo is added"
+        echo "repo ubuntu_12_04_ppa_repo has already existed."
     fi
-else
-    echo "repo ubuntu_ppa_repo has already existed."
-fi
 
-cd /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/
-if [ ! -e /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf/distributions ]; then
-    echo "create ubuntu ppa repo distribution"
-    mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf
-    cat << EOF > /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf/distributions
+    cd /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/
+    if [ ! -e /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/conf/distributions ]; then
+        echo "create ubuntu 12.04 ppa repo distribution"
+        mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/conf
+        cat << EOF > /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/conf/distributions
 Origin: ppa
 Label: ppa_repo
 Suite: stable
@@ -314,22 +439,76 @@ Architectures: i386 amd64 source
 Components: main
 Description: ppa repo
 EOF
-    chmod 644 /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/conf/distributions
-else
-    echo "ubuntu ppa repo distribution file exists."
+        chmod 644 /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/conf/distributions
+    else
+        echo "ubuntu 12.04 ppa repo distribution file exists."
+    fi
+
+    # download chef client for ubuntu ppa repo
+    download -u $UBUNTU_12_04_CHEF_CLIENT -u $UBUNTU_12_04_CHEF_CLIENT_HUAWEI `basename $UBUNTU_12_04_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/ || exit $?
+
+    cd ..
+    find ubuntu_12_04_ppa_repo -name \*.deb -exec reprepro -Vb ubuntu_12_04_ppa_repo includedeb ppa {} \;
+    if [ "$?" != "0" ]; then
+        echo "failed to create ubuntu_12_04_ppa_repo"
+        exit 1
+    else
+        echo  "ubuntu_12_04_ppa_repo is created"
+    fi
 fi
 
-# download chef client for ubuntu ppa repo
-UBUNTU_CHEF_CLIENT_SOURCE=`fastesturl "$UBUNTU_CHEF_CLIENT" "$UBUNTU_CHEF_CLIENT_HUAWEI"`
-download $UBUNTU_CHEF_CLIENT_SOURCE `basename $UBUNTU_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/ubuntu_ppa_repo/ || exit $?
+if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
+    sudo rm -rf /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo
+    sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo
+    found_ubuntu_14_04_ppa_repo=0
+    for repo in $(cobbler repo list); do
+        if [ "$repo" == "ubuntu_14_04_ppa_repo" ]; then
+            found_ubuntu_14_04_ppa_repo=1
+        fi
+    done
 
-cd ..
-find ubuntu_ppa_repo -name \*.deb -exec reprepro -Vb ubuntu_ppa_repo includedeb ppa {} \;
-if [ "$?" != "0" ]; then
-    echo "failed to create ubuntu_ppa_repo"
-    exit 1
-else
-    echo  "ubuntu_ppa_repo is created"
+    if [ "$found_ubuntu_14_04_ppa_repo" == "0" ]; then
+        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo --name=ubuntu_14_04_ppa_repo --mirror-locally=Y --arch=x86_64 --apt-dists=ppa --apt-components=main
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add ubuntu_14_04_ppa_repo"
+            exit 1
+        else
+            echo "ubuntu_14_04_ppa_repo is added"
+        fi
+    else
+        echo "repo ubuntu_14_04_ppa_repo has already existed."
+    fi
+
+    cd /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/
+    if [ ! -e /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/conf/distributions ]; then
+        echo "create ubuntu 14.04 ppa repo distribution"
+        mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/conf
+        cat << EOF > /var/lib/cobbler/repo_mirror/ubuntu_13_04__ppa_repo/conf/distributions
+Origin: ppa
+Label: ppa_repo
+Suite: stable
+Codename: ppa
+Version: 0.1
+Architectures: i386 amd64 source
+Components: main
+Description: ppa repo
+EOF
+        chmod 644 /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/conf/distributions
+    else
+        echo "ubuntu 14.04 ppa repo distribution file exists."
+    fi
+
+    # download chef client for ubuntu ppa repo
+    download -u $UBUNTU_14_04_CHEF_CLIENT -u $UBUNTU_14_04_CHEF_CLIENT_HUAWEI `basename $UBUNTU_14_04_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/ || exit $?
+
+    cd ..
+    find ubuntu_14_04_ppa_repo -name \*.deb -exec reprepro -Vb ubuntu_14_04_ppa_repo includedeb ppa {} \;
+    if [ "$?" != "0" ]; then
+        echo "failed to create ubuntu_12_04_ppa_repo"
+        exit 1
+    else
+        echo  "ubuntu_14_04_ppa_repo is created"
+    fi
 fi
 
 sudo cobbler reposync
@@ -342,144 +521,360 @@ fi
 
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
-CENTOS_SOURCE=`fastesturl $CENTOS_IMAGE_SOURCE_ASIA $CENTOS_IMAGE_SOURCE`
-download "$CENTOS_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
-sudo mkdir -p /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
-if [ $(mount | grep -c "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} ") -eq 0 ]; then
-    sudo mount -o loop /var/lib/cobbler/iso/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
-    if [[ "$?" != "0" ]]; then
-        echo "failed to mount image /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
-        exit 1
+if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
+    download -u $CENTOS_6_5_IMAGE_SOURCE_ASIA -u $CENTOS_6_5_IMAGE_SOURCE CentOS-6.5-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    sudo mkdir -p /mnt/CentOS-6.5-x86_64
+    if [ $(mount | grep -c "/mnt/CentOS-6.5-x86_64") -eq 0 ]; then
+        sudo mount -o loop /var/lib/cobbler/iso/CentOS-6.5-x86_64.iso /mnt/CentOS-6.5-x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to mount image /mnt/CentOS-6.5-x86_64"
+            exit 1
+        else
+            echo "/mnt/CentOS-6.5-x86_64 is mounted"
+        fi
     else
-        echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is mounted"
+        echo "/mnt/CentOS-6.5-x86_64 has already mounted"
     fi
-else
-    echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already mounted"
 fi
 
-UBUNTU_SOURCE=`fastesturl $UBUNTU_IMAGE_SOURCE_ASIA $UBUNTU_IMAGE_SOURCE`
-download "$UBUNTU_SOURCE" ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
-sudo mkdir -p /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
-if [ $(mount | grep -c "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} ") -eq 0 ]; then
-    sudo mount -o loop /var/lib/cobbler/iso/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
-    if [[ "$?" != "0" ]]; then
-        echo "failed to mount image /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
-        exit 1
+if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
+    download -u $CENTOS_6_6_IMAGE_SOURCE_ASIA -u $CENTOS_6_6_IMAGE_SOURCE CentOS-6.6-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    sudo mkdir -p /mnt/CentOS-6.6-x86_64
+    if [ $(mount | grep -c "/mnt/CentOS-6.6-x86_64") -eq 0 ]; then
+        sudo mount -o loop /var/lib/cobbler/iso/CentOS-6.6-x86_64.iso /mnt/CentOS-6.6-x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to mount image /mnt/CentOS-6.6-x86_64"
+            exit 1
+        else
+            echo "/mnt/CentOS-6.6-x86_64 is mounted"
+        fi
     else
-        echo "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is mounted"
+        echo "/mnt/CentOS-6.6-x86_64 has already mounted"
     fi
-else
-    echo "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already mounted"
+fi
+
+if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
+    download -u $CENTOS_7_0_IMAGE_SOURCE_ASIA -u $CENTOS_7_0_IMAGE_SOURCE CentOS-7.0-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    sudo mkdir -p /mnt/CentOS-7.0-x86_64
+    if [ $(mount | grep -c "/mnt/CentOS-7.0-x86_64") -eq 0 ]; then
+        sudo mount -o loop /var/lib/cobbler/iso/CentOS-7.0-x86_64.iso /mnt/CentOS-7.0-x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to mount image /mnt/CentOS-7.0-x86_64"
+            exit 1
+        else
+            echo "/mnt/CentOS-7.0-x86_64 is mounted"
+        fi
+    else
+        echo "/mnt/CentOS-7.0-x86_64 has already mounted"
+    fi
+fi
+
+
+if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
+    download -u $UBUNTU_12_04_IMAGE_SOURCE_ASIA -u $UBUNTU_12_04_IMAGE_SOURCE Ubuntu-12.04-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    sudo mkdir -p /mnt/Ubuntu-12.04-x86_64
+    if [ $(mount | grep -c "/mnt/Ubuntu-12.04-x86_64") -eq 0 ]; then
+        sudo mount -o loop /var/lib/cobbler/iso/Ubuntu-12.04-x86_64.iso /mnt/Ubuntu-12.04-x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to mount image /mnt/Ubuntu-12.04-x86_64"
+            exit 1
+        else
+            echo "/mnt/Ubuntu-12.04-x86_64 is mounted"
+        fi
+    else
+        echo "/mnt/Ubuntu-12.04-x86_64 has already mounted"
+    fi
+fi
+
+if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
+    download -u $UBUNTU_14_04_IMAGE_SOURCE_ASIA -u $UBUNTU_14_04_IMAGE_SOURCE Ubuntu-14.04-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    sudo mkdir -p /mnt/Ubuntu-14.04-x86_64
+    if [ $(mount | grep -c "/mnt/Ubuntu-14.04-x86_64") -eq 0 ]; then
+        sudo mount -o loop /var/lib/cobbler/iso/Ubuntu-14.04-x86_64.iso /mnt/Ubuntu-14.04-x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to mount image /mnt/Ubuntu-12.04-x86_64"
+            exit 1
+        else
+            echo "/mnt/Ubuntu-14.04-x86_64 is mounted"
+        fi
+    else
+        echo "/mnt/Ubuntu-14.04-x86_64 has already mounted"
+    fi
 fi
 
 # add distro
-found_centos_distro=0
-for distro in $(cobbler distro list); do
-    if [ "$distro" == "${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" ]; then
-        found_centos_distro=1
-    fi
-done
+if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
+    found_centos_6_5_distro=0
+    for distro in $(cobbler distro list); do
+        if [ "$distro" == "CentOS-6.5-x86_64" ]; then
+            found_centos_6_5_distro=1
+        fi
+    done
 
-if [ "$found_centos_distro" == "0" ]; then
-    sudo cobbler import --path=/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} --name=${CENTOS_IMAGE_NAME} --arch=${CENTOS_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
-    if [[ "$?" != "0" ]]; then
-        echo "failed to import /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
-        exit 1
+    if [ "$found_centos_6_5_distro" == "0" ]; then
+        sudo cobbler import --path=/mnt/CentOS-6.5-x86_64 --name=CentOS-6.5 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
+        if [[ "$?" != "0" ]]; then
+            echo "failed to import /mnt/CentOS-6.5-x_86_64"
+            exit 1
+        else
+            echo "/mnt/CentOS-6.5-x86_64 is imported" 
+        fi
     else
-        echo "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is imported" 
+        echo "distro CentOS-6.5-x86_64 has already existed"
+        sudo cobbler distro edit --name=CentOS-6.5-x86_64 --arch=x86_64 --breed=redhat
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit distro CentOS-6.5-x86_64"
+            exit 1
+        else
+            echo "distro CentOS-6.5-x86_64 is updated"
+        fi
     fi
-else
-    echo "distro ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already existed"
-    sudo cobbler distro edit --name=${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} --arch=${CENTOS_IMAGE_ARCH} --breed=redhat
-    if [[ "$?" != "0" ]]; then
-        echo "failed to edit distro ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
-        exit 1
+
+    centos_6_5_found_profile=0
+    for profile in $(cobbler profile list); do
+        if [ "$profile" == "CentOS-6.5-x86_64" ]; then
+            centos_6_5_found_profile=1
+        fi
+    done
+
+    if [ "$centos_6_5_found_profile" == "0" ]; then
+        sudo cobbler profile add --name="CentOS-6.5-x86_64" --repo=centos_6_5_ppa_repo --distro=CentOS-6.5-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.5-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add profile CentOS-6.5-x86_64"
+            exit 1
+        else
+            echo "profile CentOS-6.5-x86_64 is added"
+        fi
     else
-        echo "distro ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is updated"
+        echo "profile CentOS-6.5-x86_64 has already existed."
+        sudo cobbler profile edit --name=CentOS-6.5-x86_64 --repo=centos_6_5_ppa_repo --distro=CentOS-6.5-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.5-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit profile CentOS-6.5-x86_64"
+            exit 1
+        else
+            echo "profile CentOS-6.5-x86_64 is updated"
+        fi
     fi
 fi
 
-found_ubuntu_distro=0
-for distro in $(cobbler distro list); do
-    if [ "$distro" == "${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" ]; then
-        found_ubuntu_distro=1
-    fi
-done
+if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
+    found_centos_6_6_distro=0
+    for distro in $(cobbler distro list); do
+        if [ "$distro" == "CentOS-6.6-x86_64" ]; then
+            found_centos_6_6_distro=1
+        fi
+    done
 
-if [ "$found_ubuntu_distro" == "0" ]; then
-    sudo cobbler import --path=/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --name=${UBUNTU_IMAGE_NAME} --arch=${UBUNTU_IMAGE_ARCH} --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
-    if [[ "$?" != "0" ]]; then
-        echo "failed to import /mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
-        exit 1
+    if [ "$found_centos_6_6_distro" == "0" ]; then
+        sudo cobbler import --path=/mnt/CentOS-6.6-x86_64 --name=CentOS-6.6 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
+        if [[ "$?" != "0" ]]; then
+            echo "failed to import /mnt/CentOS-6.6-x_86_64"
+            exit 1
+        else
+            echo "/mnt/CentOS-6.6-x86_64 is imported" 
+        fi
     else
-        echo "/mnt/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is imported" 
+        echo "distro CentOS-6.6-x86_64 has already existed"
+        sudo cobbler distro edit --name=CentOS-6.6-x86_64 --arch=x86_64 --breed=redhat
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit distro CentOS-6.6-x86_64"
+            exit 1
+        else
+            echo "distro CentOS-6.6-x86_64 is updated"
+        fi
     fi
-else
-    echo "distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed"
-    sudo cobbler distro edit --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} --arch=${UBUNTU_IMAGE_ARCH} --breed=ubuntu
-    if [[ "$?" != "0" ]]; then
-        echo "failed to edit distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
-        exit 1
+
+    centos_6_6_found_profile=0
+    for profile in $(cobbler profile list); do
+        if [ "$profile" == "CentOS-6.6-x86_64" ]; then
+            centos_6_6_found_profile=1
+        fi
+    done
+
+    if [ "$centos_6_6_found_profile" == "0" ]; then
+        sudo cobbler profile add --name="CentOS-6.6-x86_64" --repo=centos_6_6_ppa_repo --distro=CentOS-6.6-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.6-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add profile CentOS-6.6-x86_64"
+            exit 1
+        else
+            echo "profile CentOS-6.6-x86_64 is added"
+        fi
     else
-        echo "distro ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is updated"
+        echo "profile CentOS-6.6-x86_64 has already existed."
+        sudo cobbler profile edit --name=CentOS-6.6-x86_64 --repo=centos_6_6_ppa_repo --distro=CentOS-6.6-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.6-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit profile CentOS-6.6-x86_64"
+            exit 1
+        else
+            echo "profile CentOS-6.6-x86_64 is updated"
+        fi
     fi
 fi
 
-# add profile
-centos_found_profile=0
-for profile in $(cobbler profile list); do
-    if [ "$profile" == "${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" ]; then
-        centos_found_profile=1
-    fi
-done
+if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
+    found_centos_7_0_distro=0
+    for distro in $(cobbler distro list); do
+        if [ "$distro" == "CentOS-7.0-x86_64" ]; then
+            found_centos_7_0_distro=1
+        fi
+    done
 
-if [ "$centos_found_profile" == "0" ]; then
-    sudo cobbler profile add --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
-    if [[ "$?" != "0" ]]; then
-        echo "failed to add profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
-        exit 1
+    if [ "$found_centos_7_0_distro" == "0" ]; then
+        sudo cobbler import --path=/mnt/CentOS-7.0-x86_64 --name=CentOS-7.0 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
+        if [[ "$?" != "0" ]]; then
+            echo "failed to import /mnt/CentOS-7.0-x_86_64"
+            exit 1
+        else
+            echo "/mnt/CentOS-7.0-x86_64 is imported" 
+        fi
     else
-        echo "profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is added"
+        echo "distro CentOS-7.0-x86_64 has already existed"
+        sudo cobbler distro edit --name=CentOS-7.0-x86_64 --arch=x86_64 --breed=redhat
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit distro CentOS-7.0-x86_64"
+            exit 1
+        else
+            echo "distro CentOS-7.0-x86_64 is updated"
+        fi
     fi
-else
-    echo "profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} has already existed."
-    sudo cobbler profile edit --name="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --repo=centos_ppa_repo --distro="${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.ks
-    if [[ "$?" != "0" ]]; then
-        echo "failed to edit profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}"
-        exit 1
+
+    centos_7_0_found_profile=0
+    for profile in $(cobbler profile list); do
+        if [ "$profile" == "CentOS-7.0-x86_64" ]; then
+            centos_7_0_found_profile=1
+        fi
+    done
+
+    if [ "$centos_7_0_found_profile" == "0" ]; then
+        sudo cobbler profile add --name="CentOS-7.0-x86_64" --repo=centos_7_0_ppa_repo --distro=CentOS-7.0-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-7.0-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add profile CentOS-7.0-x86_64"
+            exit 1
+        else
+            echo "profile CentOS-7.0-x86_64 is added"
+        fi
     else
-        echo "profile ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} is updated"
+        echo "profile CentOS-7.0-x86_64 has already existed."
+        sudo cobbler profile edit --name=CentOS-7.0-x86_64 --repo=centos_7_0_ppa_repo --distro=CentOS-7.0-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-7.0-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit profile CentOS-7.0-x86_64"
+            exit 1
+        else
+            echo "profile CentOS-7.0-x86_64 is updated"
+        fi
     fi
 fi
 
-ubuntu_found_profile=0
-for profile in $(cobbler profile list); do
-    if [ "$profile" == "${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" ]; then
-        ubuntu_found_profile=1
-    fi
-done
+if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
+    found_ubuntu_12_04_distro=0
+    for distro in $(cobbler distro list); do
+        if [ "$distro" == "Ubuntu-12.04-x86_64" ]; then
+            found_ubuntu_12_04_distro=1
+        fi
+    done
 
-if [ "$ubuntu_found_profile" == "0" ]; then
-    sudo cobbler profile add --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
-    if [[ "$?" != "0" ]]; then
-        echo "failed to add profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
-        exit 1
+    if [ "$found_ubuntu_12_04_distro" == "0" ]; then
+        sudo cobbler import --path=/mnt/Ubuntu-12.04-x86_64 --name=Ubuntu-12.04 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
+        if [[ "$?" != "0" ]]; then
+            echo "failed to import /mnt/Ubuntu-12.04-x86_64"
+            exit 1
+        else
+            echo "/mnt/Ubuntu-12.04-x86_64 is imported" 
+        fi
     else
-        echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is added"
+        echo "distro Ubuntu-12.04-x86_64 has already existed"
+        sudo cobbler distro edit --name=Ubuntu-12.04-x86_64 --arch=x86_64 --breed=ubuntu
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit distro Ubuntu-12.04-x86_64"
+            exit 1
+        else
+            echo "distro Ubuntu-12.04-x86_64 is updated"
+        fi
     fi
-else
-    echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} has already existed."
-    sudo cobbler profile edit --name="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --repo=ubuntu_ppa_repo --distro="${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
-    if [[ "$?" != "0" ]]; then
-        echo "failed to edit profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}"
-        exit 1
+
+    ubuntu_12_04_found_profile=0
+    for profile in $(cobbler profile list); do
+        if [ "$profile" == "Ubuntu-12.04-x86_64" ]; then
+            ubuntu_12_04_found_profile=1
+        fi
+    done
+
+    if [ "$ubuntu_12_04_found_profile" == "0" ]; then
+        sudo cobbler profile add --name=Ubuntu-12.04-x86_64 --repo=ubuntu_12_04_ppa_repo --distro=Ubuntu-12.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-12.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add profile Ubuntu-12.04-x86_64"
+            exit 1
+        else
+            echo "profile Ubuntu-12.04-x86_64 is added"
+        fi
     else
-        echo "profile ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH} is updated"
+        echo "profile Ubuntu-12.04-x86_64 has already existed."
+        sudo cobbler profile edit --name=Ubuntu-12.04-x86_64 --repo=ubuntu_12_04_ppa_repo --distro=Ubuntu-12.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-12.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit profile Ubuntu-12.04-x86_64"
+            exit 1
+        else
+            echo "profile Ubuntu-12.04-x86_64 is updated"
+        fi
     fi
+    sudo cobbler repo remove --name=Ubuntu-12.04-x86_64
 fi
 
-#clean ubuntu repo
-sudo cobbler repo remove --name=${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}
+if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
+    found_ubuntu_14_04_distro=0
+    for distro in $(cobbler distro list); do
+        if [ "$distro" == "Ubuntu-14.04-x86_64" ]; then
+            found_ubuntu_14_04_distro=1
+        fi
+    done
+
+    if [ "$found_ubuntu_14_04_distro" == "0" ]; then
+        sudo cobbler import --path=/mnt/Ubuntu-14.04-x86_64 --name=Ubuntu-14.04 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
+        if [[ "$?" != "0" ]]; then
+            echo "failed to import /mnt/Ubuntu-14.04-x86_64"
+            exit 1
+        else
+            echo "/mnt/Ubuntu-14.04-x86_64 is imported" 
+        fi
+    else
+        echo "distro Ubuntu-14.04-x86_64 has already existed"
+        sudo cobbler distro edit --name=Ubuntu-14.04-x86_64 --arch=x86_64 --breed=ubuntu
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit distro Ubuntu-14.04-x86_64"
+            exit 1
+        else
+            echo "distro Ubuntu-14.04-x86_64 is updated"
+        fi
+    fi
+
+    ubuntu_14_04_found_profile=0
+    for profile in $(cobbler profile list); do
+        if [ "$profile" == "Ubuntu-14.04-x86_64" ]; then
+            ubuntu_14_04_found_profile=1
+        fi
+    done
+
+    if [ "$ubuntu_14_04_found_profile" == "0" ]; then
+        sudo cobbler profile add --name=Ubuntu-14.04-x86_64 --repo=ubuntu_14_04_ppa_repo --distro=Ubuntu-14.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-14.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add profile Ubuntu-14.04-x86_64"
+            exit 1
+        else
+            echo "profile Ubuntu-14.04-x86_64 is added"
+        fi
+    else
+        echo "profile Ubuntu-14.04-x86_64 has already existed."
+        sudo cobbler profile edit --name=Ubuntu-14.04-x86_64 --repo=ubuntu_14_04_ppa_repo --distro=Ubuntu-14.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-14.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit profile Ubuntu-14.04-x86_64"
+            exit 1
+        else
+            echo "profile Ubuntu-14.04-x86_64 is updated"
+        fi
+    fi
+    sudo cobbler repo remove --name=Ubuntu-14.04-x86_64
+fi
+
 
 sudo cobbler reposync
 if [[ "$?" != "0" ]]; then

@@ -246,6 +246,67 @@ if [[ -z $LOCAL_REPO ]]; then
         esac
     done
 fi
+
+if [[ -z $SUPPORT_CENTOS_6_5 ]]; then
+    echo -e "\x1b[32mWould you like to support centos6.5?(y/n)\x1b[37m"
+    while true; do
+        read ans
+        case $ans in
+            y ) export SUPPORT_CENTOS_6_5="y"; break;;
+            n ) export SUPPORT_CENTOS_6_5="n"; break;;
+            * ) echo "I don't understand this";;
+        esac
+    done
+fi
+
+if [[ -z $SUPPORT_CENTOS_6_6 ]]; then
+    echo -e "\x1b[32mWould you like to support centos6.6?(y/n)\x1b[37m"
+    while true; do
+        read ans
+        case $ans in
+            y ) export SUPPORT_CENTOS_6_6="y"; break;;
+            n ) export SUPPORT_CENTOS_6_6="n"; break;;
+            * ) echo "I don't understand this";;
+        esac
+    done
+fi
+
+if [[ -z $SUPPORT_CENTOS_7_0 ]]; then
+    echo -e "\x1b[32mWould you like to support centos7.0?(y/n)\x1b[37m"
+    while true; do
+        read ans
+        case $ans in
+            y ) export SUPPORT_CENTOS_7_0="y"; break;;
+            n ) export SUPPORT_CENTOS_7_0="n"; break;;
+            * ) echo "I don't understand this";;
+        esac
+    done
+fi
+
+if [[ -z $SUPPORT_UBUNTU_12_04 ]]; then
+    echo -e "\x1b[32mWould you like to support ubuntu12.04?(y/n)\x1b[37m"
+    while true; do
+        read ans
+        case $ans in
+            y ) export SUPPORT_UBUNTU_12_04="y"; break;;
+            n ) export SUPPORT_UBUNTU_12_04="n"; break;;
+            * ) echo "I don't understand this";;
+        esac
+    done
+fi
+
+if [[ -z $SUPPORT_UBUNTU_14_04 ]]; then
+    echo -e "\x1b[32mWould you like to support ubuntu14.04?(y/n)\x1b[37m"
+    while true; do
+        read ans
+        case $ans in
+            y ) export SUPPORT_UBUNTU_14_04="y"; break;;
+            n ) export SUPPORT_UBUNTU_14_04="n"; break;;
+            * ) echo "I don't understand this";;
+        esac
+    done
+fi
+
 loadvars NAMESERVER_DOMAINS "ods.com"
 loadvars NAMESERVER_REVERSE_ZONES "unused"
 loadvars WEB_SOURCE 'http://git.openstack.org/stackforge/compass-web'

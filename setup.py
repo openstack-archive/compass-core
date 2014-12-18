@@ -66,6 +66,14 @@ INSTALL_REQUIRES_DIR = os.path.join(
 with open(INSTALL_REQUIRES_DIR, 'r') as requires_file:
     REQUIREMENTS = [line.strip() for line in requires_file if line != '\n']
 
+DATA_FILES_DIR = os.path.join(
+    os.path.dirname(__file__), 'conf')
+DATA_FILES = []
+for parent_dir, sub_dirs, files in os.walk(DATA_FILES_DIR):
+    if files == []:
+        pass
+    for file in files:
+        DATA_FILES.append((parent_dir, [os.path.join(parent_dir, file)]))
 
 setup(
     name='compass',
@@ -94,6 +102,8 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
+    # data
+    data_files=DATA_FILES,
     # test,
     tests_require=['tox'],
     cmdclass={'test': Tox},

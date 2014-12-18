@@ -9,14 +9,18 @@ fastesturl()
     while [ $1 ]; do
         url=$1
         result=($(curl --max-time 20 -o /dev/null --header "Range: bytes=0-20000" -s -w "%{http_code} %{time_total}" $url))
-        code=${result[0]}
-        time=${result[1]}
-        if [[ ${good_code[*]} =~ $code ]]; then
-            if [ $(echo "$shortest > $time" | bc) -eq 1 ]; then
-                shortest=$time
-                fastest_url=$url
+	if [[ "$?" == "0" ]]; then
+	    code=${result[0]}
+            time=${result[1]}
+            if [[ ${good_code[*]} =~ $code ]]; then
+                if [ $(echo "$shortest > $time" | bc) -eq 1 ]; then
+                    shortest=$time
+                    fastest_url=$url
+                fi
             fi
-        fi
+	else
+	    echo "ignore failed url $url" >&2
+	fi
         shift
     done
     if [[ -z $fastest_url ]]; then
@@ -131,7 +135,7 @@ download()
 {
     #download params: <download url> [<package name>] [<action after package downloaded>]
     force=0
-    url=""
+    urls=()
     package=""
     options=()
     while [ $# -gt 0 ]; do
@@ -141,7 +145,7 @@ download()
 		shift 1
 		;;
 	    -u | --url):
-	        url=$2
+	        urls=(${urls[@]} $2)
 		shift 2
 		;;
 	    -p | --package):
@@ -159,23 +163,33 @@ download()
 	esac
     done
     set ${options[@]}
-    if [ -z "$url" ]; then
-        url=$1
+    if [ ${#urls[@]} -eq 0 ]; then
+        urls+=($1)
 	shift 1
     fi
     if [ -z "$package" ]; then
+	url=${urls[0]}
         package=${1:-$(basename $url)}
 	shift 1
     fi
     echo "download options: $@"
     action=${1:-""}
     downloaded=0
-    echo "download $package from $url and run $action"
     if [[ "$force" == "0" || "$force" == "false" ]]; then
         if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
             echo "$package already exists"
 	    downloaded=1
         fi
+    fi
+    if [ ${#urls[@]} -eq 1 ]; then
+	url=${urls[0]}
+    else
+        echo "download $package from fastest urls ${url[@]}"
+        url=`fastesturl ${urls[@]}`
+	if [[ "$?" != "0" ]]; then
+	    echo "failed to get fastest url from ${urls[@]}"
+	    exit 1
+	fi
     fi
     if [[ "$url" =~ (http|https|ftp):// ]]; then
         if [[ "$downloaded" == "0" ]]; then

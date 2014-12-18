@@ -15,7 +15,13 @@ export NIC=installation
 
 # default local repo config is "n"
 export LOCAL_REPO=${LOCAL_REPO:-"y"}
- 
+
+export SUPPORT_CENTOS_6_5=${SUPPORT_CENTOS_6_5:-"y"}
+export SUPPORT_CENTOS_6_6=${SUPPORT_CENTOS_6_6:-"n"}
+export SUPPORT_CENTOS_7_0=${SUPPORT_CENTOS_7_0:-"n"}
+export SUPPORT_UBUNTU_12_04=${SUPPORT_UBUNTU_12_04:-"y"}
+export SUPPORT_UBUNTU_14_04=${SUPPORT_UBUNTU_14_04:-"n"}
+
 # DHCP config
 export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 export NETMASK=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')

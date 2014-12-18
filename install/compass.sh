@@ -38,6 +38,26 @@ sudo ln -s -f /opt/compass/bin/compass_wsgi.py /var/www/compass/compass.wsgi
 sudo cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/cobbler/* /opt/compass/bin/
 
+if [[ $SUPPORT_CENTOS_6_5 != "y" ]]; then
+    sudo rm -f /etc/compass/os/centos6.5.conf
+fi
+
+if [[ $SUPPORT_CENTOS_6_6 != "y" ]]; then
+    sudo rm -f /etc/compass/os/centos6.6.conf
+fi
+
+if [[ $SUPPORT_CENTOS_7_0 != "y" ]]; then
+    sudo rm -f /etc/compass/os/centos7.0.conf
+fi
+
+if [[ $SUPPORT_UBUNTU_12_04 != "y" ]]; then
+    sudo rm -f /etc/compass/os/ubuntu12.04.conf
+fi
+
+if [[ $SUPPORT_UBUNTU_14_04 != "y" ]]; then
+    sudo rm -f /etc/compass/os/ubuntu14.04.conf
+fi
+
 # add apache user to the group of virtualenv user
 sudo usermod -a -G `groups $USER|awk '{print$3}'` apache
 
@@ -94,11 +114,13 @@ sudo rm -rf /var/lib/redis/dump.rdb
 sudo killall -9 redis-server
 sudo rm -rf /var/run/redis/redis.pid
 sudo service redis restart
+sleep 10
 echo "Checking if redis is running"
 sudo service redis status
 if [[ "$?" == "0" ]]; then
     echo "redis is running"
 else
+    ps -ef | grep redis
     echo "redis is not running"
     exit 1
 fi

@@ -121,6 +121,9 @@ TMPL_DIR = lazypy.delay(
 MACHINE_LIST_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'machine_list')
 )
+PROGRESS_CALCULATOR_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'progress_calculator')
+)
 PROXY_URL_PREFIX = 'http://10.145.81.205:5000'
 
 if (

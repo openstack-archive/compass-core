@@ -27,9 +27,11 @@ import os.path
 CONFIG_DIR = '/etc/compass'
 SQLALCHEMY_DATABASE_URI = 'sqlite://'
 SQLALCHEMY_DATABASE_POOL_TYPE = 'static'
+COBBLER_INSTALLATION_LOGDIR = '/var/log/cobbler/anamon'
+CHEF_INSTALLATION_LOGDIR = '/var/log/chef'
 INSTALLATION_LOGDIR = {
-    'CobblerInstaller': '/var/log/cobbler/anamon',
-    'ChefInstaller': '/var/log/chef'
+    'CobblerInstaller': COBBLER_INSTALLATION_LOGDIR,
+    'ChefInstaller': CHEF_INSTALLATION_LOGDIR
 }
 CLUSTERHOST_INATALLATION_LOGDIR_NAME = 'name'
 HOST_INSTALLATION_LOGDIR_NAME = 'name'
@@ -118,6 +120,9 @@ TMPL_DIR = lazypy.delay(
 )
 MACHINE_LIST_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'machine_list')
+)
+PROGRESS_CALCULATOR_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'progress_calculator')
 )
 PROXY_URL_PREFIX = 'http://10.145.81.205:5000'
 

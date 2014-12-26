@@ -45,77 +45,37 @@ pip install tox==1.6.1
 #Install setuptools twice so that it is really upgraded
 pip install -U setuptools
 pip install -U setuptools
+pip install -U virtualenvwrapper
 yum install -y libxml2-devel libxslt-devel python-devel sshpass
 if [[ ! -e /tmp/tempest ]]; then
     git clone http://git.openstack.org/openstack/tempest /tmp/tempest
     cd /tmp/tempest
-    git checkout grizzly-eol
 else
     cd /tmp/tempest
     git remote set-url origin http://git.openstack.org/openstack/tempest
     git remote update
     git reset --hard
     git clean -x -f -d -q
-    git checkout grizzly-eol
+    git checkout remotes/origin/master
 fi
+source `which virtualenvwrapper.sh`
+set +e
+if ! lsvirtualenv |grep tempest>/dev/null; then
+    mkvirtualenv tempest
+    workon tempest
+else
+    workon tempest
+fi
+set -e
 cd /tmp/tempest
 #Install Tempest including dependencies
 pip install -e .
-if [[ ! -e /etc/tempest ]]; then
-    mkdir /etc/tempest
-fi
-#Initialize cloud environment for test and Tempest config file
-cp etc/tempest.conf.sample /etc/tempest/tempest.conf
 nova_api_host=$(knife search node 'roles:os-compute-api' | grep 'IP:' | awk '{print $2}' | head -1)
 sshpass -p 'root' scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r root@$nova_api_host:/root/openrc /root/.
 source /root/openrc
-demo_tenant_id=`keystone tenant-create --name demo |grep " id " |awk '{print $4}'`
-alt_demo_tenant_id=`keystone tenant-create --name alt_demo |grep " id " |awk '{print $4}'`
-keystone user-create --name demo --pass secret --tenant $demo_tenant_id
-keystone user-create --name alt_demo --pass secret --tenant $alt_demo_tenant_id
-image_id=`glance image-list |grep 'cirros'|awk '{print$2}'`
-private_net_id=`quantum net-create --tenant_id $demo_tenant_id private |grep " id " |awk '{print$4}'`
-private_subnet_id=`quantum subnet-create --tenant_id $demo_tenant_id --ip_version 4 --gateway 10.10.0.1  $private_net_id 10.10.0.0/24|grep " id "|awk '{print$4}'`
-router_id=`quantum router-create --tenant_id $demo_tenant_id router1|grep " id " |awk '{print$4}'`
-public_net_id=`quantum net-create public -- --router:external=True |grep " id " |awk '{print$4}'`
-quantum subnet-create --ip_version 4 $public_net_id 172.24.4.0/24 -- --enable_dhcp=False
-quantum router-gateway-set $router_id $public_net_id
-quantum router-interface-add router1 $private_subnet_id
-iniset /etc/tempest/tempest.conf identity uri $OS_AUTH_URL
-iniset /etc/tempest/tempest.conf identity admin_username $OS_USERNAME
-iniset /etc/tempest/tempest.conf identity admin_password $OS_PASSWORD
-iniset /etc/tempest/tempest.conf compute allow_tenant_isolation false
-iniset /etc/tempest/tempest.conf compute image_ref $image_id
-iniset /etc/tempest/tempest.conf compute image_ref_alt $image_id
-iniset /etc/tempest/tempest.conf compute image_ssh_user cirros
-iniset /etc/tempest/tempest.conf compute image_alt_ssh_user cirros
-iniset /etc/tempest/tempest.conf compute resize_available false
-iniset /etc/tempest/tempest.conf compute change_password_available false
-iniset /etc/tempest/tempest.conf compute build_interval 15
-iniset /etc/tempest/tempest.conf whitebox whitebox_enabled false
-iniset /etc/tempest/tempest.conf network public_network_id $public_net_id
-iniset /etc/tempest/tempest.conf network public_router_id ''
-iniset /etc/tempest/tempest.conf network quantum_available true
-iniset /etc/tempest/tempest.conf network tenant_network_cidr '172.16.2.128/25'
-# wait for nova-compute to report health to nova-conductor
+# wait for nova-compute neutron-agent and cinder-volume to report health
 # In some scenarios, nova-compute is up before conductor and has to retry
 # to register to conductor and there is some wait time between retries.
-timeout 180s sh -c "while ! nova service-list |grep nova-compute; do sleep 3; done"
-#Start a smoke test against cloud without object storage and aws related tests 
-#as they are unavailable for now
-if [[ $tempest_full == true ]]; then
-    nosetests --logging-format '%(asctime)-15s %(message)s' --with-xunit -sv --attr=type=smoke \
-                             --xunit-file=nosetests-smoke.xml tempest -e object_storage -e boto
-    if [[ $tempest_network == true ]]; then
-    nosetests tempest.tests.network.test_network_basic_ops
-    fi
-else
-    nosetests --logging-format '%(asctime)-15s %(message)s' --with-xunit --xunit-file=nosetests-smoke.xml \
--sv --attr=type=smoke --tests="\
-tempest.tests.compute.servers.test_server_addresses:ServerAddressesTest.test_list_server_addresses,\
-tempest.tests.compute.servers.test_create_server:ServersTestAutoDisk.test_verify_server_details,\
-tempest.tests.volume.test_volumes_get:VolumesGetTest.test_volume_create_get_delete"
-    if [[ $tempest_network == true ]]; then
-    nosetests tempest.tests.network.test_network_basic_ops
-    fi
-fi
+timeout 180s sh -c "while ! nova service-list --binary nova-compute 2>/dev/null | grep 'enabled.*\ up\ '; do sleep 3; done"
+timeout 180s sh -c '''while ! neutron agent-list -f csv -c alive -c agent_type -c host | grep "\":-).*Open vSwitch agent.*\"" ; do sleep 3; done'''
+timeout 180s sh -c "cinder service-list --binary cinder-volume 2>/dev/null | grep 'enabled.*\ up\ '"

@@ -185,12 +185,13 @@ if [[ $rc != 0 ]]; then
     echo "deployment failed"
     exit 1
 fi
-#if [[ $tempest == true ]]; then
-#    ./tempest_run.sh
-#    if [[ $? != 0 ]]; then
+if [[ $tempest == true ]] && [[ $ADAPTER_NAME != os_only ]]; then
+    ./tempest_run.sh
+    if [[ $? != 0 ]]; then
+# keep machines for debugging
 #        tear_down_machines
-#        echo "tempest failed"
-#        exit 1
-#    fi
-#    tear_down_machines 
-#fi
+        echo "tempest failed"
+        exit 1
+    fi
+fi
+tear_down_machines

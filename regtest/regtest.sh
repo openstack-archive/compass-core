@@ -185,12 +185,12 @@ if [[ $rc != 0 ]]; then
     echo "deployment failed"
     exit 1
 fi
-#if [[ $tempest == true ]]; then
-#    ./tempest_run.sh
-#    if [[ $? != 0 ]]; then
-#        tear_down_machines
-#        echo "tempest failed"
-#        exit 1
-#    fi
-#    tear_down_machines 
-#fi
+if [[ $tempest == true ]]; then
+    ./tempest_run.sh
+    if [[ $? != 0 ]]; then
+        tear_down_machines
+        echo "tempest failed"
+        exit 1
+    fi
+    tear_down_machines 
+fi

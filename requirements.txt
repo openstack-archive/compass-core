@@ -18,7 +18,7 @@ MySQL-python
 netaddr
 paramiko==1.7.5
 PyChef
-python-daemon
+python-daemon==1.6.1
 SQLAlchemy>=0.9.0
 simplejson
 requests

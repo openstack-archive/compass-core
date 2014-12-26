@@ -8,7 +8,7 @@ fastesturl()
     good_code=[200,206]
     while [ $1 ]; do
         url=$1
-        result=($(curl --max-time 20 -o /dev/null --header "Range: bytes=0-20000" -s -w "%{http_code} %{time_total}" $url))
+        result=($(curl -L --max-time 20 -o /dev/null --header "Range: bytes=0-20000" -s -w "%{http_code} %{time_total}" $url))
         code=${result[0]}
         time=${result[1]}
         if [[ ${good_code[*]} =~ $code ]]; then

@@ -58,10 +58,10 @@
 ## Set Openstack neutron config
 #set tenant_network_type = $getDictValue('neutron_config/openvswitch/tenant_network_type', 'gre')
 #set enable_tunneling = True
-#set bridge_mappings = 'physnet1:br-eth1'
+#set bridge_mappings = ''
 #if $tenant_network_type != 'gre'
     #set enable_tunneling = False
-    #set bridge_mappings = ''
+    #set bridge_mappings = 'physnet1:br-eth1'
 #end if
 
 ## Utility functions definition

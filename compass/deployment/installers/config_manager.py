@@ -86,6 +86,16 @@ class BaseConfigManager(object):
     def get_cluster_os_config(self):
         return deepcopy(self.__get_cluster_item(const.OS_CONFIG, {}))
 
+    def get_server_credentials(self):
+        cluster_os_config = self.get_cluster_os_config()
+        if not cluster_os_config:
+            logging.info("cluster os_config is None!")
+            return ()
+
+        username = cluster_os_config[const.SERVER_CREDS][const.USERNAME]
+        password = cluster_os_config[const.SERVER_CREDS][const.PASSWORD]
+        return (username, password)
+
     def get_cluster_package_config(self):
         return deepcopy(self.__get_cluster_item(const.PK_CONFIG, {}))
 
@@ -308,6 +318,9 @@ class BaseConfigManager(object):
 
     def get_dist_system_name(self):
         return self.__get_adapter_item(const.NAME, None)
+
+    def get_adapter_health_check_cmd(self):
+        return self.__get_adapter_item(const.HEALTH_CHECK_CMD)
 
     def get_os_installer_settings(self):
         installer_info = self.__get_adapter_item(const.OS_INSTALLER, {})

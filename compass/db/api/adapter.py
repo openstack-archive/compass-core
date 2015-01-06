@@ -98,7 +98,8 @@ def add_adapters_internal(session, exception_when_existing=True):
             distributed_system=distributed_system,
             os_installer=os_installer,
             package_installer=package_installer,
-            deployable=config.get('DEPLOYABLE', False)
+            deployable=config.get('DEPLOYABLE', False),
+            health_check_cmd=config.get('HEALTH_CHECK_COMMAND', None)
         )
         supported_os_patterns = [
             re.compile(supported_os_pattern)

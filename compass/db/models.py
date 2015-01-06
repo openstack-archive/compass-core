@@ -2466,6 +2466,8 @@ class Adapter(BASE, HelperMixin):
         Boolean, default=False
     )
 
+    health_check_cmd = Column(String(80))
+
     supported_oses = relationship(
         AdapterOS,
         passive_deletes=True, passive_updates=True,
@@ -2732,3 +2734,39 @@ class Subnet(BASE, TimestampMixin, HelperMixin):
         if not self.name:
             dict_info['name'] = self.subnet
         return dict_info
+
+
+HEALTH_REPORT_STATES = ('verifying', 'finished', 'error')
+
+
+class HealthCheckReport(BASE, HelperMixin):
+    """Health check report table."""
+    __tablename__ = 'health_check_report'
+
+    cluster_id = Column(
+        Integer,
+        ForeignKey('cluster.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True
+    )
+    name = Column(String(80), nullable=False, primary_key=True)
+    report = Column(JSONEncoded, default={})
+    state = Column(
+        Enum(*HEALTH_REPORT_STATES, name='report_state'),
+        ColumnDefault('verifying'),
+        nullable=False
+    )
+    error_message = Column(Text, default='')
+
+    def __init__(self, cluster_id, name, **kwargs):
+        self.cluster_id = cluster_id
+        self.name = name
+        if 'state' in kwargs and kwargs['state'] not in HEALTH_REPORT_STATES:
+            err_msg = 'State value %s is not accepted.' % kwargs['state']
+            raise exception.InvalidParameter(err_msg)
+
+        super(HealthCheckReport, self).__init__(**kwargs)
+
+    def __str__(self):
+        return 'HealthCheckReport[cluster_id: %s, name: %s]' % (
+            self.cluster_id, self.name
+        )

@@ -25,6 +25,7 @@ os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
 from compass.actions import deploy
+from compass.actions import util
 from compass.utils import setting_wrapper as setting
 reload(setting)
 
@@ -101,7 +102,7 @@ class TestDeployAction(unittest2.TestCase):
                 "package_config": {}
             }
         }
-        output = deploy.ActionHelper.get_adapter_info(1, 1, None)
+        output = util.ActionHelper.get_adapter_info(1, 1, None)
         self.maxDiff = None
         self.assertDictEqual(expected_output, output)
 
@@ -165,6 +166,6 @@ class TestDeployAction(unittest2.TestCase):
                 "deployed_package_config": {}
             }
         }
-        output = deploy.ActionHelper.get_hosts_info(1, [1], None)
+        output = util.ActionHelper.get_hosts_info(1, [1], None)
         self.maxDiff = None
         self.assertDictEqual(expected_output, output)

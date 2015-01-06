@@ -258,3 +258,67 @@ def get_switch_machines_from_file(filename):
                 })
 
     return (switches, switch_machines)
+
+
+def execute_cli_by_ssh(cmd, host, username, password=None,
+                       keyfile='/root/.ssh/id_rsa', nowait=False):
+    """SSH to execute script on remote machine
+    :param host: ip of the remote machine
+    :param username: username to access the remote machine
+    :param password: password to access the remote machine
+    :param cmd: command to execute
+    """
+    if not cmd:
+        logging.error("No command found!")
+        raise Exception('No command found!')
+    """
+    if nowait:
+        cmd = "nohup %s &" % cmd
+    """
+    stdin = None
+    stdout = None
+    stderr = None
+    try:
+        import paramiko
+        from paramiko import ssh_exception
+
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        if password:
+            client.connect(host, username=username, password=password)
+        else:
+            client.load_system_host_keys()
+            client.connect(
+                host, username=username,
+                key_filename=keyfile, look_for_keys=True
+            )
+        stdin, stdout, stderr = client.exec_command(cmd)
+        result = stdout.readlines()
+        return result
+
+    except ImportError:
+        err_msg = "Cannot find Paramiko package!"
+        logging.error(err_msg)
+        raise ImportError(err_msg)
+
+    except (ssh_exception.BadHostKeyException,
+            ssh_exception.AuthenticationException,
+            ssh_exception.SSHException):
+
+        err_msg = 'SSH connection error or command execution failed!'
+        logging.error(err_msg)
+        raise Exception(err_msg)
+
+    except Exception as exc:
+        logging.error(
+            'Failed to execute command "%s", exception is %s' % (cmd, exc)
+        )
+        raise Exception(exc)
+
+    finally:
+        for resource in [stdin, stdout, stderr]:
+            if resource:
+                resource.close()
+
+        client.close()

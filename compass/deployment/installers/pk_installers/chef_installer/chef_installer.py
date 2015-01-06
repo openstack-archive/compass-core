@@ -627,3 +627,31 @@ class ChefInstaller(PKInstaller):
             settings = self.config_manager.get_pk_installer_settings()
 
         return settings.setdefault(self.CHEFSERVER_DNS, None)
+
+    def check_cluster_health(self, callback_url):
+        import chef
+
+        nodes = chef.Search('node', 'tags:rally_node', api=self.chef_api)
+        if not nodes:
+            err_msg = "Cannot find Rally node!"
+            logging.info(err_msg)
+            raise Exception(err_msg)
+
+        rally_node_name = None
+        for node in nodes:
+            rally_node_name = node.object.name
+            break
+
+        rally_node = chef.Node(rally_node_name, api=self.chef_api)
+        rally_node_ip = rally_node['ipaddress']
+        cluster_name = self.config_manager.get_clustername()
+
+        command = self.config_manager.get_adapter_health_check_cmd()
+        option = '--url %s --clustername %s' % (callback_url, cluster_name)
+        command = ' '.join((command, option))
+
+        username, pwd = self.config_manager.get_server_credentials()
+        util.execute_cli_by_ssh(
+            command, rally_node_ip, username=username,
+            password=pwd, nowait=True
+        )

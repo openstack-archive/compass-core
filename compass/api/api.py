@@ -35,6 +35,7 @@ from compass.api import utils
 from compass.db.api import adapter_holder as adapter_api
 from compass.db.api import cluster as cluster_api
 from compass.db.api import database
+from compass.db.api import health_check_report as health_report_api
 from compass.db.api import host as host_api
 from compass.db.api import machine as machine_api
 from compass.db.api import metadata_holder as metadata_api
@@ -1506,6 +1507,8 @@ def delete_cluster_config(cluster_id):
 def take_cluster_action(cluster_id):
     """take cluster action."""
     data = _get_request_data()
+    url_root = request.url_root
+
     update_cluster_hosts_func = _wrap_response(
         functools.partial(
             cluster_api.update_cluster_hosts, current_user, cluster_id
@@ -1524,13 +1527,22 @@ def take_cluster_action(cluster_id):
         ),
         202
     )
+    check_cluster_health_func = _wrap_response(
+        functools.partial(
+            health_report_api.start_check_cluster_health,
+            current_user, cluster_id,
+            '%s/clusters/%s/healthreports' % (url_root, cluster_id)
+        ),
+        202
+    )
     return _group_data_action(
         data,
         add_hosts=update_cluster_hosts_func,
         set_hosts=update_cluster_hosts_func,
         remove_hosts=update_cluster_hosts_func,
         review=review_cluster_func,
-        deploy=deploy_cluster_func
+        deploy=deploy_cluster_func,
+        check_health=check_cluster_health_func
     )
 
 
@@ -1546,6 +1558,73 @@ def get_cluster_state(cluster_id):
         cluster_api.get_cluster_state(
             current_user, cluster_id, **data
         )
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/healthreports", methods=['POST'])
+def create_health_reports(cluster_id):
+    """Create a health check report."""
+    data = _get_request_data()
+    output = []
+    if 'report_list' in data:
+        for report in data['report_list']:
+            try:
+                output.append(
+                    health_report_api.add_report_record(cluster_id, **report)
+                )
+            except Exception:
+                continue
+
+    else:
+        output = health_report_api.add_report_record(cluster_id, **data)
+
+    return utils.make_json_response(
+        200,
+        output
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/healthreports", methods=['PUT'])
+def bulk_update_reports(cluster_id):
+    """Bulk update reports."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        health_report_api.update_multi_reports(cluster_id, **data)
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/healthreports", methods=['GET'])
+@log_user_action
+@login_required
+@update_user_token
+def list_health_reports(cluster_id):
+    return utils.make_json_response(
+        200,
+        health_report_api.list_health_reports(current_user, cluster_id)
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/healthreports/<name>", methods=['PUT'])
+def update_health_report(cluster_id, name):
+    data = _get_request_data()
+    if 'error_message' not in data:
+        data['error_message'] = ""
+
+    return utils.make_json_response(
+        200,
+        health_report_api.update_report(cluster_id, name, **data)
+    )
+
+
+@app.route("/clusters/<int:cluster_id>/healthreports/<name>", methods=['GET'])
+@log_user_action
+@login_required
+@update_user_token
+def get_health_report(cluster_id, name):
+    return utils.make_json_response(
+        200,
+        health_report_api.get_health_report(current_user, cluster_id, name)
     )
 
 

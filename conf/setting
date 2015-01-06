@@ -22,6 +22,7 @@ POLLSWITCH_INTERVAL=60
 SWITCHES = [
 ]
 TMPL_DIR = '/etc/compass/templates'
+COMPASS_IP = '$ipaddr'
 COMPASS_SUPPORTED_PROXY = 'http://$ipaddr:3128'
 COMPASS_SUPPORTED_DEFAULT_NOPROXY = ['127.0.0.1','$ipaddr','$hostname']
 COMPASS_SUPPORTED_NTP_SERVER = '$ipaddr'

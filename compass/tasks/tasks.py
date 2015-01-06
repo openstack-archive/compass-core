@@ -80,6 +80,19 @@ def pollswitch(
         logging.exception(error)
 
 
+@celery.task(name='compass.tasks.health_check')
+def health_check(cluster_id, send_report_url, useremail):
+    """Verify the deployed cluster functionally works.
+
+       :param cluster_id: ID of the cluster
+       :param send_report_url: The URL which reports should send back
+    """
+    try:
+        deploy.health_check(cluster_id, send_report_url, useremail)
+    except Exception as error:
+        logging.exception(error)
+
+
 @celery.task(name='compass.tasks.deploy_cluster')
 def deploy_cluster(deployer_email, cluster_id, clusterhost_ids):
     """Deploy the given cluster.

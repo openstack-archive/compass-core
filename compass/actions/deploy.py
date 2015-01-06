@@ -17,6 +17,7 @@
 import logging
 
 from compass.actions import util
+from compass.db.api import health_check_report as health_check_db
 from compass.db.api import user as user_db
 from compass.deployment.deploy_manager import DeployManager
 from compass.deployment.utils import constants as const
@@ -46,7 +47,7 @@ def deploy(cluster_id, hosts_id_list, username=None):
             cluster_id, hosts_id_list, user)
 
         deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
-        #deploy_manager.prepare_for_deploy()
+        # deploy_manager.prepare_for_deploy()
         logging.debug('Created deploy manager with %s %s %s'
                       % (adapter_info, cluster_info, hosts_info))
 
@@ -80,7 +81,35 @@ def redeploy(cluster_id, hosts_id_list, username=None):
         util.ActionHelper.update_state(cluster_id, hosts_id_list, user)
 
 
-ActionHelper = util.ActionHelper
+def health_check(cluster_id, report_uri, username):
+    with util.lock('cluster_health_check') as lock:
+        if not lock:
+            raise Exception('failed to acquire lock to check health')
+
+        user = user_db.get_user_object(username)
+        cluster_info = util.ActionHelper.get_cluster_info(cluster_id, user)
+        adapter_id = cluster_info[const.ADAPTER_ID]
+
+        adapter_info = util.ActionHelper.get_adapter_info(
+            adapter_id, cluster_id, user
+        )
+
+        deploy_manager = DeployManager(adapter_info, cluster_info, None)
+        try:
+            deploy_manager.check_cluster_health(report_uri)
+        except Exception as exc:
+            logging.error("health_check exception: ============= %s" % exc)
+            data = {'state': 'error', 'error_message': str(exc), 'report': {}}
+            reports = health_check_db.list_health_reports(user, cluster_id)
+            if not reports:
+                # Exception before executing command remotely for health check.
+                # No reports names sending back yet. Create a report
+                name = 'pre_remote_health_check'
+                health_check_db.add_report_record(
+                    cluster_id, name=name, **data
+                )
+
+            health_check_db.update_multi_reports(cluster_id, **data)
 
 
 class ServerPowerMgmt(object):

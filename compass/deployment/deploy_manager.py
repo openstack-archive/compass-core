@@ -69,6 +69,10 @@ class DeployManager(object):
 
         return deployed_config
 
+    def check_cluster_health(self, callback_url):
+        logging.info("DeployManager check_cluster_health...........")
+        self.pk_installer.check_cluster_health(callback_url)
+
     def clean_progress(self):
         """Clean previous installation log and progress."""
         self.clean_os_installtion_progress()

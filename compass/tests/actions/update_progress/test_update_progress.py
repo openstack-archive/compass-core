@@ -60,7 +60,7 @@ from compass.log_analyzor import progress_calculator
 from compass.utils import flags
 from compass.utils import logsetting
 
-OS_NAME = 'CentOS-6.5-x86_64'
+OS_NAME = 'CentOS-6.6-x86_64'
 SWITCH_IP = '172.29.8.40'
 MACHINE_MAC = '00:0c:29:bf:eb:1d'
 SUBNET = '10.145.88.0/23'

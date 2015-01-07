@@ -236,10 +236,13 @@ else
 fi
 
 # download cobbler related packages
-CENTOS_PPA_SOURCE=`fastesturl "http://mirrors.hustunique.com" "http://mirror.centos.org"`
+# TODO: temporarily host the deprecated packages in huawei lab, will switch later.
+# CENTOS_PPA_SOURCE=`fastesturl "http://mirrors.hustunique.com" "http://mirror.centos.org"`
+CENTOS_PPA_SOURCE="http://huawei-repo.uubright.com/repos"
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
+openssh-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 iproute-2.6.32-31.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
@@ -270,8 +273,10 @@ download $UBUNTU_CHEF_CLIENT_SOURCE `basename $UBUNTU_CHEF_CLIENT_SOURCE` || exi
 CHEF_SRV_SOURCE=`fastesturl "$CHEF_SRV" "$CHEF_SRV_HUAWEI"`
 download $CHEF_SRV_SOURCE chef-server || exit $?
 
+# TODO: temporarily host the deprecated packages in huawei lab, will switch later.
 # download os images
-CENTOS_ISO_SOURCE=`fastesturl $CENTOS_IMAGE_SOURCE $CENTOS_IMAGE_SOURCE_ASIA`
+#CENTOS_ISO_SOURCE=`fastesturl $CENTOS_IMAGE_SOURCE $CENTOS_IMAGE_SOURCE_ASIA`
+CENTOS_ISO_SOURCE="http://huawei-repo.uubright.com/repos/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/isos/${CENTOS_IMAGE_ARCH}/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}-minimal.iso"
 download $CENTOS_ISO_SOURCE ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
 
 UBUNTU_ISO_SOURCE=`fastesturl $UBUNTU_IMAGE_SOURCE $UBUNTU_IMAGE_SOURCE_ASIA`

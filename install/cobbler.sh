@@ -239,7 +239,9 @@ fi
 
 # download packages
 cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
-PPA_REPO_URL=`fastesturl http://mirrors.hustunique.com http://mirror.centos.org`
+# TODO: fix later
+# PPA_REPO_URL=`fastesturl http://mirrors.hustunique.com http://mirror.centos.org`
+PPA_REPO_URL="http://http://huawei-repo.uubright.com/repos"
 centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
@@ -342,7 +344,9 @@ fi
 
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
-CENTOS_SOURCE=`fastesturl $CENTOS_IMAGE_SOURCE_ASIA $CENTOS_IMAGE_SOURCE`
+# TODO: fix later
+# CENTOS_SOURCE=`fastesturl $CENTOS_IMAGE_SOURCE_ASIA $CENTOS_IMAGE_SOURCE`
+CENTOS_SOURCE="http://huawei-repo.uubright.com/repos/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/isos/${CENTOS_IMAGE_ARCH}/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}-minimal.iso"
 download "$CENTOS_SOURCE" ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso copy /var/lib/cobbler/iso/ || exit $?
 sudo mkdir -p /mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}
 if [ $(mount | grep -c "/mnt/${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH} ") -eq 0 ]; then

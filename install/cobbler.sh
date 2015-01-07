@@ -237,10 +237,16 @@ else
     echo "repo centos_ppa_repo has already existed."
 fi
 
-# download packages
-cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
-PPA_REPO_URL=`fastesturl http://mirrors.hustunique.com http://mirror.centos.org`
-centos_ppa_repo_packages="
+if [[ $LOCAL_REPO == "y" ]]; then
+    mkdir -p /tmp/ppa_repo
+    LOCAL_PPA_REPO_SOURCE=$LOCAL_PPA_REPO_US
+    download $LOCAL_PPA_REPO_SOURCE local_ppa_repo.tar.gz unzip /tmp/ppa_repo || exit $?  
+    cp -rf /tmp/ppa_repo/centos_6_5_ppa_repo/* /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+else
+    # download packages
+    cd /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+    PPA_REPO_URL=`fastesturl http://mirrors.hustunique.com http://mirror.centos.org`
+    centos_ppa_repo_packages="
 ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 openssh-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
@@ -250,32 +256,33 @@ ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENT
 yum-plugin-priorities-1.1.30-14.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.noarch.rpm
 parted-2.1-21.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
 
-for f in $centos_ppa_repo_packages; do
-    download $PPA_REPO_URL/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
-done
+    for f in $centos_ppa_repo_packages; do
+        download $PPA_REPO_URL/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
+    done
 
-centos_ppa_repo_rsyslog_packages="
+    centos_ppa_repo_rsyslog_packages="
 json-c-0.10-2.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 libestr-0.1.9-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 libgt-0.3.11-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 liblogging-1.0.4-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
 rsyslog-7.6.3-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
-for f in $centos_ppa_repo_rsyslog_packages; do
-    download http://rpms.adiscon.com/v7-stable/epel-${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
-done
+    for f in $centos_ppa_repo_rsyslog_packages; do
+        download http://rpms.adiscon.com/v7-stable/epel-${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/ || exit $?
+    done
 
-# download chef client for centos ppa repo
-CENTOS_CHEF_CLIENT_SOURCE=`fastesturl "$CENTOS_CHEF_CLIENT" "$CENTOS_CHEF_CLIENT_HUAWEI"`
-download $CENTOS_CHEF_CLIENT_SOURCE `basename $CENTOS_CHEF_CLIENT_SOURCE` copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/
+    # download chef client for centos ppa repo
+    CENTOS_CHEF_CLIENT_SOURCE=`fastesturl "$CENTOS_CHEF_CLIENT" "$CENTOS_CHEF_CLIENT_HUAWEI"`
+    download $CENTOS_CHEF_CLIENT_SOURCE `basename $CENTOS_CHEF_CLIENT_SOURCE` copy /var/lib/cobbler/repo_mirror/centos_ppa_repo/
 
-# create centos repo
-cd ..
-sudo createrepo centos_ppa_repo
-if [[ "$?" != "0" ]]; then
-    echo "failed to createrepo centos_ppa_repo"
-    exit 1
-else
-    echo "centos_ppa_repo is created"
+    # create centos repo
+    cd ..
+    sudo createrepo centos_ppa_repo
+    if [[ "$?" != "0" ]]; then
+        echo "failed to createrepo centos_ppa_repo"
+        exit 1
+    else
+        echo "centos_ppa_repo is created"
+    fi
 fi
 
 # create ubuntu repo

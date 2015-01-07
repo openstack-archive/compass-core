@@ -3,7 +3,7 @@
 05:51:18,517 INFO kernel:Initializing cgroup subsys cpuset
 05:51:18,517 INFO kernel:Initializing cgroup subsys cpu
 05:51:18,517 NOTICE kernel:Linux version 2.6.32-431.el6.x86_64 (mockbuild@c6b8.bsys.dev.centos.org) (gcc version 4.4.7 20120313 (Red Hat 4.4.7-4) (GCC) ) #1 SMP Fri Nov 22 03:15:09 UTC 2013
-05:51:18,517 INFO kernel:Command line: initrd=/images/CentOS-6.5-x86_64/initrd.img ksdevice=bootif lang= kssendmac text ks=http://10.145.88.211/cblr/svc/op/ks/system/server1.1 BOOT_IMAGE=/images/CentOS-6.5-x86_64/vmlinuz BOOTIF=01-00-0c-29-21-89-af 
+05:51:18,517 INFO kernel:Command line: initrd=/images/CentOS-6.6-x86_64/initrd.img ksdevice=bootif lang= kssendmac text ks=http://10.145.88.211/cblr/svc/op/ks/system/server1.1 BOOT_IMAGE=/images/CentOS-6.6-x86_64/vmlinuz BOOTIF=01-00-0c-29-21-89-af 
 05:51:18,517 INFO kernel:KERNEL supported cpus:
 05:51:18,517 INFO kernel:  Intel GenuineIntel
 05:51:18,517 INFO kernel:  AMD AuthenticAMD
@@ -132,7 +132,7 @@
 05:51:18,518 INFO kernel:pcpu-alloc: [0] 0 1 
 05:51:18,518 WARNING kernel:Built 1 zonelists in Node order, mobility grouping on.  Total pages: 516890
 05:51:18,520 WARNING kernel:Policy zone: DMA32
-05:51:18,520 NOTICE kernel:Kernel command line: initrd=/images/CentOS-6.5-x86_64/initrd.img ksdevice=bootif lang= kssendmac text ks=http://10.145.88.211/cblr/svc/op/ks/system/server1.1 BOOT_IMAGE=/images/CentOS-6.5-x86_64/vmlinuz BOOTIF=01-00-0c-29-21-89-af 
+05:51:18,520 NOTICE kernel:Kernel command line: initrd=/images/CentOS-6.6-x86_64/initrd.img ksdevice=bootif lang= kssendmac text ks=http://10.145.88.211/cblr/svc/op/ks/system/server1.1 BOOT_IMAGE=/images/CentOS-6.6-x86_64/vmlinuz BOOTIF=01-00-0c-29-21-89-af 
 05:51:18,520 INFO kernel:PID hash table entries: 4096 (order: 3, 32768 bytes)
 05:51:18,520 INFO kernel:Checking aperture...
 05:51:18,520 INFO kernel:No AGP bridge found

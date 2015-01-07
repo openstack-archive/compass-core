@@ -114,7 +114,7 @@ class ActionHelper(object):
            {
                "id": 1,
                "adapter_id": 1,
-               "os_version": "CentOS-6.5-x86_64",
+               "os_version": "CentOS-6.6-x86_64",
                "name": "cluster_01",
                "flavor": {
                    "flavor_name": "zzz",

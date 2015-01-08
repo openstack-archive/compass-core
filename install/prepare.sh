@@ -237,51 +237,166 @@ fi
 
 # download cobbler related packages
 CENTOS_PPA_SOURCE=`fastesturl "http://mirrors.hustunique.com" "http://mirror.centos.org"`
-centos_ppa_repo_packages="
-ntp-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
-openssh-clients-5.3p1-94.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-iproute-2.6.32-31.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-wget-1.12-1.8.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-ntpdate-4.2.6p5-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_TYPE,,}.${CENTOS_IMAGE_ARCH}.rpm
-yum-plugin-priorities-1.1.30-14.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.noarch.rpm
-parted-2.1-21.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
+centos_6_5_ppa_repo_packages="
+ntp-4.2.6p5-1.el6.centos.x86_64.rpm
+openssh-clients-5.3p1-94.el6.x86_64.rpm
+iproute-2.6.32-31.el6.x86_64.rpm
+wget-1.12-1.8.el6.x86_64.rpm
+ntpdate-4.2.6p5-1.el6.centos.x86_64.rpm
+yum-plugin-priorities-1.1.30-14.el6.noarch.rpm
+parted-2.1-21.el6.x86_64.rpm"
 
-for f in $centos_ppa_repo_packages; do
-    download $CENTOS_PPA_SOURCE/${CENTOS_IMAGE_TYPE,,}/${CENTOS_IMAGE_VERSION}/os/${CENTOS_IMAGE_ARCH}/Packages/$f $f || exit $?
-done
+if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
+    for f in $centos_6_5_ppa_repo_packages; do
+        download $CENTOS_PPA_SOURCE/centos/6.5/os/x86_64/Packages/$f $f || exit $?
+    done
+fi
 
-centos_ppa_repo_rsyslog_packages="
-json-c-0.10-2.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-libestr-0.1.9-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-libgt-0.3.11-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-liblogging-1.0.4-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm
-rsyslog-7.6.3-1.${CENTOS_IMAGE_TYPE_OTHER}${CENTOS_IMAGE_VERSION_MAJOR}.${CENTOS_IMAGE_ARCH}.rpm"
+centos_6_6_ppa_repo_packages="
+ntp-4.2.6p5-1.el6.centos.x86_64.rpm
+openssh-5.3p1-104.el6.x86_64.rpm
+openssh-clients-5.3p1-104.el6.x86_64.rpm
+iproute-2.6.32-32.el6_5.x86_64.rpm
+wget-1.12-5.el6.x86_64.rpm
+ntpdate-4.2.6p5-1.el6.centos.x86_64.rpm
+yum-plugin-priorities-1.1.30-30.el6.noarch.rpm
+parted-2.1-25.el6.x86_64.rpm"
 
-for f in $centos_ppa_repo_rsyslog_packages; do
-    download http://rpms.adiscon.com/v7-stable/epel-${CENTOS_IMAGE_VERSION_MAJOR}/${CENTOS_IMAGE_ARCH}/RPMS/$f $f || exit $?
-done
+if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
+    for f in $centos_6_6_ppa_repo_packages; do
+        download $CENTOS_PPA_SOURCE/centos/6.6/os/x86_64/Packages/$f $f || exit $?
+    done
+fi
 
-CENTOS_CHEF_CLIENT_SOURCE=`fastesturl "$CENTOS_CHEF_CLIENT" "$CENTOS_CHEF_CLIENT_HUAWEI"`
-download $CENTOS_CHEF_CLIENT_SOURCE `basename $CENTOS_CHEF_CLIENT_SOURCE` || exit $?
-UBUNTU_CHEF_CLIENT_SOURCE=`fastesturl "$UBUNTU_CHEF_CLIENT" "$UBUNTU_CHEF_CLIENT_HUAWEI"`
-download $UBUNTU_CHEF_CLIENT_SOURCE `basename $UBUNTU_CHEF_CLIENT_SOURCE` || exit $?
+centos_7_0_ppa_repo_packages="
+ntp-4.2.6p5-18.el7.centos.x86_64.rpm
+openssh-6.4p1-8.el7.x86_64.rpm
+openssh-clients-6.4p1-8.el7.x86_64.rpm
+iproute-3.10.0-13.el7.x86_64.rpm
+wget-1.14-10.el7.x86_64.rpm
+ntpdate-4.2.6p5-18.el7.centos.x86_64.rpm
+yum-plugin-priorities-1.1.31-24.el7.noarch.rpm
+json-c-0.11-3.el7.x86_64.rpm
+parted-3.1-17.el7.x86_64.rpm
+autogen-5.18-5.el7.x86_64.rpm
+autogen-libopts-5.18-5.el7.x86_64.rpm
+net-tools-2.0-0.17.20131004git.el7.x86_64.rpm"
+
+if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
+    for f in $centos_7_0_ppa_repo_packages; do
+        download $CENTOS_PPA_SOURCE/centos/7.0.1406/os/x86_64/Packages/$f $f || exit $?
+    done
+fi
+
+centos_6_5_ppa_repo_rsyslog_packages="
+json-c-0.10-2.el6.x86_64.rpm
+libestr-0.1.9-1.el6.x86_64.rpm
+libgt-0.3.11-1.el6.x86_64.rpm
+liblogging-1.0.4-1.el6.x86_64.rpm
+rsyslog-mmjsonparse-7.6.3-1.el6.x86_64.rpm
+rsyslog-7.6.3-1.el6.x86_64.rpm"
+
+if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
+    for f in $centos_6_5_ppa_repo_rsyslog_packages; do
+        download http://rpms.adiscon.com/v7-stable/epel-6/x86_64/RPMS/$f $f || exit $?
+    done
+fi
+
+centos_6_6_ppa_repo_rsyslog_packages="
+json-c-0.10-2.el6.x86_64.rpm
+libestr-0.1.9-1.el6.x86_64.rpm
+libgt-0.3.11-1.el6.x86_64.rpm
+liblogging-1.0.4-1.el6.x86_64.rpm
+rsyslog-mmjsonparse-7.6.3-1.el6.x86_64.rpm
+rsyslog-7.6.3-1.el6.x86_64.rpm"
+
+
+if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
+    for f in $centos_6_6_ppa_repo_rsyslog_packages; do
+        download http://rpms.adiscon.com/v7-stable/epel-6/x86_64/RPMS/$f $f || exit $?
+    done
+fi
+
+centos_7_0_ppa_repo_rsyslog_packages="
+libestr-0.1.9-1.el7.x86_64.rpm
+libgt-0.3.11-1.el7.x86_64.rpm
+liblogging-1.0.4-1.el7.x86_64.rpm
+rsyslog-mmjsonparse-7.6.3-1.el7.x86_64.rpm
+rsyslog-7.6.3-1.el7.x86_64.rpm"
+
+if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
+    for f in $centos_7_0_ppa_repo_rsyslog_packages; do
+        download http://rpms.adiscon.com/v7-stable/epel-7/x86_64/RPMS/$f $f || exit $?
+    done
+fi
+
+if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
+    download -u $CENTOS_6_5_CHEF_CLIENT -u $CENTOS_6_5_CHEF_CLIENT_HUAWEI || exit $?
+fi
+
+if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
+    download -u $CENTOS_6_6_CHEF_CLIENT -u $CENTOS_6_6_CHEF_CLIENT_HUAWEI || exit $?
+fi
+
+if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
+    download -u $CENTOS_7_0_CHEF_CLIENT -u $CENTOS_7_0_CHEF_CLIENT_HUAWEI || exit $?
+fi
+
+if [[ $SUPPORT_UBUNTU_12_04 = "y" ]]; then
+    download -u $UBUNTU_12_04_CHEF_CLIENT -u $UBUNTU_12_04_CHEF_CLIENT_HUAWEI || exit $?
+fi
+
+if [[ $SUPPORT_UBUNTU_14_04 = "y" ]]; then
+    download -u $UBUNTU_14_04_CHEF_CLIENT -u $UBUNTU_14_04_CHEF_CLIENT_HUAWEI || exit $?
+fi
 
 # download chef related packages
-CHEF_SRV_SOURCE=`fastesturl "$CHEF_SRV" "$CHEF_SRV_HUAWEI"`
-download $CHEF_SRV_SOURCE chef-server || exit $?
+download -u $CHEF_SRV -u $CHEF_SRV_HUAWEI || exit $?
+download -u $CHEF_CLIENT -u $CHEF_CLIENT_HUAWEI || exit $?
 
 # download os images
-CENTOS_ISO_SOURCE=`fastesturl $CENTOS_IMAGE_SOURCE $CENTOS_IMAGE_SOURCE_ASIA`
-download $CENTOS_ISO_SOURCE ${CENTOS_IMAGE_NAME}-${CENTOS_IMAGE_ARCH}.iso || exit $?
+if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
+    download -u $CENTOS_6_5_IMAGE_SOURCE -u $CENTOS_6_5_IMAGE_SOURCE_ASIA CentOS-6.5-x86_64.iso || exit $?
+fi
 
-UBUNTU_ISO_SOURCE=`fastesturl $UBUNTU_IMAGE_SOURCE $UBUNTU_IMAGE_SOURCE_ASIA`
-download $UBUNTU_ISO_SOURCE ${UBUNTU_IMAGE_NAME}-${UBUNTU_IMAGE_ARCH}.iso || exit $?
+if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
+    download -u $CENTOS_6_6_IMAGE_SOURCE -u $CENTOS_6_6_IMAGE_SOURCE_ASIA CentOS-6.6-x86_64.iso || exit $?
+fi
+
+if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
+    download -u $CENTOS_7_0_IMAGE_SOURCE -u $CENTOS_7_0_IMAGE_SOURCE_ASIA $CENTOS_7_0_ISO_SOURCE CentOS-7.0-x86_64.iso || exit $?
+fi
+
+if [[ $SUPPORT_UBUNTU_12_04 = "y" ]]; then
+    download -u $UBUNTU_12_04_IMAGE_SOURCE -u $UBUNTU_12_04_IMAGE_SOURCE_ASIA Ubuntu-12.04-x86_64.iso || exit $?
+fi
+
+if [[ $SUPPORT_UBUNTU_14_04 = "y" ]]; then
+    download -u $UBUNTU_14_04_IMAGE_SOURCE -u $UBUNTU_14_04_IMAGE_SOURCE_ASIA Ubuntu-14.04-x86_64.iso || exit $?
+fi
 
 # download local repo
 if [[ $LOCAL_REPO = "y" ]]; then
-    LOCAL_REPO_SOURCE=`fastesturl $LOCAL_REPO_US $LOCAL_REPO_HUAWEI`
-    download $LOCAL_REPO_SOURCE local_repo.tar.gz || exit $?
+    download -u ${LOCAL_REPO_US}/local_repo.tar.gz -u ${LOCAL_REPO_HUAWEI}/local_repo.tar.gz || exit $?
+    download -u ${LOCAL_REPO_US}/gem_repo.tar.gz -u ${LOCAL_REPO_HUAWEI}/gem_repo.tar.gz || exit $?
+    download -u ${LOCAL_REPO_US}/cirros-0.3.2-x86_64-disk.img -u ${LOCAL_REPO_HUAWEI}/cirros-0.3.2-x86_64-disk.img || exit $?
+    if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
+	download -u ${LOCAL_REPO_US}/centos/6.5/centos_repo.tar.gz -u ${LOCAL_REPO_HUAWEI}/centos/6.5/centos_repo.tag.gz CentOS-6.5-x86_64.tar.gz|| exit $?
+    fi
+    if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
+	download -u ${LOCAL_REPO_US}/centos/6.6/centos_repo.tar.gz -u ${LOCAL_REPO_HUAWEI}/centos/6.6/centos_repo.tag.gz CentOS-6.6-x86_64.tar.gz|| exit $?
+    fi
+    if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
+	download -u ${LOCAL_REPO_US}/centos/7.0/centos_repo.tar.gz -u ${LOCAL_REPO_HUAWEI}/centos/7.0/centos_repo.tag.gz CentOS-7.0-x86_64.tar.gz|| exit $?
+    fi
+    if [[ $SUPPORT_UBUNTU_12_04 = "y" ]]; then
+	download -u ${LOCAL_REPO_US}/ubuntu/12.04/ubuntu_repo.tar.gz -u ${LOCAL_REPO_HUAWEI}/ubuntu/12.04/ubuntu_repo.tar.gz Ubuntu-12.04-x86_64.tar.gz || exit $?
+    fi
+    if [[ $SUPPORT_UBUNTU_14_04 = "y" ]]; then
+	download -u ${LOCAL_REPO_US}/ubuntu/14.04/ubuntu_repo.tar.gz -u ${LOCAL_REPO_HUAWEI}/ubuntu/14.04/ubuntu_repo.tar.gz Ubuntu-14.04-x86_64.tar.gz || exit $?
+    fi
 fi
+
 # Install net-snmp
 echo "install snmp config"
 if [[ ! -e /etc/snmp ]]; then

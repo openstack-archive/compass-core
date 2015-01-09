@@ -236,118 +236,24 @@ else
 fi
 
 # download cobbler related packages
-CENTOS_PPA_SOURCE=`fastesturl "http://mirrors.hustunique.com" "http://mirror.centos.org"`
-centos_6_5_ppa_repo_packages="
-ntp-4.2.6p5-1.el6.centos.x86_64.rpm
-openssh-clients-5.3p1-94.el6.x86_64.rpm
-iproute-2.6.32-31.el6.x86_64.rpm
-wget-1.12-1.8.el6.x86_64.rpm
-ntpdate-4.2.6p5-1.el6.centos.x86_64.rpm
-yum-plugin-priorities-1.1.30-14.el6.noarch.rpm
-parted-2.1-21.el6.x86_64.rpm"
-
 if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
-    for f in $centos_6_5_ppa_repo_packages; do
-        download $CENTOS_PPA_SOURCE/centos/6.5/os/x86_64/Packages/$f $f || exit $?
-    done
-fi
-
-centos_6_6_ppa_repo_packages="
-ntp-4.2.6p5-1.el6.centos.x86_64.rpm
-openssh-5.3p1-104.el6.x86_64.rpm
-openssh-clients-5.3p1-104.el6.x86_64.rpm
-iproute-2.6.32-32.el6_5.x86_64.rpm
-wget-1.12-5.el6.x86_64.rpm
-ntpdate-4.2.6p5-1.el6.centos.x86_64.rpm
-yum-plugin-priorities-1.1.30-30.el6.noarch.rpm
-parted-2.1-25.el6.x86_64.rpm"
-
-if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
-    for f in $centos_6_6_ppa_repo_packages; do
-        download $CENTOS_PPA_SOURCE/centos/6.6/os/x86_64/Packages/$f $f || exit $?
-    done
-fi
-
-centos_7_0_ppa_repo_packages="
-ntp-4.2.6p5-18.el7.centos.x86_64.rpm
-openssh-6.4p1-8.el7.x86_64.rpm
-openssh-clients-6.4p1-8.el7.x86_64.rpm
-iproute-3.10.0-13.el7.x86_64.rpm
-wget-1.14-10.el7.x86_64.rpm
-ntpdate-4.2.6p5-18.el7.centos.x86_64.rpm
-yum-plugin-priorities-1.1.31-24.el7.noarch.rpm
-json-c-0.11-3.el7.x86_64.rpm
-parted-3.1-17.el7.x86_64.rpm
-autogen-5.18-5.el7.x86_64.rpm
-autogen-libopts-5.18-5.el7.x86_64.rpm
-net-tools-2.0-0.17.20131004git.el7.x86_64.rpm"
-
-if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
-    for f in $centos_7_0_ppa_repo_packages; do
-        download $CENTOS_PPA_SOURCE/centos/7.0.1406/os/x86_64/Packages/$f $f || exit $?
-    done
-fi
-
-centos_6_5_ppa_repo_rsyslog_packages="
-json-c-0.10-2.el6.x86_64.rpm
-libestr-0.1.9-1.el6.x86_64.rpm
-libgt-0.3.11-1.el6.x86_64.rpm
-liblogging-1.0.4-1.el6.x86_64.rpm
-rsyslog-mmjsonparse-7.6.3-1.el6.x86_64.rpm
-rsyslog-7.6.3-1.el6.x86_64.rpm"
-
-if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
-    for f in $centos_6_5_ppa_repo_rsyslog_packages; do
-        download http://rpms.adiscon.com/v7-stable/epel-6/x86_64/RPMS/$f $f || exit $?
-    done
-fi
-
-centos_6_6_ppa_repo_rsyslog_packages="
-json-c-0.10-2.el6.x86_64.rpm
-libestr-0.1.9-1.el6.x86_64.rpm
-libgt-0.3.11-1.el6.x86_64.rpm
-liblogging-1.0.4-1.el6.x86_64.rpm
-rsyslog-mmjsonparse-7.6.3-1.el6.x86_64.rpm
-rsyslog-7.6.3-1.el6.x86_64.rpm"
-
-
-if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
-    for f in $centos_6_6_ppa_repo_rsyslog_packages; do
-        download http://rpms.adiscon.com/v7-stable/epel-6/x86_64/RPMS/$f $f || exit $?
-    done
-fi
-
-centos_7_0_ppa_repo_rsyslog_packages="
-libestr-0.1.9-1.el7.x86_64.rpm
-libgt-0.3.11-1.el7.x86_64.rpm
-liblogging-1.0.4-1.el7.x86_64.rpm
-rsyslog-mmjsonparse-7.6.3-1.el7.x86_64.rpm
-rsyslog-7.6.3-1.el7.x86_64.rpm"
-
-if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
-    for f in $centos_7_0_ppa_repo_rsyslog_packages; do
-        download http://rpms.adiscon.com/v7-stable/epel-7/x86_64/RPMS/$f $f || exit $?
-    done
-fi
-
-if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
-    download -u $CENTOS_6_5_CHEF_CLIENT -u $CENTOS_6_5_CHEF_CLIENT_HUAWEI || exit $?
+    download $CENTOS_6_5_PPA_REPO_SOURCE || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
-    download -u $CENTOS_6_6_CHEF_CLIENT -u $CENTOS_6_6_CHEF_CLIENT_HUAWEI || exit $?
+    download $CENTOS_6_6_PPA_REPO_SOURCE || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
-    download -u $CENTOS_7_0_CHEF_CLIENT -u $CENTOS_7_0_CHEF_CLIENT_HUAWEI || exit $?
+    download $CENTOS_7_0_PPA_SOURCE || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_12_04 = "y" ]]; then
-    download -u $UBUNTU_12_04_CHEF_CLIENT -u $UBUNTU_12_04_CHEF_CLIENT_HUAWEI || exit $?
+    download $UBUNTU_12_04_PPA_REPO_SOURCE || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 = "y" ]]; then
-    download -u $UBUNTU_14_04_CHEF_CLIENT -u $UBUNTU_14_04_CHEF_CLIENT_HUAWEI || exit $?
+    download $UBNUT_14_04_PPA_REPO_SOURCE || exit $?
 fi
 
 # download chef related packages
@@ -364,7 +270,7 @@ if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
-    download -u $CENTOS_7_0_IMAGE_SOURCE -u $CENTOS_7_0_IMAGE_SOURCE_ASIA $CENTOS_7_0_ISO_SOURCE CentOS-7.0-x86_64.iso || exit $?
+    download -u $CENTOS_7_0_IMAGE_SOURCE -u $CENTOS_7_0_IMAGE_SOURCE_ASIA CentOS-7.0-x86_64.iso || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_12_04 = "y" ]]; then

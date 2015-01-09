@@ -19,7 +19,7 @@ sudo mkdir -p /root/backup/chef
 
 sudo rpm -q chef-server
 if [[ "$?" != "0" ]]; then
-    download -u $CHEF_SRV -u $CHEF_SRV_HUAWEI `basename $CHEF_SRV` install || exit $?
+    download -u "$CHEF_SRV" -u "$CHEF_SRV_HUAWEI" `basename $CHEF_SRV` install || exit $?
 else
     echo "chef-server has already installed"
 fi
@@ -42,7 +42,7 @@ echo "configure chef client and knife"
 # configure chef client and knife
 sudo rpm -q chef
 if [[ "$?" != "0" ]]; then
-    download -u $CHEF_CLIENT -u $CHEF_CLIENT_HUAWEI `basename $CHEF_CLIENT` install || exit $?
+    download -u "$CHEF_CLIENT" -u "$CHEF_CLIENT_HUAWEI" `basename $CHEF_CLIENT` install || exit $?
 else
     echo "chef client has already installed"
 fi

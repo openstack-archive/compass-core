@@ -138,6 +138,7 @@ download()
     urls=()
     package=""
     options=()
+    echo "download $@"
     while [ $# -gt 0 ]; do
 	case "$1" in
 	    -f | --force)
@@ -145,11 +146,20 @@ download()
 		shift 1
 		;;
 	    -u | --url):
-	        urls=(${urls[@]} $2)
+	        url=$2
+		if [ -z "$url" ]; then
+		    echo "url param is empty: $url"
+		    exit 1
+		fi
+	        urls=(${urls[@]} $url)
 		shift 2
 		;;
 	    -p | --package):
 	        package=$2
+		if [ -z "$package" ]; then
+		    echo "package param is empty: $package"
+		    exit 1
+		fi
 		shift 2
 		;;
 	    -*)

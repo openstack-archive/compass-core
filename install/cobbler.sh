@@ -215,10 +215,9 @@ else
     exit 1
 fi
 
-PPA_REPO_URL=`fastesturl http://mirror.centos.org http://mirrors.hustunique.com`
+sudo mkdir -p /var/lib/cobbler/repo_mirror
 # create centos repo
 if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    sudo rm -rf /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo
     sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo
     found_centos_6_5_ppa_repo=0
     for repo in $(cobbler repo list); do
@@ -240,47 +239,10 @@ if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
     fi
 
     # download packages
-    cd /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo/
-    centos_6_5_ppa_repo_packages="
-ntp-4.2.6p5-1.el6.centos.x86_64.rpm
-openssh-clients-5.3p1-94.el6.x86_64.rpm
-iproute-2.6.32-31.el6.x86_64.rpm
-wget-1.12-1.8.el6.x86_64.rpm
-ntpdate-4.2.6p5-1.el6.centos.x86_64.rpm
-yum-plugin-priorities-1.1.30-14.el6.noarch.rpm
-parted-2.1-21.el6.x86_64.rpm"
-    for f in $centos_6_5_ppa_repo_packages; do
-        download -u $PPA_REPO_URL/centos/6.5/os/x86_64/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo/ || exit $?
-    done
-
-    centos_6_5_ppa_repo_rsyslog_packages="
-json-c-0.10-2.el6.x86_64.rpm
-libestr-0.1.9-1.el6.x86_64.rpm
-libgt-0.3.11-1.el6.x86_64.rpm
-liblogging-1.0.4-1.el6.x86_64.rpm
-rsyslog-mmjsonparse-7.6.3-1.el6.x86_64.rpm
-rsyslog-7.6.3-1.el6.x86_64.rpm"
-
-    for f in $centos_6_5_ppa_repo_rsyslog_packages; do
-        download -u http://rpms.adiscon.com/v7-stable/epel-6/x86_64/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo/ || exit $?
-    done
-
-    # download chef client for centos ppa repo
-    download -u $CENTOS_6_5_CHEF_CLIENT -u $CENTOS_6_5_CHEF_CLIENT_HUAWEI `basename $CENTOS_6_5_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo/
-
-    # create centos repo
-    cd ..
-    sudo createrepo centos_6_5_ppa_repo
-    if [[ "$?" != "0" ]]; then
-        echo "failed to createrepo centos_6_5_ppa_repo"
-        exit 1
-    else
-        echo "centos_6_5_ppa_repo is created"
-    fi
+    download -u "$CENTOS_6_5_PPA_REPO_SOURCE" centos_6_5_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    sudo rm -rf /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo
     sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo
     found_centos_6_6_ppa_repo=0
     for repo in $(cobbler repo list); do
@@ -302,46 +264,10 @@ if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
     fi
 
     # download packages
-    cd /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo/
-    centos_6_6_ppa_repo_packages="
-ntp-4.2.6p5-1.el6.centos.x86_64.rpm
-openssh-5.3p1-104.el6.x86_64.rpm
-openssh-clients-5.3p1-104.el6.x86_64.rpm
-iproute-2.6.32-32.el6_5.x86_64.rpm
-wget-1.12-5.el6.x86_64.rpm
-ntpdate-4.2.6p5-1.el6.centos.x86_64.rpm
-yum-plugin-priorities-1.1.30-30.el6.noarch.rpm
-parted-2.1-25.el6.x86_64.rpm"
-    for f in $centos_6_6_ppa_repo_packages; do
-        download -u $PPA_REPO_URL/centos/6.6/os/x86_64/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo/ || exit $?
-    done
-
-    centos_6_6_ppa_repo_rsyslog_packages="
-json-c-0.10-2.el6.x86_64.rpm
-libestr-0.1.9-1.el6.x86_64.rpm
-libgt-0.3.11-1.el6.x86_64.rpm
-liblogging-1.0.4-1.el6.x86_64.rpm
-rsyslog-mmjsonparse-7.6.3-1.el6.x86_64.rpm
-rsyslog-7.6.3-1.el6.x86_64.rpm"
-
-    for f in $centos_6_6_ppa_repo_rsyslog_packages; do
-        download -u http://rpms.adiscon.com/v7-stable/epel-6/x86_64/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo/ || exit $?
-    done
-
-    download -u $CENTOS_6_6_CHEF_CLIENT -u $CENTOS_6_6_CHEF_CLIENT_HUAWEI $CENTOS_6_6_CHEF_CLIENT_SOURCE `basename $CENTOS_6_6_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo/
-
-    cd ..
-    sudo createrepo centos_6_6_ppa_repo
-    if [[ "$?" != "0" ]]; then
-        echo "failed to createrepo centos_6_6_ppa_repo"
-        exit 1
-    else
-        echo "centos_6_6_ppa_repo is created"
-    fi
+    download "$CENTOS_6_6_PPA_REPO_SOURCE" centos_6_6_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    sudo rm -rf /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo
     sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo
     found_centos_7_0_ppa_repo=0
     for repo in $(cobbler repo list); do
@@ -363,54 +289,12 @@ if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
     fi
 
     # download packages
-    cd /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo/
-    centos_7_0_ppa_repo_packages="
-ntp-4.2.6p5-18.el7.centos.x86_64.rpm
-openssh-6.4p1-8.el7.x86_64.rpm
-openssh-clients-6.4p1-8.el7.x86_64.rpm
-iproute-3.10.0-13.el7.x86_64.rpm
-wget-1.14-10.el7.x86_64.rpm
-ntpdate-4.2.6p5-18.el7.centos.x86_64.rpm
-yum-plugin-priorities-1.1.31-24.el7.noarch.rpm
-json-c-0.11-3.el7.x86_64.rpm
-parted-3.1-17.el7.x86_64.rpm
-autogen-5.18-5.el7.x86_64.rpm
-autogen-libopts-5.18-5.el7.x86_64.rpm
-net-tools-2.0-0.17.20131004git.el7.x86_64.rpm"
-    for f in $centos_7_0_ppa_repo_packages; do
-        download -u $PPA_REPO_URL/centos/7.0.1406/os/x86_64/Packages/$f $f copy /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo/ || exit $?
-    done
-
-    centos_7_0_ppa_repo_rsyslog_packages="
-libestr-0.1.9-1.el7.x86_64.rpm
-libgt-0.3.11-1.el7.x86_64.rpm
-liblogging-1.0.4-1.el7.x86_64.rpm
-rsyslog-mmjsonparse-7.6.3-1.el7.x86_64.rpm
-rsyslog-7.6.3-1.el7.x86_64.rpm"
-
-    for f in $centos_7_0_ppa_repo_rsyslog_packages; do
-        download -u http://rpms.adiscon.com/v7-stable/epel-7/x86_64/RPMS/$f $f copy /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo/ || exit $?
-    done
-
-    # download chef client for centos ppa repo
-    CENTOS_7_0_CHEF_CLIENT_SOURCE=`fastesturl "$CENTOS_7_0_CHEF_CLIENT" "$CENTOS_7_0_CHEF_CLIENT_HUAWEI"`
-    download -u $CENTOS_7_0_CHEF_CLIENT -u $CENTOS_7_0_CHEF_CLIENT_HUAWEI `basename $CENTOS_7_0_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo/
-
-    # create centos repo
-    cd ..
-    sudo createrepo centos_7_0_ppa_repo
-    if [[ "$?" != "0" ]]; then
-        echo "failed to createrepo centos_7_0_ppa_repo"
-        exit 1
-    else
-        echo "centos_7_0_ppa_repo is created"
-    fi
+    download -u "$CENTOS_7_0_PPA_REPO_SOURCE" centos_7_0_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 
 # create ubuntu repo
 if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    sudo rm -rf /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo
     sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo
     found_ubuntu_12_04_ppa_repo=0
     for repo in $(cobbler repo list); do
@@ -431,40 +315,10 @@ if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
         echo "repo ubuntu_12_04_ppa_repo has already existed."
     fi
 
-    cd /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/
-    if [ ! -e /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/conf/distributions ]; then
-        echo "create ubuntu 12.04 ppa repo distribution"
-        mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/conf
-        cat << EOF > /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/conf/distributions
-Origin: ppa
-Label: ppa_repo
-Suite: stable
-Codename: ppa
-Version: 0.1
-Architectures: i386 amd64 source
-Components: main
-Description: ppa repo
-EOF
-        chmod 644 /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/conf/distributions
-    else
-        echo "ubuntu 12.04 ppa repo distribution file exists."
-    fi
-
-    # download chef client for ubuntu ppa repo
-    download -u $UBUNTU_12_04_CHEF_CLIENT -u $UBUNTU_12_04_CHEF_CLIENT_HUAWEI `basename $UBUNTU_12_04_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo/ || exit $?
-
-    cd ..
-    find ubuntu_12_04_ppa_repo -name \*.deb -exec reprepro -Vb ubuntu_12_04_ppa_repo includedeb ppa {} \;
-    if [ "$?" != "0" ]; then
-        echo "failed to create ubuntu_12_04_ppa_repo"
-        exit 1
-    else
-        echo  "ubuntu_12_04_ppa_repo is created"
-    fi
+    download -u "$UBUNTU_12_04_PPA_REPO_SOURCE" ubuntu_12_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    sudo rm -rf /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo
     sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo
     found_ubuntu_14_04_ppa_repo=0
     for repo in $(cobbler repo list); do
@@ -485,36 +339,7 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
         echo "repo ubuntu_14_04_ppa_repo has already existed."
     fi
 
-    cd /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/
-    if [ ! -e /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/conf/distributions ]; then
-        echo "create ubuntu 14.04 ppa repo distribution"
-        mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/conf
-        cat << EOF > /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/conf/distributions
-Origin: ppa
-Label: ppa_repo
-Suite: stable
-Codename: ppa
-Version: 0.1
-Architectures: i386 amd64 source
-Components: main
-Description: ppa repo
-EOF
-        chmod 644 /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/conf/distributions
-    else
-        echo "ubuntu 14.04 ppa repo distribution file exists."
-    fi
-
-    # download chef client for ubuntu ppa repo
-    download -u $UBUNTU_14_04_CHEF_CLIENT -u $UBUNTU_14_04_CHEF_CLIENT_HUAWEI `basename $UBUNTU_14_04_CHEF_CLIENT` copy /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo/ || exit $?
-
-    cd ..
-    find ubuntu_14_04_ppa_repo -name \*.deb -exec reprepro -Vb ubuntu_14_04_ppa_repo includedeb ppa {} \;
-    if [ "$?" != "0" ]; then
-        echo "failed to create ubuntu_14_04_ppa_repo"
-        exit 1
-    else
-        echo  "ubuntu_14_04_ppa_repo is created"
-    fi
+    download -u "$UBUNTU_14_04_PPA_REPO_SOURCE" ubuntu_14_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 sudo cobbler reposync
@@ -528,7 +353,7 @@ fi
 # import cobbler distro
 sudo mkdir -p /var/lib/cobbler/iso
 if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    download -u $CENTOS_6_5_IMAGE_SOURCE_ASIA -u $CENTOS_6_5_IMAGE_SOURCE CentOS-6.5-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    download -u "$CENTOS_6_5_IMAGE_SOURCE_ASIA" -u "$CENTOS_6_5_IMAGE_SOURCE" CentOS-6.5-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
     sudo mkdir -p /mnt/CentOS-6.5-x86_64
     if [ $(mount | grep -c "/mnt/CentOS-6.5-x86_64") -eq 0 ]; then
         sudo mount -o loop /var/lib/cobbler/iso/CentOS-6.5-x86_64.iso /mnt/CentOS-6.5-x86_64
@@ -544,7 +369,7 @@ if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
 fi
 
 if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    download -u $CENTOS_6_6_IMAGE_SOURCE_ASIA -u $CENTOS_6_6_IMAGE_SOURCE CentOS-6.6-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    download -u "$CENTOS_6_6_IMAGE_SOURCE_ASIA" -u "$CENTOS_6_6_IMAGE_SOURCE" CentOS-6.6-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
     sudo mkdir -p /mnt/CentOS-6.6-x86_64
     if [ $(mount | grep -c "/mnt/CentOS-6.6-x86_64") -eq 0 ]; then
         sudo mount -o loop /var/lib/cobbler/iso/CentOS-6.6-x86_64.iso /mnt/CentOS-6.6-x86_64
@@ -560,7 +385,7 @@ if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    download -u $CENTOS_7_0_IMAGE_SOURCE_ASIA -u $CENTOS_7_0_IMAGE_SOURCE CentOS-7.0-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    download -u "$CENTOS_7_0_IMAGE_SOURCE_ASIA" -u "$CENTOS_7_0_IMAGE_SOURCE" CentOS-7.0-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
     sudo mkdir -p /mnt/CentOS-7.0-x86_64
     if [ $(mount | grep -c "/mnt/CentOS-7.0-x86_64") -eq 0 ]; then
         sudo mount -o loop /var/lib/cobbler/iso/CentOS-7.0-x86_64.iso /mnt/CentOS-7.0-x86_64
@@ -577,7 +402,7 @@ fi
 
 
 if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    download -u $UBUNTU_12_04_IMAGE_SOURCE_ASIA -u $UBUNTU_12_04_IMAGE_SOURCE Ubuntu-12.04-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    download -u "$UBUNTU_12_04_IMAGE_SOURCE_ASIA" -u "$UBUNTU_12_04_IMAGE_SOURCE" Ubuntu-12.04-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
     sudo mkdir -p /mnt/Ubuntu-12.04-x86_64
     if [ $(mount | grep -c "/mnt/Ubuntu-12.04-x86_64") -eq 0 ]; then
         sudo mount -o loop /var/lib/cobbler/iso/Ubuntu-12.04-x86_64.iso /mnt/Ubuntu-12.04-x86_64
@@ -593,7 +418,7 @@ if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    download -u $UBUNTU_14_04_IMAGE_SOURCE_ASIA -u $UBUNTU_14_04_IMAGE_SOURCE Ubuntu-14.04-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    download -u "$UBUNTU_14_04_IMAGE_SOURCE_ASIA" -u "$UBUNTU_14_04_IMAGE_SOURCE" Ubuntu-14.04-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
     sudo mkdir -p /mnt/Ubuntu-14.04-x86_64
     if [ $(mount | grep -c "/mnt/Ubuntu-14.04-x86_64") -eq 0 ]; then
         sudo mount -o loop /var/lib/cobbler/iso/Ubuntu-14.04-x86_64.iso /mnt/Ubuntu-14.04-x86_64

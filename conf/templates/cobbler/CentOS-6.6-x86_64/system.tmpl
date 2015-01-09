@@ -20,6 +20,7 @@
             #set static_key = '-'.join(('static', $nic))
             #set $rekeyed[$ip_key] = $val.ip
             #set $rekeyed[$netmask_key] = $val.netmask
+            #set $rekeyed[$mgmt_key] = $val.is_mgmt
             #set $rekeyed[$static_key] = True
 
             #if $val.is_promiscuous:

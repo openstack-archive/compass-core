@@ -821,7 +821,7 @@ class TestAddHostNetwork(HostTestCase):
         host.add_host_network(
             self.user_object,
             self.host_ids[0],
-            interface='eth1',
+            'eth1',
             ip='10.145.88.20',
             subnet_id=self.subnet_ids[0],
             is_mgmt=True
@@ -835,13 +835,31 @@ class TestAddHostNetwork(HostTestCase):
             result.append(item['ip'])
         self.assertIn('10.145.88.20', result)
 
+    def test_add_host_network_position_args(self):
+        host.add_host_network(
+            self.user_object,
+            self.host_ids[1],
+            interface='eth10',
+            ip='10.145.88.30',
+            subnet_id=self.subnet_ids[0],
+            is_mgmt=True
+        )
+        host_network = host.list_host_networks(
+            self.user_object,
+            self.host_ids[1]
+        )
+        result = []
+        for item in host_network:
+            result.append(item['ip'])
+        self.assertIn('10.145.88.30', result)
+
     def test_invalid_parameter(self):
         self.assertRaises(
             exception.InvalidParameter,
             host.add_host_network,
             self.user_object,
             self.host_ids[0],
-            interface='eth3',
+            'eth3',
             ip='10.145.88.0',
             subnet_id=self.subnet_ids[0]
         )
@@ -1156,7 +1174,7 @@ class TestAddHostLogHistory(HostTestCase):
         host.add_host_log_history(
             self.user_object,
             self.host_ids[0],
-            filename='add_log'
+            'add_log'
         )
         logs = host.get_host_log_histories(
             self.user_object,
@@ -1166,6 +1184,21 @@ class TestAddHostLogHistory(HostTestCase):
         for log in logs:
             result.append(log['filename'])
         self.assertIn('add_log', result)
+
+    def test_add_host_log_history_position_args(self):
+        host.add_host_log_history(
+            self.user_object,
+            self.host_ids[0],
+            filename='add_log_position'
+        )
+        logs = host.get_host_log_histories(
+            self.user_object,
+            self.host_ids[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_position', result)
 
 
 class TestPoweronHost(HostTestCase):

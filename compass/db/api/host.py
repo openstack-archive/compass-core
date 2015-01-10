@@ -578,11 +578,6 @@ def get_hostnetwork(session, getter, host_network_id, **kwargs):
     )
 
 
-@utils.supported_filters(
-    ADDED_NETWORK_FIELDS,
-    optional_support_keys=OPTIONAL_ADDED_NETWORK_FIELDS,
-    ignore_support_keys=IGNORE_FIELDS
-)
 @utils.input_validates(
     ip=utils.check_ip
 )
@@ -618,6 +613,11 @@ def _add_host_network(
     )
 
 
+@utils.supported_filters(
+    ADDED_NETWORK_FIELDS,
+    optional_support_keys=OPTIONAL_ADDED_NETWORK_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_HOST_NETWORK

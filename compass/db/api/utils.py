@@ -16,10 +16,12 @@
 
 import functools
 import inspect
+import itertools
 import logging
 import netaddr
 import re
 
+from inspect import isfunction
 from sqlalchemy import and_
 from sqlalchemy import or_
 
@@ -255,6 +257,17 @@ def _replace_output(data, **output_mapping):
     return info
 
 
+def get_wrapped_func(func):
+    """Get wrapped function instance."""
+    if func.func_closure:
+        for closure in func.func_closure:
+            if isfunction(closure.cell_contents):
+                return get_wrapped_func(closure.cell_contents)
+        return func
+    else:
+        return func
+
+
 def wrap_to_dict(support_keys=[], **filters):
     def decorator(func):
         @functools.wraps(func)
@@ -272,6 +285,7 @@ def _wrapper_dict(data, support_keys, **filters):
         'wrap dict %s by support_keys=%s filters=%s',
         data, support_keys, filters
     )
+    logging.info('datatype is: %s', type(data))
     if isinstance(data, list):
         return [
             _wrapper_dict(item, support_keys, **filters)
@@ -283,6 +297,7 @@ def _wrapper_dict(data, support_keys, **filters):
         raise exception.InvalidResponse(
             'response %s type is not dict' % data
         )
+    logging.info('datatoditc: %s', data)
     info = {}
     for key in support_keys:
         if key in data:
@@ -335,14 +350,18 @@ def replace_filters(**filter_mapping):
 def supported_filters(
     support_keys=[],
     optional_support_keys=[],
-    ignore_support_keys=[]
+    ignore_support_keys=[],
 ):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **filters):
+            wrapped_func = get_wrapped_func(func)
+            argspec = inspect.getargspec(wrapped_func)
+            wrapped_args = argspec.args
             must_support_keys = set(support_keys)
             all_support_keys = must_support_keys | set(optional_support_keys)
-            filter_keys = set(filters)
+            filter_keys = set(filters) - set(wrapped_args)
+            wrapped_support_keys = set(filters) | set(wrapped_args)
             unsupported_keys = (
                 filter_keys - all_support_keys - set(ignore_support_keys)
             )
@@ -352,7 +371,7 @@ def supported_filters(
                         list(unsupported_keys)
                     )
                 )
-            missing_keys = must_support_keys - filter_keys
+            missing_keys = must_support_keys - wrapped_support_keys
             if missing_keys:
                 raise exception.InvalidParameter(
                     'filter keys %s not found' % str(
@@ -364,6 +383,44 @@ def supported_filters(
                 for key, value in filters.items()
                 if key not in ignore_support_keys
             ])
+
+            args_raw_value = list(args)
+            if 'session' in wrapped_args:
+                wrapped_args.remove('session')
+            if 'exception_when_existing' in wrapped_args:
+                wrapped_args.remove('exception_when_existing')
+            if 'exception_when_missing' in wrapped_args:
+                wrapped_args.remove('exception_when_missing')
+            wrapped_args = wrapped_args[1:]
+
+            args_key = list(
+                must_support_keys - (set(filters) - set(wrapped_args))
+            )
+            args_value = []
+            for item in args_raw_value:
+                if 'class' not in str(type(item)) and (
+                    'bool' not in str(type(item))
+                ):
+                    args_value.append(item)
+            raw_dict = {}
+            if len(args_value) == len(wrapped_args) and (
+                len(args_value) != 0 and len(wrapped_args) != 0
+            ):
+                for i in range(0, len(wrapped_args)):
+                    raw_dict[wrapped_args[i]] = args_value[i]
+
+            filtered_dict = {}
+            if raw_dict != {}:
+                filtered_dict = dict([
+                    (key, value)
+                    for key, value in raw_dict.items()
+                    if key in args_key
+                ])
+
+            filtered_filters = dict(
+                filtered_filters.items() + filtered_dict.items()
+            )
+
             return func(*args, **filtered_filters)
         return wrapper
     return decorator

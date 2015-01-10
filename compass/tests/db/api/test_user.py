@@ -286,6 +286,22 @@ class TestAddDelUserPermission(BaseTest):
         user_api.add_permission(
             self.user_object,
             self.user_object.id,
+            2
+        )
+        permissions = user_api.get_permissions(
+            self.user_object,
+            self.user_object.id
+        )
+        result = None
+        for permission in permissions:
+            if permission['id'] == 2:
+                result = permission['name']
+        self.assertEqual(result, 'list_switches')
+
+    def test_add_permission_position_args(self):
+        user_api.add_permission(
+            self.user_object,
+            self.user_object.id,
             permission_id=2
         )
         permissions = user_api.get_permissions(

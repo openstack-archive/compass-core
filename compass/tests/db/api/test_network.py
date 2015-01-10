@@ -101,15 +101,28 @@ class TestAddSubnet(BaseTest):
     def test_add_subnet(self):
         network.add_subnet(
             self.user_object,
-            subnet='10.145.89.0/24'
+            '10.145.89.0/24',
+            name='add_subnet'
         )
-        add_subnet = network.list_subnets(
+        add_subnets = network.list_subnets(
             self.user_object
         )
         expected = '10.145.89.0/24'
-        self.assertTrue(
-            item in add_subnet[0].items() for item in expected
+        for add_subnet in add_subnets:
+            self.assertEqual(expected, add_subnet['subnet'])
+
+    def test_add_subnet_position_args(self):
+        network.add_subnet(
+            self.user_object,
+            subnet='10.145.89.0/23',
+            name='add_subnet_position'
         )
+        add_subnets = network.list_subnets(
+            self.user_object
+        )
+        expected = '10.145.89.0/23'
+        for add_subnet in add_subnets:
+            self.assertEqual(expected, add_subnet['subnet'])
 
 
 class TestUpdateSubnet(BaseTest):
@@ -160,7 +173,7 @@ class TestDelSubnet(BaseTest):
     def test_del_subnet(self):
         network.add_subnet(
             self.user_object,
-            subnet='10.145.89.0/24'
+            '10.145.89.0/24'
         )
         network.del_subnet(
             self.user_object,

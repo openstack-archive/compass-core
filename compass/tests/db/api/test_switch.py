@@ -64,9 +64,19 @@ class TestAddSwitch(BaseTest):
     def test_add_switch(self):
         add_switch = switch.add_switch(
             self.user_object,
-            ip='2887583784'
+            '172.29.8.40',
+            vendor='test_vendor'
         )
         expected = '172.29.8.40'
+        self.assertEqual(expected, add_switch['ip'])
+
+    def test_add_switch_position_args(self):
+        add_switch = switch.add_switch(
+            self.user_object,
+            ip='172.29.8.50',
+            vendor='test_vendor_position'
+        )
+        expected = '172.29.8.50'
         self.assertEqual(expected, add_switch['ip'])
 
 
@@ -82,7 +92,7 @@ class TestListSwitches(BaseTest):
     def test_list_switches_ip_int_invalid(self):
         switch.add_switch(
             self.user_object,
-            ip='2887583784'
+            '2887583784'
         )
         list_switches = switch.list_switches(
             self.user_object,
@@ -93,7 +103,7 @@ class TestListSwitches(BaseTest):
     def test_list_switches_with_ip_int(self):
         switch.add_switch(
             self.user_object,
-            ip='2887583784'
+            '2887583784'
         )
         list_switches = switch.list_switches(
             self.user_object,
@@ -298,10 +308,20 @@ class TestAddSwitchMachine(BaseTest):
         add_switch_machine = switch.add_switch_machine(
             self.user_object,
             1,
-            mac='28:6e:d4:46:c4:25',
+            '28:6e:d4:46:c4:25',
             port='1'
         )
         expected = '28:6e:d4:46:c4:25'
+        self.assertEqual(expected, add_switch_machine['mac'])
+
+    def test_add_switch_machine_position_args(self):
+        add_switch_machine = switch.add_switch_machine(
+            self.user_object,
+            1,
+            '28:6e:d4:46:c4:26',
+            port='1'
+        )
+        expected = '28:6e:d4:46:c4:26'
         self.assertEqual(expected, add_switch_machine['mac'])
 
 
@@ -384,7 +404,7 @@ class TestListSwitchmachines(BaseTest):
         switch.add_switch_machine(
             self.user_object,
             2,
-            mac='28:6e:d4:46:c4:25',
+            '28:6e:d4:46:c4:25',
             port='1'
         )
         list_switch_machines = switch.list_switchmachines(
@@ -410,7 +430,7 @@ class TestListSwitchMachinesHosts(BaseTest):
         switch.add_switch_machine(
             self.user_object,
             2,
-            mac='28:6e:d4:46:c4:25',
+            '28:6e:d4:46:c4:25',
             port='1'
         )
         list_hosts = switch.list_switch_machines_hosts(
@@ -432,12 +452,12 @@ class TestListSwitchmachinesHosts(BaseTest):
     def test_list_hosts_with_ip_int(self):
         switch.add_switch(
             self.user_object,
-            ip='2887583784'
+            '2887583784'
         )
         switch.add_switch_machine(
             self.user_object,
             2,
-            mac='28:6e:d4:46:c4:25',
+            '28:6e:d4:46:c4:25',
             port='1'
         )
         list_hosts = switch.list_switchmachines_hosts(
@@ -450,12 +470,12 @@ class TestListSwitchmachinesHosts(BaseTest):
     def test_list_hosts_ip_invalid(self):
         switch.add_switch(
             self.user_object,
-            ip='2887583784'
+            '2887583784'
         )
         switch.add_switch_machine(
             self.user_object,
             2,
-            mac='28:6e:d4:46:c4:25',
+            '28:6e:d4:46:c4:25',
             port='1'
         )
         list_hosts = switch.list_switchmachines_hosts(
@@ -467,12 +487,12 @@ class TestListSwitchmachinesHosts(BaseTest):
     def test_list_hosts_without_ip(self):
         switch.add_switch(
             self.user_object,
-            ip='2887583784'
+            '2887583784'
         )
         switch.add_switch_machine(
             self.user_object,
             2,
-            mac='28:6e:d4:46:c4:25',
+            '28:6e:d4:46:c4:25',
             port='1'
         )
         list_hosts = switch.list_switchmachines_hosts(
@@ -493,12 +513,12 @@ class TestGetSwitchMachine(BaseTest):
     def test_get_switch_machine(self):
         switch.add_switch(
             self.user_object,
-            ip='2887583784'
+            '2887583784'
         )
         switch.add_switch_machine(
             self.user_object,
             2,
-            mac='28:6e:d4:46:c4:25',
+            '28:6e:d4:46:c4:25',
             port='1'
         )
         get_switch_machine = switch.get_switch_machine(

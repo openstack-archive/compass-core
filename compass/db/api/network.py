@@ -51,7 +51,7 @@ def _check_subnet(subnet):
     permission.PERMISSION_LIST_SUBNETS
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_subnets(session, lister, **filters):
+def list_subnets(lister, session=None, **filters):
     """List subnets."""
     return utils.list_db_objects(
         session, models.Subnet, **filters
@@ -65,8 +65,8 @@ def list_subnets(session, lister, **filters):
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_subnet(
-    session, getter, subnet_id,
-    exception_when_missing=True, **kwargs
+    getter, subnet_id,
+    exception_when_missing=True, session=None, **kwargs
 ):
     """Get subnet info."""
     return utils.get_db_object(
@@ -86,8 +86,8 @@ def get_subnet(
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def add_subnet(
-    session, creator, exception_when_existing=True,
-    subnet=None, **kwargs
+    creator, exception_when_existing=True,
+    subnet=None, session=None, **kwargs
 ):
     """Create a subnet."""
     return utils.add_db_object(
@@ -106,7 +106,7 @@ def add_subnet(
     permission.PERMISSION_ADD_SUBNET
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def update_subnet(session, updater, subnet_id, **kwargs):
+def update_subnet(updater, subnet_id, session=None, **kwargs):
     """Update a subnet."""
     subnet = utils.get_db_object(
         session, models.Subnet, id=subnet_id
@@ -120,7 +120,7 @@ def update_subnet(session, updater, subnet_id, **kwargs):
     permission.PERMISSION_DEL_SUBNET
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def del_subnet(session, deleter, subnet_id, **kwargs):
+def del_subnet(deleter, subnet_id, session=None, **kwargs):
     """Delete a subnet."""
     subnet = utils.get_db_object(
         session, models.Subnet, id=subnet_id

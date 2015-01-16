@@ -835,6 +835,66 @@ class TestAddHostNetwork(HostTestCase):
             result.append(item['ip'])
         self.assertIn('10.145.88.20', result)
 
+    def test_add_host_network_position(self):
+        host.add_host_network(
+            self.user_object,
+            self.host_ids[0],
+            True,
+            'eth1',
+            ip='10.145.88.30',
+            subnet_id=self.subnet_ids[0],
+            is_mgmt=True
+        )
+        host_network = host.list_host_networks(
+            self.user_object,
+            self.host_ids[0]
+        )
+        result = []
+        for item in host_network:
+            result.append(item['ip'])
+        self.assertIn('10.145.88.30', result)
+
+    def test_add_host_network_session(self):
+        with database.session() as session:
+            host.add_host_network(
+                self.user_object,
+                self.host_ids[0],
+                interface='eth1',
+                ip='10.145.88.40',
+                subnet_id=self.subnet_ids[0],
+                is_mgmt=True,
+                session=session
+            )
+        host_network = host.list_host_networks(
+            self.user_object,
+            self.host_ids[0]
+        )
+        result = []
+        for item in host_network:
+            result.append(item['ip'])
+        self.assertIn('10.145.88.40', result)
+
+    def test_add_host_network_position_session(self):
+        with database.session() as session:
+            host.add_host_network(
+                self.user_object,
+                self.host_ids[0],
+                True,
+                'eth1',
+                session,
+                ip='10.145.88.50',
+                subnet_id=self.subnet_ids[0],
+                is_mgmt=True
+            )
+        host_network = host.list_host_networks(
+            self.user_object,
+            self.host_ids[0]
+        )
+        result = []
+        for item in host_network:
+            result.append(item['ip'])
+        self.assertIn('10.145.88.50', result)
+
     def test_invalid_parameter(self):
         self.assertRaises(
             exception.InvalidParameter,
@@ -1166,6 +1226,57 @@ class TestAddHostLogHistory(HostTestCase):
         for log in logs:
             result.append(log['filename'])
         self.assertIn('add_log', result)
+
+    def test_add_host_log_history_position(self):
+        host.add_host_log_history(
+            self.user_object,
+            self.host_ids[0],
+            False,
+            'add_log_position'
+        )
+        logs = host.get_host_log_histories(
+            self.user_object,
+            self.host_ids[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_position', result)
+
+    def test_add_host_log_history_session(self):
+        with database.session() as session:
+            host.add_host_log_history(
+                self.user_object,
+                self.host_ids[0],
+                filename='add_log_session',
+                session=session
+            )
+        logs = host.get_host_log_histories(
+            self.user_object,
+            self.host_ids[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_session', result)
+
+    def test_add_host_log_history_position_session(self):
+        with database.session() as session:
+            host.add_host_log_history(
+                self.user_object,
+                self.host_ids[0],
+                False,
+                'add_log_position_session',
+                session
+            )
+        logs = host.get_host_log_histories(
+            self.user_object,
+            self.host_ids[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_position_session', result)
 
 
 class TestPoweronHost(HostTestCase):

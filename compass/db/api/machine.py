@@ -50,8 +50,8 @@ RESP_DEPLOY_FIELDS = [
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_machine(
-    session, getter, machine_id,
-    exception_when_missing=True,
+    getter, machine_id,
+    exception_when_missing=True, session=None,
     **kwargs
 ):
     """get field dict of a machine."""
@@ -73,16 +73,13 @@ def get_machine(
     location=utils.general_filter_callback
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_machines(session, lister, **filters):
+def list_machines(lister, session=None, **filters):
     """List machines."""
     return utils.list_db_objects(
         session, models.Machine, **filters
     )
 
 
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_ADD_MACHINE
-)
 @utils.wrap_to_dict(RESP_FIELDS)
 def _update_machine(session, updater, machine_id, **kwargs):
     """Update a machine."""
@@ -96,7 +93,10 @@ def _update_machine(session, updater, machine_id, **kwargs):
 )
 @utils.input_validates(ipmi_credentials=utils.check_ipmi_credentials)
 @database.run_in_session()
-def update_machine(session, updater, machine_id, **kwargs):
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_MACHINE
+)
+def update_machine(updater, machine_id, session=None, **kwargs):
     return _update_machine(
         session, updater, machine_id, **kwargs
     )
@@ -113,7 +113,7 @@ def update_machine(session, updater, machine_id, **kwargs):
 )
 @database.run_in_session()
 @utils.output_validates(ipmi_credentials=utils.check_ipmi_credentials)
-def patch_machine(session, updater, machine_id, **kwargs):
+def patch_machine(updater, machine_id, session=None, **kwargs):
     return _update_machine(
         session, updater, machine_id, **kwargs
     )
@@ -125,7 +125,7 @@ def patch_machine(session, updater, machine_id, **kwargs):
     permission.PERMISSION_DEL_MACHINE
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def del_machine(session, deleter, machine_id, **kwargs):
+def del_machine(deleter, machine_id, session=None, **kwargs):
     """Delete a machine."""
     machine = utils.get_db_object(session, models.Machine, id=machine_id)
     if machine.host:
@@ -148,7 +148,7 @@ def del_machine(session, deleter, machine_id, **kwargs):
     machine=RESP_FIELDS
 )
 def poweron_machine(
-    session, deployer, machine_id, poweron={}, **kwargs
+    deployer, machine_id, poweron={}, session=None, **kwargs
 ):
     """power on machine."""
     from compass.tasks import client as celery_client
@@ -175,7 +175,7 @@ def poweron_machine(
     machine=RESP_FIELDS
 )
 def poweroff_machine(
-    session, deployer, machine_id, poweroff={}, **kwargs
+    deployer, machine_id, poweroff={}, session=None, **kwargs
 ):
     """power off machine."""
     from compass.tasks import client as celery_client
@@ -202,7 +202,7 @@ def poweroff_machine(
     machine=RESP_FIELDS
 )
 def reset_machine(
-    session, deployer, machine_id, reset={}, **kwargs
+    deployer, machine_id, reset={}, session=None, **kwargs
 ):
     """reset machine."""
     from compass.tasks import client as celery_client

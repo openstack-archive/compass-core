@@ -46,6 +46,7 @@ class TestListPermissions(BaseTest):
     def test_list_permissions(self):
         permissions = permission.list_permissions(self.user_object)
         self.assertIsNotNone(permissions)
+        self.assertEqual(49, len(permissions))
 
 
 class TestGetPermission(BaseTest):
@@ -60,6 +61,13 @@ class TestGetPermission(BaseTest):
     def test_get_permission(self):
         get_permission = permission.get_permission(self.user_object, 1)
         self.assertIsNotNone(get_permission)
+        expected = {
+            'alias': 'list permissions',
+            'description': 'list all permissions',
+            'id': 1,
+            'name': 'list_permissions'
+        }
+        self.assertDictEqual(get_permission, expected)
 
 
 if __name__ == '__main__':

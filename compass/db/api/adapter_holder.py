@@ -95,7 +95,7 @@ def _filter_adapters(adapter_config, filter_name, filter_value):
     roles=RESP_ROLES_FIELDS,
     flavors=RESP_FLAVORS_FIELDS
 )
-def list_adapters(session, lister, **filters):
+def list_adapters(lister, session=None, **filters):
     """list adapters."""
     if not ADAPTER_MAPPING:
         load_adapters_internal(session)
@@ -125,6 +125,6 @@ def get_adapter_internal(session, adapter_id):
     roles=RESP_ROLES_FIELDS,
     flavors=RESP_FLAVORS_FIELDS
 )
-def get_adapter(session, getter, adapter_id, **kwargs):
+def get_adapter(getter, adapter_id, session=None, **kwargs):
     """get adapter."""
     return get_adapter_internal(session, adapter_id)

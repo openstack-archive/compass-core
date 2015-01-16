@@ -101,9 +101,13 @@ def _check_user_permission(session, user, permission):
 def check_user_permission_in_session(permission):
     def decorator(func):
         @functools.wraps(func)
-        def wrapper(session, user, *args, **kwargs):
+        def wrapper(user, *args, **kwargs):
+            if 'session' in kwargs.keys():
+                session = kwargs['session']
+            else:
+                session = args[-1]
             _check_user_permission(session, user, permission)
-            return func(session, user, *args, **kwargs)
+            return func(user, *args, **kwargs)
         return wrapper
     return decorator
 
@@ -223,7 +227,7 @@ class UserWrapper(UserMixin):
 
 
 @database.run_in_session()
-def get_user_object(session, email, **kwargs):
+def get_user_object(email, session=None, **kwargs):
     user = utils.get_db_object(
         session, models.User, False, email=email
     )
@@ -237,7 +241,7 @@ def get_user_object(session, email, **kwargs):
 
 
 @database.run_in_session()
-def get_user_object_from_token(session, token):
+def get_user_object_from_token(token, session=None):
     expire_timestamp = {
         'ge': datetime.datetime.now()
     }
@@ -262,7 +266,7 @@ def get_user_object_from_token(session, token):
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_TOKEN_FIELDS)
 def record_user_token(
-    session, user, token, expire_timestamp
+    user, token, expire_timestamp, session=None
 ):
     """record user token in database."""
     user_token = utils.get_db_object(
@@ -285,7 +289,7 @@ def record_user_token(
 @utils.supported_filters()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_TOKEN_FIELDS)
-def clean_user_token(session, user, token):
+def clean_user_token(user, token, session=None):
     """clean user token in database."""
     return utils.del_db_objects(
         session, models.UserToken,
@@ -298,8 +302,8 @@ def clean_user_token(session, user, token):
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_user(
-    session, getter, user_id,
-    exception_when_missing=True, **kwargs
+    getter, user_id,
+    exception_when_missing=True, session=None, **kwargs
 ):
     """get field dict of a user."""
     return utils.get_db_object(
@@ -311,8 +315,8 @@ def get_user(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_current_user(
-    session, getter,
-    exception_when_missing=True, **kwargs
+    getter,
+    exception_when_missing=True, session=None, **kwargs
 ):
     """get field dict of a user."""
     return utils.get_db_object(
@@ -326,7 +330,7 @@ def get_current_user(
 @check_user_admin()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_users(session, lister, **filters):
+def list_users(lister, session=None, **filters):
     """List fields of all users by some fields."""
     return utils.list_db_objects(
         session, models.User, **filters
@@ -343,9 +347,9 @@ def list_users(session, lister, **filters):
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
 def add_user(
-    session, creator,
+    creator,
     exception_when_existing=True,
-    **kwargs
+    session=None, **kwargs
 ):
     """Create a user and return created user object."""
     return add_user_internal(
@@ -357,7 +361,7 @@ def add_user(
 @check_user_admin()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def del_user(session, deleter, user_id, **kwargs):
+def del_user(deleter, user_id, session=None, **kwargs):
     """delete a user and return the deleted user object."""
     user = utils.get_db_object(session, models.User, id=user_id)
     return utils.del_db_object(session, user)
@@ -370,7 +374,7 @@ def del_user(session, deleter, user_id, **kwargs):
 @utils.input_validates(email=_check_email)
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def update_user(session, updater, user_id, **kwargs):
+def update_user(updater, user_id, session=None, **kwargs):
     """Update a user and return the updated user object."""
     user = utils.get_db_object(
         session, models.User, id=user_id
@@ -395,7 +399,7 @@ def update_user(session, updater, user_id, **kwargs):
 @check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
-def get_permissions(session, lister, user_id, **kwargs):
+def get_permissions(lister, user_id, session=None, **kwargs):
     """List permissions of a user."""
     return utils.list_db_objects(
         session, models.UserPermission, user_id=user_id, **kwargs
@@ -407,8 +411,8 @@ def get_permissions(session, lister, user_id, **kwargs):
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
 def get_permission(
-    session, getter, user_id, permission_id,
-    exception_when_missing=True, **kwargs
+    getter, user_id, permission_id,
+    exception_when_missing=True, session=None, **kwargs
 ):
     """Get a specific user permission."""
     return utils.get_db_object(
@@ -423,7 +427,7 @@ def get_permission(
 @check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
-def del_permission(session, deleter, user_id, permission_id, **kwargs):
+def del_permission(deleter, user_id, permission_id, session=None, **kwargs):
     """Delete a specific user permission."""
     user_permission = utils.get_db_object(
         session, models.UserPermission,
@@ -441,8 +445,8 @@ def del_permission(session, deleter, user_id, permission_id, **kwargs):
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
 def add_permission(
-    session, creator, user_id,
-    exception_when_missing=True, permission_id=None
+    creator, user_id,
+    exception_when_missing=True, permission_id=None, session=None
 ):
     """Add an user permission."""
     return utils.add_db_object(
@@ -467,9 +471,9 @@ def _get_permission_filters(permission_ids):
 @database.run_in_session()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
 def update_permissions(
-    session, updater, user_id,
+    updater, user_id,
     add_permissions=[], remove_permissions=[],
-    set_permissions=None, **kwargs
+    set_permissions=None, session=None, **kwargs
 ):
     """update user permissions."""
     user = utils.get_db_object(session, models.User, id=user_id)

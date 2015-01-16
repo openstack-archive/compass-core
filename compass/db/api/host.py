@@ -107,7 +107,7 @@ UPDATED_LOG_FIELDS = [
     permission.PERMISSION_LIST_HOSTS
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_hosts(session, lister, **filters):
+def list_hosts(lister, session=None, **filters):
     """List hosts."""
     return utils.list_db_objects(
         session, models.Host, **filters
@@ -128,7 +128,7 @@ def list_hosts(session, lister, **filters):
     os_id=utils.general_filter_callback
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_machines_or_hosts(session, lister, **filters):
+def list_machines_or_hosts(lister, session=None, **filters):
     """List hosts."""
     machines = utils.list_db_objects(
         session, models.Machine, **filters
@@ -150,8 +150,8 @@ def list_machines_or_hosts(session, lister, **filters):
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_host(
-    session, getter, host_id,
-    exception_when_missing=True, **kwargs
+    getter, host_id,
+    exception_when_missing=True, session=None, **kwargs
 ):
     """get host info."""
     return utils.get_db_object(
@@ -167,8 +167,8 @@ def get_host(
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_machine_or_host(
-    session, getter, host_id,
-    exception_when_missing=True, **kwargs
+    getter, host_id,
+    exception_when_missing=True, session=None, **kwargs
 ):
     """get host info."""
     machine = utils.get_db_object(
@@ -190,7 +190,7 @@ def get_machine_or_host(
     permission.PERMISSION_LIST_HOST_CLUSTERS
 )
 @utils.wrap_to_dict(RESP_CLUSTER_FIELDS)
-def get_host_clusters(session, getter, host_id, **kwargs):
+def get_host_clusters(getter, host_id, session=None, **kwargs):
     """get host clusters."""
     host = utils.get_db_object(
         session, models.Host, id=host_id
@@ -303,7 +303,7 @@ def _update_host(session, updater, host_id, **kwargs):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_HOST
 )
-def update_host(session, updater, host_id, **kwargs):
+def update_host(updater, host_id, session=None, **kwargs):
     """Update a host."""
     return _update_host(session, updater, host_id=host_id, **kwargs)
 
@@ -312,7 +312,7 @@ def update_host(session, updater, host_id, **kwargs):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_UPDATE_HOST
 )
-def update_hosts(session, updater, data=[]):
+def update_hosts(updater, data=[], session=None):
     hosts = []
     for host_data in data:
         hosts.append(_update_host(session, updater, **host_data))
@@ -329,8 +329,8 @@ def update_hosts(session, updater, data=[]):
     host=RESP_FIELDS
 )
 def del_host(
-    session, deleter, host_id,
-    force=False, from_database_only=False, **kwargs
+    deleter, host_id,
+    force=False, from_database_only=False, session=None, **kwargs
 ):
     """Delete a host."""
     from compass.db.api import cluster as cluster_api
@@ -378,7 +378,7 @@ def del_host(
     permission.PERMISSION_LIST_HOST_CONFIG
 )
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-def get_host_config(session, getter, host_id, **kwargs):
+def get_host_config(getter, host_id, session=None, **kwargs):
     """Get host config."""
     return utils.get_db_object(
         session, models.Host, id=host_id
@@ -391,7 +391,7 @@ def get_host_config(session, getter, host_id, **kwargs):
     permission.PERMISSION_LIST_HOST_CONFIG
 )
 @utils.wrap_to_dict(RESP_DEPLOYED_CONFIG_FIELDS)
-def get_host_deployed_config(session, getter, host_id, **kwargs):
+def get_host_deployed_config(getter, host_id, session=None, **kwargs):
     """Get host deployed config."""
     return utils.get_db_object(
         session, models.Host, id=host_id
@@ -410,7 +410,7 @@ def get_host_deployed_config(session, getter, host_id, **kwargs):
     permission.PERMISSION_ADD_HOST_CONFIG
 )
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-def update_host_deployed_config(session, updater, host_id, **kwargs):
+def update_host_deployed_config(updater, host_id, session=None, **kwargs):
     """Update host deployed config."""
     host = utils.get_db_object(
         session, models.Host, id=host_id
@@ -420,9 +420,6 @@ def update_host_deployed_config(session, updater, host_id, **kwargs):
     return utils.update_db_object(session, host, **kwargs)
 
 
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_ADD_HOST_CONFIG
-)
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
 def _update_host_config(session, updater, host, **kwargs):
     """Update host config."""
@@ -438,7 +435,10 @@ def _update_host_config(session, updater, host, **kwargs):
     ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
-def update_host_config(session, updater, host_id, **kwargs):
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_CONFIG
+)
+def update_host_config(updater, host_id, session=None, **kwargs):
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
@@ -469,7 +469,10 @@ def update_host_config(session, updater, host_id, **kwargs):
     ignore_support_keys=IGNORE_FIELDS
 )
 @database.run_in_session()
-def patch_host_config(session, updater, host_id, **kwargs):
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_CONFIG
+)
+def patch_host_config(updater, host_id, session=None, **kwargs):
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
@@ -498,7 +501,7 @@ def patch_host_config(session, updater, host_id, **kwargs):
     permission.PERMISSION_DEL_HOST_CONFIG
 )
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-def del_host_config(session, deleter, host_id):
+def del_host_config(deleter, host_id, session=None):
     """delete a host config."""
     host = utils.get_db_object(
         session, models.Host, id=host_id
@@ -517,7 +520,7 @@ def del_host_config(session, deleter, host_id):
     permission.PERMISSION_LIST_HOST_NETWORKS
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def list_host_networks(session, lister, host_id, **filters):
+def list_host_networks(lister, host_id, session=None, **filters):
     """Get host networks."""
     return utils.list_db_objects(
         session, models.HostNetwork,
@@ -533,7 +536,7 @@ def list_host_networks(session, lister, host_id, **filters):
     permission.PERMISSION_LIST_HOST_NETWORKS
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def list_hostnetworks(session, lister, **filters):
+def list_hostnetworks(lister, session=None, **filters):
     """Get host networks."""
     return utils.list_db_objects(
         session, models.HostNetwork, **filters
@@ -547,8 +550,8 @@ def list_hostnetworks(session, lister, **filters):
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 def get_host_network(
-    session, getter, host_id,
-    host_network_id, **kwargs
+    getter, host_id,
+    host_network_id, session=None, **kwargs
 ):
     """Get host network."""
     host_network = utils.get_db_object(
@@ -570,7 +573,7 @@ def get_host_network(
     permission.PERMISSION_LIST_HOST_NETWORKS
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def get_hostnetwork(session, getter, host_network_id, **kwargs):
+def get_hostnetwork(getter, host_network_id, session=None, **kwargs):
     """Get host network."""
     return utils.get_db_object(
         session, models.HostNetwork,
@@ -623,9 +626,9 @@ def _add_host_network(
     permission.PERMISSION_ADD_HOST_NETWORK
 )
 def add_host_network(
-    session, creator, host_id,
+    creator, host_id,
     exception_when_existing=True,
-    interface=None, **kwargs
+    interface=None, session=None, **kwargs
 ):
     """Create a host network."""
     return _add_host_network(
@@ -639,9 +642,9 @@ def add_host_network(
     permission.PERMISSION_ADD_HOST_NETWORK
 )
 def add_host_networks(
-    session, creator,
+    creator,
     exception_when_existing=False,
-    data=[]
+    data=[], session=None
 ):
     """Create host networks."""
     hosts = []
@@ -672,9 +675,6 @@ def add_host_networks(
     }
 
 
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_ADD_HOST_NETWORK
-)
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 def _update_host_network(
     session, updater, host_network, **kwargs
@@ -720,8 +720,11 @@ def _update_host_network(
     ip=utils.check_ip
 )
 @database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_NETWORK
+)
 def update_host_network(
-    session, updater, host_id, host_network_id, **kwargs
+    updater, host_id, host_network_id, session=None, **kwargs
 ):
     """Update a host network."""
     host_network = utils.get_db_object(
@@ -747,7 +750,10 @@ def update_host_network(
     ip=utils.check_ip
 )
 @database.run_in_session()
-def update_hostnetwork(session, updater, host_network_id, **kwargs):
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_HOST_NETWORK
+)
+def update_hostnetwork(updater, host_network_id, session=None, **kwargs):
     """Update a host network."""
     host_network = utils.get_db_object(
         session, models.HostNetwork, id=host_network_id
@@ -763,7 +769,10 @@ def update_hostnetwork(session, updater, host_network_id, **kwargs):
     permission.PERMISSION_DEL_HOST_NETWORK
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def del_host_network(session, deleter, host_id, host_network_id, **kwargs):
+def del_host_network(
+    deleter, host_id, host_network_id,
+    session=None, **kwargs
+):
     """Delete a host network."""
     host_network = utils.get_db_object(
         session, models.HostNetwork,
@@ -785,7 +794,7 @@ def del_host_network(session, deleter, host_id, host_network_id, **kwargs):
     permission.PERMISSION_DEL_HOST_NETWORK
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
-def del_hostnetwork(session, deleter, host_network_id, **kwargs):
+def del_hostnetwork(deleter, host_network_id, session=None, **kwargs):
     """Delete a host network."""
     host_network = utils.get_db_object(
         session, models.HostNetwork, id=host_network_id
@@ -800,7 +809,7 @@ def del_hostnetwork(session, deleter, host_network_id, **kwargs):
     permission.PERMISSION_GET_HOST_STATE
 )
 @utils.wrap_to_dict(RESP_STATE_FIELDS)
-def get_host_state(session, getter, host_id, **kwargs):
+def get_host_state(getter, host_id, session=None, **kwargs):
     """Get host state info."""
     return utils.get_db_object(
         session, models.Host, id=host_id
@@ -816,7 +825,7 @@ def get_host_state(session, getter, host_id, **kwargs):
     permission.PERMISSION_UPDATE_HOST_STATE
 )
 @utils.wrap_to_dict(RESP_STATE_FIELDS)
-def update_host_state(session, updater, host_id, **kwargs):
+def update_host_state(updater, host_id, session=None, **kwargs):
     """Update a host state."""
     host = utils.get_db_object(
         session, models.Host, id=host_id
@@ -828,7 +837,7 @@ def update_host_state(session, updater, host_id, **kwargs):
 @utils.supported_filters([])
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_LOG_FIELDS)
-def get_host_log_histories(session, getter, host_id, **kwargs):
+def get_host_log_histories(getter, host_id, session=None, **kwargs):
     """Get host log history."""
     return utils.list_db_objects(
         session, models.HostLogHistory, id=host_id
@@ -838,7 +847,7 @@ def get_host_log_histories(session, getter, host_id, **kwargs):
 @utils.supported_filters([])
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_LOG_FIELDS)
-def get_host_log_history(session, getter, host_id, filename, **kwargs):
+def get_host_log_history(getter, host_id, filename, session=None, **kwargs):
     """Get host log history."""
     return utils.get_db_object(
         session, models.HostLogHistory, id=host_id, filename=filename
@@ -851,7 +860,10 @@ def get_host_log_history(session, getter, host_id, filename, **kwargs):
 )
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_LOG_FIELDS)
-def update_host_log_history(session, updater, host_id, filename, **kwargs):
+def update_host_log_history(
+    updater, host_id, filename,
+    session=None, **kwargs
+):
     """Update a host log history."""
     host_log_history = utils.get_db_object(
         session, models.HostLogHistory, id=host_id, filename=filename
@@ -867,8 +879,8 @@ def update_host_log_history(session, updater, host_id, filename, **kwargs):
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_LOG_FIELDS)
 def add_host_log_history(
-    session, creator, host_id, exception_when_existing=False,
-    filename=None, **kwargs
+    creator, host_id, exception_when_existing=False,
+    filename=None, session=None, **kwargs
 ):
     """add a host log history."""
     return utils.add_db_object(
@@ -887,7 +899,7 @@ def add_host_log_history(
     host=RESP_CONFIG_FIELDS
 )
 def poweron_host(
-    session, deployer, host_id, poweron={}, **kwargs
+    deployer, host_id, poweron={}, session=None, **kwargs
 ):
     """power on host."""
     from compass.tasks import client as celery_client
@@ -915,7 +927,7 @@ def poweron_host(
     host=RESP_CONFIG_FIELDS
 )
 def poweroff_host(
-    session, deployer, host_id, poweroff={}, **kwargs
+    deployer, host_id, poweroff={}, session=None, **kwargs
 ):
     """power off host."""
     from compass.tasks import client as celery_client
@@ -943,7 +955,7 @@ def poweroff_host(
     host=RESP_CONFIG_FIELDS
 )
 def reset_host(
-    session, deployer, host_id, reset={}, **kwargs
+    deployer, host_id, reset={}, session=None, **kwargs
 ):
     """reset host."""
     from compass.tasks import client as celery_client

@@ -28,7 +28,7 @@ RESP_FIELDS = ['user_id', 'logs', 'timestamp']
 
 
 @database.run_in_session()
-def log_user_action(session, user_id, action):
+def log_user_action(user_id, action, session=None):
     """Log user action."""
     utils.add_db_object(
         session, models.UserLog, True, user_id=user_id, action=action
@@ -39,7 +39,7 @@ def log_user_action(session, user_id, action):
 @user_api.check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_user_actions(session, lister, user_id, **filters):
+def list_user_actions(lister, user_id, session=None, **filters):
     """list user actions."""
     return utils.list_db_objects(
         session, models.UserLog, order_by=['timestamp'],
@@ -51,7 +51,7 @@ def list_user_actions(session, lister, user_id, **filters):
 @user_api.check_user_admin()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_actions(session, lister, **filters):
+def list_actions(lister, session=None, **filters):
     """list actions."""
     return utils.list_db_objects(
         session, models.UserLog, order_by=['timestamp'], **filters
@@ -62,7 +62,7 @@ def list_actions(session, lister, **filters):
 @user_api.check_user_admin_or_owner()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def del_user_actions(session, deleter, user_id, **filters):
+def del_user_actions(deleter, user_id, session=None, **filters):
     """delete user actions."""
     return utils.del_db_objects(
         session, models.UserLog, user_id=user_id, **filters
@@ -73,7 +73,7 @@ def del_user_actions(session, deleter, user_id, **filters):
 @user_api.check_user_admin()
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def del_actions(session, deleter, **filters):
+def del_actions(deleter, session=None, **filters):
     """delete actions."""
     return utils.del_db_objects(
         session, models.UserLog, **filters

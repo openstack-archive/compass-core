@@ -20,6 +20,7 @@ import logging
 import netaddr
 import re
 
+from inspect import isfunction
 from sqlalchemy import and_
 from sqlalchemy import or_
 
@@ -255,6 +256,17 @@ def _replace_output(data, **output_mapping):
     return info
 
 
+def get_wrapped_func(func):
+    """Get wrapped function instance."""
+    if func.func_closure:
+        for closure in func.func_closure:
+            if isfunction(closure.cell_contents):
+                return get_wrapped_func(closure.cell_contents)
+        return func
+    else:
+        return func
+
+
 def wrap_to_dict(support_keys=[], **filters):
     def decorator(func):
         @functools.wraps(func)
@@ -335,14 +347,18 @@ def replace_filters(**filter_mapping):
 def supported_filters(
     support_keys=[],
     optional_support_keys=[],
-    ignore_support_keys=[]
+    ignore_support_keys=[],
 ):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **filters):
+            wrapped_func = get_wrapped_func(func)
+            argspec = inspect.getargspec(wrapped_func)
+            wrapped_args = argspec.args
             must_support_keys = set(support_keys)
             all_support_keys = must_support_keys | set(optional_support_keys)
-            filter_keys = set(filters)
+            filter_keys = set(filters) - set(wrapped_args)
+            wrapped_support_keys = set(filters) | set(wrapped_args)
             unsupported_keys = (
                 filter_keys - all_support_keys - set(ignore_support_keys)
             )
@@ -352,7 +368,7 @@ def supported_filters(
                         list(unsupported_keys)
                     )
                 )
-            missing_keys = must_support_keys - filter_keys
+            missing_keys = must_support_keys - wrapped_support_keys
             if missing_keys:
                 raise exception.InvalidParameter(
                     'filter keys %s not found' % str(

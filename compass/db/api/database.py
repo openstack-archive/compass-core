@@ -149,8 +149,14 @@ def run_in_session():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            with session() as my_session:
-                return func(my_session, *args, **kwargs)
+            if args is not () and 'session' in str(args[-1]):
+                    return func(*args, **kwargs)
+            elif 'session' in kwargs.keys():
+                return func(*args, **kwargs)
+            else:
+                with session() as my_session:
+                    kwargs['session'] = my_session
+                    return func(*args, **kwargs)
         return wrapper
     return decorator
 
@@ -289,24 +295,24 @@ def _update_others(other_session):
 
 
 @run_in_session()
-def create_db(my_session):
+def create_db(session):
     """Create database."""
     models.BASE.metadata.create_all(bind=ENGINE)
-    _setup_permission_table(my_session)
-    _setup_user_table(my_session)
-    _setup_switch_table(my_session)
-    _setup_os_installers(my_session)
-    _setup_package_installers(my_session)
-    _setup_oses(my_session)
-    _setup_distributed_systems(my_session)
-    _setup_adapters(my_session)
-    _setup_adapter_roles(my_session)
-    _setup_adapter_flavors(my_session)
-    _setup_os_fields(my_session)
-    _setup_package_fields(my_session)
-    _setup_os_metadatas(my_session)
-    _setup_package_metadatas(my_session)
-    _update_others(my_session)
+    _setup_permission_table(session)
+    _setup_user_table(session)
+    _setup_switch_table(session)
+    _setup_os_installers(session)
+    _setup_package_installers(session)
+    _setup_oses(session)
+    _setup_distributed_systems(session)
+    _setup_adapters(session)
+    _setup_adapter_roles(session)
+    _setup_adapter_flavors(session)
+    _setup_os_fields(session)
+    _setup_package_fields(session)
+    _setup_os_metadatas(session)
+    _setup_package_metadatas(session)
+    _update_others(session)
 
 
 def drop_db():

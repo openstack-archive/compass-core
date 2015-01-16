@@ -176,6 +176,16 @@ class TestAddUser(BaseTest):
         )
         self.assertEqual('test@abc.com', user_objs['email'])
 
+    def test_add_user_session(self):
+        with database.session() as session:
+            user_objs = user_api.add_user(
+                self.user_object,
+                email='test@abc.com',
+                password='password',
+                session=session
+            )
+        self.assertEqual('test@abc.com', user_objs['email'])
+
 
 class TestDelUser(BaseTest):
     """Test delete user."""
@@ -288,6 +298,60 @@ class TestAddDelUserPermission(BaseTest):
             self.user_object.id,
             permission_id=2
         )
+        permissions = user_api.get_permissions(
+            self.user_object,
+            self.user_object.id
+        )
+        result = None
+        for permission in permissions:
+            if permission['id'] == 2:
+                result = permission['name']
+        self.assertEqual(result, 'list_switches')
+
+    def test_add_permission_position(self):
+        user_api.add_permission(
+            self.user_object,
+            self.user_object.id,
+            True,
+            2
+        )
+        permissions = user_api.get_permissions(
+            self.user_object,
+            self.user_object.id
+        )
+        result = None
+        for permission in permissions:
+            if permission['id'] == 2:
+                result = permission['name']
+        self.assertEqual(result, 'list_switches')
+
+    def test_add_permission_session(self):
+        with database.session() as session:
+            user_api.add_permission(
+                self.user_object,
+                self.user_object.id,
+                permission_id=2,
+                session=session
+            )
+        permissions = user_api.get_permissions(
+            self.user_object,
+            self.user_object.id
+        )
+        result = None
+        for permission in permissions:
+            if permission['id'] == 2:
+                result = permission['name']
+        self.assertEqual(result, 'list_switches')
+
+    def test_add_permission_position_session(self):
+        with database.session() as session:
+            user_api.add_permission(
+                self.user_object,
+                self.user_object.id,
+                True,
+                2,
+                session
+            )
         permissions = user_api.get_permissions(
             self.user_object,
             self.user_object.id

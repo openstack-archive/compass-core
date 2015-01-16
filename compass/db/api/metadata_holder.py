@@ -133,7 +133,7 @@ def get_package_metadata_internal(session, adapter_id):
     permission.PERMISSION_LIST_METADATAS
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
-def get_package_metadata(session, getter, adapter_id, **kwargs):
+def get_package_metadata(getter, adapter_id, session=None, **kwargs):
     return {
         'package_config': get_package_metadata_internal(session, adapter_id)
     }
@@ -158,7 +158,7 @@ def get_os_metadata_internal(session, os_id):
     permission.PERMISSION_LIST_METADATAS
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
-def get_os_metadata(session, getter, os_id, **kwargs):
+def get_os_metadata(getter, os_id, session=None, **kwargs):
     """get os metadatas."""
     return {'os_config': get_os_metadata_internal(session, os_id)}
 
@@ -169,7 +169,7 @@ def get_os_metadata(session, getter, os_id, **kwargs):
     permission.PERMISSION_LIST_METADATAS
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
-def get_package_os_metadata(session, getter, adapter_id, os_id, **kwargs):
+def get_package_os_metadata(getter, adapter_id, os_id, session=None, **kwargs):
     from compass.db.api import adapter_holder as adapter_api
     adapter = adapter_api.get_adapter_internal(session, adapter_id)
     os_ids = [os['os_id'] for os in adapter['supported_oses']]

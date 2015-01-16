@@ -103,13 +103,54 @@ class TestAddSubnet(BaseTest):
             self.user_object,
             subnet='10.145.89.0/24'
         )
-        add_subnet = network.list_subnets(
+        add_subnets = network.list_subnets(
             self.user_object
         )
         expected = '10.145.89.0/24'
-        self.assertTrue(
-            item in add_subnet[0].items() for item in expected
+        for add_subnet in add_subnets:
+            self.assertEqual(expected, add_subnet['subnet'])
+
+    def test_add_subnet_position(self):
+        network.add_subnet(
+            self.user_object,
+            True,
+            '10.145.89.0/23'
         )
+        add_subnets = network.list_subnets(
+            self.user_object
+        )
+        expected = '10.145.89.0/23'
+        for add_subnet in add_subnets:
+            self.assertEqual(expected, add_subnet['subnet'])
+
+    def test_add_subnet_session(self):
+        with database.session() as session:
+            network.add_subnet(
+                self.user_object,
+                subnet='10.145.89.0/22',
+                session=session
+            )
+        add_subnets = network.list_subnets(
+            self.user_object
+        )
+        expected = '10.145.89.0/22'
+        for add_subnet in add_subnets:
+            self.assertEqual(expected, add_subnet['subnet'])
+
+    def test_add_subnet_position_session(self):
+        with database.session() as session:
+            network.add_subnet(
+                self.user_object,
+                True,
+                '10.145.89.0/21',
+                session
+            )
+        add_subnets = network.list_subnets(
+            self.user_object
+        )
+        expected = '10.145.89.0/21'
+        for add_subnet in add_subnets:
+            self.assertEqual(expected, add_subnet['subnet'])
 
 
 class TestUpdateSubnet(BaseTest):

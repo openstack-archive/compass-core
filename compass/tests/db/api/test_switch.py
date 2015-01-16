@@ -64,8 +64,39 @@ class TestAddSwitch(BaseTest):
     def test_add_switch(self):
         add_switch = switch.add_switch(
             self.user_object,
-            ip='2887583784'
+            ip='2887583784',
         )
+        expected = '172.29.8.40'
+        self.assertEqual(expected, add_switch['ip'])
+
+    def test_add_switch_position_args(self):
+        add_switch = switch.add_switch(
+            self.user_object,
+            True,
+            '2887583784',
+        )
+        print add_switch
+        expected = '172.29.8.40'
+        self.assertEqual(expected, add_switch['ip'])
+
+    def test_add_switch_session(self):
+        with database.session() as session:
+            add_switch = switch.add_switch(
+                self.user_object,
+                ip='2887583784',
+                session=session
+            )
+        expected = '172.29.8.40'
+        self.assertEqual(expected, add_switch['ip'])
+
+    def test_add_switch_position_args_session(self):
+        with database.session() as session:
+            add_switch = switch.add_switch(
+                self.user_object,
+                True,
+                '2887583784',
+                session
+            )
         expected = '172.29.8.40'
         self.assertEqual(expected, add_switch['ip'])
 
@@ -301,6 +332,42 @@ class TestAddSwitchMachine(BaseTest):
             mac='28:6e:d4:46:c4:25',
             port='1'
         )
+        expected = '28:6e:d4:46:c4:25'
+        self.assertEqual(expected, add_switch_machine['mac'])
+
+    def test_add_switch_machine_position_args(self):
+        add_switch_machine = switch.add_switch_machine(
+            self.user_object,
+            1,
+            True,
+            '28:6e:d4:46:c4:25',
+            port='1'
+        )
+        expected = '28:6e:d4:46:c4:25'
+        self.assertEqual(expected, add_switch_machine['mac'])
+
+    def test_add_switch_machine_session(self):
+        with database.session() as session:
+            add_switch_machine = switch.add_switch_machine(
+                self.user_object,
+                1,
+                mac='28:6e:d4:46:c4:25',
+                session=session,
+                port='1'
+            )
+        expected = '28:6e:d4:46:c4:25'
+        self.assertEqual(expected, add_switch_machine['mac'])
+
+    def test_add_switch_machine_position_args_session(self):
+        with database.session() as session:
+            add_switch_machine = switch.add_switch_machine(
+                self.user_object,
+                1,
+                True,
+                '28:6e:d4:46:c4:25',
+                session,
+                port='1'
+            )
         expected = '28:6e:d4:46:c4:25'
         self.assertEqual(expected, add_switch_machine['mac'])
 

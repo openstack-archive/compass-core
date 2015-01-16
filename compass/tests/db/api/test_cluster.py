@@ -326,6 +326,54 @@ class TestAddCluster(ClusterTestCase):
             result.append(add_cluster['name'])
         self.assertIn('test_add_cluster', result)
 
+    def test_add_cluster_position_args(self):
+        cluster.add_cluster(
+            self.user_object,
+            True,
+            'test_add_cluster_position',
+            adapter_id=self.adapter_id,
+            os_id=self.os_id,
+            flavor_id=self.flavor_id,
+        )
+        add_clusters = cluster.list_clusters(self.user_object)
+        result = []
+        for add_cluster in add_clusters:
+            result.append(add_cluster['name'])
+        self.assertIn('test_add_cluster_position', result)
+
+    def test_add_cluster_session(self):
+        with database.session() as session:
+            cluster.add_cluster(
+                self.user_object,
+                adapter_id=self.adapter_id,
+                os_id=self.os_id,
+                flavor_id=self.flavor_id,
+                name='test_add_cluster_session',
+                session=session
+            )
+        add_clusters = cluster.list_clusters(self.user_object)
+        result = []
+        for add_cluster in add_clusters:
+            result.append(add_cluster['name'])
+        self.assertIn('test_add_cluster_session', result)
+
+    def test_add_cluster_position_args_session(self):
+        with database.session() as session:
+            cluster.add_cluster(
+                self.user_object,
+                True,
+                'test_add_cluster_position_session',
+                session,
+                adapter_id=self.adapter_id,
+                os_id=self.os_id,
+                flavor_id=self.flavor_id,
+            )
+        add_clusters = cluster.list_clusters(self.user_object)
+        result = []
+        for add_cluster in add_clusters:
+            result.append(add_cluster['name'])
+        self.assertIn('test_add_cluster_position_session', result)
+
 
 class TestUpdateCluster(ClusterTestCase):
     """Test update cluster."""
@@ -1927,7 +1975,6 @@ class TestAddClusterhostLogHistory(ClusterTestCase):
             self.user_object,
             self.clusterhost_id[0],
             filename='add_log_file'
-
         )
         logs = cluster.get_clusterhost_log_histories(
             self.user_object,
@@ -1937,6 +1984,57 @@ class TestAddClusterhostLogHistory(ClusterTestCase):
         for log in logs:
             result.append(log['filename'])
         self.assertIn('add_log_file', result)
+
+    def test_add_clusterhost_log_history_position_args(self):
+        cluster.add_clusterhost_log_history(
+            self.user_object,
+            self.clusterhost_id[0],
+            False,
+            'add_log_file_position'
+        )
+        logs = cluster.get_clusterhost_log_histories(
+            self.user_object,
+            self.clusterhost_id[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_file_position', result)
+
+    def test_add_clusterhost_log_history_session(self):
+        with database.session() as session:
+            cluster.add_clusterhost_log_history(
+                self.user_object,
+                self.clusterhost_id[0],
+                filename='add_log_file_session',
+                session=session
+            )
+        logs = cluster.get_clusterhost_log_histories(
+            self.user_object,
+            self.clusterhost_id[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_file_session', result)
+
+    def test_add_clusterhost_log_history_position_args_session(self):
+        with database.session() as session:
+            cluster.add_clusterhost_log_history(
+                self.user_object,
+                self.clusterhost_id[0],
+                False,
+                'add_log_file_position_session',
+                session
+            )
+        logs = cluster.get_clusterhost_log_histories(
+            self.user_object,
+            self.clusterhost_id[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_file_position_session', result)
 
 
 class TestAddClusterHostLogHistory(ClusterTestCase):
@@ -1964,6 +2062,63 @@ class TestAddClusterHostLogHistory(ClusterTestCase):
         for log in logs:
             result.append(log['filename'])
         self.assertIn('add_log_file', result)
+
+    def test_add_cluster_host_log_history_position(self):
+        cluster.add_cluster_host_log_history(
+            self.user_object,
+            self.cluster_id,
+            self.host_id[0],
+            False,
+            'add_log_file_position'
+        )
+        logs = cluster.get_cluster_host_log_histories(
+            self.user_object,
+            self.cluster_id,
+            self.host_id[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_file_position', result)
+
+    def test_add_cluster_host_log_history_session(self):
+        with database.session() as session:
+            cluster.add_cluster_host_log_history(
+                self.user_object,
+                self.cluster_id,
+                self.host_id[0],
+                filename='add_log_file_session',
+                session=session
+            )
+        logs = cluster.get_cluster_host_log_histories(
+            self.user_object,
+            self.cluster_id,
+            self.host_id[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_file_session', result)
+
+    def test_add_cluster_host_log_history_position_session(self):
+        with database.session() as session:
+            cluster.add_cluster_host_log_history(
+                self.user_object,
+                self.cluster_id,
+                self.host_id[0],
+                False,
+                'add_log_file_position_session',
+                session
+            )
+        logs = cluster.get_cluster_host_log_histories(
+            self.user_object,
+            self.cluster_id,
+            self.host_id[0]
+        )
+        result = []
+        for log in logs:
+            result.append(log['filename'])
+        self.assertIn('add_log_file_position_session', result)
 
 
 if __name__ == '__main__':

@@ -245,7 +245,7 @@ if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    download $CENTOS_7_0_PPA_SOURCE || exit $?
+    download $CENTOS_7_0_PPA_REPO_SOURCE || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
@@ -253,7 +253,7 @@ if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    download $UBNUT_14_04_PPA_REPO_SOURCE || exit $?
+    download $UBUNTU_14_04_PPA_REPO_SOURCE || exit $?
 fi
 
 # download chef related packages

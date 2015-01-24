@@ -21,13 +21,6 @@ sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
 
 if [[ $LOCAL_REPO = "y" ]]; then
     echo "setting up local repo"
-    mkdir -p /tmp/repo
-    download -u "${LOCAL_REPO_US}/local_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/local_repo.tar.gz" local_repo.tar.gz unzip /tmp/repo || exit $?
-    mv -f /tmp/repo/local_repo/* /var/www/compass_web/v2/
-    if [[ "$?" != "0" ]]; then
-	echo "failed to setup local repo"
-	exit 1
-    fi
     download -u "${LOCAL_REPO_US}/gem_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/gem_repo.tar.gz" gem_repo.tar.gz unzip /var/www/compass_web/v2 || exit $?
     download -u "${LOCAL_REPO_US}/cirros-0.3.2-x86_64-disk.img" -u "${LOCAL_REPO_HUAWEI}/cirros-0.3.2-x86_64-disk.img" cirros-0.3.2-x86_64-disk.img copy /var/www/compass_web/v2 || exit $?
     if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then

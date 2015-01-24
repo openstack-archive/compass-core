@@ -288,8 +288,6 @@ fi
 
 # download local repo
 if [[ $LOCAL_REPO == "y" ]]; then
-    echo "download local repo"
-    download -u "${LOCAL_REPO_US}/local_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/local_repo.tar.gz" || exit $?
     echo "download gem local repo"
     download -u "${LOCAL_REPO_US}/gem_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/gem_repo.tar.gz" || exit $?
     echo "download openstack os image local repo"

@@ -1,8 +1,8 @@
 amqplib
 argparse
 celery
-Markdown==2.4.1
-Cheetah==2.4.1
+Markdown
+Cheetah
 daemon
 Flask
 Flask-Login
@@ -16,9 +16,9 @@ lazypy
 lockfile
 MySQL-python
 netaddr
-paramiko==1.7.5
+paramiko
 PyChef
-python-daemon==1.6.1
+python-daemon!=2.0,!=2.0.1,!=2.0.2,!=2.0.3
 SQLAlchemy>=0.9.0
 simplejson
 requests

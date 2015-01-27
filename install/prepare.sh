@@ -217,6 +217,7 @@ if ! lsvirtualenv |grep compass-core>/dev/null; then
 fi
 cd $COMPASSDIR
 workon compass-core
+easy_install --upgrade pip
 rm -rf ${WORKON_HOME}/compass-core/build
 echo "install compass requirements"
 pip install -U -r requirements.txt

@@ -128,7 +128,7 @@ def poll_switch(poller_email, ip_addr, credentials,
         switch_dict, machine_dicts = _poll_switch(
             ip_addr, credentials, req_obj=req_obj, oper=oper
         )
-        switches = switch_api.list_switches(poller, ip_int=ip_int)
+        switches = switch_api.list_switches(ip_int=ip_int, user=poller)
         if not switches:
             logging.error('no switch found for %s', ip_addr)
             return
@@ -137,6 +137,10 @@ def poll_switch(poller_email, ip_addr, credentials,
             for machine_dict in machine_dicts:
                 logging.debug('add machine: %s', machine_dict)
                 switch_api.add_switch_machine(
-                    poller, switch['id'], False, **machine_dict
+                    switch['id'], False, user=poller, **machine_dict
                 )
-                switch_api.update_switch(poller, switch['id'], **switch_dict)
+                switch_api.update_switch(
+                    switch['id'],
+                    user=poller,
+                    **switch_dict
+                )

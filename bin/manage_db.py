@@ -148,7 +148,7 @@ def set_switch_machines():
     switch_mapping = {}
     for switch in switches:
         added_switch = switch_api.add_switch(
-            user, False, **switch
+            False, user=user, **switch
         )
         switch_mapping[switch['ip']] = added_switch['id']
     for switch_ip, machines in switch_machines.items():
@@ -158,7 +158,7 @@ def set_switch_machines():
         switch_id = switch_mapping[switch_ip]
         for machine in machines:
             switch_api.add_switch_machine(
-                user, switch_id, False, **machine
+                switch_id, False, user=user, **machine
             )
 
 

@@ -55,7 +55,7 @@ def update_progress():
         logging.info('update installing progress')
 
         user = user_api.get_user_object(setting.COMPASS_ADMIN_EMAIL)
-        hosts = host_api.list_hosts(user)
+        hosts = host_api.list_hosts(user=user)
         host_mapping = {}
         for host in hosts:
             if 'id' not in host:
@@ -74,13 +74,13 @@ def update_progress():
                     '%s is not in host %s', host_dirname, host
                 )
                 continue
-            host_state = host_api.get_host_state(user, host_id)
+            host_state = host_api.get_host_state(host_id, user=user)
             if 'state' not in host_state:
                 logging.error('state is not in host state %s', host_state)
                 continue
             if host_state['state'] == 'INSTALLING':
                 host_log_histories = host_api.get_host_log_histories(
-                    user, host_id
+                    host_id, user=user
                 )
                 host_log_history_mapping = {}
                 for host_log_history in host_log_histories:
@@ -101,7 +101,7 @@ def update_progress():
                     'ignore host state %s since it is not in installing',
                     host_state
                 )
-        adapters = adapter_api.list_adapters(user)
+        adapters = adapter_api.list_adapters(user=user)
         adapter_mapping = {}
         for adapter in adapters:
             if 'id' not in adapter:
@@ -116,7 +116,7 @@ def update_progress():
                 continue
             adapter_id = adapter['id']
             adapter_mapping[adapter_id] = adapter
-        clusters = cluster_api.list_clusters(user)
+        clusters = cluster_api.list_clusters(user=user)
         cluster_mapping = {}
         for cluster in clusters:
             if 'id' not in cluster:
@@ -129,12 +129,15 @@ def update_progress():
                     cluster
                 )
                 continue
-            cluster_state = cluster_api.get_cluster_state(user, cluster_id)
+            cluster_state = cluster_api.get_cluster_state(
+                cluster_id,
+                user=user
+            )
             if 'state' not in cluster_state:
                 logging.error('state not in cluster state %s', cluster_state)
                 continue
             cluster_mapping[cluster_id] = (cluster, cluster_state)
-        clusterhosts = cluster_api.list_clusterhosts(user)
+        clusterhosts = cluster_api.list_clusterhosts(user=user)
         clusterhost_mapping = {}
         for clusterhost in clusterhosts:
             if 'clusterhost_id' not in clusterhost:
@@ -194,7 +197,7 @@ def update_progress():
             package_installer = adapter['package_installer']
             clusterhost['package_installer'] = package_installer
             clusterhost_state = cluster_api.get_clusterhost_self_state(
-                user, clusterhost_id
+                clusterhost_id, user=user
             )
             if 'state' not in clusterhost_state:
                 logging.error(
@@ -205,7 +208,7 @@ def update_progress():
             if clusterhost_state['state'] == 'INSTALLING':
                 clusterhost_log_histories = (
                     cluster_api.get_clusterhost_log_histories(
-                        user, clusterhost_id
+                        clusterhost_id, user=user
                     )
                 )
                 clusterhost_log_history_mapping = {}
@@ -236,7 +239,7 @@ def update_progress():
             host_mapping.items()
         ):
             host_api.update_host_state(
-                user, host_id,
+                host_id, user=user,
                 percentage=host_state.get('percentage', 0),
                 message=host_state.get('message', ''),
                 severity=host_state.get('severity', 'INFO')
@@ -245,7 +248,7 @@ def update_progress():
                 host_log_history_mapping.items()
             ):
                 host_api.add_host_log_history(
-                    user, host_id, filename=filename,
+                    host_id, filename=filename, user=user,
                     position=host_log_history.get('position', 0),
                     percentage=host_log_history.get('percentage', 0),
                     partial_line=host_log_history.get('partial_line', ''),
@@ -264,7 +267,7 @@ def update_progress():
             clusterhost_mapping.items()
         ):
             cluster_api.update_clusterhost_state(
-                user, clusterhost_id,
+                clusterhost_id, user=user,
                 percentage=clusterhost_state.get('percentage', 0),
                 message=clusterhost_state.get('message', ''),
                 severity=clusterhost_state.get('severity', 'INFO')
@@ -273,7 +276,7 @@ def update_progress():
                 clusterhost_log_history_mapping.items()
             ):
                 cluster_api.add_clusterhost_log_history(
-                    user, clusterhost_id, filename=filename,
+                    clusterhost_id, user=user, filename=filename,
                     position=clusterhost_log_history.get('position', 0),
                     percentage=clusterhost_log_history.get('percentage', 0),
                     partial_line=clusterhost_log_history.get(
@@ -290,5 +293,5 @@ def update_progress():
             cluster_mapping)
         for cluster_id, (cluster, cluster_state) in cluster_mapping.items():
             cluster_api.update_cluster_state(
-                user, cluster_id
+                cluster_id, user=user
             )

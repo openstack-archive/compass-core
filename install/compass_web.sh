@@ -25,15 +25,15 @@ if [[ $LOCAL_REPO = "y" ]]; then
     download -u "${LOCAL_REPO_US}/cirros-0.3.2-x86_64-disk.img" -u "${LOCAL_REPO_HUAWEI}/cirros-0.3.2-x86_64-disk.img" cirros-0.3.2-x86_64-disk.img copy /var/www/compass_web/v2 || exit $?
     if [[ $SUPPORT_CENTOS_6_5 = "y" ]]; then
 	mkdir -p /var/www/compass_web/v2/yum.repos.d/centos/6.5
-	download -u "${LOCAL_REPO_US}/centos/6.5/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/6.5/centos_repo.tag.gz" CentOS-6.5-x86_64.tar.gz unzip /var/www/compass_web/v2/yum.repos.d/centos/6.5 || exit $?
+	download -u "${LOCAL_REPO_US}/centos/6.5/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/6.5/centos_repo.tar.gz" CentOS-6.5-x86_64.tar.gz unzip /var/www/compass_web/v2/yum.repos.d/centos/6.5 || exit $?
     fi
     if [[ $SUPPORT_CENTOS_6_6 = "y" ]]; then
 	mkdir -p /var/www/compass_web/v2/yum.repos.d/centos/6.6
-	download -u "${LOCAL_REPO_US}/centos/6.6/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/6.6/centos_repo.tag.gz" CentOS-6.6-x86_64.tar.gz unzip /var/www/compass_web/v2/yum.repos.d/centos/6.6 || exit $?
+	download -u "${LOCAL_REPO_US}/centos/6.6/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/6.6/centos_repo.tar.gz" CentOS-6.6-x86_64.tar.gz unzip /var/www/compass_web/v2/yum.repos.d/centos/6.6 || exit $?
     fi
     if [[ $SUPPORT_CENTOS_7_0 = "y" ]]; then
 	mkdir -p /var/www/compass_web/v2/yum.repos.d/centos/7.0
-	download -u "${LOCAL_REPO_US}/centos/7.0/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/7.0/centos_repo.tag.gz" CentOS-7.0-x86_64.tar.gz unzip /var/www/compass_web/v2/yum.repos.d/centos/7.0 || exit $?
+	download -u "${LOCAL_REPO_US}/centos/7.0/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/7.0/centos_repo.tar.gz" CentOS-7.0-x86_64.tar.gz unzip /var/www/compass_web/v2/yum.repos.d/centos/7.0 || exit $?
     fi
     if [[ $SUPPORT_UBUNTU_12_04 = "y" ]]; then
 	mkdir -p /var/www/compass_web/v2/apt.repos.d/ubuntu/12.04

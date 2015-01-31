@@ -375,9 +375,9 @@ class TestClusterAPI(ApiTestCase):
             )
         )
         cluster_api.update_cluster_state(
-            self.user_object,
             1,
-            state='INSTALLING'
+            state='INSTALLING',
+            user=self.user_object,
         )
         url = '/clusters/1'
         return_value = self.delete(url)
@@ -577,7 +577,6 @@ class TestSwitchAPI(ApiTestCase):
         url = '/switches'
         return_value = self.get(url)
         resp = json.loads(return_value.get_data())
-        print 'list switches: %s' % resp
         count = len(resp)
         self.assertEqual(count, 2)
         self.assertEqual(return_value.status_code, 200)

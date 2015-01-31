@@ -44,7 +44,7 @@ class TestListPermissions(BaseTest):
         super(TestListPermissions, self).tearDown()
 
     def test_list_permissions(self):
-        permissions = permission.list_permissions(self.user_object)
+        permissions = permission.list_permissions(user=self.user_object)
         self.assertIsNotNone(permissions)
         self.assertEqual(49, len(permissions))
 
@@ -59,7 +59,9 @@ class TestGetPermission(BaseTest):
         super(TestGetPermission, self).tearDown()
 
     def test_get_permission(self):
-        get_permission = permission.get_permission(self.user_object, 1)
+        get_permission = permission.get_permission(
+            1,
+            user=self.user_object)
         self.assertIsNotNone(get_permission)
         expected = {
             'alias': 'list permissions',

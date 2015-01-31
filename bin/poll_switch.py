@@ -62,7 +62,7 @@ def pollswitches(switch_ips):
     poll_switches = []
     all_switches = dict([
         (switch['ip'], switch['credentials'])
-        for switch in switch_api.list_switches(user)
+        for switch in switch_api.list_switches(user=user)
     ])
     if switch_ips:
         poll_switches = dict([

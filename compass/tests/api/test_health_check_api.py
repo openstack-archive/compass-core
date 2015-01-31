@@ -154,7 +154,7 @@ class TestHealthCheckAPI(ApiTestCase):
         # Cluster has been deployed successfully.
         user = models.User.query.filter_by(email='admin@huawei.com').first()
         cluster_db.update_cluster_state(
-            user, self.cluster_id, state='SUCCESSFUL'
+            self.cluster_id, user=user, state='SUCCESSFUL'
         )
         return_value = self.test_client.post(url, data=request_data)
         self.assertEqual(202, return_value.status_code)

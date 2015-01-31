@@ -140,8 +140,8 @@ def get_switch_internal(
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_switch(
-    getter, switch_id,
-    exception_when_missing=True, session=None, **kwargs
+    switch_id, exception_when_missing=True,
+    user=None, session=None, **kwargs
 ):
     """get field dict of a switch."""
     return utils.get_db_object(
@@ -156,7 +156,7 @@ def get_switch(
     permission.PERMISSION_LIST_SWITCHES
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_switches(lister, session=None, **filters):
+def list_switches(user=None, session=None, **filters):
     """List switches."""
     switches = utils.list_db_objects(
         session, models.Switch, **filters
@@ -176,7 +176,7 @@ def list_switches(lister, session=None, **filters):
     permission.PERMISSION_DEL_SWITCH
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def del_switch(deleter, switch_id, session=None, **kwargs):
+def del_switch(switch_id, user=None, session=None, **kwargs):
     """Delete a switch."""
     switch = utils.get_db_object(session, models.Switch, id=switch_id)
     default_switch_ip_int = long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP))
@@ -212,8 +212,8 @@ def del_switch(deleter, switch_id, session=None, **kwargs):
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def add_switch(
-    creator, exception_when_existing=True,
-    ip=None, session=None, **kwargs
+    exception_when_existing=True, ip=None,
+    user=None, session=None, **kwargs
 ):
     """Create a switch."""
     ip_int = long(netaddr.IPAddress(ip))
@@ -254,9 +254,9 @@ def _update_switch(session, updater, switch_id, **kwargs):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_SWITCH
 )
-def update_switch(updater, switch_id, session=None, **kwargs):
+def update_switch(switch_id, user=None, session=None, **kwargs):
     """Update fields of a switch."""
-    return _update_switch(session, updater, switch_id, **kwargs)
+    return _update_switch(session, user, switch_id, **kwargs)
 
 
 @utils.replace_filters(
@@ -274,9 +274,9 @@ def update_switch(updater, switch_id, session=None, **kwargs):
 @utils.output_validates(
     credentials=utils.check_switch_credentials
 )
-def patch_switch(updater, switch_id, session=None, **kwargs):
+def patch_switch(switch_id, user=None, session=None, **kwargs):
     """Patch fields of a switch."""
-    return _update_switch(session, updater, switch_id, **kwargs)
+    return _update_switch(session, user, switch_id, **kwargs)
 
 
 @utils.supported_filters(optional_support_keys=SUPPORTED_FILTER_FIELDS)
@@ -285,7 +285,7 @@ def patch_switch(updater, switch_id, session=None, **kwargs):
     permission.PERMISSION_LIST_SWITCH_FILTERS
 )
 @utils.wrap_to_dict(RESP_FILTERS_FIELDS)
-def list_switch_filters(lister, session=None, **filters):
+def list_switch_filters(user=None, session=None, **filters):
     """List switch filters."""
     return utils.list_db_objects(
         session, models.Switch, **filters
@@ -299,7 +299,7 @@ def list_switch_filters(lister, session=None, **filters):
 )
 @utils.wrap_to_dict(RESP_FILTERS_FIELDS)
 def get_switch_filters(
-    getter, switch_id, session=None, **kwargs
+    switch_id, user=None, session=None, **kwargs
 ):
     """get switch filter."""
     return utils.get_db_object(
@@ -320,7 +320,7 @@ def get_switch_filters(
     permission.PERMISSION_UPDATE_SWITCH_FILTERS
 )
 @utils.wrap_to_dict(RESP_FILTERS_FIELDS)
-def update_switch_filters(updater, switch_id, session=None, **kwargs):
+def update_switch_filters(switch_id, user=None, session=None, **kwargs):
     """Update a switch filter."""
     switch = utils.get_db_object(session, models.Switch, id=switch_id)
     return utils.update_db_object(session, switch, **kwargs)
@@ -339,7 +339,7 @@ def update_switch_filters(updater, switch_id, session=None, **kwargs):
     permission.PERMISSION_UPDATE_SWITCH_FILTERS
 )
 @utils.wrap_to_dict(RESP_FILTERS_FIELDS)
-def patch_switch_filter(updater, switch_id, session=None, **kwargs):
+def patch_switch_filter(switch_id, user=None, session=None, **kwargs):
     """Patch a switch filter."""
     switch = utils.get_db_object(session, models.Switch, id=switch_id)
     return utils.update_db_object(session, switch, **kwargs)
@@ -405,7 +405,7 @@ def _filter_vlans(vlan_filter, obj):
     location=utils.general_filter_callback
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-def _filter_switch_machines(session, user, switch_machines):
+def _filter_switch_machines(session, switch_machines):
     return [
         switch_machine for switch_machine in switch_machines
         if not switch_machine.filtered
@@ -424,7 +424,7 @@ def _filter_switch_machines(session, user, switch_machines):
     RESP_MACHINES_HOSTS_FIELDS,
     clusters=RESP_CLUSTER_FIELDS
 )
-def _filter_switch_machines_hosts(session, user, switch_machines):
+def _filter_switch_machines_hosts(session, switch_machines):
     filtered_switch_machines = [
         switch_machine for switch_machine in switch_machines
         if not switch_machine.filtered
@@ -451,12 +451,12 @@ def _filter_switch_machines_hosts(session, user, switch_machines):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_SWITCH_MACHINES
 )
-def list_switch_machines(getter, switch_id, session=None, **filters):
+def list_switch_machines(switch_id, user=None, session=None, **filters):
     """Get switch machines."""
     switch_machines = get_switch_machines_internal(
         session, switch_id=switch_id, **filters
     )
-    return _filter_switch_machines(session, getter, switch_machines)
+    return _filter_switch_machines(session, switch_machines)
 
 
 @utils.replace_filters(
@@ -469,13 +469,13 @@ def list_switch_machines(getter, switch_id, session=None, **filters):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_SWITCH_MACHINES
 )
-def list_switchmachines(lister, session=None, **filters):
+def list_switchmachines(user=None, session=None, **filters):
     """List switch machines."""
     switch_machines = get_switch_machines_internal(
         session, **filters
     )
     return _filter_switch_machines(
-        session, lister, switch_machines
+        session, switch_machines
     )
 
 
@@ -486,13 +486,13 @@ def list_switchmachines(lister, session=None, **filters):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_SWITCH_MACHINES
 )
-def list_switch_machines_hosts(getter, switch_id, session=None, **filters):
+def list_switch_machines_hosts(switch_id, user=None, session=None, **filters):
     """Get switch machines hosts."""
     switch_machines = get_switch_machines_internal(
         session, switch_id=switch_id, **filters
     )
     return _filter_switch_machines_hosts(
-        session, getter, switch_machines
+        session, switch_machines
     )
 
 
@@ -506,7 +506,7 @@ def list_switch_machines_hosts(getter, switch_id, session=None, **filters):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_LIST_SWITCH_MACHINES
 )
-def list_switchmachines_hosts(lister, session=None, **filters):
+def list_switchmachines_hosts(user=None, session=None, **filters):
     """List switch machines hosts."""
     switch_machines = get_switch_machines_internal(
         session, **filters
@@ -518,7 +518,7 @@ def list_switchmachines_hosts(lister, session=None, **filters):
             switch_machine for switch_machine in switch_machines
         ]
     return _filter_switch_machines_hosts(
-        session, lister, filtered_switch_machines
+        session, filtered_switch_machines
     )
 
 
@@ -534,9 +534,8 @@ def list_switchmachines_hosts(lister, session=None, **filters):
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def add_switch_machine(
-    creator, switch_id,
-    exception_when_existing=True,
-    mac=None, session=None, **kwargs
+    switch_id, exception_when_existing=True,
+    mac=None, user=None, session=None, **kwargs
 ):
     """Add switch machine."""
     switch = utils.get_db_object(
@@ -566,13 +565,13 @@ def add_switch_machine(
     permission.PERMISSION_UPDATE_SWITCH_MACHINES
 )
 @utils.wrap_to_dict(RESP_ACTION_FIELDS)
-def poll_switch_machines(poller, switch_id, session=None, **kwargs):
+def poll_switch_machines(switch_id, user=None, session=None, **kwargs):
     """poll switch machines."""
     from compass.tasks import client as celery_client
     switch = utils.get_db_object(session, models.Switch, id=switch_id)
     celery_client.celery.send_task(
         'compass.tasks.pollswitch',
-        (poller.email, switch.ip, switch.credentials)
+        (user.email, switch.ip, switch.credentials)
     )
     return {
         'status': 'action %s sent' % kwargs,
@@ -588,8 +587,8 @@ def poll_switch_machines(poller, switch_id, session=None, **kwargs):
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def get_switch_machine(
-    getter, switch_id, machine_id,
-    exception_when_missing=True, session=None, **kwargs
+    switch_id, machine_id, exception_when_missing=True,
+    user=None, session=None, **kwargs
 ):
     """get field dict of a switch machine."""
     return utils.get_db_object(
@@ -606,9 +605,8 @@ def get_switch_machine(
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def get_switchmachine(
-    getter, switch_machine_id,
-    exception_when_missing=True, session=None,
-    **kwargs
+    switch_machine_id, exception_when_missing=True,
+    user=None, session=None, **kwargs
 ):
     """get field dict of a switch machine."""
     return utils.get_db_object(
@@ -648,7 +646,7 @@ def update_switch_machine_internal(
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def update_switch_machine(
-    updater, switch_id, machine_id,
+    switch_id, machine_id, user=None,
     session=None, **kwargs
 ):
     """Update switch machine."""
@@ -672,7 +670,7 @@ def update_switch_machine(
     permission.PERMISSION_ADD_SWITCH_MACHINE
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-def update_switchmachine(updater, switch_machine_id, session=None, **kwargs):
+def update_switchmachine(switch_machine_id, user=None, session=None, **kwargs):
     """Update switch machine."""
     switch_machine = utils.get_db_object(
         session, models.SwitchMachine,
@@ -701,7 +699,7 @@ def update_switchmachine(updater, switch_machine_id, session=None, **kwargs):
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def patch_switch_machine(
-    updater, switch_id, machine_id,
+    switch_id, machine_id, user=None,
     session=None, **kwargs
 ):
     """Patch switch machine."""
@@ -731,7 +729,7 @@ def patch_switch_machine(
     permission.PERMISSION_ADD_SWITCH_MACHINE
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-def patch_switchmachine(updater, switch_machine_id, session=None, **kwargs):
+def patch_switchmachine(switch_machine_id, user=None, session=None, **kwargs):
     """Patch switch machine."""
     switch_machine = utils.get_db_object(
         session, models.SwitchMachine,
@@ -749,7 +747,10 @@ def patch_switchmachine(updater, switch_machine_id, session=None, **kwargs):
     permission.PERMISSION_DEL_SWITCH_MACHINE
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-def del_switch_machine(deleter, switch_id, machine_id, session=None, **kwargs):
+def del_switch_machine(
+    switch_id, machine_id, user=None,
+    session=None, **kwargs
+):
     """Delete switch machine by switch id and machine id."""
     switch_machine = utils.get_db_object(
         session, models.SwitchMachine,
@@ -777,7 +778,7 @@ def del_switch_machine(deleter, switch_id, machine_id, session=None, **kwargs):
     permission.PERMISSION_DEL_SWITCH_MACHINE
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-def del_switchmachine(deleter, switch_machine_id, session=None, **kwargs):
+def del_switchmachine(switch_machine_id, user=None, session=None, **kwargs):
     """Delete switch machine by switch_machine_id."""
     switch_machine = utils.get_db_object(
         session, models.SwitchMachine,
@@ -847,9 +848,8 @@ def _set_machines(session, switch, machines):
 )
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def update_switch_machines(
-    updater, switch_id,
-    add_machines=[], remove_machines=[],
-    set_machines=None, session=None, **kwargs
+    switch_id, add_machines=[], remove_machines=[],
+    set_machines=None, user=None, session=None, **kwargs
 ):
     """update switch machines."""
     switch = utils.get_db_object(

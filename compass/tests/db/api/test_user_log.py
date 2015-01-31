@@ -46,16 +46,19 @@ class TestListUserActions(BaseTest):
     def test_list_user_actions(self):
         user_log.log_user_action(
             self.user_object.id,
-            action='/testaction'
+            action='/users/login'
         )
         user_action = user_log.list_user_actions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object
         )
-        self.assertEqual(
-            1,
-            user_action[0]['user_id']
-        )
+        expected = {
+            'action': '/users/login',
+            'user_id': 1
+        }
+        self.assertTrue(
+            all(item in user_action[0].items()
+                for item in expected.items()))
 
     def test_list_none_user_actions(self):
         user_log.log_user_action(
@@ -63,8 +66,8 @@ class TestListUserActions(BaseTest):
             action='/testaction'
         )
         user_action = user_log.list_user_actions(
-            self.user_object,
-            2
+            2,
+            user=self.user_object
         )
         self.assertEqual([], user_action)
 
@@ -83,8 +86,16 @@ class TestListActions(BaseTest):
             self.user_object.id,
             action='/testaction'
         )
-        action = user_log.list_actions(self.user_object)
+        action = user_log.list_actions(user=self.user_object)
         self.assertIsNotNone(action)
+        expected = {
+            'action': '/testaction',
+            'user_id': 1
+        }
+        print action
+        self.assertTrue(
+            all(item in action[0].items()
+                for item in expected.items()))
 
 
 class TestDelUserActions(BaseTest):
@@ -102,12 +113,12 @@ class TestDelUserActions(BaseTest):
             action='/testaction'
         )
         user_log.del_user_actions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object
         )
         del_user_action = user_log.list_user_actions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object
         )
         self.assertEqual([], del_user_action)
 
@@ -127,10 +138,10 @@ class TestDelActions(BaseTest):
             action='/testaction'
         )
         user_log.del_actions(
-            self.user_object
+            user=self.user_object
         )
         del_action = user_log.list_actions(
-            self.user_object
+            user=self.user_object
         )
         self.assertEqual([], del_action)
 

@@ -61,7 +61,7 @@ def clean_installers():
         if package_installer
     ]
     user = user_api.get_user_object(setting.COMPASS_ADMIN_EMAIL)
-    adapters = adapter_api.list_adapters(user)
+    adapters = adapter_api.list_adapters(user=user)
     filtered_os_installers = {}
     filtered_package_installers = {}
     for adapter in adapters:

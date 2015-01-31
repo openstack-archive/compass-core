@@ -270,7 +270,7 @@ def list_permissions_internal(session, **filters):
 @database.run_in_session()
 @user_api.check_user_permission_in_session(PERMISSION_LIST_PERMISSIONS)
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_permissions(lister, session=None, **filters):
+def list_permissions(user=None, session=None, **filters):
     """list permissions."""
     return utils.list_db_objects(
         session, models.Permission, **filters
@@ -282,8 +282,8 @@ def list_permissions(lister, session=None, **filters):
 @user_api.check_user_permission_in_session(PERMISSION_LIST_PERMISSIONS)
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_permission(
-    getter, permission_id,
-    exception_when_missing=True, session=None, **kwargs
+    permission_id, exception_when_missing=True,
+    user=None, session=None, **kwargs
 ):
     """get permissions."""
     return utils.get_db_object(

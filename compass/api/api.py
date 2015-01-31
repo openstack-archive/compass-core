@@ -65,7 +65,7 @@ def update_user_token(func):
             datetime.datetime.now() + app.config['REMEMBER_COOKIE_DURATION']
         )
         user_api.record_user_token(
-            current_user, current_user.token, expire_timestamp
+            current_user.token, expire_timestamp, user=current_user
         )
         return response
     return decorated_api
@@ -236,7 +236,7 @@ def _login(use_cookie):
 
     user_log_api.log_user_action(user.id, request.path)
     response_data = user_api.record_user_token(
-        user, user.token, user.expire_timestamp
+        user.token, user.expire_timestamp, user=user
     )
     return utils.make_json_response(200, response_data)
 
@@ -259,7 +259,7 @@ def logout():
     """User logout."""
     user_log_api.log_user_action(current_user.id, request.path)
     response_data = user_api.clean_user_token(
-        current_user, current_user.token
+        current_user.token, user=current_user
     )
     logout_user()
     return utils.make_json_response(200, response_data)
@@ -276,7 +276,7 @@ def list_users():
         active=_bool_converter
     )
     return utils.make_json_response(
-        200, user_api.list_users(current_user, **data)
+        200, user_api.list_users(user=current_user, **data)
     )
 
 
@@ -287,7 +287,7 @@ def list_users():
 def add_user():
     """add user."""
     data = _get_request_data()
-    user_dict = user_api.add_user(current_user, **data)
+    user_dict = user_api.add_user(user=current_user, **data)
     return utils.make_json_response(
         200, user_dict
     )
@@ -301,7 +301,7 @@ def show_user(user_id):
     """Get user."""
     data = _get_request_args()
     return utils.make_json_response(
-        200, user_api.get_user(current_user, user_id, **data)
+        200, user_api.get_user(user_id, user=current_user, **data)
     )
 
 
@@ -313,7 +313,7 @@ def show_current_user():
     """Get user."""
     data = _get_request_args()
     return utils.make_json_response(
-        200, user_api.get_current_user(current_user, **data)
+        200, user_api.get_current_user(user=current_user, **data)
     )
 
 
@@ -327,8 +327,8 @@ def update_user(user_id):
     return utils.make_json_response(
         200,
         user_api.update_user(
-            current_user,
             user_id,
+            user=current_user,
             **data
         )
     )
@@ -344,7 +344,7 @@ def delete_user(user_id):
     return utils.make_json_response(
         200,
         user_api.del_user(
-            current_user, user_id, **data
+            user_id, user=current_user, **data
         )
     )
 
@@ -357,7 +357,7 @@ def list_user_permissions(user_id):
     """Get user permissions."""
     data = _get_request_args()
     return utils.make_json_response(
-        200, user_api.get_permissions(current_user, user_id, **data)
+        200, user_api.get_permissions(user_id, user=current_user, **data)
     )
 
 
@@ -370,14 +370,14 @@ def take_user_action(user_id):
     data = _get_request_data()
     update_permissions_func = _wrap_response(
         functools.partial(
-            user_api.update_permissions, current_user, user_id
+            user_api.update_permissions, user_id, user=current_user,
         ),
         200
     )
 
     def disable_user(disable_user=None):
         return user_api.update_user(
-            current_user, user_id, active=False
+            user_id, user=current_user, active=False
         )
 
     disable_user_func = _wrap_response(
@@ -387,7 +387,7 @@ def take_user_action(user_id):
 
     def enable_user(enable_user=None):
         return user_api.update_user(
-            current_user, user_id, active=True
+            user_id, user=current_user, active=True
         )
 
     enable_user_func = _wrap_response(
@@ -417,7 +417,7 @@ def show_user_permission(user_id, permission_id):
     return utils.make_json_response(
         200,
         user_api.get_permission(
-            current_user, user_id, permission_id,
+            user_id, permission_id, user=current_user,
             **data
         )
     )
@@ -433,7 +433,7 @@ def add_user_permission(user_id):
     return utils.make_json_response(
         200,
         user_api.add_permission(
-            current_user, user_id,
+            user_id, user=current_user,
             **data
         )
     )
@@ -452,7 +452,7 @@ def delete_user_permission(user_id, permission_id):
     return utils.make_json_response(
         200,
         user_api.del_permission(
-            current_user, user_id, permission_id,
+            user_id, permission_id, user=current_user,
             **data
         )
     )
@@ -467,7 +467,7 @@ def list_permissions():
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        permission_api.list_permissions(current_user, **data)
+        permission_api.list_permissions(user=current_user, **data)
     )
 
 
@@ -480,7 +480,7 @@ def show_permission(permission_id):
     data = _get_request_args()
     return utils.make_json_response(
         200,
-        permission_api.get_permission(current_user, permission_id, **data)
+        permission_api.get_permission(permission_id, user=current_user, **data)
     )
 
 
@@ -525,7 +525,7 @@ def list_all_user_actions():
     return utils.make_json_response(
         200,
         user_log_api.list_actions(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -541,7 +541,7 @@ def list_user_actions(user_id):
     return utils.make_json_response(
         200,
         user_log_api.list_user_actions(
-            current_user, user_id, **data
+            user_id, user=current_user, **data
         )
     )
 
@@ -556,7 +556,7 @@ def delete_all_user_actions():
     return utils.make_json_response(
         200,
         user_log_api.del_actions(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -571,7 +571,7 @@ def delete_user_actions(user_id):
     return utils.make_json_response(
         200,
         user_log_api.del_user_actions(
-            current_user, user_id, **data
+            user_id, user=current_user, **data
         )
     )
 
@@ -626,7 +626,7 @@ def list_switches():
     return utils.make_json_response(
         200,
         switch_api.list_switches(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -639,7 +639,7 @@ def show_switch(switch_id):
     """Get switch."""
     data = _get_request_args()
     return utils.make_json_response(
-        200, switch_api.get_switch(current_user, switch_id, **data)
+        200, switch_api.get_switch(switch_id, user=current_user, **data)
     )
 
 
@@ -652,7 +652,7 @@ def add_switch():
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        switch_api.add_switch(current_user, **data)
+        switch_api.add_switch(user=current_user, **data)
     )
 
 
@@ -665,7 +665,7 @@ def update_switch(switch_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        switch_api.update_switch(current_user, switch_id, **data)
+        switch_api.update_switch(switch_id, user=current_user, **data)
     )
 
 
@@ -678,7 +678,7 @@ def patch_switch(switch_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        switch_api.patch_switch(current_user, switch_id, **data)
+        switch_api.patch_switch(switch_id, user=current_user, **data)
     )
 
 
@@ -691,7 +691,7 @@ def delete_switch(switch_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        switch_api.del_switch(current_user, switch_id, **data)
+        switch_api.del_switch(switch_id, user=current_user, **data)
     )
 
 
@@ -706,7 +706,7 @@ def list_switch_filters():
     return utils.make_json_response(
         200,
         switch_api.list_switch_filters(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -719,7 +719,8 @@ def show_switch_filters(switch_id):
     """Get switch filters."""
     data = _get_request_args()
     return utils.make_json_response(
-        200, switch_api.get_switch_filters(current_user, switch_id, **data)
+        200,
+        switch_api.get_switch_filters(switch_id, user=current_user, **data)
     )
 
 
@@ -732,7 +733,7 @@ def update_switch_filters(switch_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        switch_api.update_switch_filters(current_user, switch_id, **data)
+        switch_api.update_switch_filters(switch_id, user=current_user, **data)
     )
 
 
@@ -745,7 +746,7 @@ def patch_switch_filters(switch_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        switch_api.patch_switch_filter(current_user, switch_id, **data)
+        switch_api.patch_switch_filter(switch_id, user=current_user, **data)
     )
 
 
@@ -831,7 +832,7 @@ def list_switch_machines(switch_id):
     return utils.make_json_response(
         200,
         switch_api.list_switch_machines(
-            current_user, switch_id, **data
+            switch_id, user=current_user, **data
         )
     )
 
@@ -852,7 +853,7 @@ def list_switch_machines_hosts(switch_id):
     return utils.make_json_response(
         200,
         switch_api.list_switch_machines_hosts(
-            current_user, switch_id, **data
+            switch_id, user=current_user, **data
         )
     )
 
@@ -866,7 +867,7 @@ def add_switch_machine(switch_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        switch_api.add_switch_machine(current_user, switch_id, **data)
+        switch_api.add_switch_machine(switch_id, user=current_user, **data)
     )
 
 
@@ -883,7 +884,7 @@ def show_switch_machine(switch_id, machine_id):
     return utils.make_json_response(
         200,
         switch_api.get_switch_machine(
-            current_user, switch_id, machine_id, **data
+            switch_id, machine_id, user=current_user, **data
         )
     )
 
@@ -901,7 +902,7 @@ def update_switch_machine(switch_id, machine_id):
     return utils.make_json_response(
         200,
         switch_api.update_switch_machine(
-            current_user, switch_id, machine_id, **data
+            switch_id, machine_id, user=current_user, **data
         )
     )
 
@@ -937,7 +938,7 @@ def delete_switch_machine(switch_id, machine_id):
     return utils.make_json_response(
         200,
         switch_api.del_switch_machine(
-            current_user, switch_id, machine_id, **data
+            switch_id, machine_id, user=current_user, **data
         )
     )
 
@@ -951,13 +952,13 @@ def take_switch_action(switch_id):
     data = _get_request_data()
     poll_switch_machines_func = _wrap_response(
         functools.partial(
-            switch_api.poll_switch_machines, current_user, switch_id
+            switch_api.poll_switch_machines, switch_id, user=current_user,
         ),
         202
     )
     update_switch_machines_func = _wrap_response(
         functools.partial(
-            switch_api.update_switch_machines, current_user, switch_id
+            switch_api.update_switch_machines, switch_id, user=current_user,
         ),
         200
     )
@@ -979,25 +980,25 @@ def take_machine_action(machine_id):
     data = _get_request_data()
     tag_func = _wrap_response(
         functools.partial(
-            machine_api.update_machine, current_user, machine_id
+            machine_api.update_machine, machine_id, user=current_user,
         ),
         200
     )
     poweron_func = _wrap_response(
         functools.partial(
-            machine_api.poweron_machine, current_user, machine_id
+            machine_api.poweron_machine, machine_id, user=current_user,
         ),
         202
     )
     poweroff_func = _wrap_response(
         functools.partial(
-            machine_api.poweroff_machine, current_user, machine_id
+            machine_api.poweroff_machine, machine_id, user=current_user,
         ),
         202
     )
     reset_func = _wrap_response(
         functools.partial(
-            machine_api.reset_machine, current_user, machine_id
+            machine_api.reset_machine, machine_id, user=current_user,
         ),
         202
     )
@@ -1025,7 +1026,7 @@ def list_switchmachines():
     return utils.make_json_response(
         200,
         switch_api.list_switchmachines(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -1047,7 +1048,7 @@ def list_switchmachines_hosts():
     return utils.make_json_response(
         200,
         switch_api.list_switchmachines_hosts(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -1065,7 +1066,7 @@ def show_switchmachine(switch_machine_id):
     return utils.make_json_response(
         200,
         switch_api.get_switchmachine(
-            current_user, switch_machine_id, **data
+            switch_machine_id, user=current_user, **data
         )
     )
 
@@ -1083,7 +1084,7 @@ def update_switchmachine(switch_machine_id):
     return utils.make_json_response(
         200,
         switch_api.update_switchmachine(
-            current_user, switch_machine_id, **data
+            switch_machine_id, user=current_user, **data
         )
     )
 
@@ -1098,7 +1099,7 @@ def patch_switchmachine(switch_machine_id):
     return utils.make_json_response(
         200,
         switch_api.patch_switchmachine(
-            current_user, switch_machine_id, **data
+            switch_machine_id, user=current_user, **data
         )
     )
 
@@ -1113,7 +1114,7 @@ def delete_switchmachine(switch_machine_id):
     return utils.make_json_response(
         200,
         switch_api.del_switchmachine(
-            current_user, switch_machine_id, **data
+            switch_machine_id, user=current_user, **data
         )
     )
 
@@ -1130,7 +1131,7 @@ def list_machines():
     return utils.make_json_response(
         200,
         machine_api.list_machines(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -1145,7 +1146,7 @@ def show_machine(machine_id):
     return utils.make_json_response(
         200,
         machine_api.get_machine(
-            current_user, machine_id, **data
+            machine_id, user=current_user, **data
         )
     )
 
@@ -1160,7 +1161,7 @@ def update_machine(machine_id):
     return utils.make_json_response(
         200,
         machine_api.update_machine(
-            current_user, machine_id, **data
+            machine_id, user=current_user, **data
         )
     )
 
@@ -1175,7 +1176,7 @@ def patch_machine(machine_id):
     return utils.make_json_response(
         200,
         machine_api.patch_machine(
-            current_user, machine_id, **data
+            machine_id, user=current_user, **data
         )
     )
 
@@ -1190,7 +1191,7 @@ def delete_machine(machine_id):
     return utils.make_json_response(
         200,
         machine_api.del_machine(
-            current_user, machine_id, **data
+            machine_id, user=current_user, **data
         )
     )
 
@@ -1205,7 +1206,7 @@ def list_subnets():
     return utils.make_json_response(
         200,
         network_api.list_subnets(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -1220,7 +1221,7 @@ def show_subnet(subnet_id):
     return utils.make_json_response(
         200,
         network_api.get_subnet(
-            current_user, subnet_id, **data
+            subnet_id, user=current_user, **data
         )
     )
 
@@ -1234,7 +1235,7 @@ def add_subnet():
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        network_api.add_subnet(current_user, **data)
+        network_api.add_subnet(user=current_user, **data)
     )
 
 
@@ -1248,7 +1249,7 @@ def update_subnet(subnet_id):
     return utils.make_json_response(
         200,
         network_api.update_subnet(
-            current_user, subnet_id, **data
+            subnet_id, user=current_user, **data
         )
     )
 
@@ -1263,7 +1264,7 @@ def delete_subnet(subnet_id):
     return utils.make_json_response(
         200,
         network_api.del_subnet(
-            current_user, subnet_id, **data
+            subnet_id, user=current_user, **data
         )
     )
 
@@ -1282,7 +1283,7 @@ def list_adapters():
     return utils.make_json_response(
         200,
         adapter_api.list_adapters(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -1297,7 +1298,7 @@ def show_adapter(adapter_id):
     return utils.make_json_response(
         200,
         adapter_api.get_adapter(
-            current_user, adapter_id, **data
+            adapter_id, user=current_user, **data
         )
     )
 
@@ -1312,7 +1313,7 @@ def show_adapter_metadata(adapter_id):
     return utils.make_json_response(
         200,
         metadata_api.get_package_metadata(
-            current_user, adapter_id, **data
+            adapter_id, user=current_user, **data
         )
     )
 
@@ -1327,7 +1328,7 @@ def show_os_metadata(os_id):
     return utils.make_json_response(
         200,
         metadata_api.get_os_metadata(
-            current_user, os_id, **data
+            os_id, user=current_user, **data
         )
     )
 
@@ -1345,7 +1346,7 @@ def show_adapter_os_metadata(adapter_id, os_id):
     return utils.make_json_response(
         200,
         metadata_api.get_package_os_metadata(
-            current_user, adapter_id, os_id, **data
+            adapter_id, os_id, user=current_user, **data
         )
     )
 
@@ -1360,7 +1361,7 @@ def list_clusters():
     return utils.make_json_response(
         200,
         cluster_api.list_clusters(
-            current_user, **data
+            user=current_user, **data
         )
     )
 
@@ -1375,7 +1376,7 @@ def show_cluster(cluster_id):
     return utils.make_json_response(
         200,
         cluster_api.get_cluster(
-            current_user, cluster_id, **data
+            cluster_id, user=current_user, **data
         )
     )
 
@@ -1389,7 +1390,7 @@ def add_cluster():
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        cluster_api.add_cluster(current_user, **data)
+        cluster_api.add_cluster(user=current_user, **data)
     )
 
 
@@ -1403,7 +1404,7 @@ def update_cluster(cluster_id):
     return utils.make_json_response(
         200,
         cluster_api.update_cluster(
-            current_user, cluster_id, **data
+            cluster_id, user=current_user, **data
         )
     )
 
@@ -1416,7 +1417,7 @@ def delete_cluster(cluster_id):
     """Delete cluster."""
     data = _get_request_data()
     response = cluster_api.del_cluster(
-        current_user, cluster_id, **data
+        cluster_id, user=current_user, **data
     )
     if 'status' in response:
         return utils.make_json_response(
@@ -1438,7 +1439,7 @@ def show_cluster_config(cluster_id):
     return utils.make_json_response(
         200,
         cluster_api.get_cluster_config(
-            current_user, cluster_id, **data
+            cluster_id, user=current_user, **data
         )
     )
 
@@ -1453,7 +1454,7 @@ def show_cluster_metadata(cluster_id):
     return utils.make_json_response(
         200,
         cluster_api.get_cluster_metadata(
-            current_user, cluster_id, **data
+            cluster_id, user=current_user, **data
         )
     )
 
@@ -1467,7 +1468,9 @@ def update_cluster_config(cluster_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        cluster_api.update_cluster_config(current_user, cluster_id, **data)
+        cluster_api.update_cluster_config(
+            cluster_id, user=current_user, **data
+        )
     )
 
 
@@ -1480,7 +1483,7 @@ def patch_cluster_config(cluster_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        cluster_api.patch_cluster_config(current_user, cluster_id, **data)
+        cluster_api.patch_cluster_config(cluster_id, user=current_user, **data)
     )
 
 
@@ -1494,7 +1497,7 @@ def delete_cluster_config(cluster_id):
     return utils.make_json_response(
         200,
         cluster_api.del_cluster_config(
-            current_user, cluster_id, **data
+            cluster_id, user=current_user, **data
         )
     )
 
@@ -1508,19 +1511,19 @@ def take_cluster_action(cluster_id):
     data = _get_request_data()
     update_cluster_hosts_func = _wrap_response(
         functools.partial(
-            cluster_api.update_cluster_hosts, current_user, cluster_id
+            cluster_api.update_cluster_hosts, cluster_id, user=current_user,
         ),
         200
     )
     review_cluster_func = _wrap_response(
         functools.partial(
-            cluster_api.review_cluster, current_user, cluster_id
+            cluster_api.review_cluster, cluster_id, user=current_user,
         ),
         200
     )
     deploy_cluster_func = _wrap_response(
         functools.partial(
-            cluster_api.deploy_cluster, current_user, cluster_id
+            cluster_api.deploy_cluster, cluster_id, user=current_user,
         ),
         202
     )
@@ -1544,7 +1547,7 @@ def get_cluster_state(cluster_id):
     return utils.make_json_response(
         200,
         cluster_api.get_cluster_state(
-            current_user, cluster_id, **data
+            cluster_id, user=current_user, **data
         )
     )
 
@@ -1559,7 +1562,7 @@ def list_cluster_hosts(cluster_id):
     return utils.make_json_response(
         200,
         _reformat_host(cluster_api.list_cluster_hosts(
-            current_user, cluster_id, **data
+            cluster_id, user=current_user, **data
         ))
     )
 
@@ -1574,7 +1577,7 @@ def list_clusterhosts():
     return utils.make_json_response(
         200,
         _reformat_host(cluster_api.list_clusterhosts(
-            current_user, **data
+            user=current_user, **data
         ))
     )
 
@@ -1589,7 +1592,7 @@ def show_cluster_host(cluster_id, host_id):
     return utils.make_json_response(
         200,
         _reformat_host(cluster_api.get_cluster_host(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         ))
     )
 
@@ -1604,7 +1607,7 @@ def show_clusterhost(clusterhost_id):
     return utils.make_json_response(
         200,
         _reformat_host(cluster_api.get_clusterhost(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         ))
     )
 
@@ -1618,7 +1621,7 @@ def add_cluster_host(cluster_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        cluster_api.add_cluster_host(current_user, cluster_id, **data)
+        cluster_api.add_cluster_host(cluster_id, user=current_user, **data)
     )
 
 
@@ -1635,7 +1638,7 @@ def update_cluster_host(cluster_id, host_id):
     return utils.make_json_response(
         200,
         cluster_api.update_cluster_host(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         )
     )
 
@@ -1653,7 +1656,7 @@ def update_clusterhost(clusterhost_id):
     return utils.make_json_response(
         200,
         cluster_api.update_clusterhost(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         )
     )
 
@@ -1671,7 +1674,7 @@ def patch_cluster_host(cluster_id, host_id):
     return utils.make_json_response(
         200,
         cluster_api.patch_cluster_host(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         )
     )
 
@@ -1689,7 +1692,7 @@ def patch_clusterhost(clusterhost_id):
     return utils.make_json_response(
         200,
         cluster_api.patch_clusterhost(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         )
     )
 
@@ -1705,7 +1708,7 @@ def delete_cluster_host(cluster_id, host_id):
     """Delete cluster host."""
     data = _get_request_data()
     response = cluster_api.del_cluster_host(
-        current_user, cluster_id, host_id, **data
+        cluster_id, host_id, user=current_user, **data
     )
     if 'status' in response:
         return utils.make_json_response(
@@ -1728,7 +1731,7 @@ def delete_clusterhost(clusterhost_id):
     """Delete cluster host."""
     data = _get_request_data()
     response = cluster_api.del_clusterhost(
-        current_user, clusterhost_id, **data
+        clusterhost_id, user=current_user, **data
     )
     if 'status' in response:
         return utils.make_json_response(
@@ -1753,7 +1756,7 @@ def show_cluster_host_config(cluster_id, host_id):
     return utils.make_json_response(
         200,
         cluster_api.get_cluster_host_config(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         )
     )
 
@@ -1768,7 +1771,7 @@ def show_clusterhost_config(clusterhost_id):
     return utils.make_json_response(
         200,
         cluster_api.get_clusterhost_config(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         )
     )
 
@@ -1786,7 +1789,7 @@ def update_cluster_host_config(cluster_id, host_id):
     return utils.make_json_response(
         200,
         cluster_api.update_cluster_host_config(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         )
     )
 
@@ -1801,7 +1804,7 @@ def update_clusterhost_config(clusterhost_id):
     return utils.make_json_response(
         200,
         cluster_api.update_clusterhost_config(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         )
     )
 
@@ -1819,7 +1822,7 @@ def patch_cluster_host_config(cluster_id, host_id):
     return utils.make_json_response(
         200,
         cluster_api.patch_cluster_host_config(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         )
     )
 
@@ -1834,7 +1837,7 @@ def patch_clusterhost_config(clusterhost_id):
     return utils.make_json_response(
         200,
         cluster_api.patch_clusterhost_config(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         )
     )
 
@@ -1852,7 +1855,7 @@ def delete_cluster_host_config(cluster_id, host_id):
     return utils.make_json_response(
         200,
         cluster_api.del_clusterhost_config(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         )
     )
 
@@ -1867,7 +1870,7 @@ def delete_clusterhost_config(clusterhost_id):
     return utils.make_json_response(
         200,
         cluster_api.del_clusterhost_config(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         )
     )
 
@@ -1885,7 +1888,7 @@ def show_cluster_host_state(cluster_id, host_id):
     return utils.make_json_response(
         200,
         cluster_api.get_cluster_host_state(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         )
     )
 
@@ -1900,7 +1903,7 @@ def show_clusterhost_state(clusterhost_id):
     return utils.make_json_response(
         200,
         cluster_api.get_clusterhost_state(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         )
     )
 
@@ -1918,7 +1921,7 @@ def update_cluster_host_state(cluster_id, host_id):
     return utils.make_json_response(
         200,
         cluster_api.update_clusterhost_state(
-            current_user, cluster_id, host_id, **data
+            cluster_id, host_id, user=current_user, **data
         )
     )
 
@@ -1933,7 +1936,7 @@ def update_clusterhost_state(clusterhost_id):
     return utils.make_json_response(
         200,
         cluster_api.update_clusterhost_state(
-            current_user, clusterhost_id, **data
+            clusterhost_id, user=current_user, **data
         )
     )
 
@@ -1948,7 +1951,7 @@ def list_hosts():
     return utils.make_json_response(
         200,
         _reformat_host(host_api.list_hosts(
-            current_user, **data
+            user=current_user, **data
         ))
     )
 
@@ -1963,7 +1966,7 @@ def show_host(host_id):
     return utils.make_json_response(
         200,
         _reformat_host(host_api.get_host(
-            current_user, host_id, **data
+            host_id, user=current_user, **data
         ))
     )
 
@@ -1982,7 +1985,7 @@ def list_machines_or_hosts():
     return utils.make_json_response(
         200,
         _reformat_host(host_api.list_machines_or_hosts(
-            current_user, **data
+            user=current_user, **data
         ))
     )
 
@@ -1997,7 +2000,7 @@ def show_machine_or_host(host_id):
     return utils.make_json_response(
         200,
         _reformat_host(host_api.get_machine_or_host(
-            current_user, host_id, **data
+            host_id, user=current_user, **data
         ))
     )
 
@@ -2012,7 +2015,7 @@ def update_host(host_id):
     return utils.make_json_response(
         200,
         host_api.update_host(
-            current_user, host_id, **data
+            host_id, user=current_user, **data
         )
     )
 
@@ -2027,7 +2030,7 @@ def update_hosts():
     return utils.make_json_response(
         200,
         host_api.update_hosts(
-            current_user, data
+            data, user=current_user,
         )
     )
 
@@ -2040,7 +2043,7 @@ def delete_host(host_id):
     """Delete host."""
     data = _get_request_data()
     response = host_api.del_host(
-        current_user, host_id, **data
+        host_id, user=current_user, **data
     )
     if 'status' in response:
         return utils.make_json_response(
@@ -2062,7 +2065,7 @@ def get_host_clusters(host_id):
     return utils.make_json_response(
         200,
         host_api.get_host_clusters(
-            current_user, host_id, **data
+            host_id, user=current_user, **data
         )
     )
 
@@ -2077,7 +2080,7 @@ def show_host_config(host_id):
     return utils.make_json_response(
         200,
         host_api.get_host_config(
-            current_user, host_id, **data
+            host_id, user=current_user, **data
         )
     )
 
@@ -2091,7 +2094,7 @@ def update_host_config(host_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        host_api.update_host_config(current_user, host_id, **data)
+        host_api.update_host_config(host_id, user=current_user, **data)
     )
 
 
@@ -2104,7 +2107,7 @@ def patch_host_config(host_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        host_api.patch_host_config(current_user, host_id, **data)
+        host_api.patch_host_config(host_id, user=current_user, **data)
     )
 
 
@@ -2118,7 +2121,7 @@ def delete_host_config(host_id):
     return utils.make_json_response(
         200,
         host_api.del_host_config(
-            current_user, host_id, **data
+            host_id, user=current_user, **data
         )
     )
 
@@ -2134,7 +2137,7 @@ def list_host_networks(host_id):
         200,
         _reformat_host_networks(
             host_api.list_host_networks(
-                current_user, host_id, **data
+                host_id, user=current_user, **data
             )
         )
     )
@@ -2153,7 +2156,7 @@ def list_hostnetworks():
     return utils.make_json_response(
         200,
         _reformat_host_networks(
-            host_api.list_hostnetworks(current_user, **data)
+            host_api.list_hostnetworks(user=current_user, **data)
         )
     )
 
@@ -2171,7 +2174,7 @@ def show_host_network(host_id, host_network_id):
     return utils.make_json_response(
         200,
         host_api.get_host_network(
-            current_user, host_id, host_network_id, **data
+            host_id, host_network_id, user=current_user, **data
         )
     )
 
@@ -2186,7 +2189,7 @@ def show_hostnetwork(host_network_id):
     return utils.make_json_response(
         200,
         host_api.get_hostnetwork(
-            current_user, host_network_id, **data
+            host_network_id, user=current_user, **data
         )
     )
 
@@ -2199,7 +2202,7 @@ def add_host_network(host_id):
     """add host network."""
     data = _get_request_data()
     return utils.make_json_response(
-        200, host_api.add_host_network(current_user, host_id, **data)
+        200, host_api.add_host_network(host_id, user=current_user, **data)
     )
 
 
@@ -2212,7 +2215,7 @@ def update_host_networks():
     data = _get_request_data_as_list()
     return utils.make_json_response(
         200, host_api.add_host_networks(
-            current_user, data)
+            data, user=current_user,)
     )
 
 
@@ -2229,7 +2232,7 @@ def update_host_network(host_id, host_network_id):
     return utils.make_json_response(
         200,
         host_api.update_host_network(
-            current_user, host_id, host_network_id, **data
+            host_id, host_network_id, user=current_user, **data
         )
     )
 
@@ -2244,7 +2247,7 @@ def update_hostnetwork(host_network_id):
     return utils.make_json_response(
         200,
         host_api.update_hostnetwork(
-            current_user, host_network_id, **data
+            host_network_id, user=current_user, **data
         )
     )
 
@@ -2262,7 +2265,7 @@ def delete_host_network(host_id, host_network_id):
     return utils.make_json_response(
         200,
         host_api.del_host_network(
-            current_user, host_id, host_network_id, **data
+            host_id, host_network_id, user=current_user, **data
         )
     )
 
@@ -2277,7 +2280,7 @@ def delete_hostnetwork(host_network_id):
     return utils.make_json_response(
         200,
         host_api.del_hostnetwork(
-            current_user, host_network_id, **data
+            host_network_id, user=current_user, **data
         )
     )
 
@@ -2292,7 +2295,7 @@ def show_host_state(host_id):
     return utils.make_json_response(
         200,
         host_api.get_host_state(
-            current_user, host_id, **data
+            host_id, user=current_user, **data
         )
     )
 
@@ -2307,7 +2310,7 @@ def update_host_state(host_id):
     return utils.make_json_response(
         200,
         host_api.update_host_state(
-            current_user, host_id, **data
+            host_id, user=current_user, **data
         )
     )
 
@@ -2348,19 +2351,19 @@ def take_host_action(host_id):
     data = _get_request_data()
     poweron_func = _wrap_response(
         functools.partial(
-            host_api.poweron_host, current_user, host_id
+            host_api.poweron_host, host_id, user=current_user,
         ),
         202
     )
     poweroff_func = _wrap_response(
         functools.partial(
-            host_api.poweroff_host, current_user, host_id
+            host_api.poweroff_host, host_id, user=current_user,
         ),
         202
     )
     reset_func = _wrap_response(
         functools.partial(
-            host_api.reset_host, current_user, host_id
+            host_api.reset_host, host_id, user=current_user,
         )
     )
     return _group_data_action(

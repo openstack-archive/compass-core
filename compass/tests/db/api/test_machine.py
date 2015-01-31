@@ -45,16 +45,17 @@ class TestGetMachine(BaseTest):
 
     def test_get_machine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         get_machine = machine.get_machine(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         self.assertIsNotNone(get_machine)
+        self.assertEqual(get_machine['mac'], '28:6e:d4:46:c4:25')
 
 
 class TestListMachines(BaseTest):
@@ -68,13 +69,14 @@ class TestListMachines(BaseTest):
 
     def test_list_machines(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_machine = machine.list_machines(self.user_object)
         self.assertIsNotNone(list_machine)
+        self.assertEqual(list_machine[0]['mac'], '28:6e:d4:46:c4:25')
 
 
 class TestUpdateMachine(BaseTest):
@@ -88,20 +90,26 @@ class TestUpdateMachine(BaseTest):
 
     def test_update_machine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         machine.update_machine(
-            self.user_object,
             1,
-            tag='test'
+            tag='test',
+            user=self.user_object,
         )
         update_machine = machine.list_machines(self.user_object)
-        expected = {'tag': 'test'}
+        expected = {
+            'id': 1,
+            'mac': '28:6e:d4:46:c4:25',
+            'tag': 'test',
+            'switch_ip': '0.0.0.0',
+            'port': '1'
+        }
         self.assertTrue(
-            item in update_machine[0].items() for item in expected.items()
+            all(item in update_machine[0].items() for item in expected.items())
         )
 
 
@@ -116,20 +124,20 @@ class TestPatchMachine(BaseTest):
 
     def test_patch_machine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         machine.patch_machine(
-            self.user_object,
             1,
+            user=self.user_object,
             tag={'patched_tag': 'test'}
         )
         patch_machine = machine.list_machines(self.user_object)
-        expected = {'patched_tag': 'test'}
+        expected = {'tag': {'patched_tag': 'test'}}
         self.assertTrue(
-            item in patch_machine[0].items() for item in expected.items()
+            all(item in patch_machine[0].items() for item in expected.items())
         )
 
 
@@ -144,14 +152,14 @@ class TestDelMachine(BaseTest):
 
     def test_del_machine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         machine.del_machine(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         del_machine = machine.list_machines(self.user_object)
         self.assertEqual([], del_machine)

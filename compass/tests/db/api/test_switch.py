@@ -46,10 +46,11 @@ class TestGetSwitch(BaseTest):
 
     def test_get_switch(self):
         get_switch = switch.get_switch(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         self.assertIsNotNone(get_switch)
+        self.assertEqual(get_switch['ip'], '0.0.0.0')
 
 
 class TestAddSwitch(BaseTest):
@@ -63,39 +64,27 @@ class TestAddSwitch(BaseTest):
 
     def test_add_switch(self):
         add_switch = switch.add_switch(
-            self.user_object,
             ip='2887583784',
+            user=self.user_object,
         )
         expected = '172.29.8.40'
         self.assertEqual(expected, add_switch['ip'])
 
     def test_add_switch_position_args(self):
         add_switch = switch.add_switch(
-            self.user_object,
             True,
             '2887583784',
+            user=self.user_object,
         )
-        print add_switch
         expected = '172.29.8.40'
         self.assertEqual(expected, add_switch['ip'])
 
     def test_add_switch_session(self):
         with database.session() as session:
             add_switch = switch.add_switch(
-                self.user_object,
                 ip='2887583784',
+                user=self.user_object,
                 session=session
-            )
-        expected = '172.29.8.40'
-        self.assertEqual(expected, add_switch['ip'])
-
-    def test_add_switch_position_args_session(self):
-        with database.session() as session:
-            add_switch = switch.add_switch(
-                self.user_object,
-                True,
-                '2887583784',
-                session
             )
         expected = '172.29.8.40'
         self.assertEqual(expected, add_switch['ip'])
@@ -112,38 +101,39 @@ class TestListSwitches(BaseTest):
 
     def test_list_switches_ip_int_invalid(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         list_switches = switch.list_switches(
-            self.user_object,
-            ip_int='test'
+            ip_int='test',
+            user=self.user_object,
         )
         self.assertEqual(list_switches, [])
 
     def test_list_switches_with_ip_int(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         list_switches = switch.list_switches(
-            self.user_object,
-            ip_int='2887583784'
+            ip_int='2887583784',
+            user=self.user_object,
         )
-        expected = '2887583784'
-        self.assertTrue(
-            item in expected.items() for item in list_switches[0].items()
-        )
+        expected = '172.29.8.40'
+        self.assertIsNotNone(list_switches)
+        self.assertEqual(expected, list_switches[0]['ip'])
 
     def test_list_switches(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         list_switches = switch.list_switches(
-            self.user_object
+            user=self.user_object
         )
+        expected = '172.29.8.40'
         self.assertIsNotNone(list_switches)
+        self.assertEqual(expected, list_switches[0]['ip'])
 
 
 class TestDelSwitch(BaseTest):
@@ -157,11 +147,11 @@ class TestDelSwitch(BaseTest):
 
     def test_del_switch(self):
         switch.del_switch(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         del_switch = switch.list_switches(
-            self.user_object
+            user=self.user_object
         )
         self.assertEqual([], del_switch)
 
@@ -177,13 +167,13 @@ class TestUpdateSwitch(BaseTest):
 
     def test_update_switch(self):
         switch.update_switch(
-            self.user_object,
             1,
+            user=self.user_object,
             vendor='test_update'
         )
         update_switch = switch.get_switch(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         expected = 'test_update'
         self.assertEqual(expected, update_switch['vendor'])
@@ -200,23 +190,24 @@ class TestPatchSwitch(BaseTest):
 
     def test_patch_switch(self):
         switch.patch_switch(
-            self.user_object,
             1,
+            user=self.user_object,
             patched_credentials={
                 'version': '2c',
                 'community': 'public'
             }
         )
         patch_switch = switch.get_switch(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         expected = {
+            'credentials': {
             'version': '2c',
-            'community': 'public'
+            'community': 'public'}
         }
         self.assertTrue(
-            item in expected.items() for item in patch_switch.items()
+            all(item in patch_switch.items() for item in expected.items())
         )
 
 
@@ -231,9 +222,17 @@ class TestListSwitchFilters(BaseTest):
 
     def test_list_switch_filters(self):
         list_switch_filters = switch.list_switch_filters(
-            self.user_object
+            user=self.user_object
         )
+        expected = {
+            'ip': '0.0.0.0',
+            'id': 1,
+            'filters': 'allow ports all',
+        }
         self.assertIsNotNone(list_switch_filters)
+        self.assertTrue(
+            all(item in list_switch_filters[0].items()
+                for item in expected.items()))
 
 
 class TestGetSwitchFilters(BaseTest):
@@ -247,10 +246,18 @@ class TestGetSwitchFilters(BaseTest):
 
     def test_get_swtich_filters(self):
         get_switch_filter = switch.get_switch_filters(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
+        expected = {
+            'ip': '0.0.0.0',
+            'id': 1,
+            'filters': 'allow ports all',
+        }
         self.assertIsNotNone(get_switch_filter)
+        self.assertTrue(
+            all(item in get_switch_filter.items()
+                for item in expected.items()))
 
 
 class TestUpdateSwitchFilters(BaseTest):
@@ -264,8 +271,8 @@ class TestUpdateSwitchFilters(BaseTest):
 
     def test_update_switch_filters(self):
         switch.update_switch_filters(
-            self.user_object,
             1,
+            user=self.user_object,
             filters=[
                 {
                     'filter_type': 'allow'
@@ -273,15 +280,15 @@ class TestUpdateSwitchFilters(BaseTest):
             ]
         )
         update_switch_filters = switch.get_switch_filters(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         expected = {
-            'filter_type': 'allow'
+            'filters': 'allow'
         }
         self.assertTrue(
-            item in update_switch_filters[0].items()
-            for item in expected.items()
+            all(item in update_switch_filters.items()
+                for item in expected.items())
         )
 
 
@@ -295,9 +302,13 @@ class TestPatchSwitchFilter(BaseTest):
         super(TestPatchSwitchFilter, self).tearDown()
 
     def test_patch_switch_filter(self):
+        switch.add_switch(
+            ip='2887583784',
+            user=self.user_object,
+        )
         switch.patch_switch_filter(
-            self.user_object,
-            1,
+            2,
+            user=self.user_object,
             patched_filters=[
                 {
                     'filter_type': 'allow'
@@ -305,14 +316,15 @@ class TestPatchSwitchFilter(BaseTest):
             ]
         )
         patch_switch_filter = switch.get_switch_filters(
-            self.user_object,
-            1
+            2,
+            user=self.user_object,
         )
         expected = {
-            'filter_type': 'allow'
+            'filters': 'allow'
         }
         self.assertTrue(
-            item in patch_switch_filter[0].items() for item in expected.items()
+            all(item in patch_switch_filter.items()
+                for item in expected.items())
         )
 
 
@@ -327,21 +339,21 @@ class TestAddSwitchMachine(BaseTest):
 
     def test_add_switch_machine(self):
         add_switch_machine = switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         expected = '28:6e:d4:46:c4:25'
         self.assertEqual(expected, add_switch_machine['mac'])
 
     def test_add_switch_machine_position_args(self):
         add_switch_machine = switch.add_switch_machine(
-            self.user_object,
             1,
             True,
             '28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         expected = '28:6e:d4:46:c4:25'
         self.assertEqual(expected, add_switch_machine['mac'])
@@ -349,23 +361,10 @@ class TestAddSwitchMachine(BaseTest):
     def test_add_switch_machine_session(self):
         with database.session() as session:
             add_switch_machine = switch.add_switch_machine(
-                self.user_object,
                 1,
                 mac='28:6e:d4:46:c4:25',
+                user=self.user_object,
                 session=session,
-                port='1'
-            )
-        expected = '28:6e:d4:46:c4:25'
-        self.assertEqual(expected, add_switch_machine['mac'])
-
-    def test_add_switch_machine_position_args_session(self):
-        with database.session() as session:
-            add_switch_machine = switch.add_switch_machine(
-                self.user_object,
-                1,
-                True,
-                '28:6e:d4:46:c4:25',
-                session,
                 port='1'
             )
         expected = '28:6e:d4:46:c4:25'
@@ -383,20 +382,32 @@ class TestListSwitchMachines(BaseTest):
 
     def test_list_switch_machines(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_switch_machines = switch.list_switch_machines(
-            self.user_object,
-            2
+            2,
+            user=self.user_object,
         )
+        expected = {
+            'switch_id': 2,
+            'id': 1,
+            'mac': '28:6e:d4:46:c4:25',
+            'switch_ip': '172.29.8.40',
+            'machine_id': 1,
+            'port': '1',
+            'switch_machine_id': 1
+        }
         self.assertIsNotNone(list_switch_machines)
+        self.assertTrue(
+            all(item in list_switch_machines[0].items()
+                for item in expected.items()))
 
 
 class TestListSwitchmachines(BaseTest):
@@ -410,54 +421,59 @@ class TestListSwitchmachines(BaseTest):
 
     def test_list_switch_machines_with_ip_int(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_switch_machines = switch.list_switchmachines(
-            self.user_object,
-            switch_ip_int='2887583784'
+            switch_ip_int='2887583784',
+            user=self.user_object,
         )
-        expected = '172.29.8.40'
-        self.assertTrue(expected for item in list_switch_machines[0].items())
+        expected = {'switch_ip': '172.29.8.40'}
+        self.assertTrue(
+            all(item in list_switch_machines[0].items()
+                for item in expected.items()))
 
     def test_list_switch_machines_ip_invalid(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_switch_machines = switch.list_switchmachines(
-            self.user_object,
-            switch_ip_int='test'
+            switch_ip_int='test',
+            user=self.user_object,
         )
         self.assertEqual(list_switch_machines, [])
 
     def test_list_switch_machines_without_ip(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_switch_machines = switch.list_switchmachines(
-            self.user_object
+            user=self.user_object
         )
-        self.assertIsNotNone(list_switch_machines)
+        expected = {'switch_ip': '172.29.8.40'}
+        self.assertTrue(
+            all(item in list_switch_machines[0].items()
+                for item in expected.items()))
 
 
 class TestListSwitchMachinesHosts(BaseTest):
@@ -471,20 +487,31 @@ class TestListSwitchMachinesHosts(BaseTest):
 
     def test_list_hosts(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_hosts = switch.list_switch_machines_hosts(
-            self.user_object,
-            2
+            2,
+            user=self.user_object,
         )
-        self.assertIsNotNone(list_hosts)
+        expected = {
+            'switch_id': 2,
+            'id': 1,
+            'mac': '28:6e:d4:46:c4:25',
+            'switch_ip': '172.29.8.40',
+            'machine_id': 1,
+            'port': '1',
+            'switch_machine_id': 1
+        }
+        self.assertTrue(
+            all(item in list_hosts[0].items()
+                for item in expected.items()))
 
 
 class TestListSwitchmachinesHosts(BaseTest):
@@ -498,53 +525,59 @@ class TestListSwitchmachinesHosts(BaseTest):
 
     def test_list_hosts_with_ip_int(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_hosts = switch.list_switchmachines_hosts(
-            self.user_object,
-            switch_ip_int='2887583784'
+            switch_ip_int='2887583784',
+            user=self.user_object,
         )
-        expected = '172.29.8.40'
-        self.assertTrue(expected for item in list_hosts[0].items())
+        expected = {'switch_ip': '172.29.8.40'}
+        self.assertTrue(
+            all(item in list_hosts[0].items()
+                for item in expected.items()))
 
     def test_list_hosts_ip_invalid(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_hosts = switch.list_switchmachines_hosts(
-            self.user_object,
-            switch_ip_int='test'
+            switch_ip_int='test',
+            user=self.user_object,
         )
         self.assertEqual(list_hosts, [])
 
     def test_list_hosts_without_ip(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         list_hosts = switch.list_switchmachines_hosts(
-            self.user_object
+            user=self.user_object
         )
+        expected = {'switch_ip': '172.29.8.40'}
+        self.assertTrue(
+            all(item in list_hosts[0].items()
+                for item in expected.items()))
         self.assertIsNotNone(list_hosts)
 
 
@@ -559,21 +592,22 @@ class TestGetSwitchMachine(BaseTest):
 
     def test_get_switch_machine(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         get_switch_machine = switch.get_switch_machine(
-            self.user_object,
             2,
-            1
+            1,
+            user=self.user_object,
         )
         self.assertIsNotNone(get_switch_machine)
+        self.assertEqual(get_switch_machine['mac'], '28:6e:d4:46:c4:25')
 
 
 class TestGetSwitchmachine(BaseTest):
@@ -587,16 +621,17 @@ class TestGetSwitchmachine(BaseTest):
 
     def test_get_switchmachine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         get_switchmachine = switch.get_switchmachine(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         self.assertIsNotNone(get_switchmachine)
+        self.assertEqual(get_switchmachine['mac'], '28:6e:d4:46:c4:25')
 
 
 class TestUpdateSwitchMachine(BaseTest):
@@ -610,24 +645,34 @@ class TestUpdateSwitchMachine(BaseTest):
 
     def test_update_switch_machine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         switch.update_switch_machine(
-            self.user_object,
             1,
             1,
-            tag='test_tag'
+            tag='test_tag',
+            user=self.user_object,
         )
         update_switch_machine = switch.list_switch_machines(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
-        expected = {'tag': 'test_tag'}
+        expected = {
+            'switch_id': 1,
+            'id': 1,
+            'mac': '28:6e:d4:46:c4:25',
+            'tag': 'test_tag',
+            'switch_ip': '0.0.0.0',
+            'machine_id': 1,
+            'port': '1',
+            'switch_machine_id': 1
+        }
         self.assertTrue(
-            item in update_switch_machine[0].items for item in expected.items()
+            all(item in update_switch_machine[0].items()
+                for item in expected.items())
         )
 
 
@@ -642,23 +687,32 @@ class TestUpdateSwitchmachine(BaseTest):
 
     def test_update_switchmachine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         switch.update_switchmachine(
-            self.user_object,
             1,
-            location='test_location'
+            location='test_location',
+            user=self.user_object,
         )
         update_switchmachine = switch.list_switchmachines(
-            self.user_object,
+            user=self.user_object,
         )
-        expected = {'location': 'test_location'}
+        expected = {
+            'switch_id': 1,
+            'id': 1,
+            'mac': '28:6e:d4:46:c4:25',
+            'location': 'test_location',
+            'switch_ip': '0.0.0.0',
+            'machine_id': 1,
+            'port': '1',
+            'switch_machine_id': 1
+        }
         self.assertTrue(
-            item in update_switchmachine[0].items()
-            for item in expected.items()
+            all(item in update_switchmachine[0].items()
+                for item in expected.items())
         )
 
 
@@ -673,27 +727,29 @@ class TestPatchSwitchMachine(BaseTest):
 
     def test_pathc_switch_machine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         switch.patch_switch_machine(
-            self.user_object,
             1,
             1,
+            user=self.user_object,
             patched_tag={
                 'patched_tag': 'test_patched_tag'
             }
         )
         switch_patch_switch_machine = switch.list_switch_machines(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
-        expected = {'patched_tag': 'test_patched_tag'}
+        expected = {'tag': {
+            'patched_tag': 'test_patched_tag'}
+        }
         self.assertTrue(
-            item in switch_patch_switch_machine[0].items()
-            for item in expected.items()
+            all(item in switch_patch_switch_machine[0].items()
+                for item in expected.items())
         )
 
 
@@ -708,24 +764,27 @@ class TestPatchSwitchmachine(BaseTest):
 
     def test_patch_switchmachine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         switch.patch_switchmachine(
-            self.user_object,
             1,
+            user=self.user_object,
             patched_location={
                 'patched_location': 'test_location'
             }
         )
         patch_switchmachine = switch.list_switchmachines(
-            self.user_object
+            user=self.user_object
         )
-        expected = {'patched_location': 'test_location'}
+        expected = {'location': {
+            'patched_location': 'test_location'}
+        }
         self.assertTrue(
-            item in patch_switchmachine[0].items() for item in expected.items()
+            all(item in patch_switchmachine[0].items()
+                for item in expected.items())
         )
 
 
@@ -740,19 +799,19 @@ class TestDelSwitchMachine(BaseTest):
 
     def test_del_switch_machine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         switch.del_switch_machine(
-            self.user_object,
             1,
-            1
+            1,
+            user=self.user_object,
         )
         del_switch_machine = switch.list_switch_machines(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         self.assertEqual([], del_switch_machine)
 
@@ -768,17 +827,17 @@ class TestDelSwitchmachine(BaseTest):
 
     def test_switchmachine(self):
         switch.add_switch_machine(
-            self.user_object,
             1,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         switch.del_switchmachine(
-            self.user_object,
-            1
+            1,
+            user=self.user_object,
         )
         del_switchmachine = switch.list_switchmachines(
-            self.user_object
+            user=self.user_object
         )
         self.assertEqual([], del_switchmachine)
 
@@ -794,23 +853,23 @@ class TestUpdateSwitchMachines(BaseTest):
 
     def test_update_switch_machines_remove(self):
         switch.add_switch(
-            self.user_object,
-            ip='2887583784'
+            ip='2887583784',
+            user=self.user_object,
         )
         switch.add_switch_machine(
-            self.user_object,
             2,
             mac='28:6e:d4:46:c4:25',
-            port='1'
+            port='1',
+            user=self.user_object,
         )
         switch.update_switch_machines(
-            self.user_object,
             2,
-            remove_machines=1
+            remove_machines=1,
+            user=self.user_object,
         )
         update_remove = switch.list_switch_machines(
-            self.user_object,
-            2
+            2,
+            user=self.user_object,
         )
         self.assertEqual([], update_remove)
 

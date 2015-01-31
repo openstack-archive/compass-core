@@ -72,7 +72,7 @@ class ClusterTestCase(unittest2.TestCase):
         self.cluster_id = None
 
         # get adapter information
-        list_adapters = adapter.list_adapters(self.user_object)
+        list_adapters = adapter.list_adapters(user=self.user_object)
         for list_adapter in list_adapters:
             for supported_os in list_adapter['supported_oses']:
                 self.os_id = supported_os['os_id']
@@ -91,13 +91,13 @@ class ClusterTestCase(unittest2.TestCase):
         cluster_names = ['test_cluster1', 'test_cluster2']
         for cluster_name in cluster_names:
             cluster.add_cluster(
-                self.user_object,
+                user=self.user_object,
                 adapter_id=self.adapter_id,
                 os_id=self.os_id,
                 flavor_id=self.flavor_id,
                 name=cluster_name
             )
-        clusters = cluster.list_clusters(self.user_object)
+        clusters = cluster.list_clusters(user=self.user_object)
         self.roles = None
         for list_cluster in clusters:
             for item in list_cluster['flavor']['roles']:
@@ -163,30 +163,30 @@ class ClusterTestCase(unittest2.TestCase):
         }
         # add cluster config
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         # add switch
         switch.add_switch(
-            self.user_object,
+            user=self.user_object,
             ip='172.29.8.40'
         )
-        switches = switch.list_switches(self.user_object)
+        switches = switch.list_switches(user=self.user_object)
         self.switch_id = None
         for item in switches:
             self.switch_id = item['id']
         macs = ['28:6e:d4:46:c4:25', '00:0c:29:bf:eb:1d']
         for mac in macs:
             switch.add_switch_machine(
-                self.user_object,
                 self.switch_id,
+                user=self.user_object,
                 mac=mac,
                 port='1'
             )
         # get machine information
-        machines = machine.list_machines(self.user_object)
+        machines = machine.list_machines(user=self.user_object)
         self.machine_ids = []
         for item in machines:
             self.machine_ids.append(item['id'])
@@ -195,14 +195,14 @@ class ClusterTestCase(unittest2.TestCase):
         name = ['newname1', 'newname2']
         for i in range(0, 2):
             cluster.add_cluster_host(
-                self.user_object,
                 self.cluster_id,
+                user=self.user_object,
                 machine_id=self.machine_ids[i],
                 name=name[i]
             )
         self.host_id = []
         self.clusterhost_id = []
-        clusterhosts = cluster.list_clusterhosts(self.user_object)
+        clusterhosts = cluster.list_clusterhosts(user=self.user_object)
         for clusterhost in clusterhosts:
             self.host_id.append(clusterhost['host_id'])
             self.clusterhost_id.append(clusterhost['clusterhost_id'])
@@ -211,9 +211,9 @@ class ClusterTestCase(unittest2.TestCase):
         file_names = ['log_file1', 'log_file2']
         for file_name in file_names:
             cluster.add_cluster_host_log_history(
-                self.user_object,
                 self.cluster_id,
                 self.host_id[0],
+                user=self.user_object,
                 filename=file_name
             )
 
@@ -221,11 +221,11 @@ class ClusterTestCase(unittest2.TestCase):
         subnets = ['10.145.88.0/23', '192.168.100.0/23']
         for subnet in subnets:
             network.add_subnet(
-                self.user_object,
+                user=self.user_object,
                 subnet=subnet
             )
         list_subnet = network.list_subnets(
-            self.user_object
+            user=self.user_object
         )
         self.subnet_ids = []
         for item in list_subnet:
@@ -233,24 +233,24 @@ class ClusterTestCase(unittest2.TestCase):
 
         # add host network
         host.add_host_network(
-            self.user_object,
             self.host_id[0],
+            user=self.user_object,
             interface='eth0',
             ip='10.145.88.0',
             subnet_id=self.subnet_ids[0],
             is_mgmt=True
         )
         host.add_host_network(
-            self.user_object,
             self.host_id[0],
+            user=self.user_object,
             interface='eth1',
             ip='10.145.88.10',
             subnet_id=self.subnet_ids[0],
             is_promiscuous=True
         )
         host.list_host_networks(
-            self.user_object,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
 
     def tearDown(self):
@@ -267,7 +267,7 @@ class TestListClusters(ClusterTestCase):
         super(TestListClusters, self).tearDown()
 
     def test_list_clusters(self):
-        clusters = cluster.list_clusters(self.user_object)
+        clusters = cluster.list_clusters(user=self.user_object)
         result = []
         for list_cluster in clusters:
             result.append(list_cluster['name'])
@@ -288,8 +288,8 @@ class TestGetCluster(ClusterTestCase):
 
     def test_get_cluster(self):
         get_cluster = cluster.get_cluster(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         self.assertIsNotNone(get_cluster)
         self.assertEqual(get_cluster['name'], 'test_cluster1')
@@ -298,8 +298,8 @@ class TestGetCluster(ClusterTestCase):
         self.assertRaises(
             exception.RecordNotExists,
             cluster.get_cluster,
-            self.user_object,
-            99
+            99,
+            user=self.user_object,
         )
 
 
@@ -314,13 +314,13 @@ class TestAddCluster(ClusterTestCase):
 
     def test_add_cluster(self):
         cluster.add_cluster(
-            self.user_object,
+            user=self.user_object,
             adapter_id=self.adapter_id,
             os_id=self.os_id,
             flavor_id=self.flavor_id,
             name='test_add_cluster'
         )
-        add_clusters = cluster.list_clusters(self.user_object)
+        add_clusters = cluster.list_clusters(user=self.user_object)
         result = []
         for add_cluster in add_clusters:
             result.append(add_cluster['name'])
@@ -328,14 +328,14 @@ class TestAddCluster(ClusterTestCase):
 
     def test_add_cluster_position_args(self):
         cluster.add_cluster(
-            self.user_object,
             True,
             'test_add_cluster_position',
+            user=self.user_object,
             adapter_id=self.adapter_id,
             os_id=self.os_id,
             flavor_id=self.flavor_id,
         )
-        add_clusters = cluster.list_clusters(self.user_object)
+        add_clusters = cluster.list_clusters(user=self.user_object)
         result = []
         for add_cluster in add_clusters:
             result.append(add_cluster['name'])
@@ -344,35 +344,18 @@ class TestAddCluster(ClusterTestCase):
     def test_add_cluster_session(self):
         with database.session() as session:
             cluster.add_cluster(
-                self.user_object,
+                user=self.user_object,
                 adapter_id=self.adapter_id,
                 os_id=self.os_id,
                 flavor_id=self.flavor_id,
                 name='test_add_cluster_session',
                 session=session
             )
-        add_clusters = cluster.list_clusters(self.user_object)
+        add_clusters = cluster.list_clusters(user=self.user_object)
         result = []
         for add_cluster in add_clusters:
             result.append(add_cluster['name'])
         self.assertIn('test_add_cluster_session', result)
-
-    def test_add_cluster_position_args_session(self):
-        with database.session() as session:
-            cluster.add_cluster(
-                self.user_object,
-                True,
-                'test_add_cluster_position_session',
-                session,
-                adapter_id=self.adapter_id,
-                os_id=self.os_id,
-                flavor_id=self.flavor_id,
-            )
-        add_clusters = cluster.list_clusters(self.user_object)
-        result = []
-        for add_cluster in add_clusters:
-            result.append(add_cluster['name'])
-        self.assertIn('test_add_cluster_position_session', result)
 
 
 class TestUpdateCluster(ClusterTestCase):
@@ -386,28 +369,28 @@ class TestUpdateCluster(ClusterTestCase):
 
     def test_update_cluster(self):
         cluster.update_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             name='test_update_cluster'
         )
         update_cluster = cluster.get_cluster(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         self.assertEqual(update_cluster['name'], 'test_update_cluster')
 
     def test_is_cluster_editable(self):
         # state is INSTALLING
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.update_cluster,
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             name='cluster_editable'
         )
 
@@ -415,8 +398,8 @@ class TestUpdateCluster(ClusterTestCase):
         self.assertRaises(
             exception.Forbidden,
             cluster.update_cluster,
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             reinstall_distributed_system=True
         )
 
@@ -433,24 +416,28 @@ class TestDelCluster(ClusterTestCase):
     def test_del_cluster(self):
         from compass.tasks import client as celery_client
         celery_client.celery.send_task = mock.Mock()
-        del_cluster = cluster.del_cluster(
-            self.user_object,
-            self.cluster_id
+        cluster.del_cluster(
+            self.cluster_id,
+            user=self.user_object,
         )
-        self.assertIsNotNone(del_cluster)
+        del_clusters = cluster.list_clusters(
+            user=self.user_object,
+        )
+        for del_cluster in del_clusters:
+            self.assertNotEqual(1, del_cluster['id'])
 
     def test_is_cluster_editable(self):
         #state is INSTALLING
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.del_cluster,
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
         )
 
 
@@ -460,8 +447,8 @@ class TestGetClusterConfig(ClusterTestCase):
     def setUp(self):
         super(TestGetClusterConfig, self).setUp()
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -471,8 +458,8 @@ class TestGetClusterConfig(ClusterTestCase):
 
     def test_get_cluster_config(self):
         cluster_config = cluster.get_cluster_config(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         package_config = cluster_config['package_config']
         os_config = cluster_config['os_config']
@@ -485,27 +472,27 @@ class TestGetClusterDeployedConfig(ClusterTestCase):
     def setUp(self):
         super(TestGetClusterDeployedConfig, self).setUp()
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_id[0]]
             }
         )
         cluster.update_cluster_deployed_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -515,8 +502,8 @@ class TestGetClusterDeployedConfig(ClusterTestCase):
 
     def test_get_cluster_deployed_config(self):
         configs = cluster.get_cluster_deployed_config(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         os_config = configs['deployed_os_config']
         package_config = configs['deployed_package_config']
@@ -535,8 +522,8 @@ class TestGetClusterMetadata(ClusterTestCase):
 
     def test_get_cluster_metadata(self):
         cluster_metadata = cluster.get_cluster_metadata(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         results = []
         for k, v in cluster_metadata.items():
@@ -558,14 +545,14 @@ class TestUpdateClusterConfig(ClusterTestCase):
 
     def test_update_cluster_config(self):
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             put_os_config=self.os_configs,
             put_package_config=self.package_configs
         )
         update_cluster_config = cluster.get_cluster_config(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         package_config = update_cluster_config['package_config']
         os_config = update_cluster_config['os_config']
@@ -584,8 +571,8 @@ class TestPatchClusterConfig(ClusterTestCase):
 
     def test_patch_cluster_config(self):
         patch_cluster_config = cluster.patch_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             package_config=self.package_configs,
             os_config=self.os_configs
         )
@@ -601,8 +588,8 @@ class TestDelClusterConfig(ClusterTestCase):
     def setUp(self):
         super(TestDelClusterConfig, self).setUp()
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -612,12 +599,12 @@ class TestDelClusterConfig(ClusterTestCase):
 
     def test_del_cluster_config(self):
         cluster.del_cluster_config(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         del_cluster_config = cluster.get_cluster_config(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         configs = []
         for k, v in del_cluster_config.items():
@@ -628,15 +615,15 @@ class TestDelClusterConfig(ClusterTestCase):
 
     def test_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.del_cluster_config,
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
 
 
@@ -651,8 +638,8 @@ class TestListClusterHosts(ClusterTestCase):
 
     def test_list_cluster_hosts(self):
         list_cluster_hosts = cluster.list_cluster_hosts(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         results = []
         expected = ['28:6e:d4:46:c4:25', '00:0c:29:bf:eb:1d']
@@ -672,7 +659,7 @@ class TestListClusterhosts(ClusterTestCase):
         super(TestListClusterhosts, self).tearDown()
 
     def test_list_clusterhosts(self):
-        list_clusterhosts = cluster.list_clusterhosts(self.user_object)
+        list_clusterhosts = cluster.list_clusterhosts(user=self.user_object)
         results = []
         expected = ['28:6e:d4:46:c4:25', '00:0c:29:bf:eb:1d']
         for item in list_clusterhosts:
@@ -692,9 +679,9 @@ class TestGetClusterHost(ClusterTestCase):
 
     def test_get_cluster_host(self):
         get_cluster_host = cluster.get_cluster_host(
-            self.user_object,
             self.cluster_id,
-            self.host_id[1]
+            self.host_id[1],
+            user=self.user_object,
         )
         self.assertEqual(get_cluster_host['mac'], '00:0c:29:bf:eb:1d')
 
@@ -710,8 +697,8 @@ class TestGetClusterhost(ClusterTestCase):
 
     def test_get_clusterhost(self):
         get_clusterhost = cluster.get_clusterhost(
-            self.user_object,
-            self.clusterhost_id[1]
+            self.clusterhost_id[1],
+            user=self.user_object,
         )
         self.assertEqual(get_clusterhost['mac'], '00:0c:29:bf:eb:1d')
 
@@ -722,12 +709,12 @@ class TestAddClusterHost(ClusterTestCase):
     def setUp(self):
         super(TestAddClusterHost, self).setUp()
         switch.add_switch_machine(
-            self.user_object,
             self.switch_id,
+            user=self.user_object,
             mac='00:0c:29:5b:ee:eb',
             port='1'
         )
-        machines = machine.list_machines(self.user_object)
+        machines = machine.list_machines(user=self.user_object)
         self.add_machine_id = None
         for item in machines:
             if item['mac'] == '00:0c:29:5b:ee:eb':
@@ -739,29 +726,42 @@ class TestAddClusterHost(ClusterTestCase):
     def test_add_cluster_host(self):
         # add a cluster_host
         cluster.add_cluster_host(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             machine_id=self.add_machine_id,
             name='test_add_cluster_host'
         )
-        add_cluster_hosts = cluster.list_clusterhosts(self.user_object)
-        result = []
-        for item in add_cluster_hosts:
-            result.append(item['mac'])
-        self.assertIn('00:0c:29:5b:ee:eb', result)
+        add_cluster_hosts = cluster.list_clusterhosts(user=self.user_object)
+        expected = {
+            'clusterhost_id': 3,
+            'cluster_id': 1,
+            'id': 3,
+            'switch_ip': '172.29.8.40',
+            'hostname': 'test_add_cluster_host',
+            'owner': 'admin@huawei.com',
+            'port': '1',
+            'distributed_system_name': 'openstack',
+            'os_name': 'CentOS-6.5-x86_64',
+            'mac': '00:0c:29:5b:ee:eb',
+            'host_id': 3,
+            'name': 'test_add_cluster_host.test_cluster1',
+        }
+        self.assertTrue(
+            all(item in add_cluster_hosts[2].items()
+                for item in expected.items()))
 
     def test_is_cluster_editable(self):
         # installing
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.add_cluster_host,
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             machine_id=self.add_machine_id
         )
 
@@ -777,14 +777,14 @@ class TestUpdateClusterHost(ClusterTestCase):
 
     def test_update_cluster_host(self):
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         update_cluster_hosts = cluster.list_cluster_hosts(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         result = None
         for item in update_cluster_hosts:
@@ -796,25 +796,25 @@ class TestUpdateClusterHost(ClusterTestCase):
         self.assertRaises(
             exception.InvalidParameter,
             cluster.update_cluster_host,
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             roles=['invalid_role']
         )
 
     def test_is_cluster_editable(self):
         # state is INSTALLING
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.update_cluster_host,
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
         )
 
 
@@ -829,12 +829,12 @@ class TestUpdateClusterhost(ClusterTestCase):
 
     def test_update_clusterhost(self):
         cluster.update_clusterhost(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         update_clusterhosts = cluster.list_clusterhosts(
-            self.user_object,
+            user=self.user_object,
         )
         result = None
         for item in update_clusterhosts:
@@ -846,23 +846,23 @@ class TestUpdateClusterhost(ClusterTestCase):
         self.assertRaises(
             exception.InvalidParameter,
             cluster.update_clusterhost,
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             roles=['invalid_role']
         )
 
     def test_is_cluster_editable(self):
         # state is INSTALLING
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.update_clusterhost,
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
 
 
@@ -876,14 +876,14 @@ class TestPatchClusterHost(ClusterTestCase):
 
     def test_patch_cluster_host(self):
         cluster.patch_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         patch = cluster.list_cluster_hosts(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         result = None
         for item in patch:
@@ -893,16 +893,16 @@ class TestPatchClusterHost(ClusterTestCase):
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.patch_cluster_host,
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
 
 
@@ -915,13 +915,13 @@ class TestPatchClusterhost(ClusterTestCase):
 
     def test_patch_clusterhost(self):
         cluster.patch_clusterhost(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         patch = cluster.list_cluster_hosts(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         result = None
         for item in patch:
@@ -931,15 +931,15 @@ class TestPatchClusterhost(ClusterTestCase):
 
     def testi_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.patch_clusterhost,
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
 
 
@@ -955,25 +955,30 @@ class TestDelClusterHost(ClusterTestCase):
     def test_del_cluster_host(self):
         from compass.tasks import client as celery_client
         celery_client.celery.send_task = mock.Mock()
-        del_clusterhost = cluster.del_cluster_host(
-            self.user_object,
+        cluster.del_cluster_host(
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
-        self.assertIsNotNone(del_clusterhost)
+        del_cluster_hosts = cluster.list_cluster_hosts(
+            self.cluster_id,
+            user=self.user_object,
+        )
+        for del_cluster_host in del_cluster_hosts:
+            self.assertNotEqual(del_cluster_host['id'], 1)
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.del_cluster_host,
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
 
 
@@ -989,23 +994,27 @@ class TestDelClusterhost(ClusterTestCase):
     def test_del_clusterhost(self):
         from compass.tasks import client as celery_client
         celery_client.celery.send_task = mock.Mock()
-        del_clusterhost = cluster.del_clusterhost(
-            self.user_object,
-            self.clusterhost_id[0]
+        cluster.del_clusterhost(
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
-        self.assertIsNotNone(del_clusterhost)
+        del_clusterhosts = cluster.list_clusterhosts(
+            user=self.user_object,
+        )
+        for del_clusterhost in del_clusterhosts:
+            self.assertNotEqual(del_clusterhost['id'], 1)
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.del_clusterhost,
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
 
 
@@ -1015,9 +1024,9 @@ class TestGetClusterHostConfig(ClusterTestCase):
     def setUp(self):
         super(TestGetClusterHostConfig, self).setUp()
         cluster.update_cluster_host_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1027,9 +1036,9 @@ class TestGetClusterHostConfig(ClusterTestCase):
 
     def test_get_cluster_host_config(self):
         configs = cluster.get_cluster_host_config(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         package_config = configs['package_config']
         os_config = configs['os_config']
@@ -1043,8 +1052,8 @@ class TestGetClusterhostConfig(ClusterTestCase):
     def setUp(self):
         super(TestGetClusterhostConfig, self).setUp()
         cluster.update_clusterhost_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1054,8 +1063,8 @@ class TestGetClusterhostConfig(ClusterTestCase):
 
     def test_get_clusterhost_config(self):
         configs = cluster.get_clusterhost_config(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         package_config = configs['package_config']
         os_config = configs['os_config']
@@ -1068,29 +1077,29 @@ class TestGetClusterHostDeployedConfig(ClusterTestCase):
     def setUp(self):
         super(TestGetClusterHostDeployedConfig, self).setUp()
         cluster.update_cluster_host_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_id[0]]
             }
         )
         cluster.update_cluster_host_deployed_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1100,9 +1109,9 @@ class TestGetClusterHostDeployedConfig(ClusterTestCase):
 
     def test_get_cluster_host_deployed_config(self):
         configs = cluster.get_cluster_host_deployed_config(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         package_config = configs['deployed_package_config']
         os_config = configs['deployed_os_config']
@@ -1116,26 +1125,26 @@ class TestGetClusterhostDeployedConfig(ClusterTestCase):
     def setUp(self):
         super(TestGetClusterhostDeployedConfig, self).setUp()
         cluster.update_clusterhost_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_clusterhost(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_id[0]]
             }
         )
         cluster.update_clusterhost_deployed_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1145,8 +1154,8 @@ class TestGetClusterhostDeployedConfig(ClusterTestCase):
 
     def test_get_clusterhost_deployed_config(self):
         configs = cluster.get_clusterhost_deployed_config(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         package_config = configs['deployed_package_config']
         os_config = configs['deployed_os_config']
@@ -1165,16 +1174,16 @@ class TestUpdateClusterHostConfig(ClusterTestCase):
 
     def test_update_cluster_host_config(self):
         cluster.update_cluster_host_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         config = cluster.get_cluster_host_config(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         package_configs = config['package_config']
         os_configs = config['os_config']
@@ -1183,16 +1192,16 @@ class TestUpdateClusterHostConfig(ClusterTestCase):
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.update_cluster_host_config,
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1204,20 +1213,20 @@ class TestUpdateClusterHostDeployedConfig(ClusterTestCase):
     def setUp(self):
         super(TestUpdateClusterHostDeployedConfig, self).setUp()
         cluster.update_cluster_host_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_clusterhost(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'clusterhosts': [self.clusterhost_id[0]]
             }
@@ -1228,16 +1237,16 @@ class TestUpdateClusterHostDeployedConfig(ClusterTestCase):
 
     def test_udpate_cluster_host_deployed_config(self):
         cluster.update_cluster_host_deployed_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         configs = cluster.get_cluster_host_deployed_config(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         package_config = configs['deployed_package_config']
         os_config = configs['deployed_os_config']
@@ -1256,14 +1265,14 @@ class TestUpdateClusterhostConfig(ClusterTestCase):
 
     def test_update_clusterhost_config(self):
         cluster.update_clusterhost_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         configs = cluster.get_clusterhost_config(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         package_config = configs['package_config']
         os_config = configs['os_config']
@@ -1272,15 +1281,15 @@ class TestUpdateClusterhostConfig(ClusterTestCase):
 
     def test_id_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.update_clusterhost_config,
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1292,20 +1301,20 @@ class TestUpdateClusterhostDeployedConfig(ClusterTestCase):
     def setUp(self):
         super(TestUpdateClusterhostDeployedConfig, self).setUp()
         cluster.update_clusterhost_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'clusterhosts': [self.clusterhost_id[0]]
             }
@@ -1316,14 +1325,14 @@ class TestUpdateClusterhostDeployedConfig(ClusterTestCase):
 
     def test_update_clusterhost_config(self):
         cluster.update_clusterhost_deployed_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         configs = cluster.get_clusterhost_deployed_config(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         package_config = configs['deployed_package_config']
         os_config = configs['deployed_os_config']
@@ -1342,16 +1351,16 @@ class TestPatchClusterHostConfig(ClusterTestCase):
 
     def test_patch_cluster_host_config(self):
         cluster.patch_cluster_host_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         configs = cluster.get_cluster_host_config(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         package_config = configs['package_config']
         os_config = configs['os_config']
@@ -1360,16 +1369,16 @@ class TestPatchClusterHostConfig(ClusterTestCase):
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.patch_cluster_host_config,
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1386,14 +1395,14 @@ class TestPatchClusterhostConfig(ClusterTestCase):
 
     def test_patch_clusterhost_config(self):
         cluster.patch_clusterhost_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         config = cluster.get_clusterhost_config(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         package_config = config['package_config']
         os_config = config['os_config']
@@ -1402,15 +1411,15 @@ class TestPatchClusterhostConfig(ClusterTestCase):
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.patch_clusterhost_config,
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1422,9 +1431,9 @@ class TestDeleteClusterHostConfig(ClusterTestCase):
     def setUp(self):
         super(TestDeleteClusterHostConfig, self).setUp()
         cluster.update_cluster_host_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1434,14 +1443,14 @@ class TestDeleteClusterHostConfig(ClusterTestCase):
 
     def test_delete_cluster_host_config(self):
         cluster.delete_cluster_host_config(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
         )
         del_cluster_host_config = cluster.get_cluster_host_config(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         configs = []
         for k, v in del_cluster_host_config.items():
@@ -1452,16 +1461,16 @@ class TestDeleteClusterHostConfig(ClusterTestCase):
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.delete_cluster_host_config,
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
 
 
@@ -1471,8 +1480,8 @@ class TestDeleteClusterhostConfig(ClusterTestCase):
     def setUp(self):
         super(TestDeleteClusterhostConfig, self).setUp()
         cluster.update_clusterhost_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
@@ -1482,12 +1491,12 @@ class TestDeleteClusterhostConfig(ClusterTestCase):
 
     def test_delete_clusterhost_config(self):
         cluster.delete_clusterhost_config(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         del_clusterhost_config = cluster.get_clusterhost_config(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         configs = []
         for k, v in del_clusterhost_config.items():
@@ -1498,15 +1507,15 @@ class TestDeleteClusterhostConfig(ClusterTestCase):
 
     def test_is_cluster_editable(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             cluster.delete_clusterhost_config,
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
 
 
@@ -1516,8 +1525,8 @@ class TestUpdateClusterHosts(ClusterTestCase):
     def setUp(self):
         super(TestUpdateClusterHosts, self).setUp()
         switch.add_switch_machine(
-            self.user_object,
             self.switch_id,
+            user=self.user_object,
             mac='00:0c:29:5b:ee:eb',
             port='1'
         )
@@ -1533,13 +1542,13 @@ class TestUpdateClusterHosts(ClusterTestCase):
     def test_update_cluster_hosts(self):
         # remove host
         cluster.update_cluster_hosts(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             remove_hosts={'hosts': self.host_id[0]}
         )
         remove_hosts = cluster.list_cluster_hosts(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         result = None
         for item in remove_hosts:
@@ -1548,13 +1557,13 @@ class TestUpdateClusterHosts(ClusterTestCase):
 
         #add host
         cluster.update_cluster_hosts(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             add_hosts={'machines': [{'machine_id': self.add_machine_id}]}
         )
         add_hosts = cluster.list_cluster_hosts(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         result = None
         for item in add_hosts:
@@ -1569,15 +1578,15 @@ class TestReviewCluster(ClusterTestCase):
     def setUp(self):
         super(TestReviewCluster, self).setUp()
         cluster.update_clusterhost_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
 
@@ -1586,8 +1595,8 @@ class TestReviewCluster(ClusterTestCase):
 
     def test_review_cluster(self):
         review_cluster = cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_id[0]]
             }
@@ -1619,20 +1628,20 @@ class TestDeployedCluster(ClusterTestCase):
     def setUp(self):
         super(TestDeployedCluster, self).setUp()
         cluster.update_clusterhost_config(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_id[0]],
                 'clusterhosts': [self.clusterhost_id[0]]
@@ -1646,8 +1655,8 @@ class TestDeployedCluster(ClusterTestCase):
         from compass.tasks import client as celery_client
         celery_client.celery.send_task = mock.Mock()
         deploy_cluster = cluster.deploy_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             deploy={
                 'hosts': [self.host_id[0]],
             }
@@ -1661,17 +1670,17 @@ class TestDeployedCluster(ClusterTestCase):
                 cluster_os_config = v
         self.assertItemsEqual(cluster_package_config, self.package_configs)
         self.assertItemsEqual(cluster_os_config, self.os_configs)
-        expecteds = {
+        expected = {
+            'ip': '10.145.88.0',
             'clusterhost_id': self.clusterhost_id[0],
             'cluster_id': self.cluster_id,
             'hostname': 'newname1',
             'mac': '28:6e:d4:46:c4:25',
             'clustername': 'test_cluster1'
         }
-        result = None
-        for item in deploy_cluster['hosts']:
-            result = item
-        self.assertDictContainsSubset(expecteds, result)
+        self.assertTrue(
+            all(item in deploy_cluster['hosts'][0].items()
+                for item in expected.items()))
 
 
 class TestGetClusterState(ClusterTestCase):
@@ -1685,8 +1694,8 @@ class TestGetClusterState(ClusterTestCase):
 
     def test_get_cluster_state(self):
         cluster_state = cluster.get_cluster_state(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         self.assertEqual(cluster_state['state'], 'UNINITIALIZED')
 
@@ -1702,9 +1711,9 @@ class TestGetClusterHostState(ClusterTestCase):
 
     def test_get_cluster_host_state(self):
         cluster_host_state = cluster.get_cluster_host_state(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         self.assertEqual(cluster_host_state['state'], 'UNINITIALIZED')
 
@@ -1720,9 +1729,9 @@ class TestGetClusterHostSelfState(ClusterTestCase):
 
     def test_get_cluster_host_self_state(self):
         cluster_host_self_state = cluster.get_cluster_host_self_state(
-            self.user_object,
             self.cluster_id,
-            self.host_id
+            self.host_id,
+            user=self.user_object,
         )
         self.assertEqual(cluster_host_self_state['state'], 'UNINITIALIZED')
 
@@ -1738,8 +1747,8 @@ class TestGetClusterhostState(ClusterTestCase):
 
     def test_get_clusterhost_state(self):
         clusterhost_state = cluster.get_clusterhost_state(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
         )
         self.assertEqual(clusterhost_state['state'], 'UNINITIALIZED')
 
@@ -1755,8 +1764,8 @@ class TestGetClusterhostSelfState(ClusterTestCase):
 
     def test_get_clusterhost_state(self):
         clusterhost_state = cluster.get_clusterhost_self_state(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         self.assertEqual(clusterhost_state['state'], 'UNINITIALIZED')
 
@@ -1772,15 +1781,15 @@ class TestUpdateClusterHostState(ClusterTestCase):
 
     def test_update_cluster_host_state(self):
         cluster.update_cluster_host_state(
-            self.user_object,
             self.cluster_id,
             self.host_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         update_state = cluster.get_cluster_host_state(
-            self.user_object,
             self.cluster_id,
-            self.host_id
+            self.host_id,
+            user=self.user_object,
         )
         self.assertEqual(update_state['state'], 'INSTALLING')
 
@@ -1796,13 +1805,13 @@ class TestUpdateClusterhostState(ClusterTestCase):
 
     def test_update_clusterhost_state(self):
         cluster.update_clusterhost_state(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             state='INSTALLING'
         )
         clusterhost_state = cluster.get_clusterhost_state(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         self.assertEqual(clusterhost_state['state'], 'INSTALLING')
 
@@ -1818,13 +1827,13 @@ class TestUpdateClusterState(ClusterTestCase):
 
     def test_update_cluster_state(self):
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
         cluster_state = cluster.get_cluster_state(
-            self.user_object,
-            self.cluster_id
+            self.cluster_id,
+            user=self.user_object,
         )
         self.assertEqual(cluster_state['state'], 'INSTALLING')
 
@@ -1840,9 +1849,9 @@ class TestGetClusterHostLogHistories(ClusterTestCase):
 
     def test_get_cluster_host_log_histories(self):
         logs = cluster.get_cluster_host_log_histories(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
@@ -1862,8 +1871,8 @@ class TestGetClusterhostLogHistories(ClusterTestCase):
 
     def test_get_clusterhost_log_histories(self):
         logs = cluster.get_clusterhost_log_histories(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
@@ -1883,10 +1892,10 @@ class TestGetClusterHostLogHistory(ClusterTestCase):
 
     def test_get_cluster_host_log_history(self):
         log = cluster.get_cluster_host_log_history(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
-            'log_file1'
+            'log_file1',
+            user=self.user_object,
         )
         self.assertEqual(log['filename'], 'log_file1')
 
@@ -1902,9 +1911,9 @@ class TestGetClusterhostLogHistory(ClusterTestCase):
 
     def test_get_clusterhost_log_history(self):
         log = cluster.get_clusterhost_log_history(
-            self.user_object,
             self.clusterhost_id[0],
-            'log_file1'
+            'log_file1',
+            user=self.user_object,
         )
         self.assertEqual(log['filename'], 'log_file1')
 
@@ -1920,20 +1929,30 @@ class TestUpdateClusterHostLogHistory(ClusterTestCase):
 
     def test_update_cluster_host_log_history(self):
         cluster.update_cluster_host_log_history(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
             'log_file1',
+            user=self.user_object,
             severity='WARNING',
             message='test update cluster host log history.'
         )
         update_log = cluster.get_cluster_host_log_history(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
-            'log_file1'
+            'log_file1',
+            user=self.user_object,
         )
-        self.assertEqual(update_log['severity'], 'WARNING')
+        expected = {
+            'severity': 'WARNING',
+            'clusterhost_id': 1,
+            'filename': 'log_file1',
+            'cluster_id': 1,
+            'host_id': 1,
+            'message': 'test update cluster host log history.'
+        }
+        self.assertTrue(
+            all(item in update_log.items()
+                for item in expected.items()))
 
 
 class TestUpdateClusterhostLogHistory(ClusterTestCase):
@@ -1947,18 +1966,28 @@ class TestUpdateClusterhostLogHistory(ClusterTestCase):
 
     def test_update_clusterhost_log_history(self):
         cluster.update_clusterhost_log_history(
-            self.user_object,
             self.clusterhost_id[0],
             'log_file1',
+            user=self.user_object,
             severity='WARNING',
             message='test update clusterhost log history.'
         )
         update_log = cluster.get_clusterhost_log_history(
-            self.user_object,
             self.clusterhost_id[0],
-            'log_file1'
+            'log_file1',
+            user=self.user_object,
         )
-        self.assertEqual(update_log['severity'], 'WARNING')
+        expected = {
+            'severity': 'WARNING',
+            'clusterhost_id': 1,
+            'filename': 'log_file1',
+            'cluster_id': 1,
+            'host_id': 1,
+            'message': 'test update clusterhost log history.'
+        }
+        self.assertTrue(
+            all(item in update_log.items() for item in expected.items())
+        )
 
 
 class TestAddClusterhostLogHistory(ClusterTestCase):
@@ -1972,13 +2001,13 @@ class TestAddClusterhostLogHistory(ClusterTestCase):
 
     def test_add_clusterhost_log_history(self):
         cluster.add_clusterhost_log_history(
-            self.user_object,
             self.clusterhost_id[0],
+            user=self.user_object,
             filename='add_log_file'
         )
         logs = cluster.get_clusterhost_log_histories(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
@@ -1987,14 +2016,14 @@ class TestAddClusterhostLogHistory(ClusterTestCase):
 
     def test_add_clusterhost_log_history_position_args(self):
         cluster.add_clusterhost_log_history(
-            self.user_object,
             self.clusterhost_id[0],
             False,
-            'add_log_file_position'
+            'add_log_file_position',
+            user=self.user_object,
         )
         logs = cluster.get_clusterhost_log_histories(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
@@ -2004,37 +2033,19 @@ class TestAddClusterhostLogHistory(ClusterTestCase):
     def test_add_clusterhost_log_history_session(self):
         with database.session() as session:
             cluster.add_clusterhost_log_history(
-                self.user_object,
                 self.clusterhost_id[0],
+                user=self.user_object,
                 filename='add_log_file_session',
                 session=session
             )
         logs = cluster.get_clusterhost_log_histories(
-            self.user_object,
-            self.clusterhost_id[0]
+            self.clusterhost_id[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
             result.append(log['filename'])
         self.assertIn('add_log_file_session', result)
-
-    def test_add_clusterhost_log_history_position_args_session(self):
-        with database.session() as session:
-            cluster.add_clusterhost_log_history(
-                self.user_object,
-                self.clusterhost_id[0],
-                False,
-                'add_log_file_position_session',
-                session
-            )
-        logs = cluster.get_clusterhost_log_histories(
-            self.user_object,
-            self.clusterhost_id[0]
-        )
-        result = []
-        for log in logs:
-            result.append(log['filename'])
-        self.assertIn('add_log_file_position_session', result)
 
 
 class TestAddClusterHostLogHistory(ClusterTestCase):
@@ -2048,15 +2059,15 @@ class TestAddClusterHostLogHistory(ClusterTestCase):
 
     def test_add_cluster_host_log_history(self):
         cluster.add_cluster_host_log_history(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
+            user=self.user_object,
             filename='add_log_file'
         )
         logs = cluster.get_cluster_host_log_histories(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
@@ -2065,16 +2076,16 @@ class TestAddClusterHostLogHistory(ClusterTestCase):
 
     def test_add_cluster_host_log_history_position(self):
         cluster.add_cluster_host_log_history(
-            self.user_object,
             self.cluster_id,
             self.host_id[0],
             False,
-            'add_log_file_position'
+            'add_log_file_position',
+            user=self.user_object,
         )
         logs = cluster.get_cluster_host_log_histories(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
@@ -2084,41 +2095,21 @@ class TestAddClusterHostLogHistory(ClusterTestCase):
     def test_add_cluster_host_log_history_session(self):
         with database.session() as session:
             cluster.add_cluster_host_log_history(
-                self.user_object,
                 self.cluster_id,
                 self.host_id[0],
+                user=self.user_object,
                 filename='add_log_file_session',
                 session=session
             )
         logs = cluster.get_cluster_host_log_histories(
-            self.user_object,
             self.cluster_id,
-            self.host_id[0]
+            self.host_id[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
             result.append(log['filename'])
         self.assertIn('add_log_file_session', result)
-
-    def test_add_cluster_host_log_history_position_session(self):
-        with database.session() as session:
-            cluster.add_cluster_host_log_history(
-                self.user_object,
-                self.cluster_id,
-                self.host_id[0],
-                False,
-                'add_log_file_position_session',
-                session
-            )
-        logs = cluster.get_cluster_host_log_histories(
-            self.user_object,
-            self.cluster_id,
-            self.host_id[0]
-        )
-        result = []
-        for log in logs:
-            result.append(log['filename'])
-        self.assertIn('add_log_file_position_session', result)
 
 
 if __name__ == '__main__':

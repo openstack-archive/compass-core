@@ -149,9 +149,7 @@ def run_in_session():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if args is not () and 'session' in str(args[-1]):
-                    return func(*args, **kwargs)
-            elif 'session' in kwargs.keys():
+            if 'session' in kwargs.keys():
                 return func(*args, **kwargs)
             else:
                 with session() as my_session:

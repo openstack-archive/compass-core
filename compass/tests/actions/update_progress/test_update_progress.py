@@ -85,7 +85,7 @@ class TestProgressCalculator(unittest2.TestCase):
         self.cluster_id = None
 
         # get adapter information
-        list_adapters = adapter.list_adapters(self.user_object)
+        list_adapters = adapter.list_adapters(user=self.user_object)
         for adptr in list_adapters:
             if ('package_installer' in adptr.keys() and
                 adptr['flavors'] != [] and
@@ -102,13 +102,13 @@ class TestProgressCalculator(unittest2.TestCase):
 
         #add cluster
         cluster.add_cluster(
-            self.user_object,
             adapter_id=self.adapter_id,
             os_id=self.os_id,
             flavor_id=self.flavor_id,
-            name='test_cluster'
+            name='test_cluster',
+            user=self.user_object,
         )
-        list_clusters = cluster.list_clusters(self.user_object)
+        list_clusters = cluster.list_clusters(user=self.user_object)
         for list_cluster in list_clusters:
             if list_cluster['name'] == 'test_cluster':
                 self.cluster_id = list_cluster['id']
@@ -118,51 +118,51 @@ class TestProgressCalculator(unittest2.TestCase):
 
         #add switch
         switch.add_switch(
-            self.user_object,
-            ip=SWITCH_IP
+            ip=SWITCH_IP,
+            user=self.user_object,
         )
-        list_switches = switch.list_switches(self.user_object)
+        list_switches = switch.list_switches(user=self.user_object)
         for list_switch in list_switches:
             self.switch_id = list_switch['id']
         switch.add_switch_machine(
-            self.user_object,
             self.switch_id,
+            user=self.user_object,
             mac=MACHINE_MAC,
             port='1'
         )
 
         #get machine information
-        list_machines = machine.list_machines(self.user_object)
+        list_machines = machine.list_machines(user=self.user_object)
         for list_machine in list_machines:
             self.machine_id = list_machine['id']
 
         #add cluster host
         cluster.add_cluster_host(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             machine_id=self.machine_id,
             name='test_clusterhost'
         )
-        list_clusterhosts = cluster.list_clusterhosts(self.user_object)
+        list_clusterhosts = cluster.list_clusterhosts(user=self.user_object)
         for list_clusterhost in list_clusterhosts:
             self.host_id = list_clusterhost['host_id']
             self.clusterhost_id = list_clusterhost['clusterhost_id']
 
         #add subnet
         network.add_subnet(
-            self.user_object,
-            subnet=SUBNET
+            subnet=SUBNET,
+            user=self.user_object,
         )
         list_subnets = network.list_subnets(
-            self.user_object
+            user=self.user_object
         )
         for list_subnet in list_subnets:
             self.subnet_id = list_subnet['id']
 
         #add host network
         host.add_host_network(
-            self.user_object,
             self.host_id,
+            user=self.user_object,
             interface='eth0',
             ip=HOST_IP,
             subnet_id=self.subnet_id,
@@ -171,32 +171,32 @@ class TestProgressCalculator(unittest2.TestCase):
 
         #get clusterhost
         list_clusterhosts = cluster.list_clusterhosts(
-            self.user_object
+            user=self.user_object
         )
         for list_clusterhost in list_clusterhosts:
             self.clusterhost_id = list_clusterhost['id']
 
         #update host state
-        self.list_hosts = host.list_hosts(self.user_object)
+        self.list_hosts = host.list_hosts(user=self.user_object)
         for list_host in self.list_hosts:
             self.host_id = list_host['id']
         self.host_state = host.update_host_state(
-            self.user_object,
             self.host_id,
+            user=self.user_object,
             state='INSTALLING'
         )
 
         #update cluster state
         cluster.update_cluster_state(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             state='INSTALLING'
         )
 
         #update clusterhost state
         cluster.update_clusterhost_state(
-            self.user_object,
             self.clusterhost_id,
+            user=self.user_object,
             state='INSTALLING'
         )
 
@@ -433,8 +433,8 @@ class TestProgressCalculator(unittest2.TestCase):
         self._file_generator('check_point_1')
         update_progress.update_progress()
         clusterhost_state = cluster.get_clusterhost_state(
-            self.user_object,
-            self.clusterhost_id
+            self.clusterhost_id,
+            user=self.user_object,
         )
         self.assertAlmostEqual(
             clusterhost_state['percentage'],
@@ -446,8 +446,8 @@ class TestProgressCalculator(unittest2.TestCase):
         self._file_generator('check_point_2')
         update_progress.update_progress()
         clusterhost_state = cluster.get_clusterhost_state(
-            self.user_object,
-            self.clusterhost_id
+            self.clusterhost_id,
+            user=self.user_object,
         )
         self.assertAlmostEqual(
             clusterhost_state['percentage'],
@@ -459,8 +459,8 @@ class TestProgressCalculator(unittest2.TestCase):
         self._file_generator('check_point_3')
         update_progress.update_progress()
         clusterhost_state = cluster.get_clusterhost_state(
-            self.user_object,
-            self.clusterhost_id
+            self.clusterhost_id,
+            user=self.user_object,
         )
         self.assertAlmostEqual(
             clusterhost_state['percentage'],
@@ -472,8 +472,8 @@ class TestProgressCalculator(unittest2.TestCase):
         self._file_generator('check_point_4')
         update_progress.update_progress()
         clusterhost_state = cluster.get_clusterhost_state(
-            self.user_object,
-            self.clusterhost_id
+            self.clusterhost_id,
+            user=self.user_object,
         )
         self.assertAlmostEqual(
             clusterhost_state['percentage'],
@@ -485,8 +485,8 @@ class TestProgressCalculator(unittest2.TestCase):
         self._file_generator('check_point_5')
         update_progress.update_progress()
         clusterhost_state = cluster.get_clusterhost_state(
-            self.user_object,
-            self.clusterhost_id
+            self.clusterhost_id,
+            user=self.user_object,
         )
         self.assertEqual(
             clusterhost_state['percentage'],

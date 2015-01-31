@@ -73,7 +73,7 @@ class AdapterTestCase(unittest2.TestCase):
         with database.session() as session:
             adapter_api.add_adapters_internal(session)
         adapter.load_adapters()
-        self.adapter_object = adapter.list_adapters(self.user_object)
+        self.adapter_object = adapter.list_adapters(user=self.user_object)
         for adapter_obj in self.adapter_object:
             if adapter_obj['name'] == 'openstack_icehouse':
                 self.adapter_id = adapter_obj['id']
@@ -97,7 +97,7 @@ class TestListAdapters(AdapterTestCase):
 
     def test_list_adapters(self):
         adapters = adapter.list_adapters(
-            self.user_object
+            user=self.user_object
         )
         result = []
         for item in adapters:
@@ -124,8 +124,8 @@ class TestGetAdapter(AdapterTestCase):
 
     def test_get_adapter(self):
         get_adapter = adapter.get_adapter(
-            self.user_object,
-            self.adapter_id
+            self.adapter_id,
+            user=self.user_object,
         )
         name = None
         for k, v in get_adapter.items():

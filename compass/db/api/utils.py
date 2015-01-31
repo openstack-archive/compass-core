@@ -359,6 +359,7 @@ def supported_filters(
             all_support_keys = must_support_keys | set(optional_support_keys)
             filter_keys = set(filters) - set(wrapped_args)
             wrapped_support_keys = set(filters) | set(wrapped_args)
+            #print wrapped_args
             unsupported_keys = (
                 filter_keys - all_support_keys - set(ignore_support_keys)
             )

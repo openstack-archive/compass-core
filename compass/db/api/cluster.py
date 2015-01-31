@@ -154,7 +154,7 @@ UPDATED_CLUSTERHOST_LOG_FIELDS = [
     permission.PERMISSION_LIST_CLUSTERS
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_clusters(lister, session=None, **filters):
+def list_clusters(user=None, session=None, **filters):
     """List clusters."""
     return utils.list_db_objects(
         session, models.Cluster, **filters
@@ -168,8 +168,8 @@ def list_clusters(lister, session=None, **filters):
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_cluster(
-    getter, cluster_id,
-    exception_when_missing=True, session=None, **kwargs
+    cluster_id, exception_when_missing=True,
+    user=None, session=None, **kwargs
 ):
     """Get cluster info."""
     return utils.get_db_object(
@@ -243,14 +243,13 @@ def is_cluster_editable(
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def add_cluster(
-    creator,
     exception_when_existing=True,
-    name=None, session=None, **kwargs
+    name=None, user=None, session=None, **kwargs
 ):
     """Create a cluster."""
     return utils.add_db_object(
         session, models.Cluster, exception_when_existing,
-        name, creator_id=creator.id,
+        name, creator_id=user.id,
         **kwargs
     )
 
@@ -265,13 +264,13 @@ def add_cluster(
     permission.PERMISSION_ADD_CLUSTER
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def update_cluster(updater, cluster_id, session=None, **kwargs):
+def update_cluster(cluster_id, user=None, session=None, **kwargs):
     """Update a cluster."""
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
     is_cluster_editable(
-        session, cluster, updater,
+        session, cluster, user,
         reinstall_distributed_system_set=(
             kwargs.get('reinstall_distributed_system', False)
         )
@@ -301,9 +300,8 @@ def update_cluster(updater, cluster_id, session=None, **kwargs):
     hosts=RESP_CLUSTERHOST_FIELDS
 )
 def del_cluster(
-    deleter, cluster_id,
-    force=False, from_database_only=False,
-    delete_underlying_host=False, session=None, **kwargs
+    cluster_id, force=False, from_database_only=False,
+    delete_underlying_host=False, user=None, session=None, **kwargs
 ):
     """Delete a cluster."""
     cluster = utils.get_db_object(
@@ -325,7 +323,7 @@ def del_cluster(
         cluster.state.state = 'ERROR'
 
     is_cluster_editable(
-        session, cluster, deleter,
+        session, cluster, user,
         reinstall_distributed_system_set=True
     )
 
@@ -333,7 +331,7 @@ def del_cluster(
         from compass.db.api import host as host_api
         host = clusterhost.host
         host_api.is_host_editable(
-            session, host, deleter, reinstall_os_set=True
+            session, host, user, reinstall_os_set=True
         )
         if host.state.state == 'UNINITIALIZED' or from_database_only:
             utils.del_db_object(
@@ -353,7 +351,7 @@ def del_cluster(
         celery_client.celery.send_task(
             'compass.tasks.delete_cluster',
             (
-                deleter.email, cluster_id,
+                user.email, cluster_id,
                 [clusterhost.host_id for clusterhost in clusterhosts],
                 delete_underlying_host
             )
@@ -371,7 +369,7 @@ def del_cluster(
     permission.PERMISSION_LIST_CLUSTER_CONFIG
 )
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-def get_cluster_config(getter, cluster_id, session=None, **kwargs):
+def get_cluster_config(cluster_id, user=None, session=None, **kwargs):
     """Get cluster config."""
     return utils.get_db_object(
         session, models.Cluster, id=cluster_id
@@ -384,7 +382,7 @@ def get_cluster_config(getter, cluster_id, session=None, **kwargs):
     permission.PERMISSION_LIST_CLUSTER_CONFIG
 )
 @utils.wrap_to_dict(RESP_DEPLOYED_CONFIG_FIELDS)
-def get_cluster_deployed_config(getter, cluster_id, session=None, **kwargs):
+def get_cluster_deployed_config(cluster_id, user=None, session=None, **kwargs):
     """Get cluster deployed config."""
     return utils.get_db_object(
         session, models.Cluster, id=cluster_id
@@ -397,7 +395,7 @@ def get_cluster_deployed_config(getter, cluster_id, session=None, **kwargs):
     permission.PERMISSION_LIST_METADATAS
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
-def get_cluster_metadata(getter, cluster_id, session=None, **kwargs):
+def get_cluster_metadata(cluster_id, user=None, session=None, **kwargs):
     """Get cluster metadata."""
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
@@ -441,13 +439,13 @@ def _update_cluster_config(session, updater, cluster, **kwargs):
 )
 @utils.wrap_to_dict(RESP_DEPLOYED_CONFIG_FIELDS)
 def update_cluster_deployed_config(
-    updater, cluster_id, session=None, **kwargs
+    cluster_id, user=None, session=None, **kwargs
 ):
     """Update cluster deployed config."""
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    is_cluster_editable(session, cluster, updater)
+    is_cluster_editable(session, cluster, user)
     is_cluster_validated(session, cluster)
     return utils.update_db_object(
         session, cluster, **kwargs
@@ -466,7 +464,7 @@ def update_cluster_deployed_config(
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_CLUSTER_CONFIG
 )
-def update_cluster_config(updater, cluster_id, session=None, **kwargs):
+def update_cluster_config(cluster_id, user=None, session=None, **kwargs):
     """Update cluster config."""
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
@@ -490,7 +488,7 @@ def update_cluster_config(updater, cluster_id, session=None, **kwargs):
         cluster, **in_kwargs
     ):
         return _update_cluster_config(
-            session, updater, cluster, **in_kwargs
+            session, user, cluster, **in_kwargs
         )
 
     return update_config_internal(
@@ -510,7 +508,7 @@ def update_cluster_config(updater, cluster_id, session=None, **kwargs):
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_CLUSTER_CONFIG
 )
-def patch_cluster_config(updater, cluster_id, session=None, **kwargs):
+def patch_cluster_config(cluster_id, user=None, session=None, **kwargs):
     """patch cluster config."""
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
@@ -532,7 +530,7 @@ def patch_cluster_config(updater, cluster_id, session=None, **kwargs):
     )
     def update_config_internal(cluster, **in_kwargs):
         return _update_cluster_config(
-            session, updater, cluster, **in_kwargs
+            session, user, cluster, **in_kwargs
         )
 
     return update_config_internal(
@@ -546,12 +544,12 @@ def patch_cluster_config(updater, cluster_id, session=None, **kwargs):
     permission.PERMISSION_DEL_CLUSTER_CONFIG
 )
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-def del_cluster_config(deleter, cluster_id, session=None):
+def del_cluster_config(cluster_id, user=None, session=None):
     """Delete a cluster config."""
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    is_cluster_editable(session, cluster, deleter)
+    is_cluster_editable(session, cluster, user)
     return utils.update_db_object(
         session, cluster, os_config={},
         package_config={}, config_validated=False
@@ -672,7 +670,7 @@ def _set_clusterhosts(session, cluster, machines):
     permission.PERMISSION_LIST_CLUSTERHOSTS
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
-def list_cluster_hosts(lister, cluster_id, session=None, **filters):
+def list_cluster_hosts(cluster_id, user=None, session=None, **filters):
     """Get cluster host info."""
     return utils.list_db_objects(
         session, models.ClusterHost, cluster_id=cluster_id,
@@ -686,7 +684,7 @@ def list_cluster_hosts(lister, cluster_id, session=None, **filters):
     permission.PERMISSION_LIST_CLUSTERHOSTS
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
-def list_clusterhosts(lister, session=None, **filters):
+def list_clusterhosts(user=None, session=None, **filters):
     """Get cluster host info."""
     return utils.list_db_objects(
         session, models.ClusterHost, **filters
@@ -700,8 +698,8 @@ def list_clusterhosts(lister, session=None, **filters):
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
 def get_cluster_host(
-    getter, cluster_id, host_id,
-    exception_when_missing=True, session=None, **kwargs
+    cluster_id, host_id, exception_when_missing=True,
+    user=None, session=None, **kwargs
 ):
     """Get clusterhost info."""
     return utils.get_db_object(
@@ -718,8 +716,8 @@ def get_cluster_host(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
 def get_clusterhost(
-    getter, clusterhost_id,
-    exception_when_missing=True, session=None, **kwargs
+    clusterhost_id, exception_when_missing=True,
+    user=None, session=None, **kwargs
 ):
     """Get clusterhost info."""
     return utils.get_db_object(
@@ -735,14 +733,14 @@ def get_clusterhost(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
 def add_cluster_host(
-    creator, cluster_id,
-    exception_when_existing=True, session=None, **kwargs
+    cluster_id, exception_when_existing=True,
+    user=None, session=None, **kwargs
 ):
     """Add cluster host."""
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    is_cluster_editable(session, cluster, creator)
+    is_cluster_editable(session, cluster, user)
     return add_clusterhost_internal(
         session, cluster, exception_when_existing,
         **kwargs
@@ -839,14 +837,14 @@ def _update_clusterhost(session, updater, clusterhost, **kwargs):
     permission.PERMISSION_UPDATE_CLUSTER_HOSTS
 )
 def update_cluster_host(
-    updater, cluster_id, host_id,
+    cluster_id, host_id, user=None,
     session=None, **kwargs
 ):
     """Update cluster host."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost, cluster_id=cluster_id, host_id=host_id
     )
-    return _update_clusterhost(session, updater, clusterhost, **kwargs)
+    return _update_clusterhost(session, user, clusterhost, **kwargs)
 
 
 @utils.supported_filters(
@@ -858,14 +856,14 @@ def update_cluster_host(
     permission.PERMISSION_UPDATE_CLUSTER_HOSTS
 )
 def update_clusterhost(
-    updater, clusterhost_id,
+    clusterhost_id, user=None,
     session=None, **kwargs
 ):
     """Update cluster host."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
-    return _update_clusterhost(session, updater, clusterhost, **kwargs)
+    return _update_clusterhost(session, user, clusterhost, **kwargs)
 
 
 @utils.replace_filters(
@@ -880,14 +878,14 @@ def update_clusterhost(
     permission.PERMISSION_UPDATE_CLUSTER_HOSTS
 )
 def patch_cluster_host(
-    updater, cluster_id, host_id, session=None,
-    **kwargs
+    cluster_id, host_id, user=None,
+    session=None, **kwargs
 ):
     """Update cluster host."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost, cluster_id=cluster_id, host_id=host_id
     )
-    return _update_clusterhost(session, updater, clusterhost, **kwargs)
+    return _update_clusterhost(session, user, clusterhost, **kwargs)
 
 
 @utils.replace_filters(
@@ -902,14 +900,14 @@ def patch_cluster_host(
     permission.PERMISSION_UPDATE_CLUSTER_HOSTS
 )
 def patch_clusterhost(
-    updater, clusterhost_id, session=None,
+    clusterhost_id, user=None, session=None,
     **kwargs
 ):
     """Update cluster host."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
-    return _update_clusterhost(session, updater, clusterhost, **kwargs)
+    return _update_clusterhost(session, user, clusterhost, **kwargs)
 
 
 @utils.supported_filters([])
@@ -922,9 +920,9 @@ def patch_clusterhost(
     host=RESP_CLUSTERHOST_FIELDS
 )
 def del_cluster_host(
-    deleter, cluster_id, host_id,
+    cluster_id, host_id,
     force=False, from_database_only=False,
-    delete_underlying_host=False,
+    delete_underlying_host=False, user=None,
     session=None, **kwargs
 ):
     """Delete cluster host."""
@@ -936,7 +934,7 @@ def del_cluster_host(
         clusterhost.state.state = 'ERROR'
     if not force:
         is_cluster_editable(
-            session, clusterhost.cluster, deleter,
+            session, clusterhost.cluster, user,
             reinstall_distributed_system_set=True
         )
     else:
@@ -949,7 +947,7 @@ def del_cluster_host(
             host.state.state = 'ERROR'
         import compass.db.api.host as host_api
         host_api.is_host_editable(
-            session, host, deleter,
+            session, host, user,
             reinstall_os_set=True
         )
         if host.state.state == 'UNINITIALIZED' or from_database_only:
@@ -970,7 +968,7 @@ def del_cluster_host(
         celery_client.celery.send_task(
             'compass.tasks.delete_cluster_host',
             (
-                deleter.email, cluster_id, host_id,
+                user.email, cluster_id, host_id,
                 delete_underlying_host
             )
         )
@@ -990,9 +988,9 @@ def del_cluster_host(
     host=RESP_CLUSTERHOST_FIELDS
 )
 def del_clusterhost(
-    deleter, clusterhost_id,
+    clusterhost_id,
     force=False, from_database_only=False,
-    delete_underlying_host=False,
+    delete_underlying_host=False, user=None,
     session=None, **kwargs
 ):
     """Delete cluster host."""
@@ -1004,7 +1002,7 @@ def del_clusterhost(
         clusterhost.state.state = 'ERROR'
     if not force:
         is_cluster_editable(
-            session, clusterhost.cluster, deleter,
+            session, clusterhost.cluster, user,
             reinstall_distributed_system_set=True
         )
     if delete_underlying_host:
@@ -1013,7 +1011,7 @@ def del_clusterhost(
             host.state.state = 'ERROR'
         import compass.db.api.host as host_api
         host_api.is_host_editable(
-            session, host, deleter,
+            session, host, user,
             reinstall_os_set=True
         )
         if host.state.state == 'UNINITIALIZED' or from_database_only:
@@ -1034,7 +1032,7 @@ def del_clusterhost(
         celery_client.celery.send_task(
             'compass.tasks.delete_cluster_host',
             (
-                deleter.email, clusterhost.cluster_id,
+                user.email, clusterhost.cluster_id,
                 clusterhost.host_id,
                 delete_underlying_host
             )
@@ -1052,8 +1050,8 @@ def del_clusterhost(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_CONFIG_FIELDS)
 def get_cluster_host_config(
-        getter, cluster_id,
-        host_id, session=None, **kwargs
+        cluster_id, host_id, user=None,
+        session=None, **kwargs
 ):
     """Get clusterhost config."""
     return utils.get_db_object(
@@ -1069,7 +1067,7 @@ def get_cluster_host_config(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_DEPLOYED_CONFIG_FIELDS)
 def get_cluster_host_deployed_config(
-    getter, cluster_id, host_id, session=None, **kwargs
+    cluster_id, host_id, user=None, session=None, **kwargs
 ):
     """Get clusterhost deployed config."""
     return utils.get_db_object(
@@ -1084,7 +1082,7 @@ def get_cluster_host_deployed_config(
     permission.PERMISSION_LIST_CLUSTERHOST_CONFIG
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_CONFIG_FIELDS)
-def get_clusterhost_config(getter, clusterhost_id, session=None, **kwargs):
+def get_clusterhost_config(clusterhost_id, user=None, session=None, **kwargs):
     """Get clusterhost config."""
     return utils.get_db_object(
         session, models.ClusterHost, clusterhost_id=clusterhost_id
@@ -1098,7 +1096,7 @@ def get_clusterhost_config(getter, clusterhost_id, session=None, **kwargs):
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_DEPLOYED_CONFIG_FIELDS)
 def get_clusterhost_deployed_config(
-    getter, clusterhost_id,
+    clusterhost_id, user=None,
     session=None, **kwargs
 ):
     """Get clusterhost deployed config."""
@@ -1195,7 +1193,7 @@ def _update_clusterhost_deployed_config(
     permission.PERMISSION_ADD_CLUSTERHOST_CONFIG
 )
 def update_cluster_host_config(
-    updater, cluster_id, host_id, session=None, **kwargs
+    cluster_id, host_id, user=None, session=None, **kwargs
 ):
     """Update clusterhost config."""
     clusterhost = utils.get_db_object(
@@ -1203,7 +1201,7 @@ def update_cluster_host_config(
         cluster_id=cluster_id, host_id=host_id
     )
     return _update_clusterhost_config(
-        session, updater, clusterhost, **kwargs
+        session, user, clusterhost, **kwargs
     )
 
 
@@ -1216,7 +1214,7 @@ def update_cluster_host_config(
     permission.PERMISSION_ADD_CLUSTERHOST_CONFIG
 )
 def update_cluster_host_deployed_config(
-    updater, cluster_id, host_id, session=None, **kwargs
+    cluster_id, host_id, user=None, session=None, **kwargs
 ):
     """Update clusterhost deployed config."""
     clusterhost = utils.get_db_object(
@@ -1224,7 +1222,7 @@ def update_cluster_host_deployed_config(
         cluster_id=cluster_id, host_id=host_id
     )
     return _update_clusterhost_deployed_config(
-        session, updater, clusterhost, **kwargs
+        session, user, clusterhost, **kwargs
     )
 
 
@@ -1237,14 +1235,14 @@ def update_cluster_host_deployed_config(
     permission.PERMISSION_ADD_CLUSTERHOST_CONFIG
 )
 def update_clusterhost_config(
-    updater, clusterhost_id, session=None, **kwargs
+    clusterhost_id, user=None, session=None, **kwargs
 ):
     """Update clusterhost config."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _update_clusterhost_config(
-        session, updater, clusterhost, **kwargs
+        session, user, clusterhost, **kwargs
     )
 
 
@@ -1257,14 +1255,14 @@ def update_clusterhost_config(
     permission.PERMISSION_ADD_CLUSTERHOST_CONFIG
 )
 def update_clusterhost_deployed_config(
-    updater, clusterhost_id, session=None, **kwargs
+    clusterhost_id, user=None, session=None, **kwargs
 ):
     """Update clusterhost deployed config."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _update_clusterhost_deployed_config(
-        session, updater, clusterhost, **kwargs
+        session, user, clusterhost, **kwargs
     )
 
 
@@ -1316,7 +1314,7 @@ def _patch_clusterhost_config(session, updater, clusterhost, **kwargs):
     permission.PERMISSION_ADD_CLUSTERHOST_CONFIG
 )
 def patch_cluster_host_config(
-    updater, cluster_id, host_id, session=None, **kwargs
+    cluster_id, host_id, user=None, session=None, **kwargs
 ):
     """patch clusterhost config."""
     clusterhost = utils.get_db_object(
@@ -1324,7 +1322,7 @@ def patch_cluster_host_config(
         cluster_id=cluster_id, host_id=host_id
     )
     return _patch_clusterhost_config(
-        session, updater, clusterhost, **kwargs
+        session, user, clusterhost, **kwargs
     )
 
 
@@ -1337,14 +1335,14 @@ def patch_cluster_host_config(
     permission.PERMISSION_ADD_CLUSTERHOST_CONFIG
 )
 def patch_clusterhost_config(
-    updater, clusterhost_id, session=None, **kwargs
+    clusterhost_id, user=None, session=None, **kwargs
 ):
     """patch clusterhost config."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _patch_clusterhost_config(
-        session, updater, clusterhost, **kwargs
+        session, user, clusterhost, **kwargs
     )
 
 
@@ -1388,7 +1386,7 @@ def _delete_clusterhost_config(
     permission.PERMISSION_DEL_CLUSTERHOST_CONFIG
 )
 def delete_cluster_host_config(
-    deleter, cluster_id, host_id, session=None
+    cluster_id, host_id, user=None, session=None
 ):
     """Delete a clusterhost config."""
     clusterhost = utils.get_db_object(
@@ -1396,7 +1394,7 @@ def delete_cluster_host_config(
         cluster_id=cluster_id, host_id=host_id
     )
     return _delete_clusterhost_config(
-        session, deleter, clusterhost
+        session, user, clusterhost
     )
 
 
@@ -1406,13 +1404,13 @@ def delete_cluster_host_config(
     permission.PERMISSION_DEL_CLUSTERHOST_CONFIG
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_CONFIG_FIELDS)
-def delete_clusterhost_config(deleter, clusterhost_id, session=None):
+def delete_clusterhost_config(clusterhost_id, user=None, session=None):
     """Delet a clusterhost config."""
     clusterhost = utils.get_db_object(
         session, models.ClusterHost, clusterhost_id=clusterhost_id
     )
     return _delete_clusterhost_config(
-        session, deleter, clusterhost
+        session, user, clusterhost
     )
 
 
@@ -1428,14 +1426,14 @@ def delete_clusterhost_config(deleter, clusterhost_id, session=None):
     hosts=RESP_CLUSTERHOST_FIELDS
 )
 def update_cluster_hosts(
-    updater, cluster_id, add_hosts={}, set_hosts=None,
-    remove_hosts={}, session=None
+    cluster_id, add_hosts={}, set_hosts=None,
+    remove_hosts={}, user=None, session=None
 ):
     """Update cluster hosts."""
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    is_cluster_editable(session, cluster, updater)
+    is_cluster_editable(session, cluster, user)
     if remove_hosts:
         _remove_clusterhosts(session, cluster, **remove_hosts)
     if add_hosts:
@@ -1514,13 +1512,13 @@ def validate_cluster(session, cluster):
     cluster=RESP_CONFIG_FIELDS,
     hosts=RESP_CLUSTERHOST_CONFIG_FIELDS
 )
-def review_cluster(reviewer, cluster_id, review={}, session=None, **kwargs):
+def review_cluster(cluster_id, review={}, user=None, session=None, **kwargs):
     """review cluster."""
     from compass.db.api import host as host_api
     cluster = utils.get_db_object(
         session, models.Cluster, id=cluster_id
     )
-    is_cluster_editable(session, cluster, reviewer)
+    is_cluster_editable(session, cluster, user)
     host_ids = review.get('hosts', [])
     clusterhost_ids = review.get('clusterhosts', [])
     clusterhosts = []
@@ -1542,7 +1540,7 @@ def review_cluster(reviewer, cluster_id, review={}, session=None, **kwargs):
         for clusterhost in clusterhosts:
             host = clusterhost.host
             if not host_api.is_host_editable(
-                session, host, reviewer, False
+                session, host, user, False
             ):
                 logging.info(
                     'ignore update host %s config '
@@ -1616,7 +1614,7 @@ def review_cluster(reviewer, cluster_id, review={}, session=None, **kwargs):
     hosts=RESP_CLUSTERHOST_FIELDS
 )
 def deploy_cluster(
-    deployer, cluster_id, deploy={}, session=None, **kwargs
+    cluster_id, deploy={}, user=None, session=None, **kwargs
 ):
     """deploy cluster."""
     from compass.db.api import host as host_api
@@ -1633,13 +1631,13 @@ def deploy_cluster(
             clusterhost.host_id in host_ids
         ):
             clusterhosts.append(clusterhost)
-    is_cluster_editable(session, cluster, deployer)
+    is_cluster_editable(session, cluster, user)
     is_cluster_validated(session, cluster)
     utils.update_db_object(session, cluster.state, state='INITIALIZED')
     for clusterhost in clusterhosts:
         host = clusterhost.host
         if host_api.is_host_editable(
-            session, host, deployer,
+            session, host, user,
             exception_when_not_editable=False
         ):
             host_api.is_host_validated(
@@ -1655,7 +1653,7 @@ def deploy_cluster(
     celery_client.celery.send_task(
         'compass.tasks.deploy_cluster',
         (
-            deployer.email, cluster_id,
+            user.email, cluster_id,
             [clusterhost.host_id for clusterhost in clusterhosts]
         )
     )
@@ -1672,7 +1670,7 @@ def deploy_cluster(
     permission.PERMISSION_GET_CLUSTER_STATE
 )
 @utils.wrap_to_dict(RESP_STATE_FIELDS)
-def get_cluster_state(getter, cluster_id, session=None, **kwargs):
+def get_cluster_state(cluster_id, user=None, session=None, **kwargs):
     """Get cluster state info."""
     return utils.get_db_object(
         session, models.Cluster, id=cluster_id
@@ -1686,7 +1684,7 @@ def get_cluster_state(getter, cluster_id, session=None, **kwargs):
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
 def get_cluster_host_state(
-    getter, cluster_id, host_id, session=None, **kwargs
+    cluster_id, host_id, user=None, session=None, **kwargs
 ):
     """Get clusterhost state info."""
     return utils.get_db_object(
@@ -1702,7 +1700,7 @@ def get_cluster_host_state(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
 def get_cluster_host_self_state(
-    getter, cluster_id, host_id, session=None, **kwargs
+    cluster_id, host_id, user=None, session=None, **kwargs
 ):
     """Get clusterhost state info."""
     clusterhost = utils.get_db_object(
@@ -1722,7 +1720,7 @@ def get_cluster_host_self_state(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
 def get_clusterhost_state(
-    getter, clusterhost_id, session=None, **kwargs
+    clusterhost_id, user=None, session=None, **kwargs
 ):
     """Get clusterhost state info."""
     return utils.get_db_object(
@@ -1738,7 +1736,7 @@ def get_clusterhost_state(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
 def get_clusterhost_self_state(
-    getter, clusterhost_id, session=None, **kwargs
+    clusterhost_id, user=None, session=None, **kwargs
 ):
     """Get clusterhost state info."""
     return utils.get_db_object(
@@ -1757,7 +1755,7 @@ def get_clusterhost_self_state(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
 def update_cluster_host_state(
-    updater, cluster_id, host_id, session=None, **kwargs
+    cluster_id, host_id, user=None, session=None, **kwargs
 ):
     """Update a clusterhost state."""
     clusterhost = utils.get_db_object(
@@ -1778,7 +1776,7 @@ def update_cluster_host_state(
 )
 @utils.wrap_to_dict(RESP_CLUSTERHOST_STATE_FIELDS)
 def update_clusterhost_state(
-    updater, clusterhost_id, session=None, **kwargs
+    clusterhost_id, user=None, session=None, **kwargs
 ):
     """Update a clusterhost state."""
     clusterhost = utils.get_db_object(
@@ -1799,7 +1797,7 @@ def update_clusterhost_state(
 )
 @utils.wrap_to_dict(RESP_STATE_FIELDS)
 def update_cluster_state(
-    updater, cluster_id, session=None, **kwargs
+    cluster_id, user=None, session=None, **kwargs
 ):
     """Update a cluster state."""
     cluster = utils.get_db_object(
@@ -1813,7 +1811,7 @@ def update_cluster_state(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
 def get_cluster_host_log_histories(
-    getter, cluster_id, host_id, session=None, **kwargs
+    cluster_id, host_id, user=None, session=None, **kwargs
 ):
     """Get clusterhost log history."""
     return utils.list_db_objects(
@@ -1826,7 +1824,7 @@ def get_cluster_host_log_histories(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
 def get_clusterhost_log_histories(
-    getter, clusterhost_id,
+    clusterhost_id, user=None,
     session=None, **kwargs
 ):
     """Get clusterhost log history."""
@@ -1839,7 +1837,7 @@ def get_clusterhost_log_histories(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
 def get_cluster_host_log_history(
-    getter, cluster_id, host_id, filename, session=None, **kwargs
+    cluster_id, host_id, filename, user=None, session=None, **kwargs
 ):
     """Get clusterhost log history."""
     return utils.get_db_object(
@@ -1852,7 +1850,7 @@ def get_cluster_host_log_history(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
 def get_clusterhost_log_history(
-    getter, clusterhost_id, filename, session=None, **kwargs
+    clusterhost_id, filename, user=None, session=None, **kwargs
 ):
     """Get host log history."""
     return utils.get_db_object(
@@ -1868,7 +1866,7 @@ def get_clusterhost_log_history(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
 def update_cluster_host_log_history(
-    updater, cluster_id, host_id, filename, session=None, **kwargs
+    cluster_id, host_id, filename, user=None, session=None, **kwargs
 ):
     """Update a host log history."""
     cluster_host_log_history = utils.get_db_object(
@@ -1885,7 +1883,7 @@ def update_cluster_host_log_history(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
 def update_clusterhost_log_history(
-    updater, clusterhost_id, filename, session=None, **kwargs
+    clusterhost_id, filename, user=None, session=None, **kwargs
 ):
     """Update a host log history."""
     clusterhost_log_history = utils.get_db_object(
@@ -1903,8 +1901,8 @@ def update_clusterhost_log_history(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
 def add_clusterhost_log_history(
-    creator, clusterhost_id, exception_when_existing=False,
-    filename=None, session=None, **kwargs
+    clusterhost_id, exception_when_existing=False,
+    filename=None, user=None, session=None, **kwargs
 ):
     """add a host log history."""
     return utils.add_db_object(
@@ -1921,8 +1919,8 @@ def add_clusterhost_log_history(
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_CLUSTERHOST_LOG_FIELDS)
 def add_cluster_host_log_history(
-    creator, cluster_id, host_id, exception_when_existing=False,
-    filename=None, session=None, **kwargs
+    cluster_id, host_id, exception_when_existing=False,
+    filename=None, user=None, session=None, **kwargs
 ):
     """add a host log history."""
     clusterhost = utils.get_db_object(

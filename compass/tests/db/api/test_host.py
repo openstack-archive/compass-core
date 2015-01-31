@@ -67,7 +67,7 @@ class HostTestCase(unittest2.TestCase):
             )
         )
         # get adapter information
-        list_adapters = adapter.list_adapters(self.user_object)
+        list_adapters = adapter.list_adapters(user=self.user_object)
         for list_adapter in list_adapters:
             for supported_os in list_adapter['supported_oses']:
                 self.os_id = supported_os['os_id']
@@ -86,13 +86,13 @@ class HostTestCase(unittest2.TestCase):
         cluster_names = ['test_cluster1', 'test_cluster2']
         for cluster_name in cluster_names:
             cluster.add_cluster(
-                self.user_object,
+                user=self.user_object,
                 adapter_id=self.adapter_id,
                 os_id=self.os_id,
                 flavor_id=self.flavor_id,
                 name=cluster_name
             )
-        clusters = cluster.list_clusters(self.user_object)
+        clusters = cluster.list_clusters(user=self.user_object)
         self.roles = None
         for list_cluster in clusters:
             for item in list_cluster['flavor']['roles']:
@@ -102,23 +102,23 @@ class HostTestCase(unittest2.TestCase):
                 break
         # add switch
         switch.add_switch(
-            self.user_object,
+            user=self.user_object,
             ip='172.29.8.40'
         )
-        switches = switch.list_switches(self.user_object)
+        switches = switch.list_switches(user=self.user_object)
         self.switch_id = None
         for item in switches:
             self.switch_id = item['id']
         macs = ['28:6e:d4:46:c4:25', '00:0c:29:bf:eb:1d']
         for mac in macs:
             switch.add_switch_machine(
-                self.user_object,
                 self.switch_id,
+                user=self.user_object,
                 mac=mac,
                 port='1'
             )
         # get machine information
-        machines = machine.list_machines(self.user_object)
+        machines = machine.list_machines(user=self.user_object)
         self.machine_ids = []
         for item in machines:
             self.machine_ids.append(item['id'])
@@ -126,40 +126,40 @@ class HostTestCase(unittest2.TestCase):
         name = ['newname1', 'newname2']
         for i in range(0, 2):
             cluster.add_cluster_host(
-                self.user_object,
                 self.cluster_id,
+                user=self.user_object,
                 machine_id=self.machine_ids[i],
                 name=name[i]
             )
         self.host_ids = []
-        clusterhosts = cluster.list_clusterhosts(self.user_object)
+        clusterhosts = cluster.list_clusterhosts(user=self.user_object)
         for clusterhost in clusterhosts:
             self.host_ids.append(clusterhost['host_id'])
         # add subnet
         subnets = ['10.145.88.0/23', '192.168.100.0/23']
         for subnet in subnets:
             network.add_subnet(
-                self.user_object,
+                user=self.user_object,
                 subnet=subnet
             )
         list_subnet = network.list_subnets(
-            self.user_object
+            user=self.user_object
         )
         self.subnet_ids = []
         for item in list_subnet:
             self.subnet_ids.append(item['id'])
         # add host network
         host.add_host_network(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             interface='eth0',
             ip='10.145.88.0',
             subnet_id=self.subnet_ids[0],
             is_mgmt=True
         )
         host.add_host_network(
-            self.user_object,
             self.host_ids[1],
+            user=self.user_object,
             interface='eth1',
             ip='192.168.100.0',
             subnet_id=self.subnet_ids[1],
@@ -169,8 +169,8 @@ class HostTestCase(unittest2.TestCase):
         filenames = ['log1', 'log2']
         for filename in filenames:
             host.add_host_log_history(
-                self.user_object,
                 self.host_ids[0],
+                user=self.user_object,
                 filename=filename
             )
 
@@ -238,7 +238,7 @@ class TestListHosts(HostTestCase):
 
     def test_list_hosts(self):
         list_hosts = host.list_hosts(
-            self.user_object
+            user=self.user_object
         )
         result = []
         for list_host in list_hosts:
@@ -258,7 +258,7 @@ class TestListMachinesOrHosts(HostTestCase):
 
     def test_list__hosts(self):
         list_hosts = host.list_machines_or_hosts(
-            self.user_object
+            user=self.user_object
         )
         result = []
         for list_host in list_hosts:
@@ -268,15 +268,15 @@ class TestListMachinesOrHosts(HostTestCase):
 
     def test_list_machines(self):
         host.del_host(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         host.del_host(
-            self.user_object,
-            self.host_ids[1]
+            self.host_ids[1],
+            user=self.user_object,
         )
         list_hosts = host.list_machines_or_hosts(
-            self.user_object
+            user=self.user_object
         )
         macs = []
         names = []
@@ -302,8 +302,8 @@ class TestGetHost(HostTestCase):
 
     def test_get_host(self):
         get_host = host.get_host(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertIsNotNone(get_host)
         self.assertEqual(get_host['mac'], '28:6e:d4:46:c4:25')
@@ -320,20 +320,20 @@ class TestGetMachineOrHost(HostTestCase):
 
     def test_get_host(self):
         get_host = host.get_machine_or_host(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertIsNotNone(get_host)
         self.assertEqual(get_host['mac'], '28:6e:d4:46:c4:25')
 
     def test_get_machine(self):
         host.del_host(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         get_machine = host.get_machine_or_host(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         name = []
         for k, v in get_machine.items():
@@ -354,8 +354,8 @@ class TestGetHostClusters(HostTestCase):
 
     def test_get_host_clusters(self):
         host_clusters = host.get_host_clusters(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         name = None
         for item in host_clusters:
@@ -374,27 +374,27 @@ class TestUpdateHost(HostTestCase):
 
     def test_update_host(self):
         host.update_host(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             name='update_test_name'
         )
         update_host = host.get_host(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertEqual(update_host['name'], 'update_test_name')
 
     def test_is_host_etitable(self):
         host.update_host_state(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             host.update_host,
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             name='invalid'
         )
 
@@ -402,8 +402,8 @@ class TestUpdateHost(HostTestCase):
         self.assertRaises(
             exception.InvalidParameter,
             host.update_host,
-            self.user_object,
             self.host_ids[1],
+            user=self.user_object,
             name='newname1'
         )
 
@@ -419,7 +419,7 @@ class TestUpdateHosts(HostTestCase):
 
     def test_update_hosts(self):
         update_hosts = host.update_hosts(
-            self.user_object,
+            user=self.user_object,
             data=[
                 {
                     'host_id': self.host_ids[0],
@@ -451,22 +451,22 @@ class TestDelHost(HostTestCase):
         from compass.tasks import client as celery_client
         celery_client.celery.send_task = mock.Mock()
         del_host = host.del_host(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertIsNotNone(del_host)
 
     def test_is_host_editable(self):
         host.update_host_state(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             host.del_host,
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
 
 
@@ -476,8 +476,8 @@ class TestGetHostConfig(HostTestCase):
     def setUp(self):
         super(TestGetHostConfig, self).setUp()
         host.update_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
 
@@ -486,8 +486,8 @@ class TestGetHostConfig(HostTestCase):
 
     def test_get_host_config(self):
         os_configs = host.get_host_config(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertItemsEqual(self.os_configs, os_configs['os_config'])
 
@@ -498,32 +498,32 @@ class TestGetHostDeployedConfig(HostTestCase):
     def setUp(self):
         super(TestGetHostDeployedConfig, self).setUp()
         host.update_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_ids[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_ids[0]]
             }
         )
         host.update_host_deployed_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
 
@@ -532,8 +532,8 @@ class TestGetHostDeployedConfig(HostTestCase):
 
     def test_get_host_deployed_config(self):
         os_configs = host.get_host_deployed_config(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertItemsEqual(
             os_configs['deployed_os_config'],
@@ -547,25 +547,25 @@ class TestUpdateHostDeployedConfig(HostTestCase):
     def setUp(self):
         super(TestUpdateHostDeployedConfig, self).setUp()
         host.update_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_ids[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_ids[0]]
             }
@@ -576,13 +576,13 @@ class TestUpdateHostDeployedConfig(HostTestCase):
 
     def test_update_host_deployed_config(self):
         host.update_host_deployed_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
         os_configs = host.get_host_deployed_config(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertItemsEqual(
             os_configs['deployed_os_config'],
@@ -591,15 +591,15 @@ class TestUpdateHostDeployedConfig(HostTestCase):
 
     def test_is_host_editable(self):
         host.update_host_state(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             host.update_host_deployed_config,
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
 
@@ -615,27 +615,27 @@ class TestUpdateHostConfig(HostTestCase):
 
     def test_update_host_config(self):
         host.update_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
         os_configs = host.get_host_config(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertItemsEqual(self.os_configs, os_configs['os_config'])
 
     def test_is_host_editable(self):
         host.update_host_state(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             host.update_host_config,
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
 
@@ -651,27 +651,27 @@ class TestPatchHostConfig(HostTestCase):
 
     def test_patch_host_config(self):
         host.patch_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
         os_configs = host.get_host_config(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertItemsEqual(self.os_configs, os_configs['os_config'])
 
     def test_is_host_editable(self):
         host.update_host_state(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             host.patch_host_config,
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
 
@@ -682,8 +682,8 @@ class TestDelHostConfig(HostTestCase):
     def setUp(self):
         super(TestDelHostConfig, self).setUp()
         host.update_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
 
@@ -692,26 +692,26 @@ class TestDelHostConfig(HostTestCase):
 
     def test_del_host_config(self):
         host.del_host_config(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         os_configs = host.get_host_config(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertEqual(os_configs['os_config'], {})
 
     def test_is_host_editable(self):
         host.update_host_state(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             state='INSTALLING'
         )
         self.assertRaises(
             exception.Forbidden,
             host.del_host_config,
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
 
 
@@ -721,10 +721,10 @@ class TestListHostNetworks(HostTestCase):
     def setUp(self):
         super(TestListHostNetworks, self).setUp()
         host.add_host_network(
-            self.user_object,
             self.host_ids[0],
             interface='eth1',
             ip='10.145.88.10',
+            user=self.user_object,
             subnet_id=self.subnet_ids[0],
             is_promiscuous=True
         )
@@ -734,8 +734,8 @@ class TestListHostNetworks(HostTestCase):
 
     def test_list_host_networs(self):
         host_networks = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         results = []
         for host_network in host_networks:
@@ -755,7 +755,7 @@ class TestListHostnetworks(HostTestCase):
 
     def test_list_hostnetworks(self):
         host_networks = host.list_hostnetworks(
-            self.user_object,
+            user=self.user_object,
         )
         results = []
         for host_network in host_networks:
@@ -769,25 +769,34 @@ class TestGetHostNetwork(HostTestCase):
 
     def setUp(self):
         super(TestGetHostNetwork, self).setUp()
+        result = host.add_host_network(
+            self.host_ids[0],
+            interface='eth1',
+            ip='10.145.88.10',
+            user=self.user_object,
+            subnet_id=self.subnet_ids[0],
+            is_promiscuous=True
+        )
+        self.host_network_id = result['id']
 
     def tearDown(self):
         super(TestGetHostNetwork, self).tearDown()
 
     def test_get_host_network(self):
         host_network = host.get_host_network(
-            self.user_object,
             self.host_ids[0],
-            self.host_ids[0]
+            self.host_network_id,
+            user=self.user_object,
         )
-        self.assertEqual(host_network['ip'], '10.145.88.0')
+        self.assertEqual(host_network['ip'], '10.145.88.10')
 
     def test_record_not_exists(self):
         self.assertRaises(
             exception.RecordNotExists,
             host.get_host_network,
-            self.user_object,
             2,
-            self.host_ids[0]
+            self.host_network_id,
+            user=self.user_object,
         )
 
 
@@ -796,16 +805,25 @@ class TestGetHostnetwork(HostTestCase):
 
     def setUp(self):
         super(TestGetHostnetwork, self).setUp()
+        result = host.add_host_network(
+            self.host_ids[0],
+            interface='eth1',
+            ip='10.145.88.10',
+            user=self.user_object,
+            subnet_id=self.subnet_ids[0],
+            is_promiscuous=True
+        )
+        self.host_network_id = result['id']
 
     def tearDown(self):
         super(TestGetHostnetwork, self).tearDown()
 
     def test_get_hostnetwork(self):
         host_network = host.get_hostnetwork(
-            self.user_object,
-            self.host_ids[0]
+            self.host_network_id,
+            user=self.user_object,
         )
-        self.assertEqual(host_network['ip'], '10.145.88.0')
+        self.assertEqual(host_network['ip'], '10.145.88.10')
 
 
 class TestAddHostNetwork(HostTestCase):
@@ -819,16 +837,16 @@ class TestAddHostNetwork(HostTestCase):
 
     def test_add_host_network(self):
         host.add_host_network(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             interface='eth1',
             ip='10.145.88.20',
             subnet_id=self.subnet_ids[0],
             is_mgmt=True
         )
         host_network = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         result = []
         for item in host_network:
@@ -837,17 +855,17 @@ class TestAddHostNetwork(HostTestCase):
 
     def test_add_host_network_position(self):
         host.add_host_network(
-            self.user_object,
             self.host_ids[0],
             True,
             'eth1',
+            user=self.user_object,
             ip='10.145.88.30',
             subnet_id=self.subnet_ids[0],
             is_mgmt=True
         )
         host_network = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         result = []
         for item in host_network:
@@ -857,8 +875,8 @@ class TestAddHostNetwork(HostTestCase):
     def test_add_host_network_session(self):
         with database.session() as session:
             host.add_host_network(
-                self.user_object,
                 self.host_ids[0],
+                user=self.user_object,
                 interface='eth1',
                 ip='10.145.88.40',
                 subnet_id=self.subnet_ids[0],
@@ -866,41 +884,20 @@ class TestAddHostNetwork(HostTestCase):
                 session=session
             )
         host_network = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         result = []
         for item in host_network:
             result.append(item['ip'])
         self.assertIn('10.145.88.40', result)
 
-    def test_add_host_network_position_session(self):
-        with database.session() as session:
-            host.add_host_network(
-                self.user_object,
-                self.host_ids[0],
-                True,
-                'eth1',
-                session,
-                ip='10.145.88.50',
-                subnet_id=self.subnet_ids[0],
-                is_mgmt=True
-            )
-        host_network = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
-        )
-        result = []
-        for item in host_network:
-            result.append(item['ip'])
-        self.assertIn('10.145.88.50', result)
-
     def test_invalid_parameter(self):
         self.assertRaises(
             exception.InvalidParameter,
             host.add_host_network,
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             interface='eth3',
             ip='10.145.88.0',
             subnet_id=self.subnet_ids[0]
@@ -918,7 +915,7 @@ class TestAddHostNetworks(HostTestCase):
 
     def test_addhost_networks(self):
         host_networks = host.add_host_networks(
-            self.user_object,
+            user=self.user_object,
             data=[
                 {
                     'host_id': self.host_ids[0],
@@ -962,15 +959,15 @@ class TestUpdateHostNetwork(HostTestCase):
 
     def test_update_host_network(self):
         host.update_host_network(
-            self.user_object,
             self.host_ids[0],
             self.host_ids[0],
+            user=self.user_object,
             interface='eth10',
             ip='10.145.88.100'
         )
         host_networks = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         interface = None
         ip = None
@@ -984,9 +981,9 @@ class TestUpdateHostNetwork(HostTestCase):
         self.assertRaises(
             exception.RecordNotExists,
             host.update_host_network,
-            self.user_object,
             self.host_ids[0],
-            2
+            2,
+            user=self.user_object,
         )
 
 
@@ -1001,14 +998,14 @@ class TestUpdateHostnetwork(HostTestCase):
 
     def test_update_hostnetwork(self):
         host.update_hostnetwork(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             interface='eth10',
             ip='10.145.88.100'
         )
         host_networks = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         interface = None
         ip = None
@@ -1020,8 +1017,8 @@ class TestUpdateHostnetwork(HostTestCase):
 
     def test_invalid_parameter(self):
         host.add_host_network(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             interface='eth11',
             ip='10.145.88.101',
             subnet_id=self.subnet_ids[0],
@@ -1030,15 +1027,15 @@ class TestUpdateHostnetwork(HostTestCase):
         self.assertRaises(
             exception.InvalidParameter,
             host.update_hostnetwork,
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             interface='eth11'
         )
         self.assertRaises(
             exception.InvalidParameter,
             host.update_hostnetwork,
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             ip='10.145.88.101'
         )
 
@@ -1054,13 +1051,13 @@ class TestDelHostNetwork(HostTestCase):
 
     def test_del_host_network(self):
         host.del_host_network(
-            self.user_object,
             self.host_ids[0],
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         host_network = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertEqual(host_network, [])
 
@@ -1068,9 +1065,9 @@ class TestDelHostNetwork(HostTestCase):
         self.assertRaises(
             exception.RecordNotExists,
             host.del_host_network,
-            self.user_object,
             100,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
 
 
@@ -1085,12 +1082,12 @@ class TestDelHostnetwork(HostTestCase):
 
     def test_del_hostnetwork(self):
         host.del_hostnetwork(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         host_network = host.list_host_networks(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertEqual(host_network, [])
 
@@ -1106,8 +1103,8 @@ class TestGetHostState(HostTestCase):
 
     def test_get_host_state(self):
         host_states = host.get_host_state(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertEqual(host_states['state'], 'UNINITIALIZED')
 
@@ -1123,13 +1120,13 @@ class TestUpdateHostState(HostTestCase):
 
     def test_update_host_state(self):
         host.update_host_state(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             state='INSTALLING'
         )
         host_states = host.get_host_state(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         self.assertEqual(host_states['state'], 'INSTALLING')
 
@@ -1145,8 +1142,8 @@ class TestGetHostLogHistories(HostTestCase):
 
     def test_get_host_log_histories(self):
         logs = host.get_host_log_histories(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         filenames = []
         for log in logs:
@@ -1166,9 +1163,9 @@ class TestGetHostLogHistory(HostTestCase):
 
     def test_get_host_log_history(self):
         log = host.get_host_log_history(
-            self.user_object,
             self.host_ids[0],
-            'log1'
+            'log1',
+            user=self.user_object,
         )
         self.assertEqual(log['filename'], 'log1')
 
@@ -1184,23 +1181,26 @@ class TestUpdateHostLogHistory(HostTestCase):
 
     def test_update_host_log_history(self):
         host.update_host_log_history(
-            self.user_object,
             self.host_ids[0],
             'log1',
+            user=self.user_object,
             severity='WARNING',
             message='update log'
         )
         logs = host.get_host_log_histories(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
-        result = []
-        for log in logs:
-            result.append(log['severity'])
-            result.append(log['message'])
-        expects = ['WARNING', 'update log']
-        for expect in expects:
-            self.assertIn(expect, result)
+        expected = {
+            'line_matcher_name': 'start',
+            'severity': 'WARNING',
+            'id': 1,
+            'filename': 'log1',
+            'message': 'update log'
+        }
+        self.assertTrue(
+            all(item in logs[0].items() for item in expected.items())
+        )
 
 
 class TestAddHostLogHistory(HostTestCase):
@@ -1214,13 +1214,13 @@ class TestAddHostLogHistory(HostTestCase):
 
     def test_add_host_log_history(self):
         host.add_host_log_history(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             filename='add_log'
         )
         logs = host.get_host_log_histories(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
@@ -1229,14 +1229,14 @@ class TestAddHostLogHistory(HostTestCase):
 
     def test_add_host_log_history_position(self):
         host.add_host_log_history(
-            self.user_object,
             self.host_ids[0],
             False,
-            'add_log_position'
+            'add_log_position',
+            user=self.user_object,
         )
         logs = host.get_host_log_histories(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
@@ -1246,37 +1246,19 @@ class TestAddHostLogHistory(HostTestCase):
     def test_add_host_log_history_session(self):
         with database.session() as session:
             host.add_host_log_history(
-                self.user_object,
                 self.host_ids[0],
+                user=self.user_object,
                 filename='add_log_session',
                 session=session
             )
         logs = host.get_host_log_histories(
-            self.user_object,
-            self.host_ids[0]
+            self.host_ids[0],
+            user=self.user_object,
         )
         result = []
         for log in logs:
             result.append(log['filename'])
         self.assertIn('add_log_session', result)
-
-    def test_add_host_log_history_position_session(self):
-        with database.session() as session:
-            host.add_host_log_history(
-                self.user_object,
-                self.host_ids[0],
-                False,
-                'add_log_position_session',
-                session
-            )
-        logs = host.get_host_log_histories(
-            self.user_object,
-            self.host_ids[0]
-        )
-        result = []
-        for log in logs:
-            result.append(log['filename'])
-        self.assertIn('add_log_position_session', result)
 
 
 class TestPoweronHost(HostTestCase):
@@ -1285,25 +1267,25 @@ class TestPoweronHost(HostTestCase):
     def setUp(self):
         super(TestPoweronHost, self).setUp()
         host.update_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_ids[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_ids[0]]
             }
@@ -1316,8 +1298,8 @@ class TestPoweronHost(HostTestCase):
         from compass.tasks import client as celery_client
         celery_client.celery.send_task = mock.Mock()
         poweron_host = host.poweron_host(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             poweron={'poweron': True}
         )
         self.assertEqual(
@@ -1332,25 +1314,25 @@ class TestPoweroffHost(HostTestCase):
     def setUp(self):
         super(TestPoweroffHost, self).setUp()
         host.update_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_ids[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_ids[0]]
             }
@@ -1363,8 +1345,8 @@ class TestPoweroffHost(HostTestCase):
         from compass.tasks import client as celery_client
         celery_client.celery.send_task = mock.Mock()
         poweroff_host = host.poweroff_host(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             poweroff={'poweroff': True}
         )
         self.assertEqual(
@@ -1379,25 +1361,25 @@ class TestResetHost(HostTestCase):
     def setUp(self):
         super(TestResetHost, self).setUp()
         host.update_host_config(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             os_config=self.os_configs
         )
         cluster.update_cluster_config(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             os_config=self.os_configs,
             package_config=self.package_configs
         )
         cluster.update_cluster_host(
-            self.user_object,
             self.cluster_id,
             self.host_ids[0],
+            user=self.user_object,
             roles=['allinone-compute']
         )
         cluster.review_cluster(
-            self.user_object,
             self.cluster_id,
+            user=self.user_object,
             review={
                 'hosts': [self.host_ids[0]]
             }
@@ -1410,8 +1392,8 @@ class TestResetHost(HostTestCase):
         from compass.tasks import client as celery_client
         celery_client.celery.send_task = mock.Mock()
         reset_host = host.reset_host(
-            self.user_object,
             self.host_ids[0],
+            user=self.user_object,
             reset={'reset': True}
         )
         self.assertEqual(

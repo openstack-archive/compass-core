@@ -94,8 +94,8 @@ class ActionHelper(object):
            }
            To view a complete output, please refer to backend doc.
         """
-        adapter_info = adapter_db.get_adapter(user, adapter_id)
-        metadata = cluster_db.get_cluster_metadata(user, cluster_id)
+        adapter_info = adapter_db.get_adapter(adapter_id, user=user)
+        metadata = cluster_db.get_cluster_metadata(cluster_id, user=user)
         adapter_info.update({const.METADATA: metadata})
 
         for flavor_info in adapter_info[const.FLAVORS]:
@@ -128,7 +128,7 @@ class ActionHelper(object):
                "owner": "xxx"
            }
         """
-        cluster_info = cluster_db.get_cluster(user, cluster_id)
+        cluster_info = cluster_db.get_cluster(cluster_id, user=user)
 
         # convert roles retrieved from db into a list of role names
         roles_info = cluster_info.setdefault(
@@ -137,11 +137,11 @@ class ActionHelper(object):
             ActionHelper._get_role_names(roles_info)
 
         # get cluster config info
-        cluster_config = cluster_db.get_cluster_config(user, cluster_id)
+        cluster_config = cluster_db.get_cluster_config(cluster_id, user=user)
         cluster_info.update(cluster_config)
 
-        deploy_config = cluster_db.get_cluster_deployed_config(user,
-                                                               cluster_id)
+        deploy_config = cluster_db.get_cluster_deployed_config(cluster_id,
+                                                               user=user)
         cluster_info.update(deploy_config)
 
         return cluster_info
@@ -179,7 +179,7 @@ class ActionHelper(object):
         """
         hosts_info = {}
         for host_id in hosts_id_list:
-            info = cluster_db.get_cluster_host(user, cluster_id, host_id)
+            info = cluster_db.get_cluster_host(cluster_id, host_id, user=user)
             logging.debug("checking on info %r %r" % (host_id, info))
 
             info[const.ROLES] = ActionHelper._get_role_names(info[const.ROLES])
@@ -187,9 +187,9 @@ class ActionHelper(object):
             # TODO(grace): Is following line necessary??
             info.setdefault(const.ROLES, [])
 
-            config = cluster_db.get_cluster_host_config(user,
-                                                        cluster_id,
-                                                        host_id)
+            config = cluster_db.get_cluster_host_config(cluster_id,
+                                                        host_id,
+                                                        user=user)
             info.update(config)
 
             networks = info[const.NETWORKS]
@@ -220,26 +220,34 @@ class ActionHelper(object):
         cluster_id = cluster_config[const.ID]
         del cluster_config[const.ID]
 
-        cluster_db.update_cluster_deployed_config(user, cluster_id,
+        cluster_db.update_cluster_deployed_config(cluster_id, user=user,
                                                   **cluster_config)
 
         hosts_id_list = deployed_config[const.HOSTS].keys()
         for host_id in hosts_id_list:
             config = deployed_config[const.HOSTS][host_id]
-            cluster_db.update_cluster_host_deployed_config(user,
-                                                           cluster_id,
+            cluster_db.update_cluster_host_deployed_config(cluster_id,
                                                            host_id,
+                                                           user=user,
                                                            **config)
 
     @staticmethod
     def update_state(cluster_id, host_id_list, user):
         # update all clusterhosts state
         for host_id in host_id_list:
-            cluster_db.update_cluster_host_state(user, cluster_id, host_id,
-                                                 state='INSTALLING')
+            cluster_db.update_cluster_host_state(
+                cluster_id,
+                host_id,
+                user=user,
+                state='INSTALLING'
+            )
 
         # update cluster state
-        cluster_db.update_cluster_state(user, cluster_id, state='INSTALLING')
+        cluster_db.update_cluster_state(
+            cluster_id,
+            user=user,
+            state='INSTALLING'
+        )
 
     @staticmethod
     def delete_cluster(
@@ -251,7 +259,7 @@ class ActionHelper(object):
                     user, host_id, True, True
                 )
         cluster_db.del_cluster(
-            user, cluster_id, True, True
+            cluster_id, True, True, user=user
         )
 
     @staticmethod
@@ -260,16 +268,16 @@ class ActionHelper(object):
     ):
         if delete_underlying_host:
             host_db.del_host(
-                user, host_id, True, True
+                host_id, True, True, user=user
             )
         cluster_db.del_cluster_host(
-            user, cluster_id, host_id, True, True
+            cluster_id, host_id, True, True, user=user
         )
 
     @staticmethod
     def delete_host(host_id, user):
         host_db.del_host(
-            user, host_id, True, True
+            host_id, True, True, user=user
         )
 
     @staticmethod

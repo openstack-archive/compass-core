@@ -90,19 +90,19 @@ fi
 mkdir -p /var/log/httpd
 chmod -R 777 /var/log/httpd
 
-mkdir -p /var/log/mysql
-chmod -R 777 /var/log/mysql
 sudo service httpd restart
 sudo service httpd status
 if [[ "$?" != "0" ]]; then
-    echo "squid is not started"
+    echo "httpd is not started"
     exit 1
 else
-    echo "squid conf is updated"
+    echo "httpd conf is updated"
 fi
 
 #update mysqld
 echo "update mysqld"
+mkdir -p /var/log/mysql
+chmod -R 777 /var/log/mysql
 sudo service mysqld restart
 sudo service mysqld status
 if [[ "$?" != "0" ]]; then

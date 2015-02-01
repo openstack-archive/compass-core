@@ -164,6 +164,10 @@ mkdir -p /var/log/cobbler/tasks
 mkdir -p /var/log/cobbler/anamon
 chmod -R 777 /var/log/cobbler
 
+# kill dnsmasq service
+service dnsmasq stop
+killall -9 dnsmasq
+
 sudo service httpd restart
 sudo service cobblerd restart
 sudo cobbler get-loaders

@@ -52,3 +52,4 @@ sudo chkconfig redis on
 sudo chkconfig mysqld on
 sudo chkconfig iptables off
 sudo chkconfig ip6tables off
+sudo chkconfig dnsmasq off

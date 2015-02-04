@@ -193,18 +193,18 @@ download()
 	    downloaded=1
         fi
     fi
-    if [ ${#urls[@]} -eq 1 ]; then
-	url=${urls[0]}
-    else
-        echo "download $package from fastest urls ${url[@]}"
-        url=`fastesturl ${urls[@]}`
-	if [[ "$?" != "0" ]]; then
-	    echo "failed to get fastest url from ${urls[@]}"
-	    exit 1
-	fi
-    fi
-    if [[ "$url" =~ (http|https|ftp):// ]]; then
-        if [[ "$downloaded" == "0" ]]; then
+    if [[ "$downloaded" == "0" ]]; then
+        if [ ${#urls[@]} -eq 1 ]; then
+	    url=${urls[0]}
+        else
+            echo "download $package from fastest urls ${urls[@]}"
+            url=`fastesturl ${urls[@]}`
+	    if [[ "$?" != "0" ]]; then
+	        echo "failed to get fastest url from ${urls[@]}"
+	        exit 1
+	    fi
+        fi
+        if [[ "$url" =~ (http|https|ftp):// ]]; then
 	    echo "downloading $url to /tmp/${package}"
 	    if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
                 curl -f -L -z /tmp/${package} -o /tmp/${package}.tmp $url
@@ -220,10 +220,10 @@ download()
                     mv -f /tmp/${package}.tmp /tmp/${package}
 		fi
             fi
-	fi
-    else
-	echo "copy $url to /tmp/${package}"
-        cp -rf $url /tmp/${package}
+        else
+	    echo "copy $url to /tmp/${package}"
+            cp -rf $url /tmp/${package}
+        fi
     fi
     if [[ ! -f /tmp/${package} && ! -L /tmp/${package} ]]; then
         echo "/tmp/$package is not created"

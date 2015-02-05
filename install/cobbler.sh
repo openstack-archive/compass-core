@@ -159,15 +159,17 @@ echo "disable selinux temporarily"
 echo 0 > /selinux/enforce
 
 # make log dir
-mkdir -p /var/log/cobbler
-mkdir -p /var/log/cobbler/tasks
-mkdir -p /var/log/cobbler/anamon
-chmod -R 777 /var/log/cobbler
+sudo mkdir -p /var/log/cobbler
+sudo mkdir -p /var/log/cobbler/tasks
+sudo mkdir -p /var/log/cobbler/anamon
+sudo chmod -R 777 /var/log/cobbler
 
 # kill dnsmasq service
-chkconfig dnsmasq off
-service dnsmasq stop
-killall -9 dnsmasq
+if `sudo chkconfig --list dnsmasq`; then
+    sudo chkconfig dnsmasq off
+    sudo service dnsmasq stop
+fi
+sudo killall -9 dnsmasq
 
 sudo service httpd restart
 sudo service cobblerd restart

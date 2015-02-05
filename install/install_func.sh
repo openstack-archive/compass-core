@@ -205,7 +205,7 @@ download()
 	    fi
         fi
         if [[ "$url" =~ (http|https|ftp):// ]]; then
-	    echo "downloading $url to /tmp/${package}"
+	    echo "download $url to /tmp/${package}"
 	    if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
                 curl -f -L -z /tmp/${package} -o /tmp/${package}.tmp $url
 	    else

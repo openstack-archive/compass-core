@@ -52,4 +52,6 @@ sudo chkconfig redis on
 sudo chkconfig mysqld on
 sudo chkconfig iptables off
 sudo chkconfig ip6tables off
-sudo chkconfig dnsmasq off
+if `sudo chkconfig --list dnsmasq`; then
+    sudo chkconfig dnsmasq off
+fi

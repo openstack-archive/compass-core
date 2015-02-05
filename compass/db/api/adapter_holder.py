@@ -32,7 +32,7 @@ RESP_FIELDS = [
     'os_installer', 'package_installer',
     'distributed_system_id',
     'distributed_system_name',
-    'supported_oses', 'display_name'
+    'supported_oses', 'display_name', 'health_check_cmd'
 ]
 RESP_OS_FIELDS = [
     'id', 'os_id', 'name'

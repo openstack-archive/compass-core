@@ -208,6 +208,31 @@ PERMISSION_UPDATE_CLUSTERHOST_STATE = PermissionWrapper(
     'update clusterhost state',
     'update clusterhost state'
 )
+PERMISSION_LIST_HEALTH_REPORT = PermissionWrapper(
+    'list_health_reports',
+    'list health check report',
+    'list health check report'
+)
+PERMISSION_GET_HEALTH_REPORT = PermissionWrapper(
+    'get_health_report',
+    'get health report',
+    'get health report'
+)
+PERMISSION_CHECK_CLUSTER_HEALTH = PermissionWrapper(
+    'start_check_cluster_health',
+    'start check cluster health',
+    'start check cluster health'
+)
+PERMISSION_SET_HEALTH_CHECK_ERROR = PermissionWrapper(
+    'set_error_state',
+    'set health check into error state',
+    'set health check into error state'
+)
+PERMISSION_DELETE_REPORT = PermissionWrapper(
+    'delete_reports',
+    'delete health reports',
+    'delete health reports'
+)
 PERMISSIONS = [
     PERMISSION_LIST_PERMISSIONS,
     PERMISSION_LIST_SWITCHES,
@@ -258,6 +283,11 @@ PERMISSIONS = [
     PERMISSION_DEL_CLUSTERHOST_CONFIG,
     PERMISSION_GET_CLUSTERHOST_STATE,
     PERMISSION_UPDATE_CLUSTERHOST_STATE,
+    PERMISSION_LIST_HEALTH_REPORT,
+    PERMISSION_GET_HEALTH_REPORT,
+    PERMISSION_CHECK_CLUSTER_HEALTH,
+    PERMISSION_SET_HEALTH_CHECK_ERROR,
+    PERMISSION_DELETE_REPORT
 ]
 
 

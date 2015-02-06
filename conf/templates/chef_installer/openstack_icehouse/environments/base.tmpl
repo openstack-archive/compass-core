@@ -58,10 +58,16 @@
 ## Set Openstack neutron config
 #set tenant_network_type = $getDictValue('neutron_config/openvswitch/tenant_network_type', 'gre')
 #set enable_tunneling = True
+#set tunnel_id_ranges = ''
+#set vlan_ranges = ''
 #set bridge_mappings = ''
-#if $tenant_network_type != 'gre'
+
+#if $tenant_network_type == 'vlan'
     #set enable_tunneling = False
-    #set bridge_mappings = 'physnet1:br-eth1'
+    #set bridge_mappings = ','.join($getDictValue('neutron_config/openvswitch/bridge_mappings', ['physnet1:br-eth1']))
+    #set vlan_ranges = ','.join($getDictValue('neutron_config/openvswitch/vlan_ranges', ['physnet1:2700:2999']))
+#else
+    #set tunnel_id_ranges = ','.join($getDictValue('neutron_config/openvswitch/tunnel_id_ranges', ['1:1000']))
 #end if
 
 ## Utility functions definition
@@ -183,15 +189,15 @@
         "ml2": {
           "type_drivers": "$tenant_network_type",
           "tenant_network_types": "$tenant_network_type",
-          "tunnel_id_ranges": "1:1000",
-          "network_vlan_ranges": "physnet1:2700:2999",
+          "tunnel_id_ranges": "$tunnel_id_ranges",
+          "network_vlan_ranges": "$vlan_ranges",
           "enable_security_group": "True"
         },
         "openvswitch": {
           "tenant_network_type": "$tenant_network_type",
           "enable_tunneling": "$enable_tunneling",
-          "tunnel_id_ranges": "1:1000",
-          "network_vlan_ranges": "physnet1:2700:2999",
+          "tunnel_id_ranges": "$tunnel_id_ranges",
+          "network_vlan_ranges": "$vlan_ranges",
           "bridge_mappings": "$bridge_mappings",
           "bind_interface": "$network_worker_tenant_nic"
         },

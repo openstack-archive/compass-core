@@ -25,68 +25,84 @@ from compass.log_analyzor.file_matcher import FileReaderFactory
 from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
-os_installer_configurations = None
-package_installer_configurations = None
 OS_ADAPTER_CONFIGURATIONS = None
 PACKAGE_ADAPTER_CONFIGURATIONS = None
+PROGRESS_CALCULATOR_CONFIGURATIONS = None
 
 
 def _load_calculator_configurations():
-    PROGRESS_CALCULATOR_CONFIGURATIONS = util.load_configs(
-        setting.PROGRESS_CALCULATOR_DIR
-    )
-    print PROGRESS_CALCULATOR_CONFIGURATIONS
-
-    for progress_calculator_configuration in (
-        PROGRESS_CALCULATOR_CONFIGURATIONS
-    ):
-        if 'OS_INSTALLER_CONFIGURATIONS' in progress_calculator_configuration:
-            os_installer_configurations = progress_calculator_configuration[
-                'OS_INSTALLER_CONFIGURATIONS'
-            ]
-        if 'PACKAGE_INSTALLER_CONFIGURATIONS' in (
-            progress_calculator_configuration
-        ):
-            package_installer_configurations = (
-                progress_calculator_configuration[
-                    'PACKAGE_INSTALLER_CONFIGURATIONS'
-                ]
-            )
+    global PROGRESS_CALCULATOR_CONFIGURATIONS
+    if PROGRESS_CALCULATOR_CONFIGURATIONS is None:
+        PROGRESS_CALCULATOR_CONFIGURATIONS = util.load_configs(
+            setting.PROGRESS_CALCULATOR_DIR
+        )
+        progress_calculator_configuration = (
+            PROGRESS_CALCULATOR_CONFIGURATIONS[0]
+        )
+        os_installer_configurations = None
+        package_installer_configurations = None
+        if progress_calculator_configuration is not None:
+            if 'OS_INSTALLER_CONFIGURATIONS' in (
+                progress_calculator_configuration
+            ):
+                os_installer_configurations = (
+                    (progress_calculator_configuration[
+                     'OS_INSTALLER_CONFIGURATIONS'])
+                )
+            if 'PACKAGE_INSTALLER_CONFIGURATIONS' in (
+                progress_calculator_configuration
+            ):
+                package_installer_configurations = (
+                    (progress_calculator_configuration[
+                     'PACKAGE_INSTALLER_CONFIGURATIONS'])
+                )
+        else:
+            logging.debug('No configuration found for progress calculator.')
 
     global OS_ADAPTER_CONFIGURATIONS
     if OS_ADAPTER_CONFIGURATIONS is None:
-        OS_ADAPTER_CONFIGURATIONS = [
-            OSMatcher(
-                os_installer_name='cobbler',
-                os_pattern='CentOS.*',
-                item_matcher=os_installer_configurations['cobbler']['CentOS'],
-                file_reader_factory=FileReaderFactory(
-                    setting.INSTALLATION_LOGDIR['CobblerInstaller']
+        if os_installer_configurations is not None:
+            OS_ADAPTER_CONFIGURATIONS = [
+                OSMatcher(
+                    os_installer_name='cobbler',
+                    os_pattern='CentOS.*',
+                    item_matcher=(
+                        (os_installer_configurations[
+                         'cobbler']['CentOS'])
+                    ),
+                    file_reader_factory=FileReaderFactory(
+                        setting.INSTALLATION_LOGDIR['CobblerInstaller']
+                    )
+                ),
+                OSMatcher(
+                    os_installer_name='cobbler',
+                    os_pattern='Ubuntu.*',
+                    item_matcher=(
+                        (os_installer_configurations[
+                         'cobbler']['Ubuntu'])
+                    ),
+                    file_reader_factory=FileReaderFactory(
+                        setting.INSTALLATION_LOGDIR['CobblerInstaller']
+                    )
                 )
-            ),
-            OSMatcher(
-                os_installer_name='cobbler',
-                os_pattern='Ubuntu.*',
-                item_matcher=os_installer_configurations['cobbler']['Ubuntu'],
-                file_reader_factory=FileReaderFactory(
-                    setting.INSTALLATION_LOGDIR['CobblerInstaller']
-                )
-            )
-        ]
+            ]
 
     global PACKAGE_ADAPTER_CONFIGURATIONS
     if PACKAGE_ADAPTER_CONFIGURATIONS is None:
-        PACKAGE_ADAPTER_CONFIGURATIONS = [
-            PackageMatcher(
-                package_installer_name='chef_installer',
-                distributed_system_pattern='openstack.*',
-                item_matcher=package_installer_configurations[
-                    'chef_installer']['openstack'],
-                file_reader_factory=FileReaderFactory(
-                    setting.INSTALLATION_LOGDIR['ChefInstaller']
+        if package_installer_configurations is not None:
+            PACKAGE_ADAPTER_CONFIGURATIONS = [
+                PackageMatcher(
+                    package_installer_name='chef_installer',
+                    distributed_system_pattern='openstack.*',
+                    item_matcher=(
+                        (package_installer_configurations[
+                         'chef_installer']['openstack'])
+                    ),
+                    file_reader_factory=FileReaderFactory(
+                        setting.INSTALLATION_LOGDIR['ChefInstaller']
+                    )
                 )
-            )
-        ]
+            ]
 
 
 def _get_os_matcher(os_installer_name, os_name):

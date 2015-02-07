@@ -75,22 +75,25 @@ class TestGetRecordCleanToken(BaseTest):
 
     def test_record_user_token(self):
         token = user_api.record_user_token(
-            self.user_object,
             'test_token',
-            datetime.datetime.now() + datetime.timedelta(seconds=10000)
+            datetime.datetime.now() + datetime.timedelta(seconds=10000),
+            user=self.user_object,
         )
         self.assertIsNotNone(token)
         self.assertEqual(token['token'], 'test_token')
 
     def test_clean_user_token(self):
-        token = user_api.clean_user_token(self.user_object, 'test_token')
+        token = user_api.clean_user_token(
+            'test_token',
+            user=self.user_object,
+        )
         self.assertEqual([], token)
 
     def test_get_user_object_from_token(self):
         token = user_api.record_user_token(
-            self.user_object,
             'test_token',
-            datetime.datetime.now() + datetime.timedelta(seconds=10000)
+            datetime.datetime.now() + datetime.timedelta(seconds=10000),
+            user=self.user_object,
         )
         self.assertIsNotNone(token)
 
@@ -112,9 +115,12 @@ class TestGetUser(BaseTest):
         super(TestGetUser, self).tearDown()
 
     def test_get_user(self):
-        user = user_api.get_user(self.user_object, self.user_object.id)
-        self.assertIsNotNone(user)
-        self.assertEqual(user['email'], setting.COMPASS_ADMIN_EMAIL)
+        get_user = user_api.get_user(
+            self.user_object.id,
+            user=self.user_object
+        )
+        self.assertIsNotNone(get_user)
+        self.assertEqual(get_user['email'], setting.COMPASS_ADMIN_EMAIL)
 
 
 class TestGetCurrentUser(BaseTest):
@@ -128,7 +134,7 @@ class TestGetCurrentUser(BaseTest):
 
     def test_get_current_user(self):
         current_user = user_api.get_current_user(
-            self.user_object
+            user=self.user_object
         )
         self.assertIsNotNone(current_user)
         self.assertEqual(current_user['email'], setting.COMPASS_ADMIN_EMAIL)
@@ -140,7 +146,7 @@ class TestListUsers(BaseTest):
     def setUp(self):
         super(TestListUsers, self).setUp()
         user_api.add_user(
-            self.user_object,
+            user=self.user_object,
             email='test@huawei.com',
             password='test'
         )
@@ -149,11 +155,13 @@ class TestListUsers(BaseTest):
         super(TestListUsers, self).tearDown()
 
     def test_list_users(self):
-        user = user_api.list_users(self.user_object)
-        self.assertIsNotNone(user)
+        list_users = user_api.list_users(
+            user=self.user_object
+        )
+        self.assertIsNotNone(list_users)
         result = []
-        for item in user:
-            result.append(item['email'])
+        for list_user in list_users:
+            result.append(list_user['email'])
         expects = ['test@huawei.com', setting.COMPASS_ADMIN_EMAIL]
         for expect in expects:
             self.assertIn(expect, result)
@@ -170,18 +178,18 @@ class TestAddUser(BaseTest):
 
     def test_add_user(self):
         user_objs = user_api.add_user(
-            self.user_object,
             email='test@abc.com',
-            password='password'
+            password='password',
+            user=self.user_object,
         )
         self.assertEqual('test@abc.com', user_objs['email'])
 
     def test_add_user_session(self):
         with database.session() as session:
             user_objs = user_api.add_user(
-                self.user_object,
                 email='test@abc.com',
                 password='password',
+                user=self.user_object,
                 session=session
             )
         self.assertEqual('test@abc.com', user_objs['email'])
@@ -197,8 +205,11 @@ class TestDelUser(BaseTest):
         super(TestDelUser, self).tearDown()
 
     def test_del_user(self):
-        user_api.del_user(self.user_object, self.user_object.id)
-        del_user = user_api.list_users(self.user_object)
+        user_api.del_user(
+            self.user_object.id,
+            user=self.user_object,
+        )
+        del_user = user_api.list_users(user=self.user_object)
         self.assertEqual([], del_user)
 
 
@@ -213,8 +224,8 @@ class TestUpdateUser(BaseTest):
 
     def test_update_admin(self):
         user_objs = user_api.update_user(
-            self.user_object,
             self.user_object.id,
+            user=self.user_object,
             email=setting.COMPASS_ADMIN_EMAIL,
             firstname='a',
             lastname='b',
@@ -228,7 +239,7 @@ class TestUpdateUser(BaseTest):
 
     def test_not_admin(self):
         user_api.add_user(
-            self.user_object,
+            user=self.user_object,
             email='dummy@abc.com',
             password='dummy',
             is_admin=False
@@ -237,8 +248,8 @@ class TestUpdateUser(BaseTest):
         self.assertRaises(
             exception.Forbidden,
             user_api.update_user,
-            user_object,
             2,
+            user=user_object,
             is_admin=False
         )
 
@@ -254,8 +265,8 @@ class TestGetPermissions(BaseTest):
 
     def test_get_permissions(self):
         user_permissions = user_api.get_permissions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object,
         )
         self.assertIsNotNone(user_permissions)
         result = []
@@ -275,9 +286,9 @@ class TestGetPermission(BaseTest):
 
     def test_get_permission(self):
         user_permission = user_api.get_permission(
-            self.user_object,
             self.user_object.id,
             1,
+            user=self.user_object,
         )
         self.assertEqual(user_permission['name'], 'list_permissions')
 
@@ -294,13 +305,13 @@ class TestAddDelUserPermission(BaseTest):
 
     def test_add_permission(self):
         user_api.add_permission(
-            self.user_object,
             self.user_object.id,
+            user=self.user_object,
             permission_id=2
         )
         permissions = user_api.get_permissions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object,
         )
         result = None
         for permission in permissions:
@@ -310,14 +321,14 @@ class TestAddDelUserPermission(BaseTest):
 
     def test_add_permission_position(self):
         user_api.add_permission(
-            self.user_object,
             self.user_object.id,
             True,
-            2
+            2,
+            user=self.user_object,
         )
         permissions = user_api.get_permissions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object,
         )
         result = None
         for permission in permissions:
@@ -328,33 +339,14 @@ class TestAddDelUserPermission(BaseTest):
     def test_add_permission_session(self):
         with database.session() as session:
             user_api.add_permission(
-                self.user_object,
                 self.user_object.id,
+                user=self.user_object,
                 permission_id=2,
                 session=session
             )
         permissions = user_api.get_permissions(
-            self.user_object,
-            self.user_object.id
-        )
-        result = None
-        for permission in permissions:
-            if permission['id'] == 2:
-                result = permission['name']
-        self.assertEqual(result, 'list_switches')
-
-    def test_add_permission_position_session(self):
-        with database.session() as session:
-            user_api.add_permission(
-                self.user_object,
-                self.user_object.id,
-                True,
-                2,
-                session
-            )
-        permissions = user_api.get_permissions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object,
         )
         result = None
         for permission in permissions:
@@ -364,13 +356,13 @@ class TestAddDelUserPermission(BaseTest):
 
     def test_del_permission(self):
         user_api.del_permission(
-            self.user_object,
             self.user_object.id,
-            1
+            1,
+            user=self.user_object,
         )
         del_user = user_api.get_permissions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object,
         )
         self.assertEqual([], del_user)
 
@@ -386,25 +378,25 @@ class TestUpdatePermissions(BaseTest):
 
     def test_remove_permissions(self):
         user_api.update_permissions(
-            self.user_object,
             self.user_object.id,
+            user=self.user_object,
             remove_permissions=1
         )
         del_user_permission = user_api.get_permissions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object,
         )
         self.assertEqual([], del_user_permission)
 
     def test_add_permissions(self):
         user_api.update_permissions(
-            self.user_object,
             self.user_object.id,
+            user=self.user_object,
             add_permissions=2
         )
         permissions = user_api.get_permissions(
-            self.user_object,
-            self.user_object.id
+            self.user_object.id,
+            user=self.user_object,
         )
         result = None
         for permission in permissions:

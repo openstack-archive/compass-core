@@ -56,13 +56,13 @@ def delete_clusters():
     if clusternames:
         list_cluster_args['name'] = clusternames
     clusters = cluster_api.list_clusters(
-        user, **list_cluster_args
+        user=user, **list_cluster_args
     )
     delete_underlying_host = flags.OPTIONS.delete_hosts
     for cluster in clusters:
         cluster_id = cluster['id']
         cluster_api.del_cluster(
-            user, cluster_id, True, False, delete_underlying_host
+            cluster_id, True, False, delete_underlying_host, user=user
         )
 
 

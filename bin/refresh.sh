@@ -2,7 +2,7 @@
 set -e
 service mysqld restart
 /opt/compass/bin/manage_db.py createdb
-/opt/compass/bin/clean_installers.py
+/opt/compass/bin/clean_installers.py --noasync
 /opt/compass/bin/clean_installation_logs.py
 service httpd restart
 service rsyslog restart

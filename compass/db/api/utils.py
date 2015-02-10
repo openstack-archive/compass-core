@@ -280,7 +280,7 @@ def wrap_to_dict(support_keys=[], **filters):
 
 def _wrapper_dict(data, support_keys, **filters):
     """Helper for warpping db object into dictionary."""
-    logging.info(
+    logging.debug(
         'wrap dict %s by support_keys=%s filters=%s',
         data, support_keys, filters
     )

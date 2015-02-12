@@ -285,17 +285,6 @@ def _update_host(session, user, host_id, **kwargs):
         session, host, user,
         reinstall_os_set=kwargs.get('reinstall_os', False)
     )
-    if 'name' in kwargs:
-        hostname = kwargs['name']
-        host_by_name = utils.get_db_object(
-            session, models.Host, False, name=hostname
-        )
-        if host_by_name and host_by_name.id != host.id:
-            raise exception.InvalidParameter(
-                'hostname %s is already exists in host %s' % (
-                    hostname, host_by_name.id
-                )
-            )
     return utils.update_db_object(session, host, **kwargs)
 
 
@@ -597,22 +586,6 @@ def _add_host_network(
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
-    ip_int = long(netaddr.IPAddress(ip))
-    host_network = utils.get_db_object(
-        session, models.HostNetwork, False,
-        ip_int=ip_int
-    )
-    if (
-        host_network and not (
-            host_network.host_id == host_id and
-            host_network.interface == interface
-        )
-    ):
-        raise exception.InvalidParameter(
-            'ip %s exists in host network %s' % (
-                ip, host_network.id
-            )
-        )
     is_host_editable(session, host, user)
     return utils.add_db_object(
         session, models.HostNetwork,
@@ -653,14 +626,26 @@ def add_host_networks(
         host_networks = []
         failed_host_networks = []
         for network in networks:
-            try:
+            ip_int = long(netaddr.IPAddress(network['ip']))
+            host_network = utils.get_db_object(
+                session, models.HostNetwork, False,
+                ip_int=ip_int
+            )
+            if (
+                host_network and not (
+                    host_network.host_id == host_id and
+                    host_network.interface == network['interface']
+                )
+            ):
+                logging.error('ip %s exists in host network %s' % (
+                    network['ip'], host_network.id
+                ))
+                failed_host_networks.append(network)
+            else:
                 host_networks.append(_add_host_network(
                     session, user, host_id, exception_when_existing,
                     **network
                 ))
-            except exception.DatabaseException as error:
-                logging.exception(error)
-                failed_host_networks.append(network)
         if host_networks:
             hosts.append({'host_id': host_id, 'networks': host_networks})
         if failed_host_networks:
@@ -677,35 +662,6 @@ def add_host_networks(
 def _update_host_network(
     session, user, host_network, **kwargs
 ):
-    if 'interface' in kwargs:
-        interface = kwargs['interface']
-        host_network_by_interface = utils.get_db_object(
-            session, models.HostNetwork, False,
-            host_id=host_network.host_id,
-            interface=interface
-        )
-        if (
-            host_network_by_interface and
-            host_network_by_interface.id != host_network.id
-        ):
-            raise exception.InvalidParameter(
-                'interface %s exists in host network %s' % (
-                    interface, host_network_by_interface.id
-                )
-            )
-    if 'ip' in kwargs:
-        ip = kwargs['ip']
-        ip_int = long(netaddr.IPAddress(ip))
-        host_network_by_ip = utils.get_db_object(
-            session, models.HostNetwork, False,
-            ip_int=ip_int
-        )
-        if host_network_by_ip and host_network_by_ip.id != host_network.id:
-            raise exception.InvalidParameter(
-                'ip %s exist in host network %s' % (
-                    ip, host_network_by_ip.id
-                )
-            )
     is_host_editable(session, host_network.host, user)
     return utils.update_db_object(session, host_network, **kwargs)
 

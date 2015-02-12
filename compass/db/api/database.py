@@ -112,11 +112,25 @@ def session():
         logging.error('failed to commit session')
         logging.exception(error)
         if isinstance(error, IntegrityError):
-            raise exception.NotAcceptable(
+            if 'unique' in error.args[0]:
+                for item in error.statement.split():
+                    if item.islower():
+                        object = item
+                        break
+                message = error.args[0].split()
+                error_m = message[2: message.index('not') - 1]
+                raise exception.DuplicatedRecord(
+                    '%s is already existed in %s' % (error_m, object)
+                )
+            else:
+                raise exception.NotAcceptable(
+                    'operation error in database'
+                )
+            """raise exception.NotAcceptable(
                 'operation error in database'
-            )
+            )"""
         elif isinstance(error, OperationalError):
-            raise exception.DatabaseExcedption(
+            raise exception.DatabaseException(
                 'operation error in database'
             )
         elif isinstance(error, exception.DatabaseException):

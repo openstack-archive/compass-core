@@ -580,6 +580,7 @@ def add_db_object(session, table, exception_when_existing=True,
                 'got db object %s: %s', db_keys, db_object
             )
             if exception_when_existing:
+                print 'true'
                 raise exception.DuplicatedRecord(
                     '%s exists in table %s' % (db_keys, table.__name__)
                 )

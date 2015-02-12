@@ -275,17 +275,7 @@ def update_cluster(cluster_id, user=None, session=None, **kwargs):
             kwargs.get('reinstall_distributed_system', False)
         )
     )
-    if 'name' in kwargs:
-        clustername = kwargs['name']
-        cluster_by_name = utils.get_db_object(
-            session, models.Cluster, False, name=clustername
-        )
-        if cluster_by_name and cluster_by_name.id != cluster.id:
-            raise exception.InvalidParameter(
-                'cluster name %s is already exists in cluster %s' % (
-                    clustername, cluster_by_name.id
-                )
-            )
+    #utils.duplicate_item(session, cluster, kwargs, models.Cluster)
     return utils.update_db_object(session, cluster, **kwargs)
 
 
@@ -587,17 +577,7 @@ def add_clusterhost_internal(
                 exception_when_not_editable=False
             )
         ):
-            if 'name' in host_dict:
-                hostname = host_dict['name']
-                host_by_name = utils.get_db_object(
-                    session, models.Host, False, name=hostname
-                )
-                if host_by_name and host_by_name.id != host.id:
-                    raise exception.InvalidParameter(
-                        'host name %s exists in host %s' % (
-                            hostname, host_by_name.id
-                        )
-                    )
+            #utils.duplicate_item(session, host, host_dict, models.Host)
             utils.update_db_object(
                 session, host,
                 **host_dict
@@ -605,17 +585,7 @@ def add_clusterhost_internal(
         else:
             logging.info('host %s is not editable', host.name)
     else:
-        if 'name' in host_dict:
-            hostname = host_dict['name']
-            host = utils.get_db_object(
-                session, models.Host, False, name=hostname
-            )
-            if host and host.machine_id != machine_id:
-                raise exception.InvalidParameter(
-                    'host name %s exists in host %s' % (
-                        hostname, host.id
-                    )
-                )
+        #utils.duplicate_item(session, host, host_dict, models.Host)
         host = utils.add_db_object(
             session, models.Host, False, machine_id,
             os=cluster.os,
@@ -765,17 +735,7 @@ def _update_clusterhost(session, user, clusterhost, **kwargs):
             reinstall_os_set=kwargs.get('reinstall_os', False),
             exception_when_not_editable=False
         ):
-            if 'name' in host_dict:
-                hostname = host_dict['name']
-                host_by_name = utils.get_db_object(
-                    session, models.Host, False, name=hostname
-                )
-                if host_by_name and host_by_name.id != host.id:
-                    raise exception.InvalidParameter(
-                        'host name %s exists in host %s' % (
-                            hostname, host_by_name.id
-                        )
-                    )
+            #utils.duplicate_item(session, host, host_dict, models.Host)
             utils.update_db_object(
                 session, host,
                 **host_dict
@@ -824,7 +784,7 @@ def _update_clusterhost(session, user, clusterhost, **kwargs):
 
     is_cluster_editable(session, clusterhost.cluster, user)
     return update_internal(
-        clusterhost, **kwargs
+        clusterhost, **clusterhost_dict
     )
 
 

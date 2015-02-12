@@ -275,17 +275,7 @@ def update_cluster(cluster_id, user=None, session=None, **kwargs):
             kwargs.get('reinstall_distributed_system', False)
         )
     )
-    if 'name' in kwargs:
-        clustername = kwargs['name']
-        cluster_by_name = utils.get_db_object(
-            session, models.Cluster, False, name=clustername
-        )
-        if cluster_by_name and cluster_by_name.id != cluster.id:
-            raise exception.InvalidParameter(
-                'cluster name %s is already exists in cluster %s' % (
-                    clustername, cluster_by_name.id
-                )
-            )
+    utils.duplicate_item(session, cluster, kwargs, models.Cluster)
     return utils.update_db_object(session, cluster, **kwargs)
 
 
@@ -417,9 +407,9 @@ def get_cluster_metadata(cluster_id, user=None, session=None, **kwargs):
 
 
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-def _update_cluster_config(session, user, cluster, **kwargs):
+def _update_cluster_config(session, updater, cluster, **kwargs):
     """Update a cluster config."""
-    is_cluster_editable(session, cluster, user)
+    is_cluster_editable(session, cluster, updater)
     return utils.update_db_object(
         session, cluster, **kwargs
     )
@@ -587,17 +577,7 @@ def add_clusterhost_internal(
                 exception_when_not_editable=False
             )
         ):
-            if 'name' in host_dict:
-                hostname = host_dict['name']
-                host_by_name = utils.get_db_object(
-                    session, models.Host, False, name=hostname
-                )
-                if host_by_name and host_by_name.id != host.id:
-                    raise exception.InvalidParameter(
-                        'host name %s exists in host %s' % (
-                            hostname, host_by_name.id
-                        )
-                    )
+            utils.duplicate_item(session, host, host_dict, models.Host)
             utils.update_db_object(
                 session, host,
                 **host_dict
@@ -605,17 +585,7 @@ def add_clusterhost_internal(
         else:
             logging.info('host %s is not editable', host.name)
     else:
-        if 'name' in host_dict:
-            hostname = host_dict['name']
-            host = utils.get_db_object(
-                session, models.Host, False, name=hostname
-            )
-            if host and host.machine_id != machine_id:
-                raise exception.InvalidParameter(
-                    'host name %s exists in host %s' % (
-                        hostname, host.id
-                    )
-                )
+        utils.duplicate_item(session, host, host_dict, models.Host)
         host = utils.add_db_object(
             session, models.Host, False, machine_id,
             os=cluster.os,
@@ -748,7 +718,7 @@ def add_cluster_host(
 
 
 @utils.wrap_to_dict(RESP_CLUSTERHOST_FIELDS)
-def _update_clusterhost(session, user, clusterhost, **kwargs):
+def _update_clusterhost(session, updater, clusterhost, **kwargs):
     clusterhost_dict = {}
     host_dict = {}
     for key, value in kwargs.items():
@@ -765,7 +735,8 @@ def _update_clusterhost(session, user, clusterhost, **kwargs):
             reinstall_os_set=kwargs.get('reinstall_os', False),
             exception_when_not_editable=False
         ):
-            if 'name' in host_dict:
+            utils.duplicate_item(session, host, host_dict, models.Host)
+            """if 'name' in host_dict:
                 hostname = host_dict['name']
                 host_by_name = utils.get_db_object(
                     session, models.Host, False, name=hostname
@@ -775,7 +746,7 @@ def _update_clusterhost(session, user, clusterhost, **kwargs):
                         'host name %s exists in host %s' % (
                             hostname, host_by_name.id
                         )
-                    )
+                    )"""
             utils.update_db_object(
                 session, host,
                 **host_dict
@@ -822,9 +793,9 @@ def _update_clusterhost(session, user, clusterhost, **kwargs):
             session, clusterhost, **in_kwargs
         )
 
-    is_cluster_editable(session, clusterhost.cluster, user)
+    is_cluster_editable(session, clusterhost.cluster, updater)
     return update_internal(
-        clusterhost, **kwargs
+        clusterhost, **clusterhost_dict
     )
 
 
@@ -1106,11 +1077,11 @@ def get_clusterhost_deployed_config(
 
 
 @utils.wrap_to_dict(RESP_CLUSTERHOST_CONFIG_FIELDS)
-def _update_clusterhost_config(session, user, clusterhost, **kwargs):
+def _update_clusterhost_config(session, updater, clusterhost, **kwargs):
     from compass.db.api import host as host_api
     ignore_keys = []
     if not host_api.is_host_editable(
-        session, clusterhost.host, user,
+        session, clusterhost.host, updater,
         exception_when_not_editable=False
     ):
         ignore_keys.append('put_os_config')
@@ -1122,7 +1093,7 @@ def _update_clusterhost_config(session, user, clusterhost, **kwargs):
 
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
-        is_cluster_editable(session, cluster, user)
+        is_cluster_editable(session, cluster, updater)
         metadata_api.validate_package_config(
             session, package_config, cluster.adapter_id
         )
@@ -1147,12 +1118,12 @@ def _update_clusterhost_config(session, user, clusterhost, **kwargs):
 
 @utils.wrap_to_dict(RESP_CLUSTERHOST_DEPLOYED_CONFIG_FIELDS)
 def _update_clusterhost_deployed_config(
-    session, user, clusterhost, **kwargs
+    session, updater, clusterhost, **kwargs
 ):
     from compass.db.api import host as host_api
     ignore_keys = []
     if not host_api.is_host_editable(
-        session, clusterhost.host, user,
+        session, clusterhost.host, updater,
         exception_when_not_editable=False
     ):
         ignore_keys.append('deployed_os_config')
@@ -1163,7 +1134,7 @@ def _update_clusterhost_deployed_config(
 
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
-        is_cluster_editable(session, cluster, user)
+        is_cluster_editable(session, cluster, updater)
         is_clusterhost_validated(session, clusterhost)
 
     @utils.supported_filters(
@@ -1267,11 +1238,11 @@ def update_clusterhost_deployed_config(
 
 
 @utils.wrap_to_dict(RESP_CLUSTERHOST_CONFIG_FIELDS)
-def _patch_clusterhost_config(session, user, clusterhost, **kwargs):
+def _patch_clusterhost_config(session, updater, clusterhost, **kwargs):
     from compass.db.api import host as host_api
     ignore_keys = []
     if not host_api.is_host_editable(
-        session, clusterhost.host, user,
+        session, clusterhost.host, updater,
         exception_when_not_editable=False
     ):
         ignore_keys.append('patched_os_config')
@@ -1282,7 +1253,7 @@ def _patch_clusterhost_config(session, user, clusterhost, **kwargs):
 
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
-        is_cluster_editable(session, cluster, user)
+        is_cluster_editable(session, cluster, updater)
         metadata_api.validate_package_config(
             session, package_config, cluster.adapter_id
         )
@@ -1348,18 +1319,18 @@ def patch_clusterhost_config(
 
 @utils.wrap_to_dict(RESP_CLUSTERHOST_CONFIG_FIELDS)
 def _delete_clusterhost_config(
-    session, user, clusterhost
+    session, deleter, clusterhost
 ):
     from compass.db.api import host as host_api
     ignore_keys = []
     if not host_api.is_host_editable(
-        session, clusterhost.host, user,
+        session, clusterhost.host, deleter,
         exception_when_not_editable=False
     ):
         ignore_keys.append('os_config')
 
     def package_config_validates(package_config):
-        is_cluster_editable(session, clusterhost.cluster, user)
+        is_cluster_editable(session, clusterhost.cluster, deleter)
 
     @utils.supported_filters(
         optional_support_keys=['os_config', 'package_config'],

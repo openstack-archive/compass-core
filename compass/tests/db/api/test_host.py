@@ -384,6 +384,20 @@ class TestUpdateHost(HostTestCase):
         )
         self.assertEqual(update_host['name'], 'update_test_name')
 
+    def test_duplicate_name(self):
+        host.update_host(
+            self.host_ids[0],
+            user=self.user_object,
+            name='update_test_name'
+        )
+        self.assertRaises(
+            exception.DuplicatedRecord,
+            host.update_host,
+            self.host_ids[1],
+            user=self.user_object,
+            name='update_test_name'
+        )
+
     def test_is_host_etitable(self):
         host.update_host_state(
             self.host_ids[0],
@@ -396,15 +410,6 @@ class TestUpdateHost(HostTestCase):
             self.host_ids[0],
             user=self.user_object,
             name='invalid'
-        )
-
-    def test_invalid_parameter(self):
-        self.assertRaises(
-            exception.InvalidParameter,
-            host.update_host,
-            self.host_ids[1],
-            user=self.user_object,
-            name='newname1'
         )
 
 
@@ -436,6 +441,27 @@ class TestUpdateHosts(HostTestCase):
             results.append(update_host['name'])
         for result in results:
             self.assertIn(result, ['test_update1', 'test_update2'])
+
+    def test_duplicate_name(self):
+        host.update_hosts(
+            user=self.user_object,
+            data=[
+                {
+                    'host_id': self.host_ids[0],
+                    'name': 'test_update1'
+                }
+            ])
+        self.assertRaises(
+            exception.DuplicatedRecord,
+            host.update_hosts,
+            user=self.user_object,
+            data=[
+                {
+                    'host_id': self.host_ids[1],
+                    'name': 'test_update1'
+                }
+            ]
+        )
 
 
 class TestDelHost(HostTestCase):
@@ -839,7 +865,7 @@ class TestAddHostNetwork(HostTestCase):
         host.add_host_network(
             self.host_ids[0],
             user=self.user_object,
-            interface='eth1',
+            interface='eth22',
             ip='10.145.88.20',
             subnet_id=self.subnet_ids[0],
             is_mgmt=True
@@ -852,6 +878,25 @@ class TestAddHostNetwork(HostTestCase):
         for item in host_network:
             result.append(item['ip'])
         self.assertIn('10.145.88.20', result)
+
+    def test_duplicate(self):
+        host.add_host_network(
+            self.host_ids[0],
+            user=self.user_object,
+            interface='eth1',
+            ip='10.145.88.20',
+            subnet_id=self.subnet_ids[0],
+            is_mgmt=True
+        )
+        self.assertRaises(
+            exception.DuplicatedRecord,
+            host.add_host_network,
+            self.host_ids[0],
+            user=self.user_object,
+            interface='eth3',
+            subnet_id=self.subnet_ids[0],
+            ip='10.145.88.20'
+        )
 
     def test_add_host_network_position(self):
         host.add_host_network(
@@ -891,17 +936,6 @@ class TestAddHostNetwork(HostTestCase):
         for item in host_network:
             result.append(item['ip'])
         self.assertIn('10.145.88.40', result)
-
-    def test_invalid_parameter(self):
-        self.assertRaises(
-            exception.InvalidParameter,
-            host.add_host_network,
-            self.host_ids[0],
-            user=self.user_object,
-            interface='eth3',
-            ip='10.145.88.0',
-            subnet_id=self.subnet_ids[0]
-        )
 
 
 class TestAddHostNetworks(HostTestCase):
@@ -977,6 +1011,42 @@ class TestUpdateHostNetwork(HostTestCase):
         self.assertEqual(interface, 'eth10')
         self.assertEqual(ip, '10.145.88.100')
 
+    def test_duplicate_ip(self):
+        host.add_host_network(
+            self.host_ids[0],
+            user=self.user_object,
+            interface='eth2',
+            ip='10.145.88.10',
+            subnet_id=self.subnet_ids[0],
+            is_mgmt=True
+        )
+        self.assertRaises(
+            exception.DuplicatedRecord,
+            host.update_host_network,
+            self.host_ids[0],
+            3,
+            user=self.user_object,
+            ip='10.145.88.0'
+        )
+
+    def test_duplicate_interface(self):
+        host.add_host_network(
+            self.host_ids[0],
+            interface='eth1',
+            user=self.user_object,
+            ip='10.145.88.10',
+            subnet_id=self.subnet_ids[0],
+            is_mgmt=True
+        )
+        self.assertRaises(
+            exception.DuplicatedRecord,
+            host.update_host_network,
+            self.host_ids[0],
+            3,
+            user=self.user_object,
+            interface='eth0'
+        )
+
     def test_record_not_exists(self):
         self.assertRaises(
             exception.RecordNotExists,
@@ -1025,14 +1095,14 @@ class TestUpdateHostnetwork(HostTestCase):
             is_promiscuous=True
         )
         self.assertRaises(
-            exception.InvalidParameter,
+            exception.DuplicatedRecord,
             host.update_hostnetwork,
             self.host_ids[0],
             user=self.user_object,
             interface='eth11'
         )
         self.assertRaises(
-            exception.InvalidParameter,
+            exception.DuplicatedRecord,
             host.update_hostnetwork,
             self.host_ids[0],
             user=self.user_object,

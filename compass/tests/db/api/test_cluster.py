@@ -379,6 +379,20 @@ class TestUpdateCluster(ClusterTestCase):
         )
         self.assertEqual(update_cluster['name'], 'test_update_cluster')
 
+    def test_duplicate_name(self):
+        cluster.update_cluster(
+            self.cluster_id,
+            user=self.user_object,
+            name='test_update_cluster'
+        )
+        self.assertRaises(
+            exception.InvalidParameter,
+            cluster.update_cluster,
+            2,
+            user=self.user_object,
+            name='test_update_cluster'
+        )
+
     def test_is_cluster_editable(self):
         # state is INSTALLING
         cluster.update_cluster_state(
@@ -739,13 +753,31 @@ class TestAddClusterHost(ClusterTestCase):
             'switch_ip': '172.29.8.40',
             'hostname': 'test_add_cluster_host',
             'owner': 'admin@huawei.com',
+            'port': '1',
+            'distributed_system_name': 'openstack',
+            'os_name': 'CentOS-6.5-x86_64',
             'mac': '00:0c:29:5b:ee:eb',
             'host_id': 3,
-            'name': 'test_add_cluster_host.test_cluster1',
         }
         self.assertTrue(
             all(item in add_cluster_hosts[2].items()
                 for item in expected.items()))
+
+    def test_duplicate_name(self):
+        cluster.add_cluster_host(
+            self.cluster_id,
+            user=self.user_object,
+            machine_id=self.add_machine_id,
+            name='test_add_cluster_host'
+        )
+        self.assertRaises(
+            exception.InvalidParameter,
+            cluster.add_cluster_host,
+            2,
+            user=self.user_object,
+            machine_id=2,
+            name='test_add_cluster_host'
+        )
 
     def test_is_cluster_editable(self):
         # installing
@@ -777,7 +809,7 @@ class TestUpdateClusterHost(ClusterTestCase):
             self.cluster_id,
             self.host_id[0],
             user=self.user_object,
-            roles=['allinone-compute']
+            roles=['allinone-compute'],
         )
         update_cluster_hosts = cluster.list_cluster_hosts(
             self.cluster_id,
@@ -788,6 +820,16 @@ class TestUpdateClusterHost(ClusterTestCase):
             if item['roles']:
                 result = item['roles'][0]['display_name']
         self.assertEqual(result, 'all in one compute')
+
+    def test_duplicate_name(self):
+        self.assertRaises(
+            exception.InvalidParameter,
+            cluster.update_cluster_host,
+            self.cluster_id,
+            self.host_id[0],
+            user=self.user_object,
+            name='newname2'
+        )
 
     def test_invalid_role(self):
         self.assertRaises(
@@ -828,6 +870,7 @@ class TestUpdateClusterhost(ClusterTestCase):
         cluster.update_clusterhost(
             self.clusterhost_id[0],
             user=self.user_object,
+            reinstall_os=False,
             roles=['allinone-compute']
         )
         update_clusterhosts = cluster.list_clusterhosts(
@@ -838,6 +881,15 @@ class TestUpdateClusterhost(ClusterTestCase):
             if item['roles']:
                 result = item['roles'][0]['display_name']
         self.assertEqual(result, 'all in one compute')
+
+    def test_duplicate_name(self):
+        self.assertRaises(
+            exception.InvalidParameter,
+            cluster.update_clusterhost,
+            self.clusterhost_id[0],
+            user=self.user_object,
+            name='newname2'
+        )
 
     def test_invalid_role(self):
         self.assertRaises(

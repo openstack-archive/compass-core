@@ -803,3 +803,63 @@ def check_switch_credentials(credentials):
                 'function %s is not defined',
                 key_check_func_name
             )
+
+
+def duplicate_item(session, object, dict, models):
+    if 'name' in dict:
+        name = dict['name']
+        object_by_name = get_db_object(
+            session, models, False, name=name
+        )
+        if object_by_name and (object_by_name.id != object.id):
+            raise exception.InvalidParameter(
+                '%s name %s exists in %s %s' % (
+                    object, name, object, object_by_name.id
+                )
+            )
+
+    elif 'host_id' in dict:
+        ip = dict['ip']
+        host_id = dict['host_id']
+        interface = dict['interface']
+        ip_int = long(netaddr.IPAddress(ip))
+        object_by_host_network = get_db_object(
+            session, models, False,
+            ip_int=ip_int
+        )
+        if object_by_host_network and not(
+            object_by_host_network.id == host_id and
+            object_by_host_network.interface == interface
+        ):
+            raise exception.InvalidParameter(
+                'ip %s exists in host network %s' % (
+                    ip, object_by_host_network.id
+                )
+            )
+
+    elif 'interface' in dict or 'ip' in dict:
+        if 'interface' in dict:
+            interface = dict['interface']
+            object_by_interface = get_db_object(
+                session, models, False,
+                host_id=object.host_id, interface=interface
+            )
+            if object_by_interface and object_by_interface.id != object.id:
+                raise exception.InvalidParameter(
+                    'interface %s exists in host network %s' % (
+                        interface, object_by_interface.id
+                    )
+                )
+
+        if 'ip' in dict:
+            ip = dict['ip']
+            ip_int = long(netaddr.IPAddress(ip))
+            object_by_ip = get_db_object(
+                session, models, False, ip_int=ip_int
+            )
+            if object_by_ip and object_by_ip.id != object.id:
+                raise exception.InvalidParameter(
+                    'ip %s exist in host network %s' % (
+                        ip, object_by_ip.id
+                    )
+                )

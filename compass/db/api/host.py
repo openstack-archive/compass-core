@@ -276,26 +276,16 @@ def validate_host(session, host):
 )
 @utils.input_validates(name=utils.check_name)
 @utils.wrap_to_dict(RESP_FIELDS)
-def _update_host(session, user, host_id, **kwargs):
+def _update_host(session, updater, host_id, **kwargs):
     """Update a host internal."""
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
     is_host_editable(
-        session, host, user,
+        session, host, updater,
         reinstall_os_set=kwargs.get('reinstall_os', False)
     )
-    if 'name' in kwargs:
-        hostname = kwargs['name']
-        host_by_name = utils.get_db_object(
-            session, models.Host, False, name=hostname
-        )
-        if host_by_name and host_by_name.id != host.id:
-            raise exception.InvalidParameter(
-                'hostname %s is already exists in host %s' % (
-                    hostname, host_by_name.id
-                )
-            )
+    utils.duplicate_item(session, host, kwargs, models.Host)
     return utils.update_db_object(session, host, **kwargs)
 
 
@@ -421,9 +411,9 @@ def update_host_deployed_config(host_id, user=None, session=None, **kwargs):
 
 
 @utils.wrap_to_dict(RESP_CONFIG_FIELDS)
-def _update_host_config(session, user, host, **kwargs):
+def _update_host_config(session, updater, host, **kwargs):
     """Update host config."""
-    is_host_editable(session, host, user)
+    is_host_editable(session, host, updater)
     return utils.update_db_object(session, host, **kwargs)
 
 
@@ -591,29 +581,19 @@ def get_hostnetwork(host_network_id, user=None, session=None, **kwargs):
 )
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 def _add_host_network(
-    session, user, host_id, exception_when_existing=True,
+    session, creator, host_id, exception_when_existing=True,
     interface=None, ip=None, **kwargs
 ):
     host = utils.get_db_object(
         session, models.Host, id=host_id
     )
-    ip_int = long(netaddr.IPAddress(ip))
-    host_network = utils.get_db_object(
-        session, models.HostNetwork, False,
-        ip_int=ip_int
-    )
-    if (
-        host_network and not (
-            host_network.host_id == host_id and
-            host_network.interface == interface
-        )
-    ):
-        raise exception.InvalidParameter(
-            'ip %s exists in host network %s' % (
-                ip, host_network.id
-            )
-        )
-    is_host_editable(session, host, user)
+    dict = {
+        'ip': ip,
+        'interface': interface,
+        'host_id': host_id
+    }
+    utils.duplicate_item(session, host, dict, models.HostNetwork)
+    is_host_editable(session, host, creator)
     return utils.add_db_object(
         session, models.HostNetwork,
         exception_when_existing,
@@ -675,38 +655,13 @@ def add_host_networks(
 
 @utils.wrap_to_dict(RESP_NETWORK_FIELDS)
 def _update_host_network(
-    session, user, host_network, **kwargs
+    session, updater, host_network, **kwargs
 ):
     if 'interface' in kwargs:
-        interface = kwargs['interface']
-        host_network_by_interface = utils.get_db_object(
-            session, models.HostNetwork, False,
-            host_id=host_network.host_id,
-            interface=interface
-        )
-        if (
-            host_network_by_interface and
-            host_network_by_interface.id != host_network.id
-        ):
-            raise exception.InvalidParameter(
-                'interface %s exists in host network %s' % (
-                    interface, host_network_by_interface.id
-                )
-            )
+        utils.duplicate_item(session, host_network, kwargs, models.HostNetwork)
     if 'ip' in kwargs:
-        ip = kwargs['ip']
-        ip_int = long(netaddr.IPAddress(ip))
-        host_network_by_ip = utils.get_db_object(
-            session, models.HostNetwork, False,
-            ip_int=ip_int
-        )
-        if host_network_by_ip and host_network_by_ip.id != host_network.id:
-            raise exception.InvalidParameter(
-                'ip %s exist in host network %s' % (
-                    ip, host_network_by_ip.id
-                )
-            )
-    is_host_editable(session, host_network.host, user)
+        utils.duplicate_item(session, host_network, kwargs, models.HostNetwork)
+    is_host_editable(session, host_network.host, updater)
     return utils.update_db_object(session, host_network, **kwargs)
 
 

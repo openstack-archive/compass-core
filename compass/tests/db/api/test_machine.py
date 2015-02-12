@@ -14,6 +14,7 @@
 
 import datetime
 import logging
+import mock
 import os
 import unittest2
 
@@ -163,6 +164,99 @@ class TestDelMachine(BaseTest):
         )
         del_machine = machine.list_machines(self.user_object)
         self.assertEqual([], del_machine)
+
+
+class TestPoweronMachine(BaseTest):
+    """Test poweron machine."""
+
+    def setUp(self):
+        super(TestPoweronMachine, self).setUp()
+
+    def tearDown(self):
+        super(TestPoweronMachine, self).tearDown()
+
+    def test_poweron_machine(self):
+        switch.add_switch_machine(
+            1,
+            mac='28:6e:d4:46:c4:25',
+            port='1',
+            user=self.user_object,
+        )
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task = mock.Mock()
+        poweron_machine = machine.poweron_machine(
+            1,
+            poweron={'poweron': True},
+            user=self.user_object
+        )
+        expected = {
+            'status': 'poweron 28:6e:d4:46:c4:25 action sent',
+        }
+        self.assertTrue(all(
+            item in poweron_machine.items() for item in expected.items())
+        )
+
+
+class TestPoweroffMachine(BaseTest):
+    """Test poweroff machine."""
+
+    def setUp(self):
+        super(TestPoweroffMachine, self).setUp()
+
+    def tearDown(self):
+        super(TestPoweroffMachine, self).tearDown()
+
+    def test_poweroff_machine(self):
+        switch.add_switch_machine(
+            1,
+            mac='28:6e:d4:46:c4:25',
+            port='1',
+            user=self.user_object,
+        )
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task = mock.Mock()
+        poweroff_machine = machine.poweroff_machine(
+            1,
+            {'poweroff': True},
+            user=self.user_object
+        )
+        expected = {
+            'status': 'poweroff 28:6e:d4:46:c4:25 action sent'
+        }
+        self.assertTrue(all(
+            item in poweroff_machine.items() for item in expected.items())
+        )
+
+
+class TestResetMachine(BaseTest):
+    """Test reset machine."""
+
+    def setUp(self):
+        super(TestResetMachine, self).setUp()
+
+    def tearDown(self):
+        super(TestResetMachine, self).tearDown()
+
+    def test_reset_machine(self):
+        switch.add_switch_machine(
+            1,
+            mac='28:6e:d4:46:c4:25',
+            port='1',
+            user=self.user_object,
+        )
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task = mock.Mock()
+        reset_machine = machine.reset_machine(
+            1,
+            {'reset_machine': True},
+            user=self.user_object
+        )
+        expected = {
+            'status': 'reset 28:6e:d4:46:c4:25 action sent'
+        }
+        self.assertTrue(all(
+            item in reset_machine.items() for item in expected.items())
+        )
 
 
 if __name__ == '__main__':

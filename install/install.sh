@@ -165,20 +165,28 @@ if [ $? -ne 0 ]; then
     echo "There is no nic '$NIC' yet"
     exit 1
 fi
-sudo ifconfig $NIC | grep 'inet addr:' >& /dev/null
+sudo ifconfig $NIC | grep 'inet ' >& /dev/null
 if [ $? -ne 0 ]; then
     echo "There is not any IP address assigned to the NIC '$NIC' yet, please assign an IP address first."
     exit 1
 fi
 
-export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+export ipaddr=$(ip addr show dev $NIC |grep 'inet ' |cut -d/ -f1|awk '{print$2}')
 loadvars IPADDR ${ipaddr}
 ipcalc $IPADDR -c
 if [ $? -ne 0 ]; then
     echo "ip addr $IPADDR format should be x.x.x.x"
     exit 1
 fi
-export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
+cdr2mask ()
+{
+   # Number of args to shift, 255..255, first non-255 byte, zeroes
+   set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
+   [ $1 -gt 1 ] && shift $1 || shift
+   echo ${1-0}.${2-0}.${3-0}.${4-0}
+}
+cidr=$(ip addr show dev eth0 |grep 'inet '|awk '{print$2}' |cut -d/ -f2)
+export netmask=$(cdr2mask $cidr)
 loadvars NETMASK ${netmask}
 export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
 export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')

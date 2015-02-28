@@ -246,7 +246,7 @@ if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
     fi
 
     # download packages
-    download -u "$CENTOS_6_5_PPA_REPO_SOURCE" centos_6_5_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$CENTOS_6_5_PPA_REPO_SOURCE" -u "$CENTOS_6_5_PPA_REPO_SOURCE_HUAWEI" centos_6_5_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
@@ -271,7 +271,7 @@ if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
     fi
 
     # download packages
-    download "$CENTOS_6_6_PPA_REPO_SOURCE" centos_6_6_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$CENTOS_6_6_PPA_REPO_SOURCE" -u "$CENTOS_6_6_PPA_REPO_SOURCE_HUAWEI" centos_6_6_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
@@ -296,7 +296,7 @@ if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
     fi
 
     # download packages
-    download -u "$CENTOS_7_0_PPA_REPO_SOURCE" centos_7_0_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$CENTOS_7_0_PPA_REPO_SOURCE" -u "$CENTOS_7_0_PPA_REPO_SOURCE_HUAWEI" centos_7_0_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 
@@ -322,7 +322,7 @@ if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
         echo "repo ubuntu_12_04_ppa_repo has already existed."
     fi
 
-    download -u "$UBUNTU_12_04_PPA_REPO_SOURCE" ubuntu_12_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$UBUNTU_12_04_PPA_REPO_SOURCE" -u "$UBUNTU_12_04_PPA_REPO_SOURCE_HUAWEI" ubuntu_12_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
@@ -346,7 +346,7 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
         echo "repo ubuntu_14_04_ppa_repo has already existed."
     fi
 
-    download -u "$UBUNTU_14_04_PPA_REPO_SOURCE" ubuntu_14_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$UBUNTU_14_04_PPA_REPO_SOURCE" -u "$UBUNTU_14_04_PPA_REPO_SOURCE_HUAWEI" ubuntu_14_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 sudo cobbler reposync

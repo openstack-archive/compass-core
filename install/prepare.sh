@@ -238,23 +238,23 @@ fi
 
 # download cobbler related packages
 if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    download $CENTOS_6_5_PPA_REPO_SOURCE || exit $?
+    download -u "$CENTOS_6_5_PPA_REPO_SOURCE" -u "$CENTOS_6_5_PPA_REPO_SOURCE_HUAWEI" || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    download $CENTOS_6_6_PPA_REPO_SOURCE || exit $?
+    download -u "$CENTOS_6_6_PPA_REPO_SOURCE" -u "$CENTOS_6_6_PPA_REPO_SOURCE_HUAWEI" || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    download $CENTOS_7_0_PPA_REPO_SOURCE || exit $?
+    download -u "$CENTOS_7_0_PPA_REPO_SOURCE" -u "$CENTOS_7_0_PPA_REPO_SOURCE_HUAWEI" || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    download $UBUNTU_12_04_PPA_REPO_SOURCE || exit $?
+    download -u "$UBUNTU_12_04_PPA_REPO_SOURCE" -u "$UBUNTU_12_04_PPA_REPO_SOURCE_HUAWEI" || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    download $UBUNTU_14_04_PPA_REPO_SOURCE || exit $?
+    download -u "$UBUNTU_14_04_PPA_REPO_SOURCE" -u "$UBUNTU_14_04_PPA_REPO_SOURCE_HUAWEI" || exit $?
 fi
 
 # download chef related packages

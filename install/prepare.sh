@@ -238,23 +238,27 @@ fi
 
 # download cobbler related packages
 if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    download $CENTOS_6_5_PPA_REPO_SOURCE || exit $?
+    download -u $CENTOS_6_5_PPA_REPO_SOURCE -u $CENTOS_6_5_PPA_REPO_SOURCE_ASIA || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    download $CENTOS_6_6_PPA_REPO_SOURCE || exit $?
+    download -u $CENTOS_6_6_PPA_REPO_SOURCE -u $CENTOS_6_6_PPA_REPO_SOURCE_ASIA|| exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    download $CENTOS_7_0_PPA_REPO_SOURCE || exit $?
+    download -u $CENTOS_7_0_PPA_REPO_SOURCE -u $CENTOS_7_0_PPA_REPO_SOURCE_ASIA || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    download $UBUNTU_12_04_PPA_REPO_SOURCE || exit $?
+    download -u $UBUNTU_12_04_PPA_REPO_SOURCE -u $UBUNTU_12_04_PPA_REPO_SOURCE_ASIA || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    download $UBUNTU_14_04_PPA_REPO_SOURCE || exit $?
+    download -u $UBUNTU_14_04_PPA_REPO_SOURCE -u $UBUNTU_14_04_PPA_REPO_SOURCE_ASIA || exit $?
+fi
+
+if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+    download -u $SLES_11SP3_PPA_REPO_SOURCE -u $SLES_11SP3_PPA_REPO_SOURCE_ASIA || exit $?
 fi
 
 # download chef related packages
@@ -287,6 +291,13 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
     download -u "$UBUNTU_14_04_IMAGE_SOURCE" -u "$UBUNTU_14_04_IMAGE_SOURCE_ASIA" Ubuntu-14.04-x86_64.iso || exit $?
 fi
 
+if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+    echo "download sles11sp3 image"
+    download -u "$SLES_11SP3_IMAGE_SOURCE" -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" sles-11sp3-x86_64.iso || exit $?
+fi
+
+
+
 # download local repo
 if [[ $LOCAL_REPO == "y" ]]; then
     echo "download gem local repo"
@@ -313,6 +324,11 @@ if [[ $LOCAL_REPO == "y" ]]; then
 	echo "download ubuntu14.04 local repo"
 	download -u "${LOCAL_REPO_US}/ubuntu/14.04/ubuntu_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/ubuntu/14.04/ubuntu_repo.tar.gz" Ubuntu-14.04-x86_64.tar.gz || exit $?
     fi
+    if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+	echo "download sles11sp3 local repo"
+	download -u "${LOCAL_REPO_US}/sles/11sp3/sles_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/sles/11sp3/sles_repo.tar.gz" sles-11sp3-x86_64.tar.gz || exit $?
+    fi
+
 fi
 
 # Install net-snmp

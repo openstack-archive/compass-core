@@ -43,6 +43,11 @@ if [[ $LOCAL_REPO = "y" ]]; then
 	mkdir -p /var/www/compass_web/v2/apt.repos.d/ubuntu/14.04
 	download -u "${LOCAL_REPO_US}/ubuntu/14.04/ubuntu_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/ubuntu/14.04/ubuntu_repo.tar.gz" Ubuntu-14.04-x86_64.tar.gz unzip /var/www/compass_web/v2/apt.repos.d/ubuntu/14.04 || exit $?
     fi
+   if [[ $SUPPORT_SLES_11SP3 = "y" ]]; then
+	mkdir -p /var/www/compass_web/v2/zypp.repos.d/sles/11sp3
+	download -u "${LOCAL_REPO_US}/sles/11sp3/sles_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/sles/11sp3/sles_repo.tar.gz" sles-11sp3-x86_64.tar.gz unzip /var/www/compass_web/v2/zypp.repos.d/sles/11sp3 || exit $?
+    fi
+
 fi
 
 sudo service httpd restart

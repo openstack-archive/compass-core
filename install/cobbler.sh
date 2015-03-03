@@ -246,7 +246,7 @@ if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
     fi
 
     # download packages
-    download -u "$CENTOS_6_5_PPA_REPO_SOURCE" centos_6_5_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$CENTOS_6_5_PPA_REPO_SOURCE" -u "$CENTOS_6_5_PPA_REPO_SOURCE_ASIA" centos_6_5_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
@@ -271,7 +271,7 @@ if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
     fi
 
     # download packages
-    download "$CENTOS_6_6_PPA_REPO_SOURCE" centos_6_6_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$CENTOS_6_6_PPA_REPO_SOURCE" -u "$CENTOS_6_6_PPA_REPO_SOURCE_ASIA" centos_6_6_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
@@ -296,7 +296,7 @@ if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
     fi
 
     # download packages
-    download -u "$CENTOS_7_0_PPA_REPO_SOURCE" centos_7_0_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$CENTOS_7_0_PPA_REPO_SOURCE" -u "$CENTOS_7_0_PPA_REPO_SOURCE_ASIA" centos_7_0_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 
@@ -322,7 +322,7 @@ if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
         echo "repo ubuntu_12_04_ppa_repo has already existed."
     fi
 
-    download -u "$UBUNTU_12_04_PPA_REPO_SOURCE" ubuntu_12_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$UBUNTU_12_04_PPA_REPO_SOURCE" -u "$UBUNTU_12_04_PPA_REPO_SOURCE_ASIA" ubuntu_12_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
@@ -346,8 +346,33 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
         echo "repo ubuntu_14_04_ppa_repo has already existed."
     fi
 
-    download -u "$UBUNTU_14_04_PPA_REPO_SOURCE" ubuntu_14_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+    download -u "$UBUNTU_14_04_PPA_REPO_SOURCE" -u "$UBUNTU_14_04_PPA_REPO_SOURCE_ASIA" ubuntu_14_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
+
+if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+    sudo mkdir -p /var/lib/cobbler/repo_mirror/sles_11sp3_ppa_repo
+    found_sle_11sp3_ppa_repo=0
+    for repo in $(cobbler repo list); do
+        if [ "$repo" == "sles_11sp3_ppa_repo" ]; then
+            found_sles_11sp3_ppa_repo=1
+        fi
+    done
+
+    if [ "$found_sles_11sp3_ppa_repo" == "0" ]; then
+        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/sles_11sp3_ppa_repo --name=sles_11sp3_ppa_repo --mirror-locally=Y --arch=x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add sles_11sp3_ppa_repo"
+            exit 1
+        else
+            echo "sles_11sp3_ppa_repo is added"
+        fi
+    else
+        echo "repo sles_11sp3_ppa_repo has already existed."
+    fi
+
+    download -u "$SLES_11SP3_PPA_REPO_SOURCE" -u "$SLES_11SP3_PPA_REPO_SOURCE_ASIA" sles_11sp3_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+fi
+
 
 sudo cobbler reposync
 if [[ "$?" != "0" ]]; then
@@ -437,6 +462,22 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
         fi
     else
         echo "/mnt/Ubuntu-14.04-x86_64 has already mounted"
+    fi
+fi
+
+if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+    download -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" -u "$SLES_11SP3_IMAGE_SOURCE" sles-11sp3-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    sudo mkdir -p /mnt/sles-11sp3-x86_64
+    if [ $(mount | grep -c "/mnt/sles-11sp3-x86_64") -eq 0 ]; then
+        sudo mount -o loop /var/lib/cobbler/iso/sles-11sp3-x86_64.iso /mnt/sles-11sp3-x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to mount image /mnt/sles-11sp3-x86_64"
+            exit 1
+        else
+            echo "/mnt/sles-11sp3-x86_64 is mounted"
+        fi
+    else
+        echo "/mnt/sles-11sp3-x86_64 has already mounted"
     fi
 fi
 
@@ -711,6 +752,60 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
         fi
     fi
     sudo cobbler repo remove --name=Ubuntu-14.04-x86_64
+fi
+
+if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+    found_sles_11sp3_distro=0
+    for distro in $(cobbler distro list); do
+        if [ "$distro" == "sles-11sp3-x86_64" ]; then
+            found_sles_11sp3_distro=1
+        fi
+    done
+
+    if [ "$found_sles_11sp3_distro" == "0" ]; then
+        sudo cobbler import --path=/mnt/sles-11sp3-x86_64 --name=sles-11sp3 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --breed=suse --os-version=sles11sp3
+        if [[ "$?" != "0" ]]; then
+            echo "failed to import /mnt/sles-11sp3-x86_64"
+            exit 1
+        else
+            echo "/mnt/sles-11sp3-x86_64 is imported" 
+        fi
+    else
+        echo "distro sles-11sp3-x86_64 has already existed"
+        sudo cobbler distro edit --name=sles-11sp3-x86_64 --arch=x86_64 --breed=suse --os-version=sles11sp3
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit distro sles-11sp3-x86_64"
+            exit 1
+        else
+            echo "distro sles-11sp3-x86_64 is updated"
+        fi
+    fi
+
+    sles_11sp3_found_profile=0
+    for profile in $(cobbler profile list); do
+        if [ "$profile" == "sles-11sp3-x86_64" ]; then
+            sles_11sp3_found_profile=1
+        fi
+    done
+
+    if [ "$sles_11sp3_found_profile" == "0" ]; then
+        sudo cobbler profile add --name=sles-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=sles-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64"
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add profile sles-11sp3-x86_64"
+            exit 1
+        else
+            echo "profile sles-11sp3-x86_64 is added"
+        fi
+    else
+        echo "profile sles-11sp3-x86_64 has already existed."
+        sudo cobbler profile edit --name=sles-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=sles-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64"
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit profile sles-11sp3-x86_64"
+            exit 1
+        else
+            echo "profile sles-11sp3-x86_64 is updated"
+        fi
+    fi
 fi
 
 

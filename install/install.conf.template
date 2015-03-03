@@ -21,6 +21,7 @@ export SUPPORT_CENTOS_6_6=${SUPPORT_CENTOS_6_6:-"y"}
 export SUPPORT_CENTOS_7_0=${SUPPORT_CENTOS_7_0:-"y"}
 export SUPPORT_UBUNTU_12_04=${SUPPORT_UBUNTU_12_04:-"y"}
 export SUPPORT_UBUNTU_14_04=${SUPPORT_UBUNTU_14_04:-"y"}
+export SUPPORT_SLES_11SP3=${SUPPORT_SLES_11SP3:-"n"}
 
 # DHCP config
 export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`

@@ -58,6 +58,10 @@ if [[ $SUPPORT_UBUNTU_14_04 != "y" ]]; then
     sudo rm -f /etc/compass/os/ubuntu14.04.conf
 fi
 
+if [[ $SUPPORT_SLES_11SP3 != "y" ]]; then
+    sudo rm -f /etc/compass/os/sles11sp3.conf
+fi
+
 # add apache user to the group of virtualenv user
 sudo usermod -a -G `groups $USER|awk '{print$3}'` apache
 

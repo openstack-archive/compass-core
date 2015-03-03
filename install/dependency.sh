@@ -20,6 +20,7 @@ fi
 sudo service ntpd stop
 ntpdate 0.centos.pool.ntp.org
 sudo service ntpd start
+sudo sleep 10
 sudo service ntpd status
 if [[ "$?" != "0" ]]; then
     echo "ntpd is not started"

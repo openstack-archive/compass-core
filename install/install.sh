@@ -307,6 +307,18 @@ if [[ -z $SUPPORT_UBUNTU_14_04 ]]; then
     done
 fi
 
+if [[ -z $SUPPORT_SLES_11SP3 ]]; then
+    echo -e "\x1b[32mWould you like to support sles11sp3?(y/n)\x1b[37m"
+    while true; do
+        read ans
+        case $ans in
+            y ) export SUPPORT_SLES_11SP3="y"; break;;
+            n ) export SUPPORT_SLES_11SP3="n"; break;;
+            * ) echo "I don't understand this";;
+        esac
+    done
+fi
+
 loadvars NAMESERVER_DOMAINS "ods.com"
 loadvars NAMESERVER_REVERSE_ZONES "unused"
 loadvars WEB_SOURCE 'http://git.openstack.org/stackforge/compass-web'

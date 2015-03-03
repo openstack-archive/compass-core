@@ -31,6 +31,7 @@ sudo rm -f /etc/rsyslog.conf
 sudo cp -rf $COMPASSDIR/misc/rsyslog/rsyslog.conf /etc/rsyslog.conf
 sudo chmod 644 /etc/rsyslog.conf
 sudo service rsyslog restart
+sudo sleep 10
 sudo service rsyslog status
 if [[ "$?" != "0" ]]; then
     echo "rsyslog is not started"
@@ -55,6 +56,7 @@ sudo chmod 644 /etc/ntp.conf
 sudo service ntpd stop
 sudo ntpdate 0.centos.pool.ntp.org
 sudo service ntpd start
+sudo sleep 10
 sudo service ntpd status
 if [[ "$?" != "0" ]]; then
     echo "ntp is not started"
@@ -79,6 +81,7 @@ sudo chown -R squid:squid /var/squid
 sudo mkdir -p /var/log/squid
 sudo chmod -R 777 /var/log/squid
 sudo service squid restart
+sudo sleep 10
 sudo service squid status
 if [[ "$?" != "0" ]]; then
     echo "squid is not started"
@@ -91,6 +94,7 @@ mkdir -p /var/log/httpd
 chmod -R 777 /var/log/httpd
 
 sudo service httpd restart
+sudo sleep 10
 sudo service httpd status
 if [[ "$?" != "0" ]]; then
     echo "httpd is not started"
@@ -104,6 +108,7 @@ echo "update mysqld"
 mkdir -p /var/log/mysql
 chmod -R 777 /var/log/mysql
 sudo service mysqld restart
+sudo sleep 10
 sudo service mysqld status
 if [[ "$?" != "0" ]]; then
     echo "failed to restart mysqld"
@@ -139,6 +144,7 @@ else
     echo "mysql database set succeeded"
 fi
 sudo service mysqld restart
+sudo sleep 10
 sudo service mysqld status
 if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
@@ -238,23 +244,27 @@ fi
 
 # download cobbler related packages
 if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    download $CENTOS_6_5_PPA_REPO_SOURCE || exit $?
+    download -u $CENTOS_6_5_PPA_REPO_SOURCE -u $CENTOS_6_5_PPA_REPO_SOURCE_ASIA || exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    download $CENTOS_6_6_PPA_REPO_SOURCE || exit $?
+    download -u $CENTOS_6_6_PPA_REPO_SOURCE -u $CENTOS_6_6_PPA_REPO_SOURCE_ASIA|| exit $?
 fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    download $CENTOS_7_0_PPA_REPO_SOURCE || exit $?
+    download -u $CENTOS_7_0_PPA_REPO_SOURCE -u $CENTOS_7_0_PPA_REPO_SOURCE_ASIA || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    download $UBUNTU_12_04_PPA_REPO_SOURCE || exit $?
+    download -u $UBUNTU_12_04_PPA_REPO_SOURCE -u $UBUNTU_12_04_PPA_REPO_SOURCE_ASIA || exit $?
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    download $UBUNTU_14_04_PPA_REPO_SOURCE || exit $?
+    download -u $UBUNTU_14_04_PPA_REPO_SOURCE -u $UBUNTU_14_04_PPA_REPO_SOURCE_ASIA || exit $?
+fi
+
+if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+    download -u $SLES_11SP3_PPA_REPO_SOURCE -u $SLES_11SP3_PPA_REPO_SOURCE_ASIA || exit $?
 fi
 
 # download chef related packages
@@ -287,6 +297,13 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
     download -u "$UBUNTU_14_04_IMAGE_SOURCE" -u "$UBUNTU_14_04_IMAGE_SOURCE_ASIA" Ubuntu-14.04-x86_64.iso || exit $?
 fi
 
+if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+    echo "download sles11sp3 image"
+    download -u "$SLES_11SP3_IMAGE_SOURCE" -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" sles-11sp3-x86_64.iso || exit $?
+fi
+
+
+
 # download local repo
 if [[ $LOCAL_REPO == "y" ]]; then
     echo "download gem local repo"
@@ -313,6 +330,11 @@ if [[ $LOCAL_REPO == "y" ]]; then
 	echo "download ubuntu14.04 local repo"
 	download -u "${LOCAL_REPO_US}/ubuntu/14.04/ubuntu_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/ubuntu/14.04/ubuntu_repo.tar.gz" Ubuntu-14.04-x86_64.tar.gz || exit $?
     fi
+    if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
+	echo "download sles11sp3 local repo"
+	download -u "${LOCAL_REPO_US}/sles/11sp3/sles_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/sles/11sp3/sles_repo.tar.gz" sles-11sp3-x86_64.tar.gz || exit $?
+    fi
+
 fi
 
 # Install net-snmp

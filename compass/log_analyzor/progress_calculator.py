@@ -65,10 +65,21 @@ def _load_calculator_configurations():
             OS_ADAPTER_CONFIGURATIONS = [
                 OSMatcher(
                     os_installer_name='cobbler',
-                    os_pattern='CentOS.*',
+                    os_pattern='CentOS-6.*',
                     item_matcher=(
                         (os_installer_configurations[
-                         'cobbler']['CentOS'])
+                         'cobbler']['CentOS6'])
+                    ),
+                    file_reader_factory=FileReaderFactory(
+                        setting.INSTALLATION_LOGDIR['CobblerInstaller']
+                    )
+                ),
+                OSMatcher(
+                    os_installer_name='cobbler',
+                    os_pattern='CentOS-7.*',
+                    item_matcher=(
+                        (os_installer_configurations[
+                         'cobbler']['CentOS7'])
                     ),
                     file_reader_factory=FileReaderFactory(
                         setting.INSTALLATION_LOGDIR['CobblerInstaller']

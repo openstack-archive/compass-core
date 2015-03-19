@@ -72,7 +72,7 @@ fi
 
 # Fix after bug 1397309 is fixed by upgrading chef-server
 # work around by reducing concurrency to 1
-knife cookbook upload --all --cookbook-path /var/chef/cookbooks --concurrency 1
+knife cookbook upload --all --cookbook-path /var/chef/cookbooks
 if [[ "$?" != "0" ]]; then
     echo "failed to add cookbooks"
     exit 1

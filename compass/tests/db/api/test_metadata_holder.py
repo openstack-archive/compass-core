@@ -138,8 +138,8 @@ class TestGetPackageMetadata(MetadataTestCase):
     def test_get_package_metadata(self):
         """Test get package metadata."""
         package_metadata = metadata.get_package_metadata(
-            self.user_object,
-            self.adapter_id
+            self.adapter_id,
+            user=self.user_object
         )
         expected = []
         for k, v in package_metadata['package_config'].iteritems():
@@ -152,8 +152,8 @@ class TestGetPackageMetadata(MetadataTestCase):
         self.assertRaises(
             exception.RecordNotExists,
             metadata.get_package_metadata,
-            self.user_object,
-            99
+            99,
+            user=self.user_object
         )
 
 
@@ -216,8 +216,8 @@ class TestGetOsMetadata(MetadataTestCase):
     def test_get_os_metadata(self):
         """Test get os metadata."""
         os_metadata = metadata.get_os_metadata(
-            self.user_object,
-            self.os_id
+            self.os_id,
+            user=self.user_object
         )
         expected = []
         for k, v in os_metadata['os_config'].iteritems():
@@ -230,8 +230,8 @@ class TestGetOsMetadata(MetadataTestCase):
         self.assertRaises(
             exception.RecordNotExists,
             metadata.get_os_metadata,
-            self.user_object,
-            99
+            99,
+            user=self.user_object
         )
 
 
@@ -245,9 +245,9 @@ class TestGetPackageOsMetadata(MetadataTestCase):
     def test_get_package_os_metadata(self):
         """Test get package and os metadata."""
         package_os_metadata = metadata.get_package_os_metadata(
-            self.user_object,
             self.adapter_id,
-            self.os_id
+            self.os_id,
+            user=self.user_object
         )
         self.assertIsNotNone(package_os_metadata)
 
@@ -256,9 +256,9 @@ class TestGetPackageOsMetadata(MetadataTestCase):
         self.assertRaises(
             exception.InvalidParameter,
             metadata.get_package_os_metadata,
-            self.user_object,
             self.adapter_id,
-            99
+            99,
+            user=self.user_object
         )
 
 

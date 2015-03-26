@@ -21,6 +21,8 @@ from compass.db.api import permission
 from compass.db.api import user as user_api
 from compass.db.api import utils
 from compass.db import exception
+from compass.utils import setting_wrapper as setting
+from compass.utils import util
 
 
 RESP_METADATA_FIELDS = [
@@ -133,7 +135,7 @@ def get_package_metadata_internal(session, adapter_id):
     permission.PERMISSION_LIST_METADATAS
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
-def get_package_metadata(getter, adapter_id, session=None, **kwargs):
+def get_package_metadata(adapter_id, user=None, session=None, **kwargs):
     return {
         'package_config': get_package_metadata_internal(session, adapter_id)
     }
@@ -158,9 +160,53 @@ def get_os_metadata_internal(session, os_id):
     permission.PERMISSION_LIST_METADATAS
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
-def get_os_metadata(getter, os_id, session=None, **kwargs):
+def get_os_metadata(os_id, user=None, session=None, **kwargs):
     """get os metadatas."""
     return {'os_config': get_os_metadata_internal(session, os_id)}
+
+
+def get_ui_metadata(metadata, config):
+    """convert os_metadata to ui os_metadata."""
+    result_config = {}
+    result_config[config['mapped_name']] = []
+    for mapped_child in config['mapped_children']:
+        data_dict = {}
+        for config_key, config_value in mapped_child.items():
+            for key, value in config_value.items():
+                if 'data' == key:
+                    result_data = []
+                    _get_data(metadata[config_key], value, result_data)
+                    data_dict['data'] = result_data
+                else:
+                    data_dict[key] = value
+        result_config[config['mapped_name']].append(data_dict)
+    return result_config
+
+
+def _get_data(metadata, config, result_data):
+    data_dict = {}
+    for key, config_value in config.items():
+        if isinstance(config_value, dict):
+            if key in metadata.keys():
+                _get_data(metadata[key], config_value, result_data)
+            else:
+                _get_data(metadata, config_value, result_data)
+        elif isinstance(config_value, list):
+            option_list = []
+            for item in config_value:
+                if isinstance(item, dict):
+                    option_list.append(item)
+                    data_dict[key] = option_list
+                else:
+                    if isinstance(metadata['_self'][item], bool):
+                        data_dict[item] = str(metadata['_self'][item])
+                    else:
+                        data_dict[item] = metadata['_self'][item]
+        else:
+            data_dict[key] = config_value
+    if data_dict:
+        result_data.append(data_dict)
+    return result_data
 
 
 @utils.supported_filters([])
@@ -169,7 +215,10 @@ def get_os_metadata(getter, os_id, session=None, **kwargs):
     permission.PERMISSION_LIST_METADATAS
 )
 @utils.wrap_to_dict(RESP_METADATA_FIELDS)
-def get_package_os_metadata(getter, adapter_id, os_id, session=None, **kwargs):
+def get_package_os_metadata(
+    adapter_id, os_id,
+    user=None, session=None, **kwargs
+):
     from compass.db.api import adapter_holder as adapter_api
     adapter = adapter_api.get_adapter_internal(session, adapter_id)
     os_ids = [os['os_id'] for os in adapter['supported_oses']]

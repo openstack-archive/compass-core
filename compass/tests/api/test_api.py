@@ -1004,6 +1004,22 @@ class TestSwitchMachines(ApiTestCase):
         self.assertEqual(return_value.status_code, 200)
 
 
+class TestMetadataAPI(ApiTestCase):
+    """Test metadata api."""
+
+    def setUp(self):
+        super(TestMetadataAPI, self).setUp()
+
+    def tearDown(self):
+        super(TestMetadataAPI, self).tearDown()
+
+    def test_get_os_ui_metadata(self):
+        url = '/oses/1/ui_metadata'
+        return_value = self.get(url)
+        self.assertEqual(return_value.status_code, 200)
+        self.assertIn('os_global_config', return_value.get_data())
+
+
 if __name__ == '__main__':
     flags.init()
     logsetting.init()

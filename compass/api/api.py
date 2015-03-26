@@ -1334,6 +1334,26 @@ def show_os_metadata(os_id):
     )
 
 
+@app.route("/oses/<int:os_id>/ui_metadata", methods=['GET'])
+@log_user_action
+@login_required
+@update_user_token
+def convert_os_metadata(os_id):
+    """Convert os metadata to ui os metadata."""
+    metadatas = metadata_api.get_os_metadata(
+        os_id, user=current_user
+    )
+    configs = util.load_configs(setting.OS_MAPPING_DIR)
+    metadata = metadatas['os_config']
+    config = configs[0]['OS_CONFIG_MAPPING']
+    return utils.make_json_response(
+        200,
+        metadata_api.get_ui_metadata(
+            metadata, config
+        )
+    )
+
+
 @app.route(
     "/adapters/<int:adapter_id>/oses/<int:os_id>/metadata",
     methods=['GET']

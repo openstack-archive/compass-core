@@ -322,7 +322,7 @@ class FieldMixin(HelperMixin):
         Enum(
             'checkbox', 'radio', 'select',
             'multiselect', 'combobox', 'text',
-            'multitext', 'password'
+            'multitext', 'password', 'dropdown'
         ),
         ColumnDefault('text')
     )

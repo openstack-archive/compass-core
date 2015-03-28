@@ -1,7 +1,7 @@
 amqplib
 argparse
 celery
-Markdown<2.5
+Markdown==2.6.1
 Cheetah<=2.4.1
 daemon
 Flask

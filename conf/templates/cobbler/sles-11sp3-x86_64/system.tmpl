@@ -22,8 +22,13 @@
             #set $rekeyed[$netmask_key] = $val.netmask
             #set $rekeyed[$mgmt_key] = $val.is_mgmt
             #set $rekeyed[$static_key] = True
+
             #set dns_key = '-'.join(('dnsname', $nic))
-            #set $rekeyed[$dns_key] = $dns
+            #if $val.is_mgmt
+                #set $rekeyed[$dns_key] = $dns
+            #else
+                #set $rekeyed[$dns_key] = '-'.join($dns, $nic)
+            #end if
 
             #if $val.is_promiscuous:
                 #set promic_nic = $nic

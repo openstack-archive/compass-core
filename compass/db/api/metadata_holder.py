@@ -199,7 +199,7 @@ def _get_data(metadata, config, result_data):
                     data_dict[key] = option_list
                 else:
                     if isinstance(metadata['_self'][item], bool):
-                        data_dict[item] = str(metadata['_self'][item])
+                        data_dict[item] = str(metadata['_self'][item]).lower()
                     else:
                         data_dict[item] = metadata['_self'][item]
         else:

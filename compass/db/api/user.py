@@ -15,6 +15,7 @@
 """User database operations."""
 import datetime
 import functools
+import logging
 
 from flask.ext.login import UserMixin
 
@@ -83,6 +84,9 @@ def add_user_internal(
 
 def _check_user_permission(session, user, permission):
     """Check user has permission."""
+    if not user:
+        logging.info('empty user means the call is from internal')
+        return
     if user.is_admin:
         return
 

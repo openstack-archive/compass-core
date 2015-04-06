@@ -151,6 +151,26 @@ class DeployManager(object):
         if self.pk_installer:
             self.pk_installer.delete_hosts(delete_cluster=delete_cluster)
 
+    def os_installed(self):
+        if self.os_installer:
+            self.os_installer.ready()
+        if self.pk_installer:
+            self.pk_installer.os_ready()
+
+    def cluster_os_installed(self):
+        if self.os_installer:
+            self.os_installer.cluster_ready()
+        if self.pk_installer:
+            self.pk_installer.cluster_os_ready()
+
+    def package_installed(self):
+        if self.pk_installer:
+            self.pk_installer.ready()
+
+    def cluster_installed(self):
+        if self.pk_installer:
+            self.pk_installer.cluster_ready()
+
 
 class PowerManager(object):
     """Manage host to power on, power off, and reset."""

@@ -85,12 +85,12 @@ RESP_CLUSTERHOST_DEPLOYED_CONFIG_FIELDS = [
 ]
 RESP_STATE_FIELDS = [
     'id', 'state', 'percentage', 'message', 'severity',
-    'status',
+    'status', 'ready',
     'created_at', 'updated_at'
 ]
 RESP_CLUSTERHOST_STATE_FIELDS = [
     'id', 'state', 'percentage', 'message', 'severity',
-    'created_at', 'updated_at'
+    'ready', 'created_at', 'updated_at'
 ]
 RESP_REVIEW_FIELDS = [
     'cluster', 'hosts'
@@ -130,9 +130,11 @@ UPDATED_CLUSTERHOST_DEPLOYED_CONFIG_FIELDS = [
 UPDATED_CLUSTERHOST_STATE_FIELDS = [
     'state', 'percentage', 'message', 'severity'
 ]
-UPDATED_CLUSTER_STATE_FIELDS = [
-    'state'
+UPDATED_CLUSTERHOST_STATE_INTERNAL_FIELDS = [
+    'ready'
 ]
+UPDATED_CLUSTER_STATE_FIELDS = ['state']
+UPDATED_CLUSTER_STATE_INTERNAL_FIELDS = ['ready']
 RESP_CLUSTERHOST_LOG_FIELDS = [
     'clusterhost_id', 'id', 'host_id', 'cluster_id',
     'filename', 'position', 'partial_line',
@@ -1400,6 +1402,8 @@ def update_cluster_hosts(
         session, models.ClusterHost, cluster_id=cluster.id
     )
     logging.info('updated clusterhosts: %s', clusterhosts)
+    for clusterhost in clusterhosts:
+        logging.info('clusterhost state: %s', clusterhost.state)
     return {
         'hosts': clusterhosts
     }
@@ -1723,6 +1727,84 @@ def update_cluster_host_state(
 
 
 @utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTERHOST_STATE_INTERNAL_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_CLUSTERHOST_STATE
+)
+@utils.wrap_to_dict(['status', 'clusterhost'])
+def update_cluster_host_state_internal(
+    clustername, hostname, from_database_only=False,
+    user=None, session=None, **kwargs
+):
+    """Update a clusterhost state."""
+    if isinstance(clustername, (int, long)):
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=clustername
+        )
+    else:
+        cluster = utils.get_db_object(
+            session, models.Cluster, name=clustername
+        )
+    if isinstance(hostname, (int, long)):
+        host = utils.get_db_object(
+            session, models.Host, id=hostname
+        )
+    else:
+        host = utils.get_db_object(
+            session, models.Host, name=hostname
+        )
+    clusterhost = utils.get_db_object(
+        session, models.ClusterHost,
+        cluster_id=cluster.id, host_id=host.id
+    )
+    if 'ready' in kwargs and kwargs['ready'] and not clusterhost.state.ready:
+        ready_triggered = True
+    else:
+        ready_triggered = False
+    cluster_ready = False
+    host_ready = not host.state.ready
+    if ready_triggered:
+        cluster_ready = True
+        for clusterhost_in_cluster in cluster.clusterhosts:
+            if (
+                clusterhost_in_cluster.clusterhost_id
+                    ==
+                clusterhost.clusterhost_id
+            ):
+                continue
+            if not clusterhost_in_cluster.state.ready:
+                cluster_ready = False
+
+    if not ready_triggered or from_database_only:
+        logging.info('%s state is set to %s', clusterhost.name, kwargs)
+        utils.update_db_object(session, clusterhost.state, **kwargs)
+        if not clusterhost.state.ready:
+            logging.info('%s state ready is set to False', cluster.name)
+            utils.update_db_object(session, cluster.state, ready=False)
+        status = '%s state is updated' % clusterhost.name
+    else:
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task(
+            'compass.tasks.package_installed',
+            (
+                clusterhost.cluster_id, clusterhost.host_id,
+                cluster_ready, host_ready
+            )
+        )
+        status = '%s: cluster ready %s host ready %s' % (
+            clusterhost.name, cluster_ready, host_ready
+        )
+        logging.info('action status: %s', status)
+    return {
+        'status': status,
+        'clusterhost': clusterhost.state_dict()
+    }
+
+
+@utils.supported_filters(
     optional_support_keys=UPDATED_CLUSTERHOST_STATE_FIELDS,
     ignore_support_keys=IGNORE_FIELDS
 )
@@ -1744,6 +1826,83 @@ def update_clusterhost_state(
 
 
 @utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTERHOST_STATE_INTERNAL_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_CLUSTERHOST_STATE
+)
+@utils.wrap_to_dict(['status', 'clusterhost'])
+def update_clusterhost_state_internal(
+    clusterhost_name, from_database_only=False,
+    user=None, session=None, **kwargs
+):
+    """Update a clusterhost state."""
+    if isinstance(clusterhost_name, (int, long)):
+        clusterhost = utils.get_db_object(
+            session, models.ClusterHost,
+            clusterhost_id=clusterhost_name
+        )
+        cluster = clusterhost.cluster
+        host = clusterhost.host
+    else:
+        hostname, clustername = clusterhost_name.split('.', 1)
+        cluster = utils.get_db_object(
+            session, models.Cluster, name=clustername
+        )
+        host = utils.get_db_object(
+            session, models.Host, name=hostname
+        )
+        clusterhost = utils.get_db_object(
+            session, models.ClusterHost,
+            cluster_id=cluster.id, host_id=host.id
+        )
+    if 'ready' in kwargs and kwargs['ready'] and not clusterhost.state.ready:
+        ready_triggered = True
+    else:
+        ready_triggered = False
+    cluster_ready = False
+    host_ready = not host.state.ready
+    if ready_triggered:
+        cluster_ready = True
+        for clusterhost_in_cluster in cluster.clusterhosts:
+            if (
+                clusterhost_in_cluster.clusterhost_id
+                    ==
+                clusterhost.clusterhost_id
+            ):
+                continue
+            if not clusterhost_in_cluster.state.ready:
+                cluster_ready = False
+
+    if not ready_triggered or from_database_only:
+        logging.info('%s set state to %s', clusterhost.name, kwargs)
+        utils.update_db_object(session, clusterhost.state, **kwargs)
+        if not clusterhost.state.ready:
+            logging.info('%s state ready is to False', cluster.name)
+            utils.update_db_object(session, cluster.state, ready=False)
+        status = '%s state is updated' % clusterhost.name
+    else:
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task(
+            'compass.tasks.package_installed',
+            (
+                clusterhost.cluster_id, clusterhost.host_id,
+                cluster_ready, host_ready
+            )
+        )
+        status = '%s: cluster ready %s host ready %s' % (
+            clusterhost.name, cluster_ready, host_ready
+        )
+        logging.info('action status: %s', status)
+    return {
+        'status': status,
+        'clusterhost': clusterhost.state_dict()
+    }
+
+
+@utils.supported_filters(
     optional_support_keys=UPDATED_CLUSTER_STATE_FIELDS,
     ignore_support_keys=IGNORE_FIELDS
 )
@@ -1761,6 +1920,65 @@ def update_cluster_state(
     )
     utils.update_db_object(session, cluster.state, **kwargs)
     return cluster.state_dict()
+
+
+@utils.supported_filters(
+    optional_support_keys=UPDATED_CLUSTER_STATE_INTERNAL_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_CLUSTER_STATE
+)
+@utils.wrap_to_dict(['status', 'cluster'])
+def update_cluster_state_internal(
+    clustername, from_database_only=False,
+    user=None, session=None, **kwargs
+):
+    """Update a cluster state."""
+    if isinstance(clustername, (int, long)):
+        cluster = utils.get_db_object(
+            session, models.Cluster, id=clustername
+        )
+    else:
+        cluster = utils.get_db_object(
+            session, models.Cluster, name=clustername
+        )
+    if 'ready' in kwargs and kwargs['ready'] and not cluster.state.ready:
+        ready_triggered = True
+    else:
+        ready_triggered = False
+    clusterhost_ready = {}
+    if ready_triggered:
+        for clusterhost in cluster.clusterhosts:
+            clusterhost_ready[clusterhost.host_id] = (
+                not clusterhost.state.ready
+            )
+
+    if not ready_triggered or from_database_only:
+        logging.info('%s state is set to %s', cluster.name, kwargs)
+        utils.update_db_object(session, cluster.state, **kwargs)
+        if not cluster.state.ready:
+            for clusterhost in cluster.clusterhosts:
+                logging.info('%s state ready is to False', clusterhost.name)
+                utils.update_db_object(
+                    session, clusterhost.state, ready=False
+                )
+        status = '%s state is updated' % cluster.name
+    else:
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task(
+            'compass.tasks.cluster_installed',
+            (clusterhost.cluster_id, clusterhost_ready)
+        )
+        status = '%s installed action set clusterhost ready %s' % (
+            cluster.name, clusterhost_ready
+        )
+        logging.info('action status: %s', status)
+    return {
+        'status': status,
+        'cluster': cluster.state_dict()
+    }
 
 
 @utils.supported_filters([])

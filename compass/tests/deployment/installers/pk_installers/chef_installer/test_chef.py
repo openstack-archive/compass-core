@@ -95,24 +95,33 @@ class TestChefInstaller(unittest2.TestCase):
 
     def test_get_env_attributes(self):
         expected_env = {
+            "chef_type": "environment",
             "name": "testing",
             "description": "Environment",
             "cookbook_versions": {
             },
             "json_class": "Chef::Environment",
-            "chef_type": "environment",
+            "override_attributes": {
+                "compass": {
+                    "cluster_id": "1"
+                }
+            },
             "default_attributes": {
+                "local_repo": "",
+                "memcached": {
+                    "bind_interface": "vnet0"
+                },
                 "compute": {
+                    "xvpvnc_proxy": {
+                        "bind_interface": "eth0"
+                    },
                     "syslog": {
                         "use": False
-                    },
-                    "libvirt": {
-                        "bind_interface": "eth0"
                     },
                     "novnc_proxy": {
                         "bind_interface": "vnet0"
                     },
-                    "xvpvnc_proxy": {
+                    "libvirt": {
                         "bind_interface": "eth0"
                     }
                 },
@@ -121,21 +130,299 @@ class TestChefInstaller(unittest2.TestCase):
                         "external_network_bridge_interface": "eth2"
                     }
                 },
+                "mysql": {
+                    "server_root_password": "root",
+                    "server_repl_password": "root",
+                    "root_network_acl": "%",
+                    "allow_remote_root": True,
+                    "server_debian_password": "root"
+                },
+                "mq": {
+                    "vhost": "/nova",
+                    "password": "test",
+                    "user": "guest",
+                    "network": {
+                        "service_type": "rabbitmq"
+                    }
+                },
+                "openstack": {
+                    "image": {
+                        "upload_images": ["cirros"],
+                        "syslog": {
+                            "use": False
+                        },
+                        "api": {
+                            "bind_interface": "vnet0"
+                        },
+                        "registry": {
+                            "bind_interface": "vnet0"
+                        },
+                        "debug": True,
+                        "upload_image": {
+                            "cirros": "http://download.cirros-cloud.net"
+                                      "/0.3.2/cirros-0.3.2-x86_64-disk.img"
+                        }
+                    },
+                    "db": {
+                        "volume": {
+                            "host": "12.234.32.100"
+                        },
+                        "compute": {
+                            "host": "12.234.32.100"
+                        },
+                        "network": {
+                            "host": "12.234.32.100"
+                        },
+                        "orchestration": {
+                            "host": "12.234.32.100"
+                        },
+                        "bind_interface": "vnet0",
+                        "image": {
+                            "host": "12.234.32.100"
+                        },
+                        "telemetry": {
+                            "host": "12.234.32.100"
+                        },
+                        "identity": {
+                            "host": "12.234.32.100"
+                        },
+                        "dashboard": {
+                            "host": "12.234.32.100"
+                        }
+                    },
+                    "auth": {
+                        "validate_certs": False
+                    },
+                    "use_databags": False,
+                    "developer_mode": True,
+                    "block-storage": {
+                        "debug": True,
+                        "syslog": {
+                            "use": False
+                        },
+                        "api": {
+                            "ratelimit": "False"
+                        }
+                    },
+                    "compute": {
+                        "xvpvnc_proxy": {
+                            "bind_interface": "eth0"
+                        },
+                        "network": {
+                            "service_type": "neutron"
+                        },
+                        "libvirt": {
+                            "bind_interface": "eth0"
+                        },
+                        "syslog": {
+                            "use": False
+                        },
+                        "ratelimit": {
+                            "volume": {
+                                "enabled": False
+                            },
+                            "api": {
+                                "enabled": False
+                            }
+                        },
+                        "novnc_proxy": {
+                            "bind_interface": "eth0"
+                        }
+                    },
+                    "network": {
+                        "verbose": "True",
+                        "openvswitch": {
+                            "network_vlan_ranges": "",
+                            "enable_tunneling": "True",
+                            "bind_interface": "eth1",
+                            "tenant_network_type": "gre",
+                            "bridge_mappings": "",
+                            "tunnel_id_ranges": "1:1000"
+                        },
+                        "ml2": {
+                            "type_drivers": "gre",
+                            "tenant_network_types": "gre",
+                            "enable_security_group": "True",
+                            "network_vlan_ranges": "",
+                            "tunnel_id_ranges": "1:1000"
+                        },
+                        "l3": {
+                            "external_network_bridge_interface": "eth2"
+                        },
+                        "debug": "True",
+                        "service_plugins": ["router"]
+                    },
+                    "mq": {
+                        "vhost": "/nova",
+                        "password": "guest",
+                        "user": "guest",
+                        "network": {
+                            "service_type": "rabbitmq"
+                        }
+                    },
+                    "dashboard": {
+                        "use_ssl": "false"
+                    },
+                    "identity": {
+                        "syslog": {
+                            "use": False
+                        },
+                        "token": {
+                            "backend": "sql"
+                        },
+                        "admin_user": "admin",
+                        "users": {
+                            "admin": {
+                                "password": "admin",
+                                "default_tenant": "admin",
+                                "roles": {
+                                    "admin": ["admin"]
+                                }
+                            },
+                            "demo": {
+                                "password": "demo",
+                                "default_tenant": "demo",
+                                "roles": {
+                                    "member": ["demo"]
+                                }
+                            }
+                        },
+                        "roles": ["admin", "member"],
+                        "bind_interface": "vnet0",
+                        "debug": True,
+                        "tenants": ["admin", "service", "demo"],
+                        "catalog": {
+                            "backend": "sql"
+                        }
+                    },
+                    "endpoints": {
+                        "telemetry-api": {
+                            "path": "/v1",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "8777"
+                        },
+                        "compute-api": {
+                            "path": "/v2/%(tenant_id)s",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "8774"
+                        },
+                        "identity-admin": {
+                            "path": "/v2.0",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "35357"
+                        },
+                        "image-api-bind": {
+                            "bind_interface": "vnet0"
+                        },
+                        "image-registry": {
+                            "path": "/v2",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "9191"
+                        },
+                        "orchestration-api-cfn": {
+                            "path": "/v1",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "8000"
+                        },
+                        "vnc_bind": {
+                            "bind_interface": "vnet0"
+                        },
+                        "image-registry-bind": {
+                            "bind_interface": "vnet0"
+                        },
+                        "orchestration-api": {
+                            "path": "/v1/%(tenant_id)s",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "8004"
+                        },
+                        "block-storage-api-bind": {
+                            "bind_interface": "vnet0"
+                        },
+                        "identity-api": {
+                            "path": "/v2.0",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "5000"
+                        },
+                        "network-api-bind": {
+                            "bind_interface": "eth0"
+                        },
+                        "block-storage-api": {
+                            "path": "/v1/%(tenant_id)s",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "8776"
+                        },
+                        "db": {
+                            "host": "12.234.32.100"
+                        },
+                        "compute-api-bind": {
+                            "bind_interface": "vnet0"
+                        },
+                        "compute-novnc": {
+                            "path": "/vnc_auto.html",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "6080"
+                        },
+                        "image-api": {
+                            "path": "/v2",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "9292"
+                        },
+                        "compute-vnc-bind": {
+                            "bind_interface": "eth0"
+                        },
+                        "identity-bind": {
+                            "bind_interface": "vnet0"
+                        },
+                        "network-api": {
+                            "path": "",
+                            "host": "12.234.32.103",
+                            "scheme": "http",
+                            "port": "9696"
+                        },
+                        "mq": {
+                            "host": "12.234.32.100"
+                        },
+                        "compute-ec2-admin": {
+                            "path": "/services/Admin",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "8773"
+                        },
+                        "compute-novnc-bind": {
+                            "bind_interface": "vnet0"
+                        },
+                        "compute-ec2-api": {
+                            "path": "/services/Cloud",
+                            "host": "12.234.32.100",
+                            "scheme": "http",
+                            "port": "8773"
+                        }
+                    }
+                },
                 "db": {
-                    "bind_interface": "vnet0",
                     "compute": {
                         "host": "12.234.32.100"
                     },
                     "identity": {
                         "host": "12.234.32.100"
-                    }
+                    },
+                    "bind_interface": "vnet0"
                 },
-                "mq": {
-                    "user": "guest",
-                    "password": "test",
-                    "vhost": "/nova",
-                    "network": {
-                        "service_type": "rabbitmq"
+                "collectd": {
+                    "server": {
+                        "host": "metrics",
+                        "protocol": "tcp",
+                        "port": "4242"
                     }
                 }
             }
@@ -221,7 +508,7 @@ class TestChefInstaller(unittest2.TestCase):
                         }
                     },
                     "roles_mapping": {
-                        "os_controller": {
+                        "os_controller": [{
                             "hostname": "server01",
                             "management": {
                                 "interface": "vnet0",
@@ -239,8 +526,8 @@ class TestChefInstaller(unittest2.TestCase):
                                 "is_promiscuous": False,
                                 "subnet": "172.16.1.0/24"
                             }
-                        },
-                        "os_compute_worker": {
+                        }],
+                        "os_compute_worker": [{
                             "hostname": "server02",
                             "management": {
                                 "interface": "eth0",
@@ -258,8 +545,7 @@ class TestChefInstaller(unittest2.TestCase):
                                 "is_promiscuous": False,
                                 "subnet": "172.16.1.0/24"
                             }
-                        },
-                        "os_network": {
+                        }, {
                             "hostname": "server03",
                             "management": {
                                 "interface": "eth0",
@@ -285,7 +571,34 @@ class TestChefInstaller(unittest2.TestCase):
                                 "is_promiscuous": True,
                                 "subnet": "10.0.0.0/24"
                             }
-                        }
+                        }],
+                        "os_network": [{
+                            "hostname": "server03",
+                            "management": {
+                                "interface": "eth0",
+                                "ip": "12.234.32.103",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": True,
+                                "is_promiscuous": False,
+                                "subnet": "12.234.32.0/24"
+                            },
+                            "tenant": {
+                                "interface": "eth1",
+                                "ip": "172.16.1.3",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": False,
+                                "is_promiscuous": False,
+                                "subnet": "172.16.1.0/24"
+                            },
+                            "public": {
+                                "interface": "eth2",
+                                "ip": "10.0.0.1",
+                                "netmask": "255.255.255.0",
+                                "is_mgmt": False,
+                                "is_promiscuous": True,
+                                "subnet": "10.0.0.0/24"
+                            }
+                        }]
                     }
                 }
             },

@@ -63,7 +63,7 @@ class TestConfigManager(unittest2.TestCase):
 
     def test_get_cluster_roles_mapping(self):
         expected_output = {
-            "os_controller": {
+            "os_controller": [{
                 "hostname": "server01",
                 "management": {
                     "interface": "vnet0",
@@ -81,8 +81,8 @@ class TestConfigManager(unittest2.TestCase):
                     "is_promiscuous": False,
                     "subnet": "172.16.1.0/24"
                 }
-            },
-            "os_compute_worker": {
+            }],
+            "os_compute_worker": [{
                 "hostname": "server02",
                 "management": {
                     "interface": "eth0",
@@ -100,8 +100,34 @@ class TestConfigManager(unittest2.TestCase):
                     "is_promiscuous": False,
                     "subnet": "172.16.1.0/24"
                 }
-            },
-            "os_network": {
+            }, {
+                "hostname": "server03",
+                "management": {
+                    "interface": "eth0",
+                    "ip": "12.234.32.103",
+                    "is_mgmt": True,
+                    "is_promiscuous": False,
+                    "netmask": "255.255.255.0",
+                    "subnet": "12.234.32.0/24"
+                },
+                'public': {
+                    "interface": "eth2",
+                    "ip": "10.0.0.1",
+                    "is_mgmt": False,
+                    "is_promiscuous": True,
+                    "netmask": "255.255.255.0",
+                    "subnet": "10.0.0.0/24"
+                },
+                "tenant": {
+                    "interface": "eth1",
+                    "ip": "172.16.1.3",
+                    "netmask": "255.255.255.0",
+                    "is_mgmt": False,
+                    "is_promiscuous": False,
+                    "subnet": "172.16.1.0/24"
+                }
+            }],
+            "os_network": [{
                 "hostname": "server03",
                 "management": {
                     "interface": "eth0",
@@ -127,7 +153,7 @@ class TestConfigManager(unittest2.TestCase):
                     "is_promiscuous": True,
                     "subnet": "10.0.0.0/24"
                 }
-            }
+            }]
         }
         self.maxDiff = None
         output = self.test_config_manager.get_cluster_roles_mapping()

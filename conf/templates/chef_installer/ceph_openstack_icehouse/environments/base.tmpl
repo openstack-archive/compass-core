@@ -6,7 +6,7 @@
 #set fsid = str(uuid.uuid4())
 #set rbd_secret_uuid = str(uuid.uuid4())
 
-#set ceph_osd = $getVar('ceph_osd', None)
+#set ceph_osd = $get_role('ceph_osd', None)
 #set public_network_subnet = $ceph_osd.public_network.subnet
 #set cluster_network_subnet = $ceph_osd.cluster_network.subnet
 
@@ -41,16 +41,16 @@
 
 ## OpenStack config
 ## Contoller node management IP/interface
-#set controller = $get_role('os_compute_controller', $getVar('os_ceph_controller', None))
+#set controller = $get_role('os_compute_controller', $get_role('os_ceph_controller', None))
 #set controller_ip = $controller.management.ip
 #set controller_nic = $controller.management.interface
 
 ## Compute node management IP/interface
-#set compute = $getVar('os_ceph_compute_worker', None)
+#set compute = $get_role('os_ceph_compute_worker', None)
 #set compute_nic = $compute.management.interface
 
 ## Network server/worker node IP/interface
-#set network = $getVar('os_network', None)
+#set network = $get_role('os_network', None)
 #set network_server = $get_role('os_network_server', [$network, $controller])
 #set network_worker = $get_role('os_network_worker', [$network, $compute])
 
@@ -108,6 +108,13 @@
 ## Utility functions definition
 #def get_role($role_name, $default_roles=None)
     #set target_role = $getVar($role_name, None)
+    #if isinstance($target_role, list)
+        #if $target_role
+            #set target_role = $target_role[0]
+        #else
+            #set target_role = None
+        #end if
+    #end if
     #if $target_role is None and $default_roles is not None
         #if isinstance($default_roles, list)
             #for $role in $default_roles

@@ -58,6 +58,15 @@ class CobblerInstaller(object):
                 logging.exception(error)
 
 
+class AnsibleInstaller(object):
+
+    def __init__(self, settings):
+        return
+
+    def clean(self):
+        pass
+
+
 class ChefInstaller(object):
     DATABAGS = "databags"
     CHEFSERVER_URL = "chef_url"
@@ -136,7 +145,8 @@ OS_INSTALLERS = {
     'cobbler': CobblerInstaller
 }
 PK_INSTALLERS = {
-    'chef_installer': ChefInstaller
+    'chef_installer': ChefInstaller,
+    'ansible_installer': AnsibleInstaller
 }
 
 

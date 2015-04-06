@@ -281,6 +281,29 @@ class ActionHelper(object):
         )
 
     @staticmethod
+    def host_ready(host_id, from_database_only, user):
+        host_db.update_host_state_internal(
+            host_id, from_database_only=from_database_only,
+            user=user, ready=True
+        )
+
+    @staticmethod
+    def cluster_host_ready(
+        cluster_id, host_id, from_database_only, user
+    ):
+        cluster_db.update_cluster_host_state_internal(
+            cluster_id, host_id, from_database_only=from_database_only,
+            user=user, ready=True
+        )
+
+    @staticmethod
+    def cluster_ready(cluster_id, from_database_only, user):
+        cluster_db.update_cluster_state_internal(
+            cluster_id, from_database_only=from_database_only,
+            user=user, ready=True
+        )
+
+    @staticmethod
     def get_machine_IPMI(machine_id, user):
         machine_info = machine_db.get_machine(user, machine_id)
         return machine_info[const.IPMI_CREDS]

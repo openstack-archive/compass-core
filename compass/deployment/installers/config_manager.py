@@ -352,7 +352,7 @@ class BaseConfigManager(object):
     def _get_cluster_roles_mapping_helper(self):
         """The ouput format will be as below, for example:
            {
-               "controller": {
+               "controller": [{
                    "hostname": "xxx",
                    "management": {
                        "interface": "eth0",
@@ -363,7 +363,7 @@ class BaseConfigManager(object):
                        "is_promiscuous": False
                    },
                    ...
-               },
+               }],
                    ...
            }
         """
@@ -375,10 +375,8 @@ class BaseConfigManager(object):
 
         for host_id in hosts_id_list:
             roles_mapping = self.get_host_roles_mapping(host_id)
-            for role in roles_mapping:
-                if role not in mapping:
-                    mapping[role] = roles_mapping[role]
-
+            for role, value in roles_mapping.items():
+                mapping.setdefault(role, []).append(value)
         return mapping
 
     def _get_host_roles_mapping_helper(self, host_id):

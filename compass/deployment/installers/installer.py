@@ -52,6 +52,12 @@ class BaseInstaller(object):
     def redeploy(self, **kwargs):
         raise NotImplementedError
 
+    def ready(self, **kwargs):
+        pass
+
+    def cluster_ready(self, **kwargs):
+        pass
+
     def get_tmpl_vars_from_metadata(self, metadata, config):
         """Get variables dictionary for rendering templates from metadata.
            :param dict metadata: The metadata dictionary.
@@ -219,6 +225,12 @@ class PKInstaller(BaseInstaller):
     NAME = 'PKInstaller'
     INSTALLER_BASE_DIR = os.path.join(CURRENT_DIR, 'pk_installers')
 
+    def generate_installer_config(self):
+        raise NotImplementedError(
+            'generate_installer_config is not defined in %s',
+            self.__class__.__name__
+        )
+
     def get_target_systems(self):
         """virtual method to get available target_systems for each os.
 
@@ -238,6 +250,16 @@ class PKInstaller(BaseInstaller):
         :returns: dict of role to role description as str.
         """
         return {}
+
+    def os_ready(self, **kwargs):
+        pass
+
+    def cluster_os_ready(self, **kwargs):
+        pass
+
+    def serialize_config(self, config, destination):
+        with open(destination, "w") as f:
+            f.write(config)
 
     @classmethod
     def get_installer(cls, name, adapter_info, cluster_info, hosts_info):

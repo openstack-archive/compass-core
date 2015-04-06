@@ -24,6 +24,7 @@ from celery.signals import setup_logging
 from compass.actions import clean
 from compass.actions import delete
 from compass.actions import deploy
+from compass.actions import install_callback
 from compass.actions import poll_switch
 from compass.actions import update_progress
 from compass.db.api import adapter_holder as adapter_api
@@ -176,7 +177,7 @@ def delete_host(deleter_email, host_id, cluster_ids):
     """
     try:
         delete.delete_host(
-            host_id, deleter_email, cluster_ids
+            host_id, cluster_ids, deleter_email
         )
     except Exception as error:
         logging.exception(error)
@@ -248,6 +249,50 @@ def reset_machine(machine_id):
     """Deploy the given cluster.
     """
     pass
+
+
+@celery.task(name='compass.tasks.os_installed')
+def os_installed(
+    host_id, clusterhosts_ready,
+    clusters_os_ready
+):
+    """callback when os is installed.
+    """
+    try:
+        install_callback.os_installed(
+            host_id, clusterhosts_ready,
+            clusters_os_ready
+        )
+    except Exception as error:
+        logging.exception(error)
+
+
+@celery.task(name='compass.tasks.package_installed')
+def package_installed(
+    cluster_id, host_id, cluster_ready, host_ready
+):
+    """callback when package is installed.
+    """
+    try:
+        install_callback.package_installed(
+            cluster_id, host_id, cluster_ready, host_ready
+        )
+    except Exception as error:
+        logging.exception(error)
+
+
+@celery.task(name='compass.tasks.cluster_installed')
+def cluster_installed(
+    cluster_id, clusterhosts_ready
+):
+    """callback when package is installed.
+    """
+    try:
+        install_callback.cluster_installed(
+            cluster_id, clusterhosts_ready
+        )
+    except Exception as error:
+        logging.exception(error)
 
 
 @celery.task(name='compass.tasks.update_progress')

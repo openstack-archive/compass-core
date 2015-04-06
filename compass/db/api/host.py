@@ -83,10 +83,13 @@ IGNORE_FIELDS = [
     'id', 'created_at', 'updated_at'
 ]
 RESP_STATE_FIELDS = [
-    'id', 'state', 'percentage', 'message', 'severity'
+    'id', 'state', 'percentage', 'message', 'severity', 'ready'
 ]
 UPDATED_STATE_FIELDS = [
     'state', 'percentage', 'message', 'severity'
+]
+UPDATED_STATE_INTERNAL_FIELDS = [
+    'ready'
 ]
 RESP_LOG_FIELDS = [
     'id', 'filename', 'position', 'partial_line', 'percentage',
@@ -786,6 +789,84 @@ def update_host_state(host_id, user=None, session=None, **kwargs):
     )
     utils.update_db_object(session, host.state, **kwargs)
     return host.state_dict()
+
+
+@utils.supported_filters(
+    optional_support_keys=UPDATED_STATE_INTERNAL_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_UPDATE_HOST_STATE
+)
+@utils.wrap_to_dict(['status', 'host'])
+def update_host_state_internal(
+    hostname, from_database_only=False,
+    user=None, session=None, **kwargs
+):
+    """Update a host state."""
+    if isinstance(hostname, (int, long)):
+        host = utils.get_db_object(
+            session, models.Host, id=hostname
+        )
+    else:
+        host = utils.get_db_object(
+            session, models.Host, name=hostname
+        )
+    if 'ready' in kwargs and kwargs['ready'] and not host.state.ready:
+        ready_triggered = True
+    else:
+        ready_triggered = False
+    clusterhost_ready = {}
+    cluster_os_ready = {}
+    if ready_triggered:
+        for clusterhost in host.clusterhosts:
+            cluster = clusterhost.cluster
+            if cluster.distributed_system:
+                clusterhost_ready[cluster.id] = False
+            else:
+                clusterhost_ready[cluster.id] = True
+            all_os_ready = True
+            for clusterhost_in_cluster in cluster.clusterhosts:
+                host_in_cluster = clusterhost_in_cluster.host
+                if host_in_cluster.id == host.id:
+                    continue
+                if not host_in_cluster.state.ready:
+                    all_os_ready = False
+            cluster_os_ready[cluster.id] = all_os_ready
+    logging.info('host %s ready: %s', hostname, ready_triggered)
+    logging.info("clusterhost_ready is: %s", clusterhost_ready)
+    logging.info("cluster_os_ready is %s", cluster_os_ready)
+
+    if not ready_triggered or from_database_only:
+        logging.info('%s state is set to %s', host.name, kwargs)
+        utils.update_db_object(session, host.state, **kwargs)
+        if not host.state.ready:
+            for clusterhost in host.clusterhosts:
+                utils.update_db_object(
+                    session, clusterhost.state, ready=False
+                )
+                utils.update_db_object(
+                    session, clusterhost.cluster.state, ready=False
+                )
+        status = '%s state is updated' % host.name
+    else:
+        from compass.tasks import client as celery_client
+        celery_client.celery.send_task(
+            'compass.tasks.os_installed',
+            (
+                host.id, clusterhost_ready,
+                cluster_os_ready
+            )
+        )
+        status = '%s: clusterhost ready %s cluster os ready %s' % (
+            host.name, clusterhost_ready, cluster_os_ready
+        )
+        logging.info('action status: %s', status)
+    return {
+        'status': status,
+        'host': host.state_dict()
+    }
 
 
 @utils.supported_filters([])

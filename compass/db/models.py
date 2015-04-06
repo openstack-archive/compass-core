@@ -421,8 +421,11 @@ class StateMixin(TimestampMixin, HelperMixin):
         Enum('INFO', 'WARNING', 'ERROR'),
         ColumnDefault('INFO')
     )
+    ready = Column(Boolean, default=False)
 
     def update(self):
+        if self.ready:
+            self.state = 'SUCCESSFUL'
         if self.state in ['UNINITIALIZED', 'INITIALIZED']:
             self.percentage = 0.0
             self.severity = 'INFO'
@@ -792,6 +795,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @property
     def os_installed(self):
+        logging.debug('os installed: %s' % self.host.os_installed)
         return self.host.os_installed
 
     @property
@@ -1184,7 +1188,16 @@ class ClusterState(BASE, StateMixin):
             )
             if self.failed_hosts:
                 self.severity = 'ERROR'
+
         super(ClusterState, self).update()
+
+        if self.state == 'SUCCESSFUL':
+            self.completed_hosts = self.total_hosts
+            for clusterhost in clusterhosts:
+                clusterhost_state = clusterhost.state
+                if clusterhost_state.state != 'SUCCESSFUL':
+                    clusterhost_state.state = 'SUCCESSFUL'
+                    clusterhost.state.update()
 
 
 class Cluster(BASE, TimestampMixin, HelperMixin):

@@ -94,6 +94,7 @@ class ApiTestCase(unittest2.TestCase):
         data['name'] = 'test_cluster1'
         data['adapter_id'] = adapter_id
         data['os_id'] = os_id
+        self.os_id = os_id
         data['flavor_id'] = flavor_id
         self.post(url, data)
         data = {}
@@ -1014,7 +1015,7 @@ class TestMetadataAPI(ApiTestCase):
         super(TestMetadataAPI, self).tearDown()
 
     def test_get_os_ui_metadata(self):
-        url = '/oses/1/ui_metadata'
+        url = '/oses/%s/ui_metadata' % self.os_id
         return_value = self.get(url)
         self.assertEqual(return_value.status_code, 200)
         self.assertIn('os_global_config', return_value.get_data())

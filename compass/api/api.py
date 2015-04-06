@@ -2009,7 +2009,7 @@ def show_clusterhost_state(clusterhost_id):
 
 @app.route(
     "/clusters/<int:cluster_id>/hosts/<int:host_id>/state",
-    methods=['PUT']
+    methods=['PUT', 'POST']
 )
 @log_user_action
 @login_required
@@ -2025,7 +2025,25 @@ def update_cluster_host_state(cluster_id, host_id):
     )
 
 
-@app.route("/clusterhosts/<int:clusterhost_id>/state", methods=['PUT'])
+@app.route(
+    "/clusters/<clustername>/hosts/<hostname>/state_internal",
+    methods=['PUT', 'POST']
+)
+def update_cluster_host_state_internal(clustername, hostname):
+    """update clusterhost state."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_clusterhost_state_internal(
+            clustername, hostname, **data
+        )
+    )
+
+
+@app.route(
+    "/clusterhosts/<int:clusterhost_id>/state",
+    methods=['PUT', 'POST']
+)
 @log_user_action
 @login_required
 @update_user_token
@@ -2036,6 +2054,21 @@ def update_clusterhost_state(clusterhost_id):
         200,
         cluster_api.update_clusterhost_state(
             clusterhost_id, user=current_user, **data
+        )
+    )
+
+
+@app.route(
+    "/clusterhosts/<clusterhost_name>/state_internal",
+    methods=['PUT', 'POST']
+)
+def update_clusterhost_state_internal(clusterhost_name):
+    """update clusterhost state."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        cluster_api.update_clusterhost_state_internal(
+            clusterhost_name, **data
         )
     )
 
@@ -2399,7 +2432,7 @@ def show_host_state(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/state", methods=['PUT'])
+@app.route("/hosts/<int:host_id>/state", methods=['PUT', 'POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2410,6 +2443,18 @@ def update_host_state(host_id):
         200,
         host_api.update_host_state(
             host_id, user=current_user, **data
+        )
+    )
+
+
+@app.route("/hosts/<hostname>/state_internal", methods=['PUT', 'POST'])
+def update_host_state_internal(hostname):
+    """update host state."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        host_api.update_host_state_internal(
+            hostname, **data
         )
     )
 

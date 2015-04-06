@@ -1,15 +1,15 @@
-#set controller_role = $get_role('os_compute_controller', $getVar('os_controller', None))
+#set controller_role = $get_role('os_compute_controller', $get_role('os_controller', None))
 
 ## Contoller node management IP/interface
 #set controller_ip = $controller_role.management.ip
 #set controller_nic = $controller_role.management.interface
 
 ## Compute node management IP/interface
-#set compute_role = $getVar('os_compute_worker', None)
+#set compute_role = $get_role('os_compute_worker', None)
 #set compute_nic = $compute_role.management.interface
 
 ## Network server/worker node IP/interface
-#set network = $getVar('os_network', None)
+#set network = $get_role('os_network', None)
 #set network_server_role = $get_role('os_network_server', [$network, $controller_role])
 #set network_worker_role = $get_role('os_network_worker', [$network, $compute_role])
 
@@ -27,6 +27,13 @@
 
 #def get_role($role_name, $default_roles=None)
     #set target_role = $getVar($role_name, None)
+    #if isinstance($target_role, list)
+        #if $target_role
+            #set target_role = $target_role[0]
+        #else
+            #set target_role = None
+        #end if
+    #end if
     #if $target_role is None and $default_roles is not None:
         #if isinstance($default_roles, list)
             #for $role in $default_roles

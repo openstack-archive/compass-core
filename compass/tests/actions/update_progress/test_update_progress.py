@@ -60,6 +60,7 @@ from compass.log_analyzor import progress_calculator
 from compass.utils import flags
 from compass.utils import logsetting
 
+ADAPTER_NAME = 'openstack_icehouse'
 OS_NAME = 'CentOS-6.5-x86_64'
 SWITCH_IP = '172.29.8.40'
 MACHINE_MAC = '00:0c:29:bf:eb:1d'
@@ -87,18 +88,40 @@ class TestProgressCalculator(unittest2.TestCase):
         # get adapter information
         list_adapters = adapter.list_adapters(user=self.user_object)
         for adptr in list_adapters:
-            if ('package_installer' in adptr.keys() and
-                adptr['flavors'] != [] and
-                    adptr['distributed_system_name'] == 'openstack'):
-                self.adapter_id = adptr['id']
-                for flavor in adptr['flavors']:
-                    if flavor['name'] == 'allinone':
-                        self.flavor_id = flavor['id']
-                        break
+            self.adapter_id = None
+            if adptr['name'] != ADAPTER_NAME:
+                continue
+            self.adapter_id = adptr['id']
+            self.os_id = None
             for supported_os in adptr['supported_oses']:
                 if supported_os['name'] == OS_NAME:
                     self.os_id = supported_os['os_id']
                     break
+            if not self.os_id:
+                continue
+            if (
+                'package_installer' in adptr.keys() and
+                adptr['flavors'] != [] and
+                adptr['distributed_system_name'] == 'openstack'
+            ):
+                self.flavor_id = None
+                for flavor in adptr['flavors']:
+                    if flavor['name'] == 'allinone':
+                        self.flavor_id = flavor['id']
+                        break
+                if not self.flavor_id:
+                    continue
+            else:
+                continue
+            if self.adapter_id and self.os_id and self.flavor_id:
+                break
+
+        if not self.adapter_id:
+            raise Exception('adapter id not found')
+        if not self.os_id:
+            raise Exception('os id not found')
+        if not self.flavor_id:
+            raise Exception('flavor id not found')
 
         #add cluster
         cluster.add_cluster(

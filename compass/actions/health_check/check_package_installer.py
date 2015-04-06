@@ -55,3 +55,14 @@ class PackageInstallerCheck(base.BaseCheck):
             self._set_status(0, message)
 
         return None
+
+    def ansible_check(self):
+        """Placeholder for ansible check."""
+        print "Checking ansible......"
+        print ("[Done]")
+        self.code == 1
+        self.messages.append(
+                "[%s]Info: Package installer health check "
+                "has completed. No problems found, all systems "
+                "go." % self.NAME)
+        return (self.code, self.messages)

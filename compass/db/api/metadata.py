@@ -74,6 +74,19 @@ def add_package_field_internal(session):
     )
 
 
+def add_flavor_field_internal(session):
+    env_locals = {}
+    env_locals.update(metadata_validator.VALIDATOR_LOCALS)
+    env_locals.update(metadata_callback.CALLBACK_LOCALS)
+    configs = util.load_configs(
+        setting.FLAVOR_FIELD_DIR,
+        env_locals=env_locals
+    )
+    return _add_field_internal(
+        session, models.FlavorConfigField, configs
+    )
+
+
 def _add_metadata(
     session, field_model, metadata_model, id, path, name, config,
     exception_when_existing=True, parent=None, **kwargs
@@ -219,6 +232,30 @@ def add_package_metadata_internal(session, exception_when_existing=True):
     return package_metadatas
 
 
+def add_flavor_metadata_internal(session, exception_when_existing=True):
+    flavor_metadatas = []
+    env_locals = {}
+    env_locals.update(metadata_validator.VALIDATOR_LOCALS)
+    env_locals.update(metadata_callback.CALLBACK_LOCALS)
+    configs = util.load_configs(
+        setting.FLAVOR_METADATA_DIR,
+        env_locals=env_locals
+    )
+    for config in configs:
+        flavor = utils.get_db_object(
+            session, models.AdapterFlavor, name=config['FLAVOR']
+        )
+        for key, value in config['METADATA'].items():
+            flavor_metadatas.append(_add_metadata(
+                session, models.FlavorConfigField,
+                models.FlavorConfigMetadata,
+                flavor.id, key, key, value,
+                exception_when_existing=exception_when_existing,
+                parent=None
+            ))
+    return flavor_metadatas
+
+
 def _filter_metadata(metadata, **kwargs):
     if not isinstance(metadata, dict):
         return metadata
@@ -274,6 +311,27 @@ def get_package_metadatas_internal(session):
                 'ignore metadata since its adapter %s is not deployable',
                 adapter.id
             )
+    return metadata_mapping
+
+
+def get_flavor_metadatas_internal(session):
+    metadata_mapping = {}
+    flavors = utils.list_db_objects(
+        session, models.AdapterFlavor
+    )
+    for flavor in flavors:
+        flavor_metadata_dict = flavor.metadata_dict()
+        metadata_mapping[flavor.id] = _filter_metadata(
+            flavor_metadata_dict, session=session
+        )
+        adapters = utils.list_db_objects(
+            session, models.Adapter, id=flavor.adapter_id
+        )
+        for adapter in adapters:
+            package_metadata_dict = adapter.metadata_dict()
+            metadata_mapping[flavor.id].update(_filter_metadata(
+                package_metadata_dict, session=session
+            ))
     return metadata_mapping
 
 

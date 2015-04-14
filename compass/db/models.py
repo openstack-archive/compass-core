@@ -2238,6 +2238,75 @@ class AdapterFlavorRole(BASE, HelperMixin):
         return dict_info
 
 
+class FlavorConfigMetadata(BASE, MetadataMixin):
+    """flavor config metadata."""
+
+    __tablename__ = "flavor_config_metadata"
+
+    id = Column(Integer, primary_key=True)
+    flavor_id = Column(
+        Integer,
+        ForeignKey(
+            'adapter_flavor.id',
+            onupdate='CASCADE', ondelete='CASCADE'
+        )
+    )
+    parent_id = Column(
+        Integer,
+        ForeignKey(
+            'flavor_config_metadata.id',
+            onupdate='CASCADE', ondelete='CASCADE'
+        )
+    )
+    field_id = Column(
+        Integer,
+        ForeignKey(
+            'flavor_config_field.id',
+            onupdate='CASCADE', ondelete='CASCADE'
+        )
+    )
+    children = relationship(
+        'FlavorConfigMetadata',
+        passive_deletes=True, passive_updates=True,
+        backref=backref('parent', remote_side=id)
+    )
+
+    __table_args__ = (
+        UniqueConstraint('path', 'flavor_id', name='constraint'),
+    )
+
+    def __init__(
+        self, flavor_id, path, **kwargs
+    ):
+        self.flavor_id = flavor_id
+        self.path = path
+        super(FlavorConfigMetadata, self).__init__(**kwargs)
+
+    def validate(self):
+        super(FlavorConfigMetadata, self).validate()
+        if not self.flavor:
+            raise exception.InvalidParameter(
+                'flavor is not set in package metadata %s' % self.id
+            )
+
+
+class FlavorConfigField(BASE, FieldMixin):
+    """Flavor config metadata fields."""
+
+    __tablename__ = "flavor_config_field"
+
+    metadatas = relationship(
+        FlavorConfigMetadata,
+        passive_deletes=True, passive_updates=True,
+        cascade="all, delete-orphan",
+        backref=backref('field')
+    )
+
+    def __init__(self, field, **kwargs):
+        self.field = field
+        super(FlavorConfigField, self).__init__(**kwargs)
+
+
 class AdapterFlavor(BASE, HelperMixin):
     """Adapter's flavors."""
 
@@ -2265,6 +2334,12 @@ class AdapterFlavor(BASE, HelperMixin):
         Cluster,
         backref=backref('flavor')
     )
+    metadatas = relationship(
+        FlavorConfigMetadata,
+        passive_deletes=True, passive_updates=True,
+        cascade='all, delete-orphan',
+        backref=backref('flavor')
+    )
 
     __table_args__ = (
         UniqueConstraint('name', 'adapter_id', name='constraint'),
@@ -2272,6 +2347,20 @@ class AdapterFlavor(BASE, HelperMixin):
 
     def __str__(self):
         return 'AdapterFlavor[%s:%s]' % (self.id, self.name)
+
+    @property
+    def root_metadatas(self):
+        return [
+            metadata for metadata in self.metadatas
+            if metadata.parent_id is None
+        ]
+
+    def metadata_dict(self):
+        dict_info = {}
+        for metadata in self.root_metadatas:
+            logging.info('metadata from flavr config metadata: %s', metadata)
+            util.merge_dict(dict_info, metadata.to_dict())
+        return dict_info
 
     @property
     def ordered_flavor_roles(self):

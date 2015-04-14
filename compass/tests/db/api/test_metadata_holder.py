@@ -73,6 +73,10 @@ class MetadataTestCase(unittest2.TestCase):
             for supported_os in test_adapter['supported_oses']:
                 self.os_id = supported_os['os_id']
                 break
+            for flavor in test_adapter['flavors']:
+                if flavor['name'] == 'HA-multinodes':
+                    self.flavor_id = flavor['id']
+                    break
 
     def tearDown(self):
         super(MetadataTestCase, self).setUp()
@@ -232,6 +236,50 @@ class TestGetOsMetadata(MetadataTestCase):
             metadata.get_os_metadata,
             99,
             user=self.user_object
+        )
+
+
+class TestGetFlavorMetadata(MetadataTestCase):
+    def setUp(self):
+        self.backup_load_configs = util.load_configs
+
+        def mock_load_configs(config_dir, *args, **kwargs):
+            if config_dir != setting.FLAVOR_METADATA_DIR:
+                return self.backup_load_configs(
+                    config_dir, *args, **kwargs
+                )
+            config = {
+                'FLAVOR': 'HA-multinodes',
+                'METADATA': {
+                    'test_ha_proxy': {
+                        '_self': {
+                        },
+                        'vip': {
+                            '_self': {
+                                'is_required': True,
+                                'field': 'general',
+                                'mapping_to': 'ha_vip'
+                            }
+                        }
+                    }
+                }
+            }
+            return [config]
+        util.load_configs = mock.Mock(side_effect=mock_load_configs)
+        super(TestGetFlavorMetadata, self).setUp()
+
+    def tearDown(self):
+        util.load_configs = self.backup_load_configs
+        super(TestGetFlavorMetadata, self).tearDown()
+
+    def test_get_flavor_metadata(self):
+        flavor_metadata = metadata.get_flavor_metadata(
+            self.flavor_id,
+            user=self.user_object
+        )
+        self.assertIsNotNone(flavor_metadata)
+        self.assertTrue(
+            'test_ha_proxy' in flavor_metadata['flavor_config'].keys()
         )
 
 

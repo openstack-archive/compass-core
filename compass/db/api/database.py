@@ -252,6 +252,13 @@ def _setup_package_fields(field_session):
     metadata.add_package_field_internal(field_session)
 
 
+def _setup_flavor_fields(field_session):
+    """Initialize flavor field table."""
+    logging.info('setup flavor field table')
+    from compass.db.api import metadata
+    metadata.add_flavor_field_internal(field_session)
+
+
 def _setup_os_metadatas(metadata_session):
     """Initialize os metadata table."""
     logging.info('setup os metadata table')
@@ -264,6 +271,13 @@ def _setup_package_metadatas(metadata_session):
     logging.info('setup package metadata table')
     from compass.db.api import metadata
     metadata.add_package_metadata_internal(metadata_session)
+
+
+def _setup_flavor_metadatas(metadata_session):
+    """Initialize flavor metadata table."""
+    logging.info('setup flavor metadata table')
+    from compass.db.api import metadata
+    metadata.add_flavor_metadata_internal(metadata_session)
 
 
 def _setup_adapter_roles(role_session):
@@ -312,8 +326,10 @@ def create_db(session):
     _setup_adapter_flavors(session)
     _setup_os_fields(session)
     _setup_package_fields(session)
+    _setup_flavor_fields(session)
     _setup_os_metadatas(session)
     _setup_package_metadatas(session)
+    _setup_flavor_metadatas(session)
     _update_others(session)
 
 

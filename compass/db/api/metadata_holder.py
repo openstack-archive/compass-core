@@ -26,7 +26,7 @@ from compass.utils import util
 
 
 RESP_METADATA_FIELDS = [
-    'os_config', 'package_config'
+    'os_config', 'package_config', 'flavor_config'
 ]
 
 
@@ -34,6 +34,7 @@ RESP_METADATA_FIELDS = [
 def load_metadatas(session):
     load_os_metadatas_internal(session)
     load_package_metadatas_internal(session)
+    load_flavor_metadatas_internal(session)
 
 
 def load_os_metadatas_internal(session):
@@ -50,8 +51,17 @@ def load_package_metadatas_internal(session):
     )
 
 
+def load_flavor_metadatas_internal(session):
+    global FLAVOR_METADATA_MAPPING
+    logging.info('load flavor metadatas into memory')
+    FLAVOR_METADATA_MAPPING = (
+        metadata_api.get_flavor_metadatas_internal(session)
+    )
+
+
 OS_METADATA_MAPPING = {}
 PACKAGE_METADATA_MAPPING = {}
+FLAVOR_METADATA_MAPPING = {}
 
 
 def _validate_config(
@@ -141,6 +151,31 @@ def get_package_metadata(adapter_id, user=None, session=None, **kwargs):
     }
 
 
+def get_flavor_metadata_internal(session, flavor_id):
+    """get flavor metadata internal."""
+    if not FLAVOR_METADATA_MAPPING:
+        load_flavor_metadatas_internal(session)
+    if flavor_id not in FLAVOR_METADATA_MAPPING:
+        raise exception.RecordNotExists(
+            'flavor %s does not exist' % flavor_id
+        )
+    return _filter_metadata(
+        FLAVOR_METADATA_MAPPING[flavor_id], session=session
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_METADATAS
+)
+@utils.wrap_to_dict(RESP_METADATA_FIELDS)
+def get_flavor_metadata(flavor_id, user=None, session=None, **kwargs):
+    return {
+        'flavor_config': get_flavor_metadata_internal(session, flavor_id)
+    }
+
+
 def get_os_metadata_internal(session, os_id):
     """get os metadata internal."""
     if not OS_METADATA_MAPPING:
@@ -186,7 +221,7 @@ def get_ui_metadata(metadata, config):
 def _get_data(metadata, config, result_data):
     data_dict = {}
     for key, config_value in config.items():
-        if isinstance(config_value, dict):
+        if isinstance(config_value, dict) and key != 'content_data':
             if key in metadata.keys():
                 _get_data(metadata[key], config_value, result_data)
             else:

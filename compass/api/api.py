@@ -1354,6 +1354,49 @@ def convert_os_metadata(os_id):
     )
 
 
+@app.route("/flavors/<int:flavor_id>/metadata", methods=['GET'])
+@log_user_action
+@login_required
+@update_user_token
+def show_flavor_metadata(flavor_id):
+    """Get flavor metadata."""
+    data = _get_request_args()
+    return utils.make_json_response(
+        200,
+        metadata_api.get_flavor_metadata(
+            flavor_id, user=current_user, **data
+        )
+    )
+
+
+@app.route("/flavors/<int:flavor_id>/ui_metadata", methods=['GET'])
+@log_user_action
+@login_required
+@update_user_token
+def convert_flavor_metadata(flavor_id):
+    """Convert flavor metadat to ui flavor metadata."""
+    metadatas = metadata_api.get_flavor_metadata(
+        flavor_id, user=current_user
+    )
+    metadata = metadatas['flavor_config']
+    clusters = cluster_api.list_clusters(
+        user=current_user
+    )
+    for cluster in clusters:
+        if cluster['flavor']['id'] == flavor_id:
+            flavor_name = cluster['flavor_name'].replace('-', '_')
+    configs = util.load_configs(setting.FLAVOR_MAPPING_DIR)
+    for item in configs:
+        if flavor_name in item.keys():
+            config = item[flavor_name]
+    return utils.make_json_response(
+        200,
+        metadata_api.get_ui_metadata(
+            metadata, config
+        )
+    )
+
+
 @app.route(
     "/adapters/<int:adapter_id>/oses/<int:os_id>/metadata",
     methods=['GET']

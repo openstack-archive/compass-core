@@ -97,11 +97,17 @@ OS_METADATA_DIR = lazypy.delay(
 PACKAGE_METADATA_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'package_metadata')
 )
+FLAVOR_METADATA_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'flavor_metadata')
+)
 OS_FIELD_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'os_field')
 )
 PACKAGE_FIELD_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'package_field')
+)
+FLAVOR_FIELD_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'flavor_field')
 )
 ADAPTER_ROLE_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'role')
@@ -126,6 +132,9 @@ PROGRESS_CALCULATOR_DIR = lazypy.delay(
 )
 OS_MAPPING_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'os_mapping')
+)
+FLAVOR_MAPPING_DIR = lazypy.delay(
+    lambda: os.path.join(CONFIG_DIR, 'flavor_mapping')
 )
 PROXY_URL_PREFIX = 'http://10.145.81.205:5000'
 

@@ -475,6 +475,7 @@ class TestGetClusterConfig(ClusterTestCase):
             self.cluster_id,
             user=self.user_object,
         )
+        print cluster_config
         package_config = cluster_config['package_config']
         os_config = cluster_config['os_config']
         self.assertItemsEqual(package_config, self.package_configs)

@@ -328,7 +328,8 @@ class AnsibleInstaller(PKInstaller):
         config_file = os.path.join(
             ansible_run_destination, self.ansible_config
         )
-        cmd = "ANSIBLE_CONFIG=%s ansible-playbook -i %s %s" % (config_file,
+        cmd = "ANSIBLE_HOST_KEY_CHECKING=False "\
+              "ANSIBLE_CONFIG=%s ansible-playbook -i %s %s" % (config_file,
                                                                inventory_file,
                                                                playbook_file)
         with open(log_file, 'w') as logfile:

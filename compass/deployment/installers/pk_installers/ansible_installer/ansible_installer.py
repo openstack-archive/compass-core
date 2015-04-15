@@ -229,6 +229,7 @@ class AnsibleInstaller(PKInstaller):
             self.log_file
         )
         log_option = "log_path = %s" % ansible_log_path
+        host_key_checking = "host_key_checking = False"
         ansible_cfg_file = os.path.join(
             ansible_run_destination,
             self.ansible_config
@@ -236,6 +237,7 @@ class AnsibleInstaller(PKInstaller):
         with open(ansible_cfg_file, 'w') as cfg:
             cfg.write('[defaults]\n')
             cfg.write(log_option)
+            cfg.write(host_key_checking)
 
         # copy roles to run env
         dirs = self.runner_dirs

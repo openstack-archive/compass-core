@@ -101,6 +101,7 @@ class ApiTestCase(unittest2.TestCase):
         data['name'] = 'test_cluster2'
         data['adapter_id'] = adapter_id
         data['os_id'] = os_id
+        self.flavor_id = flavor_id
         data['flavor_id'] = flavor_id
         self.post(url, data)
 
@@ -1019,6 +1020,12 @@ class TestMetadataAPI(ApiTestCase):
         return_value = self.get(url)
         self.assertEqual(return_value.status_code, 200)
         self.assertIn('os_global_config', return_value.get_data())
+
+    def test_get_flavor_ui_metadata(self):
+        url = '/flavors/%s/ui_metadata' % self.flavor_id
+        return_value = self.get(url)
+        self.assertEqual(return_value.status_code, 200)
+        self.assertIn('flavor_config', return_value.get_data())
 
 
 if __name__ == '__main__':

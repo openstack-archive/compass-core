@@ -392,9 +392,14 @@ def _get_adapter(client):
                     flavor_id = flavor['id']
                     break
 
-        if adapter_name and adapter['name'] == adapter_name:
-            adapter_id = adapter['id']
-            logging.info('adapter name %s matches: %s', adapter_name, adapter)
+        if adapter_name:
+            if adapter['name'] == adapter_name:
+                adapter_id = adapter['id']
+                logging.info('adapter name %s matches: %s',
+                             adapter_name, adapter)
+            else:
+                logging.info('adapter name %s does not match %s',
+                             adapter_name, adapter)
         elif (
             'distributed_system_name' in item and
             adapter['distributed_system_name']
@@ -404,9 +409,13 @@ def _get_adapter(client):
                 target_system_re.match(adapter['distributed_system_name'])
             ):
                 adapter_id = adapter['id']
-                distributed_system_id = adapter['distributed_system_id']
                 logging.info(
                     'distributed system name pattern %s matches: %s',
+                    target_system_pattern, adapter
+                )
+            else:
+                logging.info(
+                    'distributed system name pattern %s does not match: %s',
                     target_system_pattern, adapter
                 )
         else:
@@ -415,6 +424,15 @@ def _get_adapter(client):
                 logging.info(
                     'os only adapter matches no target_system_pattern'
                 )
+            else:
+                logging.info(
+                    'distributed system name pattern defined '
+                    'but the adapter does not have '
+                    'distributed_system_name attributes'
+                )
+
+        if adapter_id and target_system_re:
+            distributed_system_id = adapter['distributed_system_id']
 
         if adapter_id:
             logging.info('adadpter matches: %s', adapter)
@@ -429,7 +447,7 @@ def _get_adapter(client):
         raise Exception(msg)
 
     if target_system_re and not distributed_system_id:
-        msg = 'no distributed system found for' % target_system_pattern
+        msg = 'no distributed system found for %s' % target_system_pattern
         raise Exception(msg)
 
     if flavor_re and not flavor_id:
@@ -1039,6 +1057,7 @@ def main():
         machines = _poll_switches(client)
     else:
         machines = _get_machines(client)
+    logging.info('machines are %s', machines)
     subnet_mapping = _add_subnets(client)
     adapter_id, os_id, distributed_system_id, flavor_id = _get_adapter(client)
     cluster_id, host_mapping, role_mapping = _add_cluster(

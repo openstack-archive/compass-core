@@ -237,6 +237,7 @@ class AnsibleInstaller(PKInstaller):
         with open(ansible_cfg_file, 'w') as cfg:
             cfg.write('[defaults]\n')
             cfg.write(log_option)
+            cfg.write('\n')
             cfg.write(host_key_checking)
 
         # copy roles to run env

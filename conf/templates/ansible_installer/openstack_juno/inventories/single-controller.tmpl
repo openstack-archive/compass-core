@@ -22,7 +22,7 @@
 #for controller in $controllers
     #set controller_ip = $controller.management.ip
     #set controller_hostname = $controller.hostname
-$controller_hostname ansible_ssh_host=$controller_ip ansible_ssh_user=$username ansible_ssh_passowrd=$password
+$controller_hostname ansible_ssh_host=$controller_ip ansible_ssh_user=$username ansible_ssh_password=$password
 #end for
 
 [compute]

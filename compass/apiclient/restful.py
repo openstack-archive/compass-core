@@ -18,6 +18,7 @@
 import json
 import logging
 import requests
+import time
 
 
 class Client(object):
@@ -63,6 +64,7 @@ class Client(object):
         if data:
             resp = self.session_.get(url, params=data)
         else:
+            time.sleep(3)
             resp = self.session_.get(url)
 
         return self._get_response(resp)
@@ -73,6 +75,7 @@ class Client(object):
         if data:
             resp = self.session_.post(url, json.dumps(data))
         else:
+            time.sleep(3)
             resp = self.session_.post(url)
 
         return self._get_response(resp)
@@ -84,6 +87,7 @@ class Client(object):
         if data:
             resp = self.session_.put(url, json.dumps(data))
         else:
+            time.sleep(3)
             resp = self.session_.put(url)
 
         return self._get_response(resp)
@@ -94,6 +98,7 @@ class Client(object):
         if data:
             resp = self.session_.patch(url, json.dumps(data))
         else:
+            time.sleep(3)
             resp = self.session_.patch(url)
 
         return self._get_response(resp)

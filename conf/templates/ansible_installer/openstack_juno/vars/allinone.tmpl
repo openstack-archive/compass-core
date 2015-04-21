@@ -1,3 +1,4 @@
+#set cluster_name = $getVar('name', {})
 #set controllers = $getVar('allinone_compute', [])
 #if not $isinstance($controllers, list)
     #set controllers = [$controllers]
@@ -20,6 +21,7 @@ INTERNAL_INTERFACE: $network_internal_nic
 #set rabbit_username = $credentials.rabbitmq.username
 #set rabbit_password = $credentials.rabbitmq.password
 
+cluster_name: $cluster_name
 compute_controller_host: "{{ controller_host }}"
 db_host: "{{ controller_host }}"
 rabbit_host: "{{ controller_host }}"

@@ -1101,3 +1101,9 @@ class Client(object):
         data['reset'] = True
 
         return self._post('/hosts/%s/action' % host_id, data=data)
+
+    def clusterhost_ready(self, clusterhost_name):
+        data = {}
+        data['ready'] = True
+
+        return self._post('/clusterhosts/%s/state_internal' % clusterhost_name, data=data)

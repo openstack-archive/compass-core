@@ -143,6 +143,8 @@ sudo sed -i 's/disable\([ \t]\+\)=\([ \t]\+\)yes/disable\1=\2no/g' /etc/xinetd.d
 sudo sed -i 's/^@dists=/# @dists=/g' /etc/debmirror.conf
 sudo sed -i 's/^@arches=/# @arches=/g' /etc/debmirror.conf
 
+sudo rm -rf /var/lib/cobbler/config/systems.d/*
+
 echo "disable iptables"
 sudo service iptables stop
 sudo sleep 10

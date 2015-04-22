@@ -256,7 +256,7 @@ class ActionHelper(object):
         if delete_underlying_host:
             for host_id in host_id_list:
                 host_db.del_host(
-                    user, host_id, True, True
+                    host_id, True, True, user=user
                 )
         cluster_db.del_cluster(
             cluster_id, True, True, user=user
@@ -305,5 +305,5 @@ class ActionHelper(object):
 
     @staticmethod
     def get_machine_IPMI(machine_id, user):
-        machine_info = machine_db.get_machine(user, machine_id)
+        machine_info = machine_db.get_machine(machine_id, user=user)
         return machine_info[const.IPMI_CREDS]

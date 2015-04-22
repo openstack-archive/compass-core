@@ -1,3 +1,4 @@
+#set cluster_name = $getVar('name', '')
 #set controllers = $getVar('controller', [])
 #set computes = $getVar('compute', [])
 #set networks = $getVar('network', [])
@@ -31,6 +32,8 @@ INTERNAL_INTERFACE: $network_internal_nic
 #set credentials = $getVar('service_credentials', {})
 #set rabbit_username = $credentials.rabbitmq.username
 #set rabbit_password = $credentials.rabbitmq.password
+
+cluster_name: $cluster_name
 
 compute_controller_host: "{{ controller_host }}"
 db_host: "{{ controller_host }}"

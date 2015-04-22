@@ -1,3 +1,4 @@
+#set cluster_name = $getVar('name', '')
 #set compute_controllers = $getVar('compute_controller', [])
 #set compute_workers = $getVar('compute_worker', [])
 #set network_servers = $getVar('network_server', [])
@@ -88,6 +89,8 @@ INTERNAL_INTERFACE: $network_internal_nic
 #set credentials = $getVar('service_credentials', {})
 #set rabbit_username = $credentials.rabbitmq.username
 #set rabbit_password = $credentials.rabbitmq.password
+
+cluster_name: $cluster_name
 
 odl_controller: 10.1.0.15
 

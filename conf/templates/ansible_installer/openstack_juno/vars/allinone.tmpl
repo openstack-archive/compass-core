@@ -1,3 +1,4 @@
+#set cluster_name = $getVar('name', '')
 #set controllers = $getVar('allinone_compute', [])
 #if not $isinstance($controllers, list)
     #set controllers = [$controllers]
@@ -29,6 +30,7 @@ identity_host: "{{ controller_host }}"
 network_server_host: "{{ controller_host }}"
 dashboard_host: "{{ controller_host }}"
 
+cluster_name: $cluster_name
 odl_controller: 10.1.0.15
 
 DEBUG: False

@@ -200,6 +200,19 @@ class AnsibleInstaller(PKInstaller):
 
         return self.get_config_from_template(hosts_tmpl_path, global_vars_dict)
 
+    def _generate_ansible_cfg_attributes(self, global_vars_dict):
+        ansible_cfg_tmpl_path = os.path.join(
+            os.path.join(self.tmpl_dir, 'ansible_cfg'), self.tmpl_name
+        )
+        if not os.path.exists(ansible_cfg_tmpl_path):
+            logging.error("cfg template '%s' does not exist", self.tmpl_name)
+            raise Exception("Template '%s' does not exist!" % self.tmpl_name)
+
+        return self.get_config_from_template(
+            ansible_cfg_tmpl_path,
+            global_vars_dict
+        )
+
     def get_config_from_template(self, tmpl_path, vars_dict):
         logging.debug("vars_dict is %s", vars_dict)
 
@@ -223,22 +236,6 @@ class AnsibleInstaller(PKInstaller):
     def _create_ansible_run_env(self, env_name):
         ansible_run_destination = os.path.join(self.ansible_run_dir, env_name)
         os.mkdir(ansible_run_destination)
-
-        ansible_log_path = os.path.join(
-            ansible_run_destination,
-            self.log_file
-        )
-        log_option = "log_path = %s" % ansible_log_path
-        host_key_checking = "host_key_checking = False"
-        ansible_cfg_file = os.path.join(
-            ansible_run_destination,
-            self.ansible_config
-        )
-        with open(ansible_cfg_file, 'w') as cfg:
-            cfg.write('[defaults]\n')
-            cfg.write(log_option)
-            cfg.write('\n')
-            cfg.write(host_key_checking)
 
         # copy roles to run env
         dirs = self.runner_dirs
@@ -275,6 +272,12 @@ class AnsibleInstaller(PKInstaller):
             ansible_run_destination, self.hosts_path
         )
 
+        cfg_config = self._generate_ansible_cfg_attributes(global_vars_dict)
+        cfg_destination = os.path.join(
+            ansible_run_destination,
+            self.ansible_config
+        )
+
         os.mkdir(inventory_dir)
         os.mkdir(vars_dir)
 
@@ -283,6 +286,7 @@ class AnsibleInstaller(PKInstaller):
         self.serialize_config(inv_config, inventory_destination)
         self.serialize_config(vars_config, group_vars_destination)
         self.serialize_config(hosts_config, hosts_destination)
+        self.serialize_config(cfg_config, cfg_destination)
 
     def deploy(self):
         """Start to deploy a distributed system. Return both cluster and hosts

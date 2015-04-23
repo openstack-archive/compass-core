@@ -49,6 +49,16 @@ fi
 
 sudo mkdir -p ~/.chef
 
+if [ ! -f /etc/chef-server/admin.pem ]; then
+    echo "/etc/chef-server/admin.pem does not exist"
+    exit 1
+fi
+
+if [ ! -f /etc/chef-server/chef-validator.pem ]; then
+    echo "/etc/chef-server/chef-validator.pem does not exist"
+    exit 1
+fi
+
 sudo knife configure -y -i --defaults -r ~/chef-repo -s https://$IPADDR:443 -u $USER --admin-client-name admin --admin-client-key /etc/chef-server/admin.pem --validation-client-name chef-validator --validation-key /etc/chef-server/chef-validator.pem <<EOF
 $CHEF_PASSWORD
 EOF

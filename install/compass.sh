@@ -31,6 +31,7 @@ sudo cp -rf $COMPASSDIR/conf/* /etc/compass/
 sudo cp -rf $COMPASSDIR/service/* /etc/init.d/
 sudo cp -rf $COMPASSDIR/bin/*.py /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/*.sh /opt/compass/bin/
+sudo cp -rf $COMPASSDIR/bin/ansible_callbacks /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/compassd /usr/bin/
 sudo cp -rf $COMPASSDIR/bin/switch_virtualenv.py.template /opt/compass/bin/switch_virtualenv.py
 sudo ln -s -f /opt/compass/bin/compass_check.py /usr/bin/compass

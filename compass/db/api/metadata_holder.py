@@ -21,12 +21,16 @@ from compass.db.api import permission
 from compass.db.api import user as user_api
 from compass.db.api import utils
 from compass.db import exception
+from compass.db import models
 from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
 RESP_METADATA_FIELDS = [
     'os_config', 'package_config', 'flavor_config'
+]
+RESP_FLAVORS_FIELDS = [
+    'id', 'name', 'display_name', 'template', 'roles'
 ]
 
 
@@ -174,6 +178,32 @@ def get_flavor_metadata(flavor_id, user=None, session=None, **kwargs):
     return {
         'flavor_config': get_flavor_metadata_internal(session, flavor_id)
     }
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_METADATAS
+)
+@utils.wrap_to_dict(RESP_FLAVORS_FIELDS)
+def list_flavors(user=None, session=None, **filters):
+    """List flavors."""
+    return utils.list_db_objects(
+        session, models.AdapterFlavor, **filters
+    )
+
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_METADATAS
+)
+@utils.wrap_to_dict(RESP_FLAVORS_FIELDS)
+def get_flavor(flavor_id, user=None, session=None, **kwargs):
+    """Get flavor."""
+    return utils.get_db_object(
+        session, models.AdapterFlavor, id=flavor_id
+    )
 
 
 def get_os_metadata_internal(session, os_id):

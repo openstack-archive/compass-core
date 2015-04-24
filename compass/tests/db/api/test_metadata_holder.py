@@ -310,6 +310,55 @@ class TestGetPackageOsMetadata(MetadataTestCase):
         )
 
 
+class TestListFlavors(MetadataTestCase):
+    def setUp(self):
+        super(TestListFlavors, self).setUp()
+
+    def tesrDown(self):
+        super(TestListFlavors, self).tearDown()
+
+    def test_list_flavors(self):
+        """Test list flavors."""
+        flavors = metadata.list_flavors(
+            user=self.user_object
+        )
+        flavor_name = []
+        for flavor in flavors:
+            flavor_name.append(flavor['name'])
+        expected = [
+            'allinone',
+            'multiroles',
+            'HA-multinodes',
+            'single-contoller-multi-compute'
+        ]
+        for expect in expected:
+            self.assertIn(expect, flavor_name)
+
+
+class TestGetFlavors(MetadataTestCase):
+    def setUp(self):
+        super(TestGetFlavors, self).setUp()
+
+    def tearDown(self):
+        super(TestGetFlavors, self).tearDown()
+
+    def test_get_flavor(self):
+        """Test get a flavor."""
+        flavor = metadata.get_flavor(
+            self.flavor_id,
+            user=self.user_object
+        )
+        expected = {
+            'display_name': 'Multi-node Cluster with HA',
+            'id': 3,
+            'template': 'ha_multinodes.tmpl',
+            'name': 'HA-multinodes'
+        }
+        self.assertTrue(
+            all(item in flavor.items() for item in expected.items())
+        )
+
+
 if __name__ == '__main__':
     flags.init()
     logsetting.init()

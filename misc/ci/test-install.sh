@@ -7,11 +7,11 @@ if [[ $? -eq 0 ]] ; then
 else
     brctl addbr installation
     brctl addif installation eth1
-    ifconfig eth1 up
-    dhclient -r eth1
-    dhclient -r installation
-    dhclient installation
 fi
+
+ifconfig installation 172.16.0.1 broadcast 172.16.0.0 netmask 255.255.0.0 up
+ifconfig eth1 up
+
 # kill the dhcp service started by libvirt to avoid conflict with dhcpd
 killall dnsmasq
 source compass-core/install/install.conf.template

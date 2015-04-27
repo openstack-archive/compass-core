@@ -1,0 +1,9 @@
+Verified+2: Jenkins
+Code-Review+2: Weidong Shao <weidong.shao@huawei.com>
+Workflow+1: Weidong Shao <weidong.shao@huawei.com>
+Verified+1: Compass CI <dev-team@syscompass.org>
+Submitted-by: Jenkins
+Submitted-at: Mon, 27 Apr 2015 23:32:46 +0000
+Reviewed-on: https://review.openstack.org/177478
+Project: stackforge/compass-core
+Branch: refs/heads/dev/experimental

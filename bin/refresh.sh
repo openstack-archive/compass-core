@@ -10,6 +10,8 @@ service rsyslog restart
 service redis restart
 sleep 10
 redis-cli flushall
+service cobblerd restart
+chef-server-ctl restart
 service compass-celeryd restart
 service compass-progress-updated restart
 

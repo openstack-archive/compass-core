@@ -163,9 +163,6 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo killall -9 celery
-sudo service compass-celeryd restart
-sudo sleep 10
 sudo service compass-celeryd status |grep running
 if [[ "$?" != "0" ]]; then
     echo "compass-celeryd is not started"

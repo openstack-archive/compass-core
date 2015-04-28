@@ -27,7 +27,13 @@
             #if $val.is_mgmt
                 #set $rekeyed[$dns_key] = $dns
             #else
-                #set $rekeyed[$dns_key] = '-'.join(($dns, $nic))
+                #if '.' in $dns
+                    #set $dns_name, $dns_domain = $dns.split('.', 1)
+                    #set $dns_nic = '%s-%s.%s' % ($dns_name, $nic, $dns_domain)
+                #else
+                    #set $dns_nic = '%s-%s' % ($dns, $nic)
+                #end if
+                #set $rekeyed[$dns_key] = $dns_nic
             #end if
 
             #if $val.is_promiscuous:

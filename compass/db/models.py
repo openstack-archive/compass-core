@@ -1152,42 +1152,43 @@ class ClusterState(BASE, StateMixin):
             self.completed_hosts = 0
         if self.state == 'INSTALLING':
             cluster.reinstall_distributed_system = False
-            if not cluster.distributed_system:
-                for clusterhost in clusterhosts:
-                    host = clusterhost.host
-                    host_state = host.state.state
-                    if host_state == 'INSTALLING':
-                        self.installing_hosts += 1
-                    elif host_state == 'ERROR':
-                        self.failed_hosts += 1
-                    elif host_state == 'SUCCESSFUL':
-                        self.completed_hosts += 1
+
+        if not cluster.distributed_system:
+            for clusterhost in clusterhosts:
+                host = clusterhost.host
+                host_state = host.state.state
+                if host_state == 'INSTALLING':
+                    self.installing_hosts += 1
+                elif host_state == 'ERROR':
+                    self.failed_hosts += 1
+                elif host_state == 'SUCCESSFUL':
+                    self.completed_hosts += 1
+        else:
+            for clusterhost in clusterhosts:
+                clusterhost_state = clusterhost.state.state
+                if clusterhost_state == 'INSTALLING':
+                    self.installing_hosts += 1
+                elif clusterhost_state == 'ERROR':
+                    self.failed_hosts += 1
+                elif clusterhost_state == 'SUCCESSFUL':
+                    self.completed_hosts += 1
+        if self.total_hosts:
+            if self.completed_hosts == self.total_hosts:
+                self.percentage = 1.0
             else:
-                for clusterhost in clusterhosts:
-                    clusterhost_state = clusterhost.state.state
-                    if clusterhost_state == 'INSTALLING':
-                        self.installing_hosts += 1
-                    elif clusterhost_state == 'ERROR':
-                        self.failed_hosts += 1
-                    elif clusterhost_state == 'SUCCESSFUL':
-                        self.completed_hosts += 1
-            if self.total_hosts:
-                if self.completed_hosts == self.total_hosts:
-                    self.percentage = 1.0
-                else:
-                    self.percentage = (
-                        float(self.completed_hosts)
-                        /
-                        float(self.total_hosts)
-                    )
-            self.message = (
-                'total %s, installing %s, completed: %s, error %s'
-            ) % (
-                self.total_hosts, self.installing_hosts,
-                self.completed_hosts, self.failed_hosts
-            )
-            if self.failed_hosts:
-                self.severity = 'ERROR'
+                self.percentage = (
+                    float(self.completed_hosts)
+                    /
+                    float(self.total_hosts)
+                )
+        self.message = (
+            'total %s, installing %s, completed: %s, error %s'
+        ) % (
+            self.total_hosts, self.installing_hosts,
+            self.completed_hosts, self.failed_hosts
+        )
+        if self.failed_hosts:
+            self.severity = 'ERROR'
 
         super(ClusterState, self).update()
 

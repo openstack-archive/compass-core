@@ -232,21 +232,23 @@ class ActionHelper(object):
                                                            **config)
 
     @staticmethod
-    def update_state(cluster_id, host_id_list, user):
+    def update_state(
+        cluster_id, host_id_list, user, **kwargs
+    ):
         # update all clusterhosts state
         for host_id in host_id_list:
             cluster_db.update_cluster_host_state(
                 cluster_id,
                 host_id,
                 user=user,
-                state='INSTALLING'
+                **kwargs
             )
 
         # update cluster state
         cluster_db.update_cluster_state(
             cluster_id,
             user=user,
-            state='INSTALLING'
+            **kwargs
         )
 
     @staticmethod

@@ -46,14 +46,27 @@ def deploy(cluster_id, hosts_id_list, username=None):
         hosts_info = util.ActionHelper.get_hosts_info(
             cluster_id, hosts_id_list, user)
 
-        deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
-        # deploy_manager.prepare_for_deploy()
-        logging.debug('Created deploy manager with %s %s %s'
-                      % (adapter_info, cluster_info, hosts_info))
-
-        deployed_config = deploy_manager.deploy()
-        util.ActionHelper.save_deployed_config(deployed_config, user)
-        util.ActionHelper.update_state(cluster_id, hosts_id_list, user)
+        deploy_successful = True
+        try:
+            deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
+            # deploy_manager.prepare_for_deploy()
+            logging.debug('Created deploy manager with %s %s %s'
+                          % (adapter_info, cluster_info, hosts_info))
+            deployed_config = deploy_manager.deploy()
+        except Exception as error:
+            logging.exception(error)
+            deploy_successful = False
+        
+	if deploy_successful:    
+            util.ActionHelper.save_deployed_config(deployed_config, user)
+            util.ActionHelper.update_state(
+                cluster_id, hosts_id_list, user, state='INSTALLING'
+            )
+        else:
+            util.ActionHelper.update_state(
+                cluster_id, hosts_id_list, user, state='ERROR',
+                message='failed to start deployment', severity='ERROR'
+            )
 
 
 def redeploy(cluster_id, hosts_id_list, username=None):
@@ -75,10 +88,23 @@ def redeploy(cluster_id, hosts_id_list, username=None):
         hosts_info = util.ActionHelper.get_hosts_info(
             cluster_id, hosts_id_list, user)
 
-        deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
-        # deploy_manager.prepare_for_deploy()
-        deploy_manager.redeploy()
-        util.ActionHelper.update_state(cluster_id, hosts_id_list, user)
+        deploy_successful = True
+        try:
+            deploy_manager = DeployManager(adapter_info, cluster_info, hosts_info)
+            # deploy_manager.prepare_for_deploy()
+            deploy_manager.redeploy()
+        except Exception as error:
+            logging.exception(error)
+            deploy_successful = False
+        if deploy_successful:
+            util.ActionHelper.update_state(
+                cluster_id, hosts_id_list, user, state='INSTALLING',
+            )
+        else:
+            util.ActionHelper.update_state(
+                cluster_id, hosts_id_list, user, state='ERROR',
+                message='failed to start redeployment', severity='ERROR'
+            )
 
 
 def health_check(cluster_id, report_uri, username):

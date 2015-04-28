@@ -134,6 +134,7 @@ UPDATED_CLUSTERHOST_STATE_INTERNAL_FIELDS = [
     'ready'
 ]
 UPDATED_CLUSTER_STATE_FIELDS = ['state']
+IGNORE_UPDATED_CLUSTER_STATE_FIELDS = ['percentage', 'message', 'severity']
 UPDATED_CLUSTER_STATE_INTERNAL_FIELDS = ['ready']
 RESP_CLUSTERHOST_LOG_FIELDS = [
     'clusterhost_id', 'id', 'host_id', 'cluster_id',
@@ -1916,7 +1917,7 @@ def update_clusterhost_state_internal(
 
 @utils.supported_filters(
     optional_support_keys=UPDATED_CLUSTER_STATE_FIELDS,
-    ignore_support_keys=IGNORE_FIELDS
+    ignore_support_keys=IGNORE_FIELDS+IGNORE_UPDATED_CLUSTER_STATE_FIELDS
 )
 @database.run_in_session()
 @user_api.check_user_permission_in_session(

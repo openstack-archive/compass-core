@@ -1379,12 +1379,11 @@ def convert_flavor_metadata(flavor_id):
         flavor_id, user=current_user
     )
     metadata = metadatas['flavor_config']
-    clusters = cluster_api.list_clusters(
+    flavor = metadata_api.get_flavor(
+        flavor_id,
         user=current_user
     )
-    for cluster in clusters:
-        if cluster['flavor']['id'] == flavor_id:
-            flavor_name = cluster['flavor_name'].replace('-', '_')
+    flavor_name = flavor['name'].replace('-', '_')
     configs = util.load_configs(setting.FLAVOR_MAPPING_DIR)
     for item in configs:
         if flavor_name in item.keys():

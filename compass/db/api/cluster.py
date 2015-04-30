@@ -467,8 +467,8 @@ def update_cluster_config(cluster_id, user=None, session=None, **kwargs):
         )
 
     def package_config_validates(config):
-        metadata_api.validate_package_config(
-            session, config, adapter_id=cluster.adapter_id
+        metadata_api.validate_flavor_config(
+            session, config, flavor_id=cluster.flavor.id
         )
 
     @utils.input_validates(
@@ -511,8 +511,8 @@ def patch_cluster_config(cluster_id, user=None, session=None, **kwargs):
         )
 
     def package_config_validates(config):
-        metadata_api.validate_package_config(
-            session, config, adapter_id=cluster.adapter_id
+        metadata_api.validate_flavor_config(
+            session, config, flavor_id=cluster.flavor.id
         )
 
     @utils.output_validates(
@@ -1081,8 +1081,8 @@ def _update_clusterhost_config(session, user, clusterhost, **kwargs):
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
         is_cluster_editable(session, cluster, user)
-        metadata_api.validate_package_config(
-            session, package_config, cluster.adapter_id
+        metadata_api.validate_flavor_config(
+            session, package_config, cluster.flavor.id
         )
 
     @utils.supported_filters(
@@ -1241,8 +1241,8 @@ def _patch_clusterhost_config(session, user, clusterhost, **kwargs):
     def package_config_validates(package_config):
         cluster = clusterhost.cluster
         is_cluster_editable(session, cluster, user)
-        metadata_api.validate_package_config(
-            session, package_config, cluster.adapter_id
+        metadata_api.validate_flavor_config(
+            session, package_config, cluster.flavor.id
         )
 
     @utils.supported_filters(
@@ -1528,8 +1528,8 @@ def review_cluster(cluster_id, review={}, user=None, session=None, **kwargs):
         cluster=cluster
     )
     if package_config:
-        metadata_api.validate_package_config(
-            session, package_config, cluster.adapter_id, True
+        metadata_api.validate_flavor_config(
+            session, package_config, cluster.flavor.id, True
         )
         for clusterhost in clusterhosts:
             clusterhost_package_config = copy.deepcopy(
@@ -1542,9 +1542,9 @@ def review_cluster(cluster_id, review={}, user=None, session=None, **kwargs):
             deployed_package_config = util.merge_dict(
                 package_config, clusterhost_package_config
             )
-            metadata_api.validate_package_config(
+            metadata_api.validate_flavor_config(
                 session, deployed_package_config,
-                cluster.adapter_id, True
+                cluster.flavor.id, True
             )
             validate_clusterhost(session, clusterhost)
             utils.update_db_object(

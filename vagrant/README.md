@@ -17,7 +17,15 @@ run:
 ./launch.sh
 ```
 
-after launch finishes, to access compass server:
+or 
+
+```
+./launch.sh --recreate
+```
+
+the "recreate" flag will destroy all configured vms and hostonly networks in VirtualBox.
+
+After launch finishes, to access compass server:
 
 ```
 vagrant ssh

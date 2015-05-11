@@ -90,6 +90,48 @@ class TestAddSwitch(BaseTest):
         self.assertEqual(expected, add_switch['ip'])
 
 
+class TestAddSwitches(BaseTest):
+    """Test add switches."""
+
+    def setUp(self):
+        super(TestAddSwitches, self).setUp()
+
+    def tearDown(self):
+        super(TestAddSwitches, self).tearDown()
+
+    def test_add_switches(self):
+        data = [
+            {
+                'ip': '172.29.8.30',
+                'vendor': 'Huawei',
+                'credentials': {
+                    "version": "2c",
+                    "community": "public"
+                }
+            }, {
+                'ip': '172.29.8.40'
+            }, {
+                'ip': '172.29.8.40'
+            }
+        ]
+        switches = switch.add_switches(
+            data=data,
+            user=self.user_object
+        )
+        ip = []
+        for item in switches['switches']:
+            ip.append(item['ip'])
+        fail_ip = []
+        for item in switches['fail_switches']:
+            fail_ip.append(item['ip'])
+        expected = ['172.29.8.30', '172.29.8.40']
+        expected_fail = ['172.29.8.40']
+        for expect in expected:
+            self.assertIn(expect, ip)
+        for expect_fail in expected_fail:
+            self.assertIn(expect_fail, fail_ip)
+
+
 class TestListSwitches(BaseTest):
     """Test list switch."""
 
@@ -369,6 +411,49 @@ class TestAddSwitchMachine(BaseTest):
             )
         expected = '28:6e:d4:46:c4:25'
         self.assertEqual(expected, add_switch_machine['mac'])
+
+
+class TestAddSwitchMachines(BaseTest):
+    """Test add switch machines."""
+    def setUp(self):
+        super(TestAddSwitchMachines, self).setUp()
+
+    def tearDown(self):
+        super(TestAddSwitchMachines, self).tearDown()
+
+    def test_add_switch_machines(self):
+        data = [{
+            'switch_ip': '0.0.0.0',
+            'mac': '1a:2b:3c:4d:5e:6f',
+            'port': '100'
+        }, {
+            'switch_ip': '0.0.0.0',
+            'mac': 'a1:b2:c3:d4:e5:f6',
+            'port': '101'
+        }, {
+            'switch_ip': '0.0.0.0',
+            'mac': 'a1:b2:c3:d4:e5:f6',
+            'port': '103'
+        }, {
+            'switch_ip': '0.0.0.0',
+            'mac': 'a1:b2:c3:d4:e5:f6',
+            'port': '101'
+        }]
+        add_switch_machines = switch.add_switch_machines(
+            data=data, user=self.user_object
+        )
+        mac = []
+        failed_mac = []
+        for switch_machine in add_switch_machines['switches_machines']:
+            mac.append(switch_machine['mac'])
+        for failed_switch in add_switch_machines['fail_switches_machines']:
+            failed_mac.append(failed_switch['mac'])
+        expect = ['1a:2b:3c:4d:5e:6f', 'a1:b2:c3:d4:e5:f6']
+        expect_fail = ['a1:b2:c3:d4:e5:f6']
+        for item in expect:
+            self.assertIn(item, mac)
+        for item in expect_fail:
+            self.assertIn(item, failed_mac)
 
 
 class TestListSwitchMachines(BaseTest):

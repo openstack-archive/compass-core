@@ -644,6 +644,33 @@ class TestSwitchAPI(ApiTestCase):
         return_value = self.post(url, data)
         self.assertEqual(return_value.status_code, 400)
 
+    def test_add_switches(self):
+        # add switches
+        url = '/switchesbatch'
+        data = [
+            {
+                'ip': '172.29.8.30',
+                'vendor': 'Huawei',
+                'credentials': {
+                    "version": "2c",
+                    "community": "public"
+                }
+            }, {
+                'ip': '172.29.8.40'
+            }
+        ]
+        return_value = self.post(url, data)
+        resp = json.loads(return_value.get_data())
+        success = []
+        fail = []
+        for item in resp['switches']:
+            success.append(item['ip'])
+        for item in resp['fail_switches']:
+            fail.append(item['ip'])
+        self.assertEqual(return_value.status_code, 200)
+        self.assertIn('172.29.8.30', success)
+        self.assertIn('172.29.8.40', fail)
+
     def test_update_switch(self):
         # update a swithc successfully
         url = '/switches/1'
@@ -957,6 +984,83 @@ class TestSwitchMachines(ApiTestCase):
         }
         return_value = self.post(url, data)
         self.assertEqual(return_value.status_code, 400)
+
+    def test_add_switch_machines(self):
+        # batch switch machines
+        url = '/switches'
+        return_value = self.get(url)
+
+        url = '/switches/machines'
+        data = [{
+            "switch_ip": "0.0.0.0",
+            "mac": "1a:2b:3c:4d:5e:6f",
+            "port": "100"
+        }, {
+            "switch_ip": "0.0.0.0",
+            "mac": "a1:b2:c3:d4:e5:f6",
+            "port": "101"
+        }, {
+            "switch_ip": "0.0.0.0",
+            "mac": "a1:b2:c3:d4:e5:f6",
+            "port": "101"
+        }, {
+            "switch_ip": "0.0.0.0",
+            "mac": "a1:b2:c3:d4:e5:f6",
+            "port": "102"
+        }, {
+            "switch_ip": "10.10.10.1",
+            "mac": "b1:b2:c3:d4:e5:f6",
+            "port": "200"
+        }, {
+            "switch_ip": "127.0.0.2",
+            "mac": "a1:b2:f3:d4:e5:f6",
+            "port": "100"
+        }]
+        return_value = self.post(url, data)
+        expected = [{
+            'switch_ip': '0.0.0.0',
+            'port': '100',
+            'mac': '1a:2b:3c:4d:5e:6f'
+        }, {
+            'switch_ip': '0.0.0.0',
+            'port': '101',
+            'mac': 'a1:b2:c3:d4:e5:f6'
+        }, {
+            'switch_ip': '10.10.10.1',
+            'port': '200',
+            'mac': 'b1:b2:c3:d4:e5:f6'
+        }]
+        expect_duplicate = {'mac': 'a1:b2:c3:d4:e5:f6', 'port': '101'}
+        expect_failed = [
+            {'mac': 'a1:b2:f3:d4:e5:f6', 'port': '100'},
+            {'mac': 'a1:b2:c3:d4:e5:f6', 'port': '102'}
+        ]
+        resp = json.loads(return_value.get_data())
+        res = []
+        res_du = []
+        res_fail = []
+        for k, v in resp.items():
+            if k == 'switches_machines':
+                for item in v:
+                    res.append(item)
+            if k == 'duplicate_switches_machines':
+                for item in v:
+                    res_du.append(item)
+            if k == 'fail_switches_machines':
+                for item in v:
+                    res_fail.append(item)
+        for i, v in enumerate(res):
+            self.assertTrue(
+                all(item in res[i].items() for item in expected[i].items())
+            )
+        for i, v in enumerate(res_fail):
+            self.assertTrue(
+                all(item in res_fail[i].items() for
+                    item in expect_failed[i].items())
+            )
+        self.assertTrue(
+            all(item in res_du[0].items() for item in expect_duplicate.items())
+        )
 
     def test_show_switch_machine(self):
         # show a switch_machine successfully

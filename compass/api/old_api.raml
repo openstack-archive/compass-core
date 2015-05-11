@@ -1,0 +1,3297 @@
+#%RAML 0.8
+title: Compass
+version: v1
+baseUri: http://compass.org
+/permissions:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              [
+                  {
+                      "alias": "list permissions",
+                      "description": "list all permissions",
+                      "id": 1,
+                      "name": "list_permissions"
+                  },
+              ]
+    description: List all permissions
+  /{permission_id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                [
+                  {
+                    "alias": "list permissions",
+                    "description": "list all permissions",
+                    "id": 1,
+                    "name": "list_permissions"
+                  }
+                ]
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  message: "Cannot find the record in table Permission: {'id': '<permission_id>'}"
+                }
+      description: List a specific permission info
+/users:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: | 
+              [
+                {
+                        “id”: 1,
+                         “email”: “someuser@email.com”,
+                         “first_name”: “”,
+                         “last_name”: “”,
+                         “is_admin”: false,
+                         “active”: true,
+                         “created_at”: “--timestamp---”,
+                         “last_login_at”: “--timestamp---”
+                },
+              ]
+
+    description: Lists information for all users
+    queryParameters:
+      email:
+      is_admin:
+      active:
+  post:
+    responses:
+      201:
+        body:
+          application/json:
+            example: |
+              {
+                “id”: 3,
+                “email”: “user3@someemail.com”,
+                “first_name”: “”,
+                “last_name”: “”,
+                “is_admin”: false,
+                “active”: true,
+                 “created_at”: “--timestamp---”,
+                 “last_login_at”: “--timestamp---”
+              }
+      400:
+        body:
+          application/json:
+            example: |
+              {
+                "bad request"
+              }
+      403:
+        body:
+          application/json:
+            example: |
+              {
+                "forbidden"
+              }
+      409:
+        body:
+          application/json:
+            example: |
+              {
+                “message”: “The user already exists!”
+              }
+    queryParameters:
+      email:
+        example: "user3@someemail.com"
+        required: true
+      password:
+        example: "123456"
+        required: true
+      first_name:
+        required: false
+      last_name:
+        required: false
+    description: Creates a user(admin only)
+  /{user_id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                   “id”: 1,
+                   “email”: “someuser@email.com”,
+                   “first_name”: “”,
+                   “last_name”: “”,
+                   “is_admin”: false,
+                   “active”: true,
+                   “created_at”: “2014-03-25 12:00:00”,
+                   “last_login_at”: “2014-03-25 12:05:00
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “The user with id ‘some--id--’ cannot be found!”
+                }
+      description: Lists information for a specific user
+    put:
+      responses:
+        201:
+          body:
+            application/json:
+              example: |
+                {
+                   “id”: 3,
+                   “email”: “user3@someemail.com”,
+                   “first_name”: “”,
+                   “last_name”: “”,
+                   “is_admin”: false,
+                   “active”: true
+                }
+        409:
+          body:
+            application/json:
+              example: |
+                {
+                   “message”: “The user with id ‘some--id--’ cannot be found!”
+                }
+      queryParameters:
+        password:
+          example: "78910"
+      description: Updates user’s information
+    delete:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    “id”: 3,
+                    “email”: “user3@someemail.com”,
+                    “first_name”: “”,
+                    “last_name”: “”,
+                    “is_admin”: false,
+                    “active”: true
+                }
+        409:
+          body:
+            application/json:
+              example: |
+                {
+                   “message”: “The user cannot be found!”
+                }
+      description: Deletes a user(admin only)
+    /permissions:
+      get:
+        responses:
+           200:
+            body:
+              application/json:
+                example: |
+                  [
+                      {
+                          "created_at": "2014-10-17 16:28:21",
+                          "user_id": 1,
+                          "description": "list all permissions",
+                          "permission_id": 1,
+                          "updated_at": "2014-10-17 16:28:21",
+                          "alias": "list permissions",
+                          "id": 1,
+                          "name": "list_permissions"
+                      }
+                  ]
+           409:
+              body:
+                application/json:
+                  example: |
+                    {
+                       “type”: “itemNotFound”,
+                       “message”: “The user with id ‘some--id--’ cannot be found!”
+                    }
+        description: Lists permissions for a specified user
+    /action:
+      post:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  Add permission:
+                  
+                  [
+                    {
+                        "created_at": "2014-10-17 16:28:21",
+                        "user_id": 1,
+                        "description": "list all permissions",
+                        "permission_id": 1,
+                        "updated_at": "2014-10-17 16:28:21",
+                        "alias": "list permissions",
+                        "id": 1,
+                        "name": "list_permissions"
+                    }
+                  ]
+                  
+                  Remove permission:
+                  
+                  [
+                      {
+                          "created_at": "2014-10-17 16:28:21",
+                          "user_id": 1,
+                          "description": "list all permissions",
+                          "permission_id": 1,
+                          "updated_at": "2014-10-17 16:28:21",
+                          "alias": "list permissions",
+                          "id": 1,
+                          "name": "list_permissions"
+                      }
+                  ]
+                  
+                  Set Permission:
+                  
+                  [
+                      {
+                          "created_at": "2014-10-17 16:28:21",
+                          "user_id": 1,
+                          "description": "list all permissions",
+                          "permission_id": 1,
+                          "updated_at": "2014-10-17 16:28:21",
+                          "alias": "list permissions",
+                          "id": 1,
+                          "name": "list_permissions"
+                      }
+                  ]
+                  
+                  Enable user:
+                  
+                  {
+                      "created_at": "2014-10-17 16:28:21",
+                      "updated_at": "2014-10-17 16:28:21",
+                      "email": "admin@huawei.com",
+                      "is_admin": true,
+                      "active": true,
+                      "id": 1
+                  }
+                  
+                  Disable user:
+                  
+                  {
+                      "created_at": "2014-10-17 16:28:21",
+                      "updated_at": "2014-10-17 16:28:21",
+                      "email": "admin@huawei.com",
+                      "is_admin": true,
+                      "active": true,
+                      "id": 1
+                  }
+          409:
+            body:
+              application/json:
+                example: |
+                  {
+                     “type”: “itemNotFound”,
+                     “message”: “The user cannot be found!”
+                  }
+        queryParameters:
+          add_permissions:
+            example: "[1,2,3]"
+          remove_permissions:
+            example: "{
+                  “permissions” : [1]
+               }"
+          set_permissions:
+            example: '{"permissions" : "all"}'
+          enable_user:
+            example: null
+          disable_user:
+            example: null
+        description: Adds/Removes permissions, Enable/Disable a user (admin only)
+  /token:
+    post:
+      responses:
+        200:
+            body:
+              application/json:
+                example: |
+                  {
+                      "expire_timestamp": "2014-10-06 13:25:23",
+                      "token": "$1$c1ZWGYEn$WTg57cnP4pEwd9JMJ7beS/",
+                      "user_id": 1,
+                      "id": 3
+                  }
+        409:
+          body:
+            application/json:
+              example: |
+                {
+                    “type”: “unauthorized”,
+                    “message”: “Either email or password is wrong!”
+                }
+      queryParameters:
+        email:
+          example: someone@someemail.com
+        password: 
+          example: 123456
+      description: Authenticates and generates a token
+  /login:
+    post:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "expire_timestamp": "2014-10-06 13:25:23",
+                    "token": "$1$c1ZWGYEn$WTg57cnP4pEwd9JMJ7beS/",
+                    "user_id": 1,
+                    "id": 3
+                }
+        401:
+          body:
+            application/json:
+              example: |
+                {
+                    “type”: “unauthorized”,
+                    “message”: “Either email or password is wrong!”
+                }
+        403:
+          body:
+            application/json:
+              example: |
+                {
+                    “type”: “userDisabled”,
+                    “message”: “User is disabled !”
+                }
+      queryParameters:
+        email:
+          example: someone@someemail.com
+        password: 
+          example: 123456
+      description: Login
+  /logout:
+    post:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                [
+                    {
+                        "expire_timestamp": "2014-10-17 18:30:29",
+                        "token": "$1$AFqIS5Kn$1ASgOkPv.G1a7pkRRHKY.0",
+                        "user_id": 1,
+                        "id": 1
+                    }
+                ]
+        401:
+          body:
+            application/json:
+              example: |
+                {
+                     "message": "invalid user token: $1$AFqIS5Kn$1ASgOkPv.G1a7pkRRHKY.0",
+                }
+      description: Logout
+      
+      
+      
+  
+    
+/switches:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              [
+                  {
+                      "ip": "172.29.8.40",
+                      "created_at": "2014-10-17 17:28:06",
+                      "updated_at": "2014-10-17 17:28:06",
+                      "state": "initialized",
+                      "filters": "",
+                      "credentials": {
+                          "version": "2c",
+                          "community": "public"
+                      },
+                      "id": 2
+                  }
+              ]
+    description: Lists switches
+  post:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                  "ip": "172.29.8.40",
+                  "created_at": "2014-10-17 17:28:06",
+                  "updated_at": "2014-10-17 17:28:06",
+                  "state": "initialized",
+                  "filters": "",
+                  "credentials": {
+                      "version": "2c",
+                      "community": "public"
+                  },
+                  "id": 2
+              }
+      409:
+        body:
+          application/json:
+            example: |
+              {
+                “message”: “IP address ‘192.168.1.1’ already exists”
+              }
+    queryParameters:
+      ip: 
+        example: 172.29.8.40
+      credentials: 
+        example: '{ 
+                    “version”: “2c”,
+                    “community”: “public”
+                  }'
+
+    description: Creates a switch
+  /{switch_id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "ip": "172.29.8.40",
+                    "created_at": "2014-10-17 17:28:06",
+                    "updated_at": "2014-10-17 17:28:06",
+                    "state": "initialized",
+                    "filters": "",
+                    "credentials": {
+                        "version": "2c",
+                        "community": "public"
+                    },
+                    "id": 2
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “Cannot find the switch which id is ‘1’.”
+                }
+      description: Lists a switch
+    put:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "ip": "172.29.8.40",
+                    "created_at": "2014-10-17 17:28:06",
+                    "updated_at": "2014-10-17 17:28:06",
+                    "state": "initialized",
+                    "filters": "",
+                    "credentials": {
+                        "version": "2c",
+                        "community": "private"
+                    },
+                    "id": 2
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   “message”: “Cannot update the switch which id is ‘1’! The         switch does not exists.”
+                }
+      queryParameters:
+        ip:
+        credentials:
+          example: '{
+                     “version”: “2c”,
+                     “community”: “private”
+                    }'
+        vendor:
+        state:
+        err_msg:
+        filters:
+      description: Set the switch properties
+    patch:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "ip": "172.29.8.40",
+                    "created_at": "2014-10-17 17:28:06",
+                    "updated_at": "2014-10-17 17:28:06",
+                    "state": "initialized",
+                    "filters": "",
+                    "credentials": {
+                        "version": "3",
+                        "community": "public"
+                    },
+                    "id": 2
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   “message”: “Cannot update the switch which id is ‘1’! The         switch does not exists.”
+                }
+      queryParameters:
+        ip:
+        credentials:
+          example: '{
+                     “version”: “3”
+                    }'
+        filters:
+      description: Updates the switch properties
+    delete:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "ip": "172.29.8.41",
+                    "created_at": "2014-10-17 17:45:17",
+                    "updated_at": "2014-10-17 17:45:17",
+                    "state": "initialized",
+                    "filters": "",
+                    "credentials": {
+                        "version": "2c",
+                        "community": "public"
+                    },
+                    "id": 3
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   "message": "Cannot find the record in table Switch: {'id': 4}"
+                }
+      description: Delete switch
+    /machines:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  Get:
+                  [
+                      {
+                          "vlans": [],
+                          "updated_at": "2014-10-17 18:02:21",
+                          "created_at": "2014-10-17 18:02:21",
+                          "switch_id": 3,
+                          "id": 1,
+                          "mac": "28:6e:d4:46:c4:25",
+                          "tag": {},
+                          "location": {},
+                          "switch_ip": "172.29.8.41",
+                          "ipmi_credentials": {},
+                          "machine_id": 1,
+                          "port": "10",
+                          "switch_machine_id": 204
+                      }
+                  ]
+        queryParameters:
+          port:
+          portStart:
+          portEnd:
+          portRange: 
+          PortPrefix: 
+          PortSuffix: 
+          vlans: 
+          mac: 
+          tag: 
+          location:
+        description: Lists machines for a specified switch
+      post:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    “id”: 1,
+                    “mac”: “28:6e:d4:47:c8:6c”,
+                    “vlan”: 1,
+                    “port”: “10”
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                    “message”: “ The switch does not exists.”
+                  }
+        queryParameters:
+          mac:
+            example: “28:6e:d4:47:c8:6c”
+            required: true
+          port:
+            example: “10”
+            required: true
+          vlans:
+            example: 1 
+          ipmi_credentials: 
+            example: '{
+                        “ip”: “---some--ip---”,
+                        “username”: “--some--username--”,
+                        “password”: “---some---password---”
+                      }'
+          tag: 
+          location:
+            example: '{
+                   “column”: “xxx”,
+                   “row”: “xxx”,
+                   “unit”: “xxx”,
+                   “building”: “xxx”,
+                   “city”: “xxx”
+            }'
+        description: Manually add  a machine
+  /{id}/machines/{machine_id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "vlans": [
+                        88
+                    ],
+                    "updated_at": "2014-10-17 17:40:13",
+                    "created_at": "2014-10-17 17:40:13",
+                    "switch_id": 2,
+                    "id": 1,
+                    "mac": "28:6e:d4:46:c4:25",
+                    "tag": {},
+                    "location": {},
+                    "switch_ip": "172.29.8.40",
+                    "ipmi_credentials": {},
+                    "machine_id": 1,
+                    "port": "7",
+                    "switch_machine_id": 1
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   "message": "Cannot find the record in table SwitchMachine: {'machine_id': 1000, 'switch_id': 2}"
+                }
+      description: Get machine of a specified switch
+    put:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "vlans": [
+                        88
+                    ],
+                    "updated_at": "2014-10-17 17:40:13",
+                    "created_at": "2014-10-17 17:40:13",
+                    "switch_id": 2,
+                    "id": 1,
+                    "mac": "28:6e:d4:46:c4:25",
+                    "tag": {},
+                    "location": {
+                        "building": "E5"
+                    },
+                    "switch_ip": "172.29.8.40",
+                    "ipmi_credentials": {},
+                    "machine_id": 1,
+                    "port": "7",
+                    "switch_machine_id": 1
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   "message": "Cannot find the record in table SwitchMachine: {'machine_id': 1000, 'switch_id': 2}"
+                }
+      queryParameters:
+        port: 
+        vlans: 
+        ipmi_credentials:
+        tag: 
+        location:
+          example:
+            '{"building": "E5"}'
+      description: set machine property of a specified switch
+    patch:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "vlans": [
+                        88
+                    ],
+                    "updated_at": "2014-10-17 17:40:13",
+                    "created_at": "2014-10-17 17:40:13",
+                    "switch_id": 2,
+                    "id": 1,
+                    "mac": "28:6e:d4:46:c4:25",
+                    "tag": {},
+                    "location": {
+                        "building": "E5",
+                        "city": "beijing"
+                    },
+                    "switch_ip": "172.29.8.40",
+                    "ipmi_credentials": {},
+                    "machine_id": 1,
+                    "port": "7",
+                    "switch_machine_id": 1
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   "message": "Cannot find the record in table SwitchMachine: {'machine_id': 1000, 'switch_id': 2}"
+                }
+      queryParameters:
+        vlans: 
+        ipmi_credentials: 
+        tag: 
+        location:
+          example: '{"city": "beijing"}'
+      description: update machine property of a specified switch
+    delete:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "vlans": [
+                        88
+                    ],
+                    "updated_at": "2014-10-17 17:40:13",
+                    "created_at": "2014-10-17 17:40:13",
+                    "switch_id": 2,
+                    "id": 1,
+                    "mac": "28:6e:d4:46:c4:25",
+                    "tag": {},
+                    "location": {
+                        "building": "E5",
+                        "city": "beijing"
+                    },
+                    "switch_ip": "172.29.8.40",
+                    "ipmi_credentials": {},
+                    "machine_id": 1,
+                    "port": "7",
+                    "switch_machine_id": 1
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                    "message": "Cannot find the record in table SwitchMachine: {'machine_id': 1000, 'switch_id': 2}"
+                }
+      description: Delete a machine from a switch
+  /{switch_id}/action:
+    post:
+      responses:
+        202:
+          body:
+            application/json:
+              example: | 
+               find_machines:
+                
+                
+                {
+                    "status": "action {'find_machines': None} sent",
+                    "details": {}
+                }
+        200:
+          body:
+            application/json:
+              example: | 
+               add_machines:
+                
+                
+                [
+                    {
+                        "vlans": [],
+                        "updated_at": "2014-10-17 17:56:44",
+                        "created_at": "2014-10-17 17:56:44",
+                        "switch_id": 3,
+                        "id": 1,
+                        "mac": "28:6e:d4:46:c4:25",
+                        "tag": {},
+                        "location": {},
+                        "switch_ip": "172.29.8.41",
+                        "ipmi_credentials": {},
+                        "machine_id": 1,
+                        "port": "10",
+                        "switch_machine_id": 203
+                    }
+                ]
+                
+               remove_machines:
+               
+               []
+               
+               set_machines:
+               
+               
+               [
+                  {
+                      "vlans": [],
+                      "updated_at": "2014-10-17 17:56:44",
+                      "created_at": "2014-10-17 17:56:44",
+                      "switch_id": 3,
+                      "id": 1,
+                      "mac": "28:6e:d4:46:c4:25",
+                      "tag": {},
+                      "location": {},
+                      "switch_ip": "172.29.8.41",
+                      "ipmi_credentials": {},
+                      "machine_id": 1,
+                      "port": "10",
+                      "switch_machine_id": 203
+                  }
+               ]
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “Cannot update the switch which id is ‘1’! The         switch does not exists.”
+                }
+      queryParameters:
+        find_machines:
+          example: "null"
+        add_machines:
+          example: '[{"machine_id": 1, "port": "10"}]'
+        remove_machines: 
+          example: "[1]"
+        set_machines:
+          example: '[{"machine_id": 1, "port": "10"}]'
+      description: switch action like Polls a switch’s machines
+/machines:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              [
+                  {
+                      "created_at": "2014-10-17 17:40:13",
+                      "updated_at": "2014-10-17 23:22:53",
+                      "switches": [],
+                      "mac": "28:6e:d4:46:c4:25",
+                      "tag": {},
+                      "location": {
+                          "building": "E5",
+                          "city": "beijing"
+                      },
+                      "ipmi_credentials": {},
+                      "id": 1
+                  },
+              ]
+    queryParameters:
+      mac: 
+      tag: 
+      location:
+    description: Lists machines
+  /{machine_id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "created_at": "2014-10-17 17:40:13",
+                  "updated_at": "2014-10-17 23:22:53",
+                  "switches": [],
+                  "mac": "28:6e:d4:46:c4:25",
+                  "tag": {},
+                  "location": {
+                      "building": "E5",
+                      "city": "beijing"
+                  },
+                  "ipmi_credentials": {},
+                  "id": 1
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “The machine witch ID “$machine_id” cannot be found!”
+                }
+      description: Lists machines of a specific machine
+    put:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "created_at": "2014-10-17 17:40:13",
+                  "updated_at": "2014-10-17 23:58:46",
+                  "switches": [],
+                  "mac": "28:6e:d4:46:c4:25",
+                  "tag": {
+                      "builder": "huawei"
+                  },
+                  "location": {
+                      "building": "E5",
+                      "city": "beijing"
+                  },
+                  "ipmi_credentials": {},
+                  "id": 1
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “The machine witch ID “$machine_id” cannot be found!”
+                }
+      queryParameters:
+        ipmi_credentials:
+        tag:
+           example: '{“builder”: “huawei”} ' 
+        location:
+      description: set machine properties
+    patch:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "created_at": "2014-10-17 17:40:13",
+                    "updated_at": "2014-10-18 00:03:12",
+                    "switches": [],
+                    "mac": "28:6e:d4:46:c4:25",
+                    "tag": {
+                        "type": "ES200"
+                    },
+                    "location": {
+                        "building": "E5",
+                        "city": "beijing"
+                    },
+                    "ipmi_credentials": {},
+                    "id": 1
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “The machine witch ID “$machine_id” cannot be found!”
+                }
+      queryParameters:
+        ipmi_credentials:
+        tag:
+           example: '{"type": "ES200"}' 
+        location:
+      description: updatge machine properties
+    delete:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "created_at": "2014-10-17 17:40:13",
+                    "updated_at": "2014-10-18 00:03:12",
+                    "switches": [],
+                    "mac": "28:6e:d4:46:c4:25",
+                    "tag": {
+                        "type": "ES200"
+                    },
+                    "location": {
+                        "building": "E5",
+                        "city": "beijing"
+                    },
+                    "ipmi_credentials": {},
+                    "id": 1
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “The machine witch ID “$machine_id” cannot be found!”
+                }
+      description: Delete a machine (admin only)
+    /action:
+      post:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  tag example:
+                  
+                  {
+                    "created_at": "2014-10-17 17:40:13",
+                    "updated_at": "2014-10-18 00:10:58",
+                    "id": 2,
+                    "switches": [
+                        {
+                            "switch_ip": "172.29.8.40",
+                            "vlans": [
+                                88
+                            ],
+                            "port": "4"
+                        }
+                    ],
+                    "mac": "00:0c:29:2b:c9:d4",
+                    "tag": {
+                        "builder": "huawei"
+                    },
+                    "location": {},
+                    "switch_ip": "172.29.8.40",
+                    "ipmi_credentials": {},
+                    "vlans": [
+                        88
+                    ],
+                    "port": "4"
+                  }
+                  
+                  poweron/ poweroff / reset is null example:
+                  
+                  {
+                    "status": "poweron 00:0c:29:2b:c9:d4 action sent",
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                     “message”: “The machine witch ID “$machine_id” cannot be found!”
+                  }
+          400:
+            body:
+              application/json:
+                example: |
+                  {
+                      “message”: “The machine haven’t set IPMI info!”
+                  }
+        queryParameters:
+          tag:
+            example: '{“builder”: “huawei”}'
+          poweron: 
+          poweroff: 
+          reset:
+        description: machine actions
+/flavors:
+  /{flavor_id}/metadata:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "flavor_config“: {
+                    "neutron_config": {……},
+                    "security”: {……},
+                    "ha_proxy": {……},
+                    "network_mapping": {……}
+                    
+                  }
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {message: "flavor <flavor_id> does not exist"}
+      description: List specific flavor metadata.
+  /{flavor_id}/ui_metadata:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "flavor_config": 
+                    {
+                      "category": "service_credentials",
+                      "modifiable_data": [
+                        "username",
+                        "password",
+                      ]
+                      "table_display_header": [
+                        "Service",
+                        "UserName",
+                        "Password",
+                        "Action",
+                      ]
+                      "accordion_heading": "OpenStack Database and Queue Credentials",
+                      "action”: true,
+                      "data_structure": "table"
+                    },
+                    {...},
+                    {...}
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {message: "flavor <flavor_id> does not exist"}
+      description: List specific flavor ui metadata.
+/adapters:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              [{
+                  "flavors": [
+                      {
+                          "roles": [
+                              {
+                                  "display_name": "all in one compute",
+                                  "description": "all in one compute",
+                                  "adapter_id": 3,
+                                  "role_id": 35,
+                                  "flavor_id": 4,
+                                  "optional": true,
+                                  "id": 35,
+                                  "name": "allinone-compute"
+                              }
+                          ],
+                          "display_name": "All-In-One",
+                          "id": 4,
+                          "template": "allinone.tmpl",
+                          "name": "allinone"
+                      },
+                  ],
+                  "package_installer": {
+                      "id": 1,
+                      "alias": "chef_installer",
+                      "name": "chef_installer",
+                      "settings": {
+                          "chef_server_ip": "10.145.88.211",
+                          "client_name": "",
+                          "chef_server_dns": "compass",
+                          "databags": [],
+                          "chef_url": "https://10.145.88.211",
+                          "key_dir": ""
+                      }
+                  },
+                  "name": "openstack_icehouse",
+                  "os_installer": {
+                      "id": 1,
+                      "alias": "cobbler",
+                      "name": "cobbler",
+                      "settings": {
+                          "credentials": {
+                              "username": "cobbler",
+                              "password": "cobbler"
+                          },
+                          "cobbler_url": "http://10.145.88.211/cobbler_api"
+                      }
+                  },
+                  "distributed_system_id": 1,
+                  "supported_oses": [
+                      {
+                          "os_id": 1,
+                          "id": 1,
+                          "name": "Ubuntu-12.04-x86_64"
+                      },
+                      {
+                          "os_id": 2,
+                          "id": 2,
+                          "name": "CentOS-6.5-x86_64"
+                      }
+                  ],
+                  "distributed_system_name": "openstack",
+                  "display_name": "OpenStack Icehouse",
+                  "id": 3
+              }]
+    queryParameters:
+      name: 
+      distributed_system_name:
+    description: Lists information for all adapters
+  /{id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    “id” : 1,
+                    “name”: “openstack”,
+                    “display”: “OpenStack”,
+                    “os_installer”: “cobbler”,
+                    “package_installer”: “chef”,
+                     “roles”: [   {  “display_name”: “compute”, 
+                                           “name”: “os-compute-worker”
+                                        },
+                                        { “display_name”: “controller”, 
+                                           “name”: “os-controller”
+                                        },
+                                        { “display_name”: “network”,
+                                          “name”: “os-network”
+                                        },
+                                        { “display_name”: “storage”,
+                                           “name”: “os-block-storage-worker”
+                                    ],
+                    “compatible_os”: [
+                           {
+                                 “name”: “CentOs”, 
+                                 “os_id”: 1
+                           },
+                           {
+                                 “name”: “Ubuntu”,
+                                 “os_id”: 2
+                           }
+                    ]
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   “message”: “The adapter with id ‘some_id’ cannot be found!”
+                }
+      description: Lists information for a specified adapter
+    /oses/{os_id}/metadata:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                      "package_config": {
+                          "security": {
+                              "_self": {
+                                  "mapping_to": "",
+                                  "description": null,
+                                  "required_in_whole_config": true,
+                                  "display_type": null,
+                                  "js_validator": null,
+                                  "default_value": null,
+                                  "field_type": "dict",
+                                  "name": "security",
+                                  "required_in_options": false,
+                                  "is_required": false,
+                                  "options": null
+                              },
+                      },
+                      "os_config": {
+                           "server_credentials": {
+                              "_self": {
+                                  "mapping_to": "server_credentials",
+                                  "description": null,
+                                  "required_in_whole_config": true,
+                                  "display_type": null,
+                                  "js_validator": null,
+                                  "default_value": null,
+                                  "field_type": "dict",
+                                  "name": "server_credentials",
+                                  "required_in_options": false,
+                                  "is_required": false,
+                                  "options": null
+                              },
+                              "username": {
+                                  "_self": {
+                                      "mapping_to": "username",
+                                      "description": "username",
+                                      "required_in_whole_config": false,
+                                      "display_type": "text",
+                                      "js_validator": null,
+                                      "default_value": "root",
+                                      "field_type": "basestring",
+                                      "name": "username",
+                                      "required_in_options": false,
+                                      "is_required": true,
+                                      "options": null
+                                  }
+                              },
+                          },       
+                      },
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                      “message”: “The adapter with id ‘some_id’ cannot be found!”
+                  }
+        description: Lists config formats for a specified adapter and os
+    /oses/{os_id}/ui_metadata:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    "os_global_config": [
+                      {
+                        "title": "Server Credentials",
+                        "data": [
+                          {
+                            "default_value": "root",
+                            "display_name": "User name",
+                            "name": "username",
+                            "display_type": "text",
+                            "is_required": "true",
+                            "placeholder": "Username",
+                            "order": 1
+                          },
+                          {
+                            "display_name": "Confirm Password",
+                            "name": "confirmPassword",
+                            "datamatch": "password",
+                            "display_type": "password",
+                            "is_required": "true",
+                            "placeholder": "Confirm Password",
+                            "order": 3
+                          },
+                          {
+                            "display_name": "Password",
+                            "name": "password",
+                            "display_type": "password",
+                            "is_required": "true",
+                            "placeholder": "Password",
+                            "order": 2
+                          }],
+                        "order": 2,
+                        "name": "server_credentials"
+                        },
+                      }
+                    }]
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                      “message”: “os <os_id> does not exist”
+                  }
+        description: List specified os ui metadata.
+      
+/subnets:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              [{
+                  "updated_at": "2014-10-18 21:24:46",
+                  "subnet": "10.145.88.0/23",
+                  "created_at": "2014-10-18 21:24:46",
+                  "id": 1,
+                  "name": "10.145.88.0/23"
+              }]
+    description: Gets all subnetworks information
+  post:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                  "updated_at": "2014-10-18 21:24:46",
+                  "subnet": "10.145.88.0/23",
+                  "created_at": "2014-10-18 21:24:46",
+                  "id": 1,
+                  "name": "10.145.88.0/23"
+              }
+      400:
+        body:
+          application/json:
+            example: |
+              {
+                “message”: “Keyword ‘$somekey’ cannot be recognized!”
+              }
+      409:
+        body:
+          application/json:
+            example: |
+              {
+                “message”: “Subnet already exists!”
+              }
+    queryParameters:
+      subnet:
+        example: “10.145.88.0/23”
+    description: Creates one subnetwork
+  /{subnet_id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "updated_at": "2014-10-18 21:24:46",
+                    "subnet": "10.145.88.0/23",
+                    "created_at": "2014-10-18 21:24:46",
+                    "id": 1,
+                    "name": "10.145.88.0/23"
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “Subnetwork with id ‘some_id’ cannot be found!”
+                }
+      description: Gets one subnetwork info
+    put:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "updated_at": "2014-10-18 21:44:17",
+                    "subnet": "10.145.86.0/23",
+                    "created_at": "2014-10-18 21:43:50",
+                    "id": 1,
+                    "name": "10.145.86.0/23"
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   “message”: “Subnetwork with id ‘some_id’ cannot be found!”
+                }
+        409:
+          body:
+            application/json:
+              example: |
+                {
+                    “message”: “Subnet name already exists!”
+                }
+      queryParameters:
+        name:
+        subnet:
+          example: "10.145.86.0/23"
+      description: set subnet properties
+    delete:
+      responses:
+        403:
+          body:
+            application/json:
+              example: |
+                {
+                   “message”: “Subnetwork is in use by some interface. Cannot delete it.”
+                }
+                
+                
+                {
+                    “message”: “Subnetwork can only be deleted by creator or admin!”
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                    “message”: “Subnetwork with id ‘some_id’ cannot be found!”
+                }
+      description: Deletes a subnetwork (owner,  admin only)
+/clusters:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              [
+                  {
+                      "created_at": "2014-10-18 23:01:23",
+                      "os_name": "CentOS-6.5-x86_64",
+                      "name": "cluster1",
+                      "reinstall_distributed_system": true,
+                      "distributed_system_id": 1,
+                      "adapter_id": 3,
+                      "updated_at": "2014-10-18 23:01:23",
+                      "owner": "admin@huawei.com",
+                      "os_id": 2,
+                      "distributed_system_name": "openstack",
+                      "distributed_system_installed": false,
+                      "flavor": {
+                          "display_name": "All-In-One",
+                          "name": "allinone",
+                          "roles": [
+                              {
+                                  "display_name": "all in one compute",
+                                  "description": "all in one compute",
+                                  "adapter_id": 3,
+                                  "role_id": 35,
+                                  "flavor_id": 4,
+                                  "optional": true,
+                                  "id": 35,
+                                  "name": "allinone-compute"
+                              }
+                          ],
+                          "adapter_id": 3,
+                          "template": "allinone.tmpl",
+                          "id": 4
+                      },
+                      "id": 1
+                  }
+              ]
+    queryParameters:
+      name: 
+      os_name: 
+      distributed_system_name: 
+      owner: 
+      adapter_name: 
+      flavor_name:
+    description: Lists all information for all clusters
+  post:
+    responses:
+      201:
+        body:
+          application/json:
+            example: |
+              {
+                  "created_at": "2014-10-18 23:01:23",
+                  "os_name": "CentOS-6.5-x86_64",
+                  "name": "cluster1",
+                  "reinstall_distributed_system": true,
+                  "distributed_system_id": 1,
+                  "adapter_id": 3,
+                  "updated_at": "2014-10-18 23:01:23",
+                  "owner": "admin@huawei.com",
+                  "os_id": 2,
+                  "distributed_system_name": "openstack",
+                  "distributed_system_installed": false,
+                  "flavor": {
+                      "display_name": "All-In-One",
+                      "name": "allinone",
+                      "roles": [
+                          {
+                              "display_name": "all in one compute",
+                              "description": "all in one compute",
+                              "adapter_id": 3,
+                              "role_id": 35,
+                              "flavor_id": 4,
+                              "optional": true,
+                              "id": 35,
+                              "name": "allinone-compute"
+                          }
+                      ],
+                      "adapter_id": 3,
+                      "template": "allinone.tmpl",
+                      "id": 4
+                  },
+                  "id": 1
+              }
+      409:
+        body:
+          application/json:
+            example: |
+              {
+                “message”: “Cluster with name ‘cluster_01’ already exists!”
+              }
+    queryParameters:
+      adapter_id:
+        example: 3
+        required: true
+      os_id:
+        example: 2
+        required: true
+      name:
+        example: "cluster1"
+        required: true
+      flavor_id:
+        example: 4
+        required: false
+    description: Creates a new cluster
+  /{cluster_id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                 {
+                    "created_at": "2014-10-18 23:01:23",
+                    "os_name": "CentOS-6.5-x86_64",
+                    "name": "cluster1",
+                    "reinstall_distributed_system": true,
+                    "distributed_system_id": 1,
+                    "adapter_id": 3,
+                    "updated_at": "2014-10-18 23:01:23",
+                    "owner": "admin@huawei.com",
+                    "os_id": 2,
+                    "distributed_system_name": "openstack",
+                    "distributed_system_installed": false,
+                    "flavor": {
+                        "display_name": "All-In-One",
+                        "name": "allinone",
+                        "roles": [
+                            {
+                                "display_name": "all in one compute",
+                                "description": "all in one compute",
+                                "adapter_id": 3,
+                                "role_id": 35,
+                                "flavor_id": 4,
+                                "optional": true,
+                                "id": 35,
+                                "name": "allinone-compute"
+                            }
+                        ],
+                        "adapter_id": 3,
+                        "template": "allinone.tmpl",
+                        "id": 4
+                    },
+                    "id": 1
+                  }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “Cluster with id ‘some_id’ cannot be found! ”
+                }
+      description: Lists information for a specified cluster
+    put:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "created_at": "2014-10-18 23:16:02",
+                  "os_name": "CentOS-6.5-x86_64",
+                  "name": "cluster_new",
+                  "reinstall_distributed_system": true,
+                  "distributed_system_id": 1,
+                  "adapter_id": 3,
+                  "updated_at": "2014-10-18 23:16:39",
+                  "owner": "admin@huawei.com",
+                  "os_id": 2,
+                  "distributed_system_name": "openstack",
+                  "distributed_system_installed": false,
+                  "flavor": {
+                      "display_name": "All-In-One",
+                      "name": "allinone",
+                      "roles": [
+                          {
+                              "display_name": "all in one compute",
+                              "description": "all in one compute",
+                              "adapter_id": 3,
+                              "role_id": 35,
+                              "flavor_id": 4,
+                              "optional": true,
+                              "id": 35,
+                              "name": "allinone-compute"
+                          }
+                      ],
+                      "adapter_id": 3,
+                      "template": "allinone.tmpl",
+                      "id": 4
+                  },
+                  "id": 2
+                }
+        400:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “Cluster <cluster_id> not found”
+                }
+      description: set properties of cluster
+    delete:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                    "created_at": "2014-10-18 23:01:23",
+                    "os_name": "CentOS-6.5-x86_64",
+                    "name": "cluster1",
+                    "reinstall_distributed_system": true,
+                    "distributed_system_id": 1,
+                    "adapter_id": 3,
+                    "updated_at": "2014-10-18 23:01:23",
+                    "owner": "admin@huawei.com",
+                    "os_id": 2,
+                    "distributed_system_name": "openstack",
+                    "distributed_system_installed": false,
+                    "flavor": {
+                        "display_name": "All-In-One",
+                        "name": "allinone",
+                        "roles": [
+                            {
+                                "display_name": "all in one compute",
+                                "description": "all in one compute",
+                                "adapter_id": 3,
+                                "role_id": 35,
+                                "flavor_id": 4,
+                                "optional": true,
+                                "id": 35,
+                                "name": "allinone-compute"
+                            }
+                        ],
+                        "adapter_id": 3,
+                        "template": "allinone.tmpl",
+                        "id": 4
+                    },
+                    "id": 1
+                }
+        403:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “Cluster has been deployed or is being installed. Not allowed to delete it now!”
+                }
+      description: Deletes a specific cluster before deploy (admin, owner only). Hosts will be still kept even cluster(s) is deleted
+    /config:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                      “package_config”: {
+                       },
+                       “os_config”: {
+                       }
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                    message”: “Cluster with id ‘some_id’ cannot be found!”
+                  }
+        description: Gets config information for a specified cluster
+      put:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    “os_config”:  {
+                            “general”: {
+                                   “language”: “EN”,
+                                   “timezone”: “PDT”,
+                                   “domain”: “xxx”,
+                                   “default_gateway”: “10.0.0.1”
+                            },
+                           “server_crendentials”: {
+                                    “username”: “admin”,
+                                    “password”: “admin”
+                          },
+                          “partition”: {
+                                  "/var" : {
+                              "max_size": "20",
+                                        "size_percentage": "20",
+                                },
+                          }
+                  }
+                  
+                  {
+                    “package_config”: { 
+                            “network_mapping”: {
+                                           “management”: {
+                                                   “interface”: “eth0”
+                                            },
+                                           “tenant”: {
+                                                   “interface”: “eth1”
+                                           },
+                                           “storage”: {
+                                                     “interface”:“eth2”
+                                           },
+                                           “public”: {
+                                                     “interface”: “eth3”
+                                           }
+                           }
+                    }
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                    “message”: “Cluster with id ‘some_id’ cannot be found!”
+                  }
+        queryParameters:
+          os_config:
+            example: '{
+                         “general”: {
+                                “language”: “EN”,
+                                “timezone”: “PDT”,
+                                “domain”: “xxx”,
+                                “default_gateway”: “10.0.0.1”
+                         },
+                         “server_credentials”: {
+                                    “username”: “admin”,
+                                    “password”: “admin”
+                        },
+                        “partition”: {
+                                 "/var" : {
+                                 "_type": "$path",
+                                 "max_size": "20",
+                                 "size_percentage": "20",
+                                }
+                         }
+                      }'
+          package_config:
+            example: '{ 
+                        “network_mapping”: {
+                                       “management”: {
+                                               “interface”: “eth0”
+                                        },
+                                       “tenant”: {
+                                               “interface”: “eth1”
+                                       },
+                                       “storage”: {
+                                                 “interface”:“eth2”
+                                       },
+                                       “public”: {
+                                                 “interface”: “eth3”
+                                       }
+                       }
+                     }'
+        description: set properties in cluster config
+      patch:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                     “package_config”:{
+                         “security”: {
+                             “service_crendentials”: {
+                                       “image”: {
+                                               “username”: “admin”,
+                                               “password”: “admin”
+                                       },
+                                       ……..
+                             },
+                             “dashboard_credentials”:{
+                                        “username”: “root”,
+                                        “password”: “admin”
+                             }
+                          }
+                       }
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                     “message”: “Cluster with id ‘some_id’ cannot be found!”
+                  }
+        queryParameters:
+          os_config:
+            example: '{  
+                       “package_config”: {
+                          “security”: {
+                             “dashboard_credentials”: {
+                               “username”: “root”
+                             }
+                           }
+                        }
+                     }'
+          package_config:
+        description: update properties in cluster config
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                     “package_config”:{
+                         “security”: {
+                            “service_crendentials”: {
+                               “image”: {
+                                       “username”: “admin”,
+                                       “password”: “admin”
+                               },
+                                   ……..
+                             }
+                         }
+                       }
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                     “message”: “Cluster with id ‘some_id’ cannot be found!”
+                  }
+        description: delete cluster config
+    /state:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                      “package_config”: {
+                       },
+                       “os_config”: {
+                       }
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                    message”: “Cluster with id ‘some_id’ cannot be found!”
+                  }
+        description: get cluster state
+    /hosts:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  [
+                    {    
+                      “id” : 1,
+                      “name”: “host_01”,
+                      “dns”: “xxx”,
+                      “os”: “Centos”,
+                      “mac”: “---MAC-address---”,
+                      “machine_id”: 1,
+                      “os_installed”: true,
+                    },
+                    …...          
+                  ]
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                    “message”: “Cluster with id ‘some_id’ cannot be found!”
+                  }
+        description: Gets the information of the hosts belonging to this cluster
+      post:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                      "os_installer": {
+                          "id": 1,
+                          "alias": "cobbler",
+                          "name": "cobbler",
+                          "settings": {
+                              "credentials": {
+                                  "username": "cobbler",
+                                  "password": "cobbler"
+                              },
+                              "cobbler_url": "http://10.145.88.211/cobbler_api"
+                          }
+                      },
+                      "ip": null,
+                      "clusterhost_id": 2,
+                      "updated_at": "2014-10-18 23:47:47",
+                      "switches": [
+                          {
+                              "switch_ip": "172.29.8.40",
+                              "vlans": [
+                                  88
+                              ],
+                              "port": "4"
+                          }
+                      ],
+                      "os_installed": false,
+                      "tag": {},
+                      "cluster_id": 2,
+                      "id": 2,
+                      "switch_ip": "172.29.8.40",
+                      "networks": {
+                       },
+                      "hostname": null,
+                      "reinstall_os": true,
+                      "owner": "admin@huawei.com",
+                      "port": "4",
+                      "location": {},
+                      "distributed_system_name": "openstack",
+                      "os_name": "CentOS-6.5-x86_64",
+                      "reinstall_distributed_system": true,
+                      "mac": "00:0c:29:2b:c9:d4",
+                      "host_id": 2,
+                      "distributed_system_installed": false,
+                      "name": "None.cluster_new",
+                      "roles": [],
+                      "clustername": "cluster_new",
+                      "created_at": "2014-10-18 23:47:47",
+                      "machine_id": 2
+                  }
+          409:
+            body:
+              application/json:
+                example: |
+                  {
+                    “message”: “host <host_id> already exists”
+                  }
+        queryParameters:
+          machine_id:
+            example: 2
+            required: true
+          name:
+          reinstall_os: 
+          roles:
+        description: add host to a cluster
+      /{host_id}:
+        get:
+          responses:
+            200:
+              body:
+                application/json:
+                  example: |
+                    {    
+                        “id” : 1,
+                        “name”: “host_01”,
+                        “dns”: “xxx”,
+                        “os”: “Centos”,
+                        “mac”: “---MAC-address---”,
+                        “machine_id”: 1,
+                        “os_installed”: true,
+                         “links”: [
+                               {
+                                     “href” : “/hosts/1”,
+                                     “rel”: “self”
+                               },
+                               {
+                                     “href”: “/clusters/1/hosts/1/config”,
+                                     “rel”: “host package config”
+                               }
+                         ]
+                    }
+            404:
+              body:
+                application/json:
+                  example: |
+                    {
+                       “message”: “ Host with id ‘some_id’ cannot be found!”
+                    }
+          description: get host of a cluster
+        put:
+          responses:
+            200:
+              body:
+                application/json:
+                  example: |
+                    {
+                        "os_installer": {
+                            "id": 1,
+                            "alias": "cobbler",
+                            "name": "cobbler",
+                            "settings": {
+                                "credentials": {
+                                    "username": "cobbler",
+                                    "password": "cobbler"
+                                },
+                                "cobbler_url": "http://10.145.88.211/cobbler_api"
+                            }
+                        },
+                        "ip": null,
+                        "clusterhost_id": 2,
+                        "updated_at": "2014-10-19 00:10:43",
+                        "switches": [
+                            {
+                                "switch_ip": "172.29.8.40",
+                                "vlans": [
+                                    88
+                                ],
+                                "port": "4"
+                            }
+                        ],
+                        "os_installed": false,
+                        "tag": {},
+                        "cluster_id": 2,
+                        "id": 2,
+                        "switch_ip": "172.29.8.40",
+                        "networks": {},
+                        "hostname": null,
+                        "reinstall_os": true,
+                        "owner": "admin@huawei.com",
+                        "port": "4",
+                        "location": {},
+                        "distributed_system_name": "openstack",
+                        "os_name": "CentOS-6.5-x86_64",
+                        "reinstall_distributed_system": true,
+                        "mac": "00:0c:29:2b:c9:d4",
+                        "host_id": 2,
+                        "distributed_system_installed": false,
+                        "name": "None.cluster_new",
+                        "roles": [
+                            {
+                                "display_name": "all in one compute",
+                                "description": "all in one compute",
+                                "adapter_id": 3,
+                                "optional": true,
+                                "id": 35,
+                                "name": "allinone-compute"
+                            }
+                        ],
+                        "clustername": "cluster_new",
+                        "created_at": "2014-10-18 23:47:47",
+                        "machine_id": 2
+                    }
+            404:
+              body:
+                application/json:
+                  example: |
+                    {
+                       “message”: “ Host with id ‘some_id’ cannot be found!”
+                    }
+          queryParameters:
+            roles:
+              example:
+                '["allinone-compute"]'
+          description: set host properties of a cluster
+        patch:
+          responses:
+            200:
+              body:
+                application/json:
+                  example: |
+                    {
+                        "os_installer": {
+                            "id": 1,
+                            "alias": "cobbler",
+                            "name": "cobbler",
+                            "settings": {
+                                "credentials": {
+                                    "username": "cobbler",
+                                    "password": "cobbler"
+                                },
+                                "cobbler_url": "http://10.145.88.211/cobbler_api"
+                            }
+                        },
+                        "ip": null,
+                        "clusterhost_id": 2,
+                        "updated_at": "2014-10-19 00:10:43",
+                        "switches": [
+                            {
+                                "switch_ip": "172.29.8.40",
+                                "vlans": [
+                                    88
+                                ],
+                                "port": "4"
+                            }
+                        ],
+                        "os_installed": false,
+                        "tag": {},
+                        "cluster_id": 2,
+                        "id": 2,
+                        "switch_ip": "172.29.8.40",
+                        "networks": {},
+                        "hostname": null,
+                        "reinstall_os": true,
+                        "owner": "admin@huawei.com",
+                        "port": "4",
+                        "location": {},
+                        "distributed_system_name": "openstack",
+                        "os_name": "CentOS-6.5-x86_64",
+                        "reinstall_distributed_system": true,
+                        "mac": "00:0c:29:2b:c9:d4",
+                        "host_id": 2,
+                        "distributed_system_installed": false,
+                        "name": "None.cluster_new",
+                        "roles": [
+                            {
+                                "display_name": "all in one compute",
+                                "description": "all in one compute",
+                                "adapter_id": 3,
+                                "optional": true,
+                                "id": 35,
+                                "name": "allinone-compute"
+                            },
+                            {
+                                “name”: “new-role”,
+                                ...
+                            }
+                        ],
+                        "clustername": "cluster_new",
+                        "created_at": "2014-10-18 23:47:47",
+                        "machine_id": 2
+                    }
+            404:
+              body:
+                application/json:
+                  example: |
+                    {
+                      “message”: “ Host with id ‘some_id’ cannot be found!”
+                    }
+          queryParameters:
+            roles:
+              example:
+                '["new-role"]'
+          description: update host properties of a cluster
+        delete:
+          description: delete host from a cluster
+        /config:
+          get:
+            responses:
+              200:
+                body:
+                  application/json:
+                    example: |
+                      {
+                            “os_config”: {
+                                    …...
+                            },
+                            “package_config”: {
+                                    …...
+                            }
+                      }
+              404:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “message”: “ Host with id ‘some_id’ cannot be found!”
+                      }
+            description: get config of a host
+          put:
+            responses:
+              200:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        …..
+                      }
+              404:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “message”: “ Host with id ‘some_id’ cannot be found!”
+                      }
+            queryParameters:
+              JSON: 
+                example: '{
+                            “package_config”: {
+                              “network_mapping”: {
+                                   “management”: {
+                                           “interface”: “eth0”
+                                    },
+                                   “tenant”: {
+                                           “interface”: “eth1”
+                                   },
+                                   “storage”: {
+                                             “interface”:“eth2”
+                                   },
+                                   “public”: {
+                                             “interface”: “eth3”
+                                   }
+                              }
+                              “services_credentials”: {
+                                     “image”:  {
+                                               “username”: “xxx”,
+                                               “password”: “xxx”
+                                     },
+                                     “metering”: {
+                                                “username”: “xxx”,
+                                                 “password”: “xxx”
+                                    },
+                                    …….
+                              }
+                            }
+                      }'
+            description: set host config
+          patch:
+            responses:
+              200:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “os_config”: {
+                              …..//the same as PATCH cluster config
+                        }
+                      }
+              404:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “message”: “ Host with id ‘some_id’ cannot be found!”
+                      }
+            queryParameters:
+              JSON:
+                example:
+                  '{
+                    “os_config”: {
+                          …..//the same as PATCH cluster config
+                    }
+                  }'
+            description: update host config
+          delete:
+            responses:
+              200:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “os_config”: {
+                              …..//the same as PATCH cluster config
+                        }
+                      }
+              404:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “message”: “ Host with id ‘some_id’ cannot be found!”
+                      }
+            description: delete host config
+        /state:
+          get:
+            responses:
+              200:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “cluster_id” : 1,
+                        “host_id”: 10
+                        “state”: “INSTALLING”,
+                        “percentage”: 0.5,
+                        “severity”: “INFO”,
+                        “message”: “-----some--message-----”,
+                        “updated_at”: “---timestamp---”
+                      }
+              404:
+                body:
+                  application/json:
+                    example: |
+                      {
+                         “message”: “ Host with id ‘some_id’ cannot be found!”
+                      }
+            description: get host state of a cluster
+          put:
+            responses:
+              200:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “cluster_id” : 1,
+                        “host_id”: 10
+                        “state”: “SUCCESSFUL”,
+                        “percentage”: 1,
+                        “severity”: “INFO”,
+                        “message”: “-----some--message-----”,
+                        “updated_at”: “---timestamp---”
+                      }
+                      OR
+                      {
+                        “cluster_id” : 1,
+                        “host_id”: 10
+                        “state”: “ERROR”,
+                        “percentage”: 0.7,
+                        “severity”: “ERROR”,
+                        “message”: “---some-error-message---”,
+                        “updated_at”: “---timestamp---”
+                      }
+              404:
+                body:
+                  application/json:
+                    example: |
+                      {
+                         “message”: “ Host with id ‘some_id’ cannot be found!”
+                      }
+            queryParameters:
+              state:
+                 example: “SUCCESSFUL” / “ERROR”
+              percentage: 
+              message:
+                 example:  '“The installation is completed!” / “---some-error-message---”'
+              severity:
+                example: “INFO” / “ERROR”
+            description: set host state properties of a cluster
+    /action:
+      post:
+        responses:
+              200:
+                body:
+                  application/json:
+                    example: |
+                      {
+                        “hosts”:  [
+                          {    
+                                “id” : 5,
+                                “machine_id”: 10
+                          },
+                          {    
+                                “id” : 6,
+                                “machine_id”: 11
+                          },
+                          {    
+                                “id” : 7,
+                                “machine_id”: 12
+                          }
+                        ]
+                      }
+                        
+                      OR
+                        
+                      {
+                        “hosts”:  [
+                          {    
+                            “id” : 1,
+                            “machine_id”: 13
+                          },
+                          {    
+                            “id” : 2,
+                            “machine_id”: 14
+                          },
+                          {    
+                            “id” : 3,
+                            “machine_id”: 15
+                          }
+                         ]
+                      }
+                        
+                      OR
+                        
+                      {
+                         “hosts”: [
+                           {
+                              “id” : 1,
+                              “machine_id”: 13
+                           }
+                         ]
+                      }
+                        
+                      OR
+                      {
+                        “hosts”:  [
+                            {    
+                              “id” : 1,
+                              “machine_id”: 10
+                            },
+                            {    
+                              “id” : 2,
+                              “machine_id”: 11
+                            },
+                            {    
+                              “id” : 3,
+                              “machine_id”: 12
+                            }
+                        ]
+                      }
+                      
+                      OR
+                        
+                      {
+                        “cluster: {“id”: 1},
+                        “hosts”: [{“id”: 1}, {“id”: 2}, {“id”: 3}]
+                      }
+                        
+                      OR
+                        
+                      {
+                        “status”: “deploy action sent”,
+                        “cluster”: {
+                            “id”: 1,
+                         },
+                         “hosts”: [
+                            {
+                               “id”: 3
+                            }
+                         ]
+                      }
+                        
+                      
+              404:
+                body:
+                  application/json:
+                    example: |
+                      {
+                         “message”: “Cluster with id ‘some_id’ cannot be found!”
+                      }
+        queryParameters:
+          JSON 1:
+            example: '{
+                        “add_hosts”: {
+                           “machines” : [
+                              {
+                                “machine_id”: 10,  //“host_id”: 5,
+                                 “reinstall_os”: true
+                              },
+                              {
+                                 “machine_id”: 11 // “host_id”: 6
+                              },
+                              {
+                                  “machine_id”: 12
+                              }
+                           ]
+                        }
+                     }'
+          JSON 2:
+            example: '{
+                        “set_hosts”: {
+                           “machines” : [
+                              {
+                               “machine_id”: 13
+                              },
+                              {
+                               “machine_id”: 14
+                              },
+                              {
+                               “machine_id”: 15
+                              }
+                           ]
+                        }
+                      }'
+          JSON 3:
+            example: '{
+                        “remove_hosts”: {
+                           “hosts” : [1]
+                        }
+                     }'
+          JSON 4:
+            example: '{
+                        “remove_hosts”: {
+                           “hosts” : “all”
+                        }
+                      }'
+          JSON 5: 
+            example: '{
+                        “review” : {
+                         “hosts”: [1, 2, 3]
+                        }
+                      }'
+          JSON 6:
+            example: '{
+                        “deploy” : {
+                          “hosts” : [3]
+                        }
+                      }'
+        description: Takes an action for a specific cluster
+    /metadata:
+      get:
+        responses:
+              200:
+                body:
+                  application/json:
+                    example: |
+                      {
+                          “package_config”: {
+                           },
+                           “os_config”: {
+                           }
+                      }
+              404:
+                body:
+                  application/json:
+                    example: |
+                      {
+                         “message”: “Cluster with id ‘some_id’ cannot be found!”
+                      }
+        description: Get metadata of a specific cluster
+
+/hosts:
+  get:
+    responses:
+        200:
+          body:
+            application/json:
+              example: |
+                [
+                  {
+                    “id” : 1,
+                    “name”: “host_01”,
+                    “machine_id”: 1,
+                    “mac”: “---MAC-address--”,
+                    “ip”: “192.168.1.2”,
+                    “os”: “CentOS”,
+                    “os_installed”: false,
+                    “clusters”: [“cluster_01”],
+                    “created_by”: “user1@email.com”,
+                    “created_at”: “---timestamp---”,
+                    “updated_at”: “---timestamp---”,
+                    “links”: [
+                            {
+                             “href” : “/hosts/1”,
+                             “rel”: “self”
+                       }
+                    ]
+                   },
+                  ……
+                ]
+    queryParameters:
+      name: 
+      os_name: 
+      owner: 
+      mac:
+    description: Lists information for all hosts
+  /{host_id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  “id” : 1,
+                  “name”: “host_01”,
+                  “machine_id”: 1,
+                  “mac”: “---MAC-address--”,
+                  “ip”: “192.168.1.2”
+                  “os”: “CentOs”,
+                  “os_installed”: false,
+                  “domain”: “xxx”,
+                  “dns”: “xxx”,
+                  “created_by”: “user1@email.com”,
+                  “created_at”: “---timestamp---”,
+                  “updated_at”: “---timestamp---”
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                  “message”: “ Host with id ‘some_id’ cannot be found!”
+                }
+      description: Lists information for a specified host
+    put:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                   “id” : 1,
+                   “name”: “host1”
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   “message”: “ Host with id ‘some_id’ cannot be found!”
+                }
+      queryParameters:
+        name: 
+          example: “host1”
+        reinstall_os:
+      description: set host properties.
+    delete:
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                 “id” : 1,
+                 “name”: “host_01_new”,
+                 “mac”: “---MAC-address--”,
+                 “os_name”: “CentOs”,
+                 “os_installed”: false
+                }
+        404:
+          body:
+            application/json:
+              example: |
+                {
+                   “type”: “itemNotFound”,
+                   “message”: “ Host with id ‘some_id’ cannot be found!”
+                }
+      description: Deletes a host (admin only). The host must be not in any cluster.
+    /action:
+      post:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                     “status”: “host <host_id> power<on|off|reset> action sent”,
+                     “host”: {...}
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                      “message”: “The host witch ID “$host_id” cannot be found!”
+                  }
+          400:
+            body:
+              application/json:
+                example: |
+                  {
+                      “message”: “The host didnot set IPMI info!”
+                  }
+        queryParameters:
+          JSON 1:
+            example: '{
+                       “poweron”: null
+                      }'
+          JSON 2:
+            example: '{
+                        “poweroff”: null
+                      }'
+          JSON 3:
+            example: '{
+                       “reset”: null
+                      }'
+        description: Poweron, poweroff, reset this host by IPMI
+    /clusters:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  [
+                    {
+                      "os_name": "CentOS-6.5-x86_64",
+                      "name": "cluster_new",
+                      "reinstall_distributed_system": true,
+                      "created_at": "2014-10-18 23:16:02",
+                      "adapter_id": 3,
+                      "updated_at": "2014-10-18 23:16:39",
+                      "distributed_system_name": "openstack",
+                      "owner": "admin@huawei.com",
+                      "distributed_system_installed": false,
+                      "id": 2
+                    }
+                  ]
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                      “message”: “ Host with id ‘some_id’ cannot be found!”
+                  }
+        description: Lists clusters which the host belongs to
+    /config:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                     “os_config”: {
+                         “global”: {
+                           “language”; “EN”,
+                           “timezone”: “PDT”,
+                         }
+                         “partition”: {
+                            “/var”: {
+                                  “max_size”: “20”,
+                                  “size_percentage”: “30”
+                            },
+                           “/home”: {
+                                  “max_size”: “20”,
+                                  “size_percentage”: “40”
+                           }
+                         }
+                      }
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                       “message”: “ Host with id ‘some_id’ cannot be found!”
+                  }
+        description: Lists config information for a specified host
+      put:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    “os_config”: {
+                        …
+                    }
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                       “message”: “ Host with id ‘some_id’ cannot be found!”
+                  }
+        queryParameters:
+          os_config:
+        description: set config properties for a specified host
+      patch:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    ....
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                       “message”: “ Host with id ‘some_id’ cannot be found!”
+                  }
+        queryParameters:
+          os_config:
+        description: update host config properties
+      delete:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                     “os_config”: {
+                        …
+                     }
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                       “message”: “ Host with id ‘some_id’ cannot be found!”
+                  }
+        description: delete host config
+    /state:
+      get:
+        responses:
+            200:
+              body:
+                application/json:
+                  example: |
+                    {
+                      “state”: “INSTALLING”,
+                      “percentage”: 0.5,
+                      “severity”: “INFO”,
+                      “message”: “-----some--message-----”,
+                      “updated_at”: “---timestamp---”
+                    }
+            404:
+              body:
+                application/json:
+                  example: |
+                    {
+                         “message”: “ Host with id ‘some_id’ cannot be found!”
+                    }
+        description: get host state
+      put:
+        responses:
+            200:
+              body:
+                application/json:
+                  example: |
+                    {
+                      “cluster_id” : 1,
+                      “host_id”: 10
+                      “state”: “SUCCESSFUL”,
+                      “percentage”: 1,
+                      “severity”: “INFO”,
+                      “message”: “-----some--message-----”,
+                      “updated_at”: “---timestamp---”
+                    }
+                    
+                    OR
+                    
+                    {
+                      “cluster_id” : 1,
+                      “host_id”: 10
+                      “state”: “ERROR”,
+                      “percentage”: 0.7,
+                      “severity”: “ERROR”,
+                      “message”: “---some-error-message---”,
+                      “updated_at”: “---timestamp---”
+                    }
+
+            404:
+              body:
+                application/json:
+                  example: |
+                    {
+                         “message”: “ Host with id ‘some_id’ cannot be found!”
+                    }
+        queryParameters:
+          state:
+            example: “SUCCESSFUL” / “ERROR”
+          percentage: 
+          message: 
+            example: “The installation is completed!” / “---some-error-message---”
+          severity:
+            example: “INFO” / “ERROR”
+        description: set host state properties
+    /network:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    “eth0”:  {
+                        “id”: 1,
+                        “interface”: “eth0”,
+                        “ip”: “192.168.10.1”,
+                        “is_mgmt”: true,
+                        “is_promiscuous”: false,
+                        “subnet_id”: 1,
+                    },
+                    “eth1”:  {
+                         “id”: 2,
+                         “interface”: “eth1”,
+                         “ip”: “10.12.123.1”,
+                         “is_promiscuous”: true,
+                         “subnet_id”: 2,
+                    },
+                    …..
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                       “message”: “ Host with id ‘some_id’ cannot be found!”
+                  }
+        queryParameters:
+          interface: 
+          ip: 
+          is_mgmt: 
+          is_promiscuous:
+        description: Lists network info for a specified host
+      post:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    “id”: 3,
+                    “interface”: “eth3”,
+                    “ip”: “12.140.10.1”,
+                    “is_promiscuous”: true,
+                    “is_mgmt”: false,
+                    “subnet_id”: 3,
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                       “message”: “ Host with id ‘some_id’ cannot be found!”
+                  }
+        queryParameters:
+          interface:
+            example: “eth3”
+            required: true 
+          ip:
+            example: “12.140.10.1”
+            required: true 
+          subnet_id:
+            example: 3
+            required: true
+          is_mgmt:
+            example: false
+          is_promiscuous:
+            example: true
+        description: Creates an interface config entry
+      /{interface}:
+        get:
+          description: list host network information
+        put:
+          responses:
+            200:
+              body:
+                application/json:
+                  example: |
+                    {
+                      “id”: 3,
+                      “interface”: “eth3”,
+                      “ip”: “12.140.10.2”,
+                      “is_promiscuous”: true,
+                      “is_mgmt”: false,
+                      “subnet_id”: 4,
+                    }
+            404:
+              body:
+                application/json:
+                  example: |
+                    {
+                         “message”: “ Host with id ‘some_id’ cannot be found!”
+                    }
+          queryParameters:
+            interface: 
+            ip:
+               example: “12.140.10.2” 
+            subnet_id: 
+              example: 4
+            is_mgmt: 
+            is_promiscuous:
+          description: set host network properties
+        delete:
+          responses:
+            200:
+              body:
+                application/json:
+                  example: |
+                    {
+                      “id”: 3,
+                      “interface”: “eth3”,
+                      “ip”: “12.140.10.1”,
+                      “is_promiscuous”: true,
+                      “is_mgmt”: false,
+                      “subnet_id”: 3
+                    }
+            404:
+              body:
+                application/json:
+                  example: |
+                    {
+                         “message”: “ Host with id ‘some_id’ cannot be found!”
+                    }
+          description: delete a host network
+/proxy/{path}:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              [
+                  {
+                      "created_at": "2014-10-19 10:50:04",
+                      "updated_at": "2014-10-19 10:50:04",
+                      "email": "admin@huawei.com",
+                      "is_admin": true,
+                      "active": true,
+                      "id": 1
+                  }
+              ]
+    queryParameters:
+      URL:
+        example: http://10.145.88.211/api/proxy/users
+    description: proxy get request
+  post:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "subnet": "10.145.86.0/23",
+                "created_at": "2014-10-19 11:25:33",
+                "updated_at": "2014-10-19 11:25:33",
+                "name": "10.145.86.0/23",
+                "id": 3
+              }
+    queryParameters:
+      URL:
+        example: http://10.145.88.211/api/proxy/subnets
+    description: proxy post request
+  put:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                  "subnet": "10.145.84.0/23",
+                  "created_at": "2014-10-19 11:25:33",
+                  "updated_at": "2014-10-19 11:29:08",
+                  "name": "10.145.84.0/23",
+                  "id": 3
+              }
+    queryParameters:
+      URL:
+        example: http://10.145.88.211/api/proxy/subnets/3
+    description: proxy put request
+  patch:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                  "ip": "172.29.8.42",
+                  "created_at": "2014-10-19 11:31:40",
+                  "updated_at": "2014-10-19 11:33:46",
+                  "state": "initialized",
+                  "filters": "",
+                  "credentials": {
+                      "version": "2c",
+                      "community": "private"
+                  },
+                  "id": 3
+              }
+    queryParameters:
+      URL:
+        example: http://10.145.88.211/api/proxy/switches/3
+    description: proxy patch request
+  delete:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                  "ip": "172.29.8.42",
+                  "created_at": "2014-10-19 11:31:40",
+                  "updated_at": "2014-10-19 11:33:46",
+                  "state": "initialized",
+                  "filters": "",
+                  "credentials": {
+                      "version": "2c",
+                      "community": "private"
+                  },
+                  "id": 3
+              }
+    queryParameters:
+      URL:
+        example: http://10.145.88.211/api/proxy/switches/3
+    description: proxy delete request
+/host/networks:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "eth1": {
+                  "ip": "192.168.100.155",
+                  "created_at": "2015-04-17 14:55:55",
+                  "is_promiscuous": true,
+                  "updated_at": "2015-04-17 14:55:55",
+                  "netmask": "255.255.254.0",
+                  "is_mgmt": false,
+                  "interface": "eth1",  
+                  "id": 1
+                },
+                "eth0": {
+                  "ip": "10.145.89.155",
+                  "created_at": "2015-04-17 14:55:55",
+                  "is_promiscuous": false,
+                  "updated_at": "2015-04-17 14:55:55",
+                  "netmask": "255.255.254.0",
+                  "is_mgmt": true,
+                  "interface": "eth0",
+                  "id": 2
+                  }
+              }
+    description: List all host networks
+  /{host_network_id}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                example: |
+                  {
+                    "ip": "192.168.100.155",
+                    "created_at": "2015-04-17 14:55:55",
+                    "is_promiscuous": true,
+                    "updated_at: "2015-04-17 14:55:55",
+                    "netmask": "255.255.254.0",
+                    "is_mgmt": false,
+                    "interface": "eth1",
+                    "id": 1
+                  }
+          404:
+            body:
+              application/json:
+                example: |
+                  {
+                    "message": "Cannot find the record in table HostNetwork: {'id': <host_network_id>}",
+                  }
+        description: List specifig host network info
+/host-networks/{host_network_id}:
+  put:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "ip": "192.168.100.159",
+                "created_at": "2015-04-17 14:55:55",
+                "is_promiscuous": true,
+                "updated_at: "2015-04-17 14:55:55",
+                "netmask": "255.255.254.0",
+                "is_mgmt": false,
+                "interface": "eth1",
+                "id": 1
+              }
+      404:
+        body:
+          application/json:
+            example: |
+              {
+                message: "Cannot find the record in table HostNetwork: {'id': <host_network_id>}"
+              }
+    queryParameters:
+      interface:
+      ip:
+        example: "10.145.89.159"
+    description: Update a specific host network info.
+  delete:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "ip: "10.145.89.155",
+                "created_at": "2015-04-17 15:44:54"
+                "is_promiscuous": false,
+                "updated_at": "2015-04-17 15:44:54",
+                "netmask": "255.255.254.0",
+                "is_mgmt": false
+                "interface": "eth0",
+                "id": 1
+              }
+      404:
+        body:
+          application/json:
+            example: |
+              {
+                message: "Cannot find the record in table HostNetwork: {'id': <host_network_id>}"
+              }
+    description: Delete a host network.
+              
+    
+  

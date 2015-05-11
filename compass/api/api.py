@@ -657,6 +657,21 @@ def add_switch():
     )
 
 
+@app.route("/switchesbatch", methods=['POST'])
+@log_user_action
+@login_required
+@update_user_token
+def add_switches():
+    """add switches."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        switch_api.add_switches(
+            data=data, user=current_user
+        )
+    )
+
+
 @app.route("/switches/<int:switch_id>", methods=['PUT'])
 @log_user_action
 @login_required
@@ -869,6 +884,20 @@ def add_switch_machine(switch_id):
     return utils.make_json_response(
         200,
         switch_api.add_switch_machine(switch_id, user=current_user, **data)
+    )
+
+
+@app.route("/switches/machines", methods=['POST'])
+@log_user_action
+@login_required
+@update_user_token
+def add_switch_machines():
+    """add switch machines."""
+    data = _get_request_data_as_list()
+    return utils.make_json_response(
+        200, switch_api.add_switch_machines(
+            data=data, user=current_user
+        )
     )
 
 
@@ -2389,7 +2418,7 @@ def update_host_networks():
     data = _get_request_data_as_list()
     return utils.make_json_response(
         200, host_api.add_host_networks(
-            data, user=current_user,)
+            data=data, user=current_user,)
     )
 
 

@@ -111,13 +111,24 @@ def _check_vlans(vlans):
             )
 
 
+@utils.supported_filters(
+    ADDED_FIELDS,
+    optional_support_keys=OPTIONAL_ADDED_FIELDS,
+    ignore_support_keys=IGNORE_FIELDS
+)
+@utils.input_validates(
+    ip=utils.check_ip,
+    credentials=utils.check_switch_credentials,
+    filters=_check_filters
+)
+@utils.wrap_to_dict(RESP_FIELDS)
 def add_switch_internal(
-    session, ip_int, exception_when_existing=True,
+    session, ip, exception_when_existing=True,
     filters=setting.SWITCHES_DEFAULT_FILTERS, **kwargs
 ):
     with session.begin(subtransactions=True):
         return utils.add_db_object(
-            session, models.Switch, exception_when_existing, ip_int,
+            session, models.Switch, exception_when_existing, ip,
             filters=filters, **kwargs
         )
 
@@ -196,21 +207,10 @@ def del_switch(switch_id, user=None, session=None, **kwargs):
     return utils.del_db_object(session, switch)
 
 
-@utils.supported_filters(
-    ADDED_FIELDS,
-    optional_support_keys=OPTIONAL_ADDED_FIELDS,
-    ignore_support_keys=IGNORE_FIELDS
-)
-@utils.input_validates(
-    ip=utils.check_ip,
-    credentials=utils.check_switch_credentials,
-    filters=_check_filters
-)
 @database.run_in_session()
 @user_api.check_user_permission_in_session(
     permission.PERMISSION_ADD_SWITCH
 )
-@utils.wrap_to_dict(RESP_FIELDS)
 def add_switch(
     exception_when_existing=True, ip=None,
     user=None, session=None, **kwargs
@@ -220,6 +220,42 @@ def add_switch(
     return add_switch_internal(
         session, ip_int, exception_when_existing, **kwargs
     )
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH
+)
+def add_switches(
+    exception_when_existing=False,
+    data=[], user=None, session=None
+):
+    """Create switches."""
+    switches = []
+    fail_switches = []
+    for switch_data in data:
+        switch_ip = long(netaddr.IPAddress(switch_data['ip']))
+        switch_object = utils.get_db_object(
+            session, models.Switch, False,
+            ip_int=switch_ip
+        )
+        if switch_object:
+            logging.error('ip %s exists in switch %s' % (
+                switch_ip, switch_object.id
+            ))
+            fail_switches.append(switch_data)
+        else:
+            switch_data.pop('ip')
+            switches.append(
+                add_switch_internal(
+                    session, switch_ip, exception_when_existing,
+                    **switch_data
+                )
+            )
+    return {
+        'switches': switches,
+        'fail_switches': fail_switches
+    }
 
 
 def update_switch_internal(session, switch, **kwargs):
@@ -531,16 +567,11 @@ def list_switchmachines_hosts(user=None, session=None, **filters):
     ignore_support_keys=IGNORE_FIELDS
 )
 @utils.input_validates(mac=utils.check_mac, vlans=_check_vlans)
-@database.run_in_session()
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_ADD_SWITCH_MACHINE
-)
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
-def add_switch_machine(
-    switch_id, exception_when_existing=True,
-    mac=None, user=None, session=None, **kwargs
+def _add_switch_machine(
+    session, user, switch_id, exception_when_existing=True,
+    mac=None, **kwargs
 ):
-    """Add switch machine."""
     switch = utils.get_db_object(
         session, models.Switch, id=switch_id)
     switch_machine_dict = {}
@@ -560,6 +591,113 @@ def add_switch_machine(
         switch.id, machine.id,
         **switch_machine_dict
     )
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH_MACHINE
+)
+def add_switch_machine(
+    switch_id, exception_when_existing=True,
+    mac=None, user=None, session=None, **kwargs
+):
+    """Add switch machine."""
+    return _add_switch_machine(
+        session, user, switch_id,
+        exception_when_existing, mac=mac, **kwargs
+    )
+
+
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_ADD_SWITCH_MACHINE
+)
+def add_switch_machines(
+    exception_when_existing=False,
+    data=[], user=None, session=None
+):
+    """Add switch machines."""
+    switch_machines = []
+    duplicate_switch_machines = []
+    failed_switch_machines = []
+    switch_ip_list = []
+    switch_datas = []
+    for item_data in data:
+        switch_ip = item_data['switch_ip']
+        switch_ip_int = long(netaddr.IPAddress(item_data['switch_ip']))
+        if switch_ip not in switch_ip_list:
+            switch_object = utils.get_db_object(
+                session, models.Switch, False,
+                ip_int=switch_ip_int
+            )
+            if switch_object:
+                switch_ip_list.append(switch_ip)
+                item_data.pop('switch_ip')
+                switch_datas.append({
+                    'switch_id': switch_object.id,
+                    'switch_ip': switch_ip,
+                    'machines': [item_data]
+                })
+            else:
+                logging.error(
+                    'switch ip %s is not existed in switch table' % switch_ip
+                )
+                item_data.pop('switch_ip')
+                failed_switch_machines.append(item_data)
+        else:
+            for item in switch_datas:
+                if switch_ip == item['switch_ip']:
+                    item_data.pop('switch_ip')
+                    item['machines'].append(item_data)
+    for switch_data in switch_datas:
+        switch_id = switch_data['switch_id']
+        machines = switch_data['machines']
+        for machine in machines:
+            mac = machine['mac']
+            machine_object = utils.get_db_object(
+                session, models.Machine, False,
+                mac=mac
+            )
+            if machine_object:
+                switch_machine_object = utils.get_db_object(
+                    session, models.SwitchMachine, False,
+                    machine_id=machine_object.id
+                )
+                if (
+                    switch_machine_object and not(
+                        switch_machine_object.switch_id == switch_id and
+                        switch_machine_object.port == machine['port']
+                    )
+                ):
+                    logging.error('machine %s exists in switch machine %s' % (
+                        machine['mac'], switch_machine_object.switch_machine_id
+                    ))
+                    failed_switch_machines.append(machine)
+                elif (
+                    switch_machine_object and
+                    switch_machine_object.switch_id == switch_id and
+                    switch_machine_object.port == machine['port']
+                ):
+                    logging.error(
+                        'machine %s is dulicate, will not be override' %
+                        machine['mac']
+                    )
+                    duplicate_switch_machines.append(machine)
+                else:
+                    switch_machines.append(_add_switch_machine(
+                        session, user, switch_id, exception_when_existing,
+                        **machine
+                    ))
+            else:
+                switch_machines.append(_add_switch_machine(
+                    session, user, switch_id, exception_when_existing,
+                    **machine
+                ))
+    return {
+        'switches_machines': switch_machines,
+        'duplicate_switches_machines': duplicate_switch_machines,
+        'fail_switches_machines': failed_switch_machines
+    }
 
 
 @utils.supported_filters(optional_support_keys=['find_machines'])

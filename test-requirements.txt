@@ -5,5 +5,5 @@ testtools>=0.9.32
 testrepository>=0.0.17
 mimeparse
 coverage>=3.6
-hacking>=0.8.0,<0.9
+hacking
 pycrypto<=2.0.1

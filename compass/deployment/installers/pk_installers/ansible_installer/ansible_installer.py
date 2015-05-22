@@ -242,7 +242,7 @@ class AnsibleInstaller(PKInstaller):
         files = self.runner_files
         for dir in dirs:
             shutil.copytree(
-                os.path.join(self.adapter_dir, dir),
+                os.path.join(self.ansible_dir, dir),
                 os.path.join(
                     ansible_run_destination,
                     dir

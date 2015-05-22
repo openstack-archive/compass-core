@@ -408,7 +408,7 @@ class TestUpdateCluster(ClusterTestCase):
             name='cluster_editable'
         )
 
-        #reinstall
+        # reinstall
         self.assertRaises(
             exception.Forbidden,
             cluster.update_cluster,
@@ -441,7 +441,7 @@ class TestDelCluster(ClusterTestCase):
             self.assertNotEqual(1, del_cluster['id'])
 
     def test_is_cluster_editable(self):
-        #state is INSTALLING
+        # state is INSTALLING
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
@@ -1596,7 +1596,7 @@ class TestUpdateClusterHosts(ClusterTestCase):
             result = item
         self.assertNotIn(self.host_id[0], result)
 
-        #add host
+        # add host
         cluster.update_cluster_hosts(
             self.cluster_id,
             user=self.user_object,

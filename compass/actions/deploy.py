@@ -158,7 +158,9 @@ class ServerPowerMgmt(object):
 
 class HostPowerMgmt(object):
     """Power management for hosts installed OS by OS installer. OS installer
-       will poweron/poweroff/reset host.
+
+    will poweron/poweroff/reset host.
+
     """
     @staticmethod
     def poweron(host_id, user):

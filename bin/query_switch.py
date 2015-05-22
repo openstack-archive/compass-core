@@ -24,8 +24,10 @@ from compass.apiclient.restful import Client
 
 
 class AddSwitch(object):
-    """A utility class that handles adding a switch and retrieving
-       corresponding machines associated with the switch.
+    """A utility class.
+
+    Handles adding a switch and retrieving corresponding machines
+    associated with the switch.
     """
 
     def __init__(self, server_url):
@@ -33,8 +35,7 @@ class AddSwitch(object):
         self._client = Client(server_url)
 
     def add_switch(self, queue, ip, snmp_community):
-        """Add a switch with SNMP credentials and retrieve attached
-           server machines.
+        """Add a switch with SNMP credentials.
 
         :param queue: The result holder for the machine details.
         :type queue: A Queue object(thread-safe).

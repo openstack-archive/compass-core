@@ -263,10 +263,12 @@ def get_switch_machines_from_file(filename):
 def execute_cli_by_ssh(cmd, host, username, password=None,
                        keyfile='/root/.ssh/id_rsa', nowait=False):
     """SSH to execute script on remote machine
+
     :param host: ip of the remote machine
     :param username: username to access the remote machine
     :param password: password to access the remote machine
     :param cmd: command to execute
+
     """
     if not cmd:
         logging.error("No command found!")

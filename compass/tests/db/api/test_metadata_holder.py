@@ -55,7 +55,7 @@ class MetadataTestCase(unittest2.TestCase):
         adapter.load_adapters()
         metadata.load_metadatas()
 
-        #Get a os_id and adapter_id
+        # Get a os_id and adapter_id
         self.user_object = (
             user_api.get_user_object(
                 setting.COMPASS_ADMIN_EMAIL

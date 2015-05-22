@@ -61,8 +61,7 @@ OPTIONS = Flags()
 
 
 def init():
-    """Init flag parsing.
-    """
+    """Init flag parsing."""
     OPTIONS.parse_args()
 
 

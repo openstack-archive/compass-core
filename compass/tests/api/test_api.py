@@ -85,7 +85,7 @@ class ApiTestCase(unittest2.TestCase):
         resp = json.loads(resp)
         self.token = resp['token']
 
-        #create a cluster
+        # create a cluster
         adapter_name, adapter_id, os_id, flavor_id = (
             self._get_adapter_info()
         )
@@ -105,7 +105,7 @@ class ApiTestCase(unittest2.TestCase):
         data['flavor_id'] = flavor_id
         self.post(url, data)
 
-        #create a switch
+        # create a switch
         url = '/switches'
         datas = [
             {
@@ -537,7 +537,7 @@ class TestSubnetAPI(ApiTestCase):
         self.assertEqual(return_value.status_code, 200)
         self.assertTrue(item in data.items() for item in resp.items())
 
-         # give a non-existed id
+        # give a non-existed id
         url = '/subnets/99'
         data = {
             'subnet': '192.168.100.0/24',
@@ -813,7 +813,7 @@ class TestHostAPI(ApiTestCase):
         self.assertEqual([], resp)
 
     def test_show_host(self):
-        #show a host successfully
+        # show a host successfully
         url = '/hosts/1'
         return_value = self.get(url)
         resp = json.loads(return_value.get_data())

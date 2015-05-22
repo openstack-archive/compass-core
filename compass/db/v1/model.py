@@ -32,12 +32,12 @@ from flask.ext.login import UserMixin
 from itsdangerous import URLSafeTimedSerializer
 
 BASE = declarative_base()
-#TODO(grace) SECRET_KEY should be generated when installing compass
-#and save to a config file or DB
+# TODO(grace) SECRET_KEY should be generated when installing compass
+# and save to a config file or DB
 SECRET_KEY = "abcd"
 
-#This is used for generating a token by user's ID and
-#decode the ID from this token
+# This is used for generating a token by user's ID and
+# decode the ID from this token
 login_serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 

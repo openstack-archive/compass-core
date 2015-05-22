@@ -55,12 +55,12 @@ class HuaweiTest(unittest2.TestCase):
 
     def test_is_this_vendor(self):
         """test device vendor is haiwei."""
-        #Incorrect system information
+        # Incorrect system information
         incorrect_sys_info = "xxx"
         self.assertFalse(
             self.huawei.is_this_vendor(incorrect_sys_info))
 
-        #Correct vendor
+        # Correct vendor
         self.assertTrue(
             self.huawei.is_this_vendor(self.sys_info))
 
@@ -86,7 +86,7 @@ class HuaweiMacTest(unittest2.TestCase):
         self.assertIsNone(self.mac_plugin.process_data('GET'))
 
         # SNMP Walk Timeout
-        #utils.snmpwalk_by_cl = Mock(return_value=None)
+        # utils.snmpwalk_by_cl = Mock(return_value=None)
         mock_snmpwalk.return_value = None
         self.assertIsNone(self.mac_plugin.process_data())
 
@@ -101,7 +101,7 @@ class HuaweiMacTest(unittest2.TestCase):
             {"mac": "28:6e:d4:64:c7:4a", "port": "2", "vlan": "88"},
             {"mac": "00:0c:29:35:dc:02", "port": "3", "vlan": "88"}
         ]
-        #utils.snmpwalk_by_cl = Mock(return_value=mock_snmp_walk_result)
+        # utils.snmpwalk_by_cl = Mock(return_value=mock_snmp_walk_result)
         mock_snmpwalk.return_value = mock_snmp_walk_result
         self.mac_plugin.get_port = Mock()
         self.mac_plugin.get_port.side_effect = ["1", "2", "3"]
@@ -196,14 +196,14 @@ class HDManagerTest(unittest2.TestCase):
     @patch('compass.hdsdiscovery.hdmanager.HDManager.get_sys_info')
     def test_is_valid_vendor(self, sys_info_mock):
         """test is_valid_vendor."""
-        #non-exsiting vendor under vendors directory
+        # non-exsiting vendor under vendors directory
         self.assertFalse(
             self.manager.is_valid_vendor(self.correct_host,
                                          self.correct_credential,
                                          'xxxx')
         )
 
-        #No system description retrieved
+        # No system description retrieved
         sys_info_mock.return_value = (None, 'TIMEOUT')
         self.assertFalse(
             self.manager.is_valid_vendor(self.correct_host,
@@ -211,7 +211,7 @@ class HDManagerTest(unittest2.TestCase):
                                          'pica8')
         )
 
-        #Incorrect vendor name
+        # Incorrect vendor name
         sys_info = 'Pica8 XorPlus Platform Software'
         sys_info_mock.return_value = (sys_info, '')
         self.assertFalse(
@@ -220,7 +220,7 @@ class HDManagerTest(unittest2.TestCase):
                                          'huawei')
         )
 
-        #Correct vendor name
+        # Correct vendor name
         self.assertTrue(
             self.manager.is_valid_vendor(self.correct_host,
                                          self.correct_credential,
@@ -229,12 +229,12 @@ class HDManagerTest(unittest2.TestCase):
 
     def test_learn(self):
         """test learn."""
-        #non-exsiting plugin
+        # non-exsiting plugin
         self.assertIsNone(self.manager.learn(self.correct_host,
                                              self.correct_credential,
                                              'huawei', 'xxx'))
 
-        #non-existing vendor
+        # non-existing vendor
         self.assertIsNone(self.manager.learn(self.correct_host,
                                              self.correct_credential,
                                              'xxxx', 'mac'))

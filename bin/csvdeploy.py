@@ -205,9 +205,10 @@ class _APIClient(Client):
         return self._put(url, data=data)
 
     def execute(self, cluster_data, hosts_data, resp_results):
-        """The process including create or update a cluster and the cluster
-           configuration, add or update a host in the cluster, and deploy
-           the updated hosts.
+        """The process includes creating or updating a cluster.
+
+        The cluster configuration, add or update a host in the cluster,
+        and deploy the updated hosts.
 
         :param cluster_data: the dictionary of cluster data
         """

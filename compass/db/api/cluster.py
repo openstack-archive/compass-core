@@ -1772,8 +1772,7 @@ def update_cluster_host_state_internal(
         for clusterhost_in_cluster in cluster.clusterhosts:
             if (
                 clusterhost_in_cluster.clusterhost_id
-                    ==
-                clusterhost.clusterhost_id
+                    == clusterhost.clusterhost_id
             ):
                 continue
             if not clusterhost_in_cluster.state.ready:
@@ -1876,8 +1875,7 @@ def update_clusterhost_state_internal(
         for clusterhost_in_cluster in cluster.clusterhosts:
             if (
                 clusterhost_in_cluster.clusterhost_id
-                    ==
-                clusterhost.clusterhost_id
+                    == clusterhost.clusterhost_id
             ):
                 continue
             if not clusterhost_in_cluster.state.ready:

@@ -77,7 +77,6 @@ class HdsCheck(base.BaseCheck):
 
     def check_apt_snmp(self, pkg_module):
         """do apt health check."""
-        ## TODO(xicheng): add ubuntu package check here
         return None
 
     def check_snmp_mibs(self):

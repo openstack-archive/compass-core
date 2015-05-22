@@ -20,7 +20,7 @@ from compass.hdsdiscovery import base
 from compass.hdsdiscovery import utils
 
 
-#Vendor_loader will load vendor instance by CLASS_NAME
+# Vendor_loader will load vendor instance by CLASS_NAME
 CLASS_NAME = "OVSwitch"
 
 

@@ -275,8 +275,7 @@ class Client(object):
         return self._get('/machines/%s' % machine_id)
 
     def get_clusters(self):
-        """Lists the details for all clusters.
-        """
+        """Lists the details for all clusters."""
         return self._get('/clusters')
 
     def get_cluster(self, cluster_id):

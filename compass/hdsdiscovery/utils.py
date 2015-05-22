@@ -278,7 +278,8 @@ def snmpwalk_by_cl(host, credential, oid, timeout=5, retries=3):
 
 def exec_command(command):
     """Execute command.
-       Return a tuple: returncode, output and error message(None if no error).
+
+    Return a tuple: returncode, output and error message(None if no error).
     """
     sub_p = subprocess.Popen(command,
                              shell=True,

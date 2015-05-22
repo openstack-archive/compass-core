@@ -63,6 +63,7 @@ class ActionHelper(object):
     @staticmethod
     def get_adapter_info(adapter_id, cluster_id, user):
         """Get adapter information. Return a dictionary as below,
+
            {
               "id": 1,
               "name": "xxx",
@@ -93,6 +94,7 @@ class ActionHelper(object):
               ...
            }
            To view a complete output, please refer to backend doc.
+
         """
         adapter_info = adapter_db.get_adapter(adapter_id, user=user)
         metadata = cluster_db.get_cluster_metadata(cluster_id, user=user)
@@ -111,6 +113,7 @@ class ActionHelper(object):
     @staticmethod
     def get_cluster_info(cluster_id, user):
         """Get cluster information.Return a dictionary as below,
+
            {
                "id": 1,
                "adapter_id": 1,
@@ -149,33 +152,34 @@ class ActionHelper(object):
     @staticmethod
     def get_hosts_info(cluster_id, hosts_id_list, user):
         """Get hosts information. Return a dictionary as below,
-           {
-               "hosts": {
-                   1($host_id): {
-                        "reinstall_os": True,
-                        "mac": "xxx",
-                        "name": "xxx",
-                        "roles": [xxx, yyy]
-                        },
-                        "networks": {
-                            "eth0": {
-                                "ip": "192.168.1.1",
-                                "netmask": "255.255.255.0",
-                                "is_mgmt": True,
-                                "is_promiscuous": False,
-                                "subnet": "192.168.1.0/24"
-                            },
-                            "eth1": {...}
-                        },
-                        "os_config": {},
-                        "package_config": {},
-                        "deployed_os_config": {},
-                        "deployed_package_config": {}
-                   },
-                   2: {...},
-                   ....
-               }
-           }
+
+        {
+            "hosts": {
+                1($host_id): {
+                     "reinstall_os": True,
+                     "mac": "xxx",
+                     "name": "xxx",
+                     "roles": [xxx, yyy]
+                     },
+                     "networks": {
+                         "eth0": {
+                             "ip": "192.168.1.1",
+                             "netmask": "255.255.255.0",
+                             "is_mgmt": True,
+                             "is_promiscuous": False,
+                             "subnet": "192.168.1.0/24"
+                         },
+                         "eth1": {...}
+                     },
+                     "os_config": {},
+                     "package_config": {},
+                     "deployed_os_config": {},
+                     "deployed_package_config": {}
+                },
+                2: {...},
+                ....
+            }
+        }
         """
         hosts_info = {}
         for host_id in hosts_id_list:

@@ -286,7 +286,7 @@ class Client(object):
         return self._delete('/switches/%s/machines/%s' %
                             (switch_id, machine_id))
 
-    ## test these
+    # test these
     def poll_switch(self, switch_id):
         data = {}
         data['find_machines'] = None
@@ -306,7 +306,7 @@ class Client(object):
         data = {}
         data['set_machines'] = group_machines
         return self._post('/switches/%s/action' % switch_id, data=data)
-    ## end
+    # end
 
     def list_switchmachines(self, switch_ip_int=None, port=None, vlans=None,
                             mac=None, tag=None, location=None):
@@ -621,7 +621,7 @@ class Client(object):
     def delete_cluster_config(self, cluster_id):
         return self._delete('/clusters/%s/config' % cluster_id)
 
-    ## test these
+    # test these
     def add_hosts_to_cluster(self, cluster_id, hosts):
         data = {}
         data['add_hosts'] = hosts

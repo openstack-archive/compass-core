@@ -541,6 +541,7 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
 
 class ClusterHostLogHistory(BASE, LogHistoryMixin):
     """clusterhost installing log history for each file.
+
     """
     __tablename__ = 'clusterhost_log_history'
 
@@ -577,6 +578,7 @@ class ClusterHostLogHistory(BASE, LogHistoryMixin):
 
 class HostLogHistory(BASE, LogHistoryMixin):
     """host installing log history for each file.
+
     """
     __tablename__ = 'host_log_history'
 

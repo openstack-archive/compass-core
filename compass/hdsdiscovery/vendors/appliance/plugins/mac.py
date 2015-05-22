@@ -28,8 +28,8 @@ class Mac(base.BaseSnmpMacPlugin):
 
     def __init__(self, host, credential):
         self.host = host
-        #self.credential = credential
-        #return
+        # self.credential = credential
+        # return
 
     def scan(self):
         """Implemnets the scan method in BasePlugin class.

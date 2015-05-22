@@ -33,9 +33,11 @@ MAPPER = {
 
 
 def validate_config(session, config, id_name, id_value, patch=True):
-    """Validates the given config value according to the config
-        metadata of the asscoiated os_id or adapter_id. Returns
-        a tuple (status, message).
+    """Validates config.
+
+    Validates the given config value according to the config
+    metadata of the asscoiated os_id or adapter_id. Returns
+    a tuple (status, message).
     """
     if id_name not in MAPPER.keys():
         return (False, "Invalid id type %s" % id_name)

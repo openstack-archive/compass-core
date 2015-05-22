@@ -103,8 +103,9 @@ class ChefInstaller(PKInstaller):
         return "-".join((dist_sys_name, cluster_name))
 
     def get_create_databag(self, databag_name):
-        """Get databag object from chef server. Create the databag if it
-           does not exist.
+        """Get databag object from chef server.
+
+        Creates the databag if it does not exist.
         """
         import chef
         databag = None
@@ -116,11 +117,13 @@ class ChefInstaller(PKInstaller):
         return databag
 
     def get_create_node(self, node_name, env_name=None):
-        """Get chef node if existing, otherwise create one and set its
-           environment.
+        """Get chef node
 
-           :param str node_name: The name for this node.
-           :param str env_name: The environment name for this node.
+        Gets the node if existing, otherwise create one and set its
+        environment.
+
+        :param str node_name: The name for this node.
+        :param str env_name: The environment name for this node.
         """
         import chef
         if not self.chef_api:
@@ -194,8 +197,9 @@ class ChefInstaller(PKInstaller):
 
     def add_roles(self, node, roles):
         """Add roles to the node.
-           :param object node: The node object.
-           :param list roles: The list of roles for this node.
+
+        :param object node: The node object.
+        :param list roles: The list of roles for this node.
         """
         if node is None:
             raise Exception("Node is None!")
@@ -217,13 +221,15 @@ class ChefInstaller(PKInstaller):
         logging.debug('Runlist for node %s is %s', node.name, node.run_list)
 
     def _generate_node_attributes(self, roles, host_vars_dict):
-        """Generate node attributes from templates according to its roles. The
-           templates are named by roles without '-'. Return the dictionary
-           of attributes defined in the templates.
+        """Generate node attributes.
 
-           :param list roles: The roles for this node, used to load the
-                              specific template.
-           :param dict host_vars_dict: The dict used in cheetah searchList to
+        Generates from templates according to its roles. The
+        templates are named by roles without '-'. Return the dictionary
+        of attributes defined in the templates.
+
+        :param list roles: The roles for this node, used to load the
+                           specific template.
+        :param dict host_vars_dict: The dict used in cheetah searchList to
                                   render attributes from templates.
         """
         if not roles:
@@ -296,12 +302,11 @@ class ChefInstaller(PKInstaller):
         env.save()
 
     def upload_environment(self, env_name, global_vars_dict):
-        """Generate environment attributes based on the template file and
-           upload it to chef server.
+        """Generate environment attributes
 
-           :param str env_name: The environment name.
-           :param dict vars_dict: The dictionary used in cheetah searchList to
-                                  render attributes from templates.
+        :param str env_name: The environment name.
+        :param dict vars_dict: The dictionary used in cheetah searchList to
+                               render attributes from templates.
         """
         env_config = self._generate_env_attributes(global_vars_dict)
         env = self.get_create_environment(env_name)
@@ -341,14 +346,15 @@ class ChefInstaller(PKInstaller):
                 databagitem.save()
 
     def _get_host_tmpl_vars(self, host_id, global_vars_dict):
-        """Generate templates variables dictionary for cheetah searchList based
-           on host package config.
+        """Generate templates variables dictionary.
 
-           :param int host_id: The host ID.
-           :param dict global_vars_dict: The vars_dict got from cluster level
-                                         package_config.
+        For cheetah searchList based on host package config.
 
-           The output format is the same as cluster_vars_dict.
+        :param int host_id: The host ID.
+        :param dict global_vars_dict: The vars_dict got from cluster level
+                                      package_config.
+
+        The output format is the same as cluster_vars_dict.
         """
         host_vars_dict = {}
         if global_vars_dict:
@@ -378,20 +384,21 @@ class ChefInstaller(PKInstaller):
 
     def _get_cluster_tmpl_vars(self):
         """Generate template variables dict based on cluster level config.
-           The vars_dict will be:
-           {
-               "baseinfo": {
-                   "id":1,
-                   "name": "cluster01",
-                   ...
-               },
-               "package_config": {
-                   .... //mapped from original package config based on metadata
-               },
-               "role_mapping": {
-                   ....
-               }
-           }
+
+        The vars_dict will be:
+        {
+            "baseinfo": {
+                "id":1,
+                "name": "cluster01",
+                ...
+            },
+            "package_config": {
+                .... //mapped from original package config based on metadata
+            },
+            "role_mapping": {
+                ....
+            }
+        }
         """
         cluster_vars_dict = {}
         # set cluster basic information to vars_dict
@@ -422,23 +429,24 @@ class ChefInstaller(PKInstaller):
 
     def deploy(self):
         """Start to deploy a distributed system. Return both cluster and hosts
-           deployed configs. The return format:
-           {
-               "cluster": {
-                   "id": 1,
-                   "deployed_package_config": {
-                       "roles_mapping": {...},
-                       "service_credentials": {...},
-                       ....
-                   }
-               },
-               "hosts": {
-                   1($clusterhost_id): {
-                       "deployed_package_config": {...}
-                   },
-                   ....
-               }
-           }
+
+        deployed configs. The return format:
+        {
+            "cluster": {
+                "id": 1,
+                "deployed_package_config": {
+                    "roles_mapping": {...},
+                    "service_credentials": {...},
+                    ....
+                }
+            },
+            "hosts": {
+                1($clusterhost_id): {
+                    "deployed_package_config": {...}
+                },
+                ....
+            }
+        }
         """
         host_list = self.config_manager.get_host_id_list()
         if not host_list:
@@ -498,19 +506,20 @@ class ChefInstaller(PKInstaller):
 
     def generate_installer_config(self):
         """Render chef config file (client.rb) by OS installing right after
-           OS is installed successfully.
-           The output format:
-           {
-              '1'($host_id/clusterhost_id):{
-                  'tool': 'chef',
-                  'chef_url': 'https://xxx',
-                  'chef_client_name': '$host_name',
-                  'chef_node_name': '$host_name',
-                  'chef_server_ip': 'xxx',(op)
-                  'chef_server_dns': 'xxx' (op)
-              },
-              .....
-           }
+
+        OS is installed successfully.
+        The output format:
+        {
+           '1'($host_id/clusterhost_id):{
+               'tool': 'chef',
+               'chef_url': 'https://xxx',
+               'chef_client_name': '$host_name',
+               'chef_node_name': '$host_name',
+               'chef_server_ip': 'xxx',(op)
+               'chef_server_dns': 'xxx' (op)
+           },
+           .....
+        }
         """
         host_ids = self.config_manager.get_host_id_list()
         os_installer_configs = {}
@@ -552,7 +561,8 @@ class ChefInstaller(PKInstaller):
 
     def get_supported_dist_systems(self):
         """get target systems from chef. All target_systems for compass will
-           be stored in the databag called "compass".
+
+        be stored in the databag called "compass".
         """
         databag = self.__get_compass_databag()
         target_systems = {}

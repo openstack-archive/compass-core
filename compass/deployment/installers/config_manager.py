@@ -41,8 +41,9 @@ class BaseConfigManager(object):
         return self.__get_cluster_item(const.OS_VERSION)
 
     def get_cluster_baseinfo(self):
-        """Get cluster base information, including cluster_id, os_version,
-           and cluster_name.
+        """Get cluster base information.
+
+        Including cluster_id, os_version and cluster_name.
         """
         attr_names = [const.ID, const.NAME, const.OS_VERSION]
 
@@ -351,21 +352,22 @@ class BaseConfigManager(object):
 
     def _get_cluster_roles_mapping_helper(self):
         """The ouput format will be as below, for example:
-           {
-               "controller": [{
-                   "hostname": "xxx",
-                   "management": {
-                       "interface": "eth0",
-                       "ip": "192.168.1.10",
-                       "netmask": "255.255.255.0",
-                       "subnet": "192.168.1.0/24",
-                       "is_mgmt": True,
-                       "is_promiscuous": False
-                   },
-                   ...
-               }],
-                   ...
-           }
+
+        {
+            "controller": [{
+                "hostname": "xxx",
+                "management": {
+                    "interface": "eth0",
+                    "ip": "192.168.1.10",
+                    "netmask": "255.255.255.0",
+                    "subnet": "192.168.1.0/24",
+                    "is_mgmt": True,
+                    "is_promiscuous": False
+                },
+                ...
+            }],
+                ...
+        }
         """
         mapping = {}
         hosts_id_list = self.get_host_id_list()

@@ -17,7 +17,7 @@
 from compass.hdsdiscovery import base
 
 
-#Vendor_loader will load vendor instance by CLASS_NAME
+# Vendor_loader will load vendor instance by CLASS_NAME
 CLASS_NAME = 'Appliance'
 
 

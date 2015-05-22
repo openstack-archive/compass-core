@@ -38,8 +38,9 @@ class ItemNotFound(HTTPException):
 
 
 class BadRequest(HTTPException):
-    """Define the exception for invalid/missing parameters or a user makes
-       a request in invalid state and cannot be processed at this moment.
+    """Define the exception for invalid/missing parameters.
+
+    User making a request in invalid state cannot be processed.
     """
     def __init__(self, message):
         super(BadRequest, self).__init__(message, 400)
@@ -52,23 +53,19 @@ class Unauthorized(HTTPException):
 
 
 class UserDisabled(HTTPException):
-    """Define the exception that a disabled user tries to do some operations.
-    """
+    """Define the exception for disabled users."""
     def __init__(self, message):
         super(UserDisabled, self).__init__(message, 403)
 
 
 class Forbidden(HTTPException):
-    """Define the exception that a user tries to do some operations without
-       valid permissions.
-    """
+    """Define the exception for invalid permissions."""
     def __init__(self, message):
         super(Forbidden, self).__init__(message, 403)
 
 
 class BadMethod(HTTPException):
-    """Define the exception for invoking unsupprted or unimplemented methods.
-    """
+    """Define the exception for invoking unsupported methods."""
     def __init__(self, message):
         super(BadMethod, self).__init__(message, 405)
 

@@ -203,8 +203,9 @@ class TestPatchSwitch(BaseTest):
         )
         expected = {
             'credentials': {
-            'version': '2c',
-            'community': 'public'}
+                'version': '2c',
+                'community': 'public'
+            }
         }
         self.assertTrue(
             all(item in patch_switch.items() for item in expected.items())

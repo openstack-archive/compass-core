@@ -92,8 +92,9 @@ class DeployManager(object):
         self.clean_progress()
 
     def deploy_os(self):
-        """Deploy OS to hosts which need to in the cluster. Return OS deployed
-           config.
+        """Deploy OS to hosts which need to in the cluster.
+
+        Return OS deployed config.
         """
         if not self.os_installer:
             return {}
@@ -113,8 +114,9 @@ class DeployManager(object):
         return self.os_installer.deploy()
 
     def deploy_target_system(self):
-        """Deploy target system to all hosts in the cluster. Return package
-           deployed config.
+        """Deploy target system to all hosts in the cluster.
+
+        Return package deployed config.
         """
         if not self.pk_installer:
             return {}

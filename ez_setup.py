@@ -208,11 +208,13 @@ def download_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
 
 
 def _extractall(self, path=".", members=None):
-    """Extract all members from the archive to the current working
-       directory and set owner, modification time and permissions on
-       directories afterwards. `path' specifies a different directory
-       to extract to. `members' is optional and must be a subset of the
-       list returned by getmembers().
+    """Extract all members.
+
+    From the archive to the current working
+    directory and set owner, modification time and permissions on
+    directories afterwards. `path' specifies a different directory
+    to extract to. `members' is optional and must be a subset of the
+    list returned by getmembers().
     """
     import copy
     import operator

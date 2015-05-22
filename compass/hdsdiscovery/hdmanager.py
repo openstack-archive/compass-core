@@ -39,8 +39,9 @@ class HDManager(object):
         self.snmp_sysdescr = 'sysDescr.0'
 
     def learn(self, host, credential, vendor, req_obj, oper="SCAN", **kwargs):
-        """Insert/update record of switch_info. Get expected results from
-           switch according to sepcific operation.
+        """Insert/update record of switch_info.
+
+        Get expected results from switch according to sepcific operation.
 
         :param req_obj: the object of a machine
         :param host: switch IP address

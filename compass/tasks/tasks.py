@@ -211,43 +211,37 @@ def clean_package_installer(
 
 @celery.task(name='compass.tasks.poweron_host')
 def poweron_host(host_id):
-    """Deploy the given cluster.
-    """
+    """Deploy the given cluster."""
     pass
 
 
 @celery.task(name='compass.tasks.poweroff_host')
 def poweroff_host(host_id):
-    """Deploy the given cluster.
-    """
+    """Deploy the given cluster."""
     pass
 
 
 @celery.task(name='compass.tasks.reset_host')
 def reset_host(host_id):
-    """Deploy the given cluster.
-    """
+    """Deploy the given cluster."""
     pass
 
 
 @celery.task(name='compass.tasks.poweron_machine')
 def poweron_machine(machine_id):
-    """Deploy the given cluster.
-    """
+    """Deploy the given cluster."""
     pass
 
 
 @celery.task(name='compass.tasks.poweroff_machine')
 def poweroff_machine(machine_id):
-    """Deploy the given cluster.
-    """
+    """Deploy the given cluster."""
     pass
 
 
 @celery.task(name='compass.tasks.reset_machine')
 def reset_machine(machine_id):
-    """Deploy the given cluster.
-    """
+    """Deploy the given cluster."""
     pass
 
 
@@ -256,8 +250,7 @@ def os_installed(
     host_id, clusterhosts_ready,
     clusters_os_ready
 ):
-    """callback when os is installed.
-    """
+    """callback when os is installed."""
     try:
         install_callback.os_installed(
             host_id, clusterhosts_ready,
@@ -271,8 +264,7 @@ def os_installed(
 def package_installed(
     cluster_id, host_id, cluster_ready, host_ready
 ):
-    """callback when package is installed.
-    """
+    """callback when package is installed."""
     try:
         install_callback.package_installed(
             cluster_id, host_id, cluster_ready, host_ready
@@ -285,8 +277,7 @@ def package_installed(
 def cluster_installed(
     cluster_id, clusterhosts_ready
 ):
-    """callback when package is installed.
-    """
+    """callback when package is installed."""
     try:
         install_callback.cluster_installed(
             cluster_id, clusterhosts_ready
@@ -297,8 +288,7 @@ def cluster_installed(
 
 @celery.task(name='compass.tasks.update_progress')
 def update_clusters_progress():
-    """Calculate the installing progress of the given cluster.
-    """
+    """Calculate the installing progress of the given cluster."""
     logging.info('update_clusters_progress')
     try:
         update_progress.update_progress()

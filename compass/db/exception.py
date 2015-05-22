@@ -49,6 +49,7 @@ class Unauthorized(DatabaseException):
 
 class UserDisabled(DatabaseException):
     """Define the exception that a disabled user tries to do some operations.
+
     """
     def __init__(self, message):
         super(UserDisabled, self).__init__(message)
@@ -57,7 +58,9 @@ class UserDisabled(DatabaseException):
 
 class Forbidden(DatabaseException):
     """Define the exception that a user is trying to make some action
-       without the right permission.
+
+    without the right permission.
+
     """
     def __init__(self, message):
         super(Forbidden, self).__init__(message)
@@ -73,6 +76,7 @@ class NotAcceptable(DatabaseException):
 
 class InvalidParameter(DatabaseException):
     """Define the exception that the request has invalid or missing parameters.
+
     """
     def __init__(self, message):
         super(InvalidParameter, self).__init__(message)
@@ -81,6 +85,7 @@ class InvalidParameter(DatabaseException):
 
 class InvalidResponse(DatabaseException):
     """Define the exception that the response is invalid.
+
     """
     def __init__(self, message):
         super(InvalidResponse, self).__init__(message)

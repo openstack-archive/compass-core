@@ -95,15 +95,15 @@ class AnsibleInstaller(PKInstaller):
             self.__class__.__name__, self.NAME, self.installer_url)
 
     def generate_installer_config(self):
-        """Render ansible config file by OS installing right after
-           OS is installed successfully.
-           The output format:
-           {
-              '1'($host_id/clusterhost_id):{
-                  'tool': 'ansible',
-              },
-              .....
-           }
+        """Render ansible config file by OS installing.
+
+        The output format:
+        {
+           '1'($host_id/clusterhost_id):{
+               'tool': 'ansible',
+           },
+           .....
+        }
         """
         host_ids = self.config_manager.get_host_id_list()
         os_installer_configs = {}
@@ -119,21 +119,23 @@ class AnsibleInstaller(PKInstaller):
         return "-".join((dist_sys_name, cluster_name))
 
     def _get_cluster_tmpl_vars(self):
-        """Generate template variables dict based on cluster level config.
-           The vars_dict will be:
-           {
-               "baseinfo": {
-                   "id":1,
-                   "name": "cluster01",
-                   ...
-               },
-               "package_config": {
-                   .... //mapped from original package config based on metadata
-               },
-               "role_mapping": {
-                   ....
-               }
-           }
+        """Generate template variables dict
+
+        Generates based on cluster level config.
+        The vars_dict will be:
+        {
+            "baseinfo": {
+                "id":1,
+                "name": "cluster01",
+                ...
+            },
+            "package_config": {
+                .... //mapped from original package config based on metadata
+            },
+            "role_mapping": {
+                ....
+            }
+        }
         """
         cluster_vars_dict = {}
         # set cluster basic information to vars_dict
@@ -242,7 +244,7 @@ class AnsibleInstaller(PKInstaller):
         files = self.runner_files
         for dir in dirs:
             shutil.copytree(
-                os.path.join(self.adapter_dir, dir),
+                os.path.join(self.ansible_dir, dir),
                 os.path.join(
                     ansible_run_destination,
                     dir
@@ -289,24 +291,26 @@ class AnsibleInstaller(PKInstaller):
         self.serialize_config(cfg_config, cfg_destination)
 
     def deploy(self):
-        """Start to deploy a distributed system. Return both cluster and hosts
-           deployed configs. The return format:
-           {
-               "cluster": {
-                   "id": 1,
-                   "deployed_package_config": {
-                       "roles_mapping": {...},
-                       "service_credentials": {...},
-                       ....
-                   }
-               },
-               "hosts": {
-                   1($clusterhost_id): {
-                       "deployed_package_config": {...}
-                   },
-                   ....
-               }
-           }
+        """Start to deploy a distributed system.
+
+        Return both cluster and hosts deployed configs.
+        The return format:
+        {
+            "cluster": {
+                "id": 1,
+                "deployed_package_config": {
+                    "roles_mapping": {...},
+                    "service_credentials": {...},
+                    ....
+                }
+            },
+            "hosts": {
+                1($clusterhost_id): {
+                    "deployed_package_config": {...}
+                },
+                ....
+            }
+        }
         """
         host_list = self.config_manager.get_host_id_list()
         if not host_list:

@@ -60,8 +60,9 @@ class BaseInstaller(object):
 
     def get_tmpl_vars_from_metadata(self, metadata, config):
         """Get variables dictionary for rendering templates from metadata.
-           :param dict metadata: The metadata dictionary.
-           :param dict config: The
+
+        :param dict metadata: The metadata dictionary.
+        :param dict config: The
         """
         template_vars = {}
         self._get_tmpl_vars_helper(metadata, config, template_vars)
@@ -69,18 +70,19 @@ class BaseInstaller(object):
         return template_vars
 
     def _get_key_mapping(self, metadata, key, is_regular_key):
-        """Get the keyword which the input key maps to. This keyword will be
-           added to dictionary used to render templates.
+        """Get the keyword which the input key maps to.
 
-           If the key in metadata has a mapping to another keyword which is
-           used for templates, then return this keyword. If the key is started
-           with '$', which is a variable in metadata, return the key itself as
-           the mapping keyword. If the key has no mapping, return None.
+        This keyword will be added to dictionary used to render templates.
 
-           :param dict metadata: metadata/submetadata dictionary.
-           :param str key: The keyword defined in metadata.
-           :param bool is_regular_key: False when the key defined in metadata
-                                       is a variable(starting with '$').
+        If the key in metadata has a mapping to another keyword which is
+        used for templates, then return this keyword. If the key is started
+        with '$', which is a variable in metadata, return the key itself as
+        the mapping keyword. If the key has no mapping, return None.
+
+        :param dict metadata: metadata/submetadata dictionary.
+        :param str key: The keyword defined in metadata.
+        :param bool is_regular_key: False when the key defined in metadata
+                                    is a variable(starting with '$').
         """
         mapping_to = key
         if is_regular_key:
@@ -92,12 +94,14 @@ class BaseInstaller(object):
         return mapping_to
 
     def _get_submeta_by_key(self, metadata, key):
-        """Get submetadata dictionary based on current metadata key. And
-           determines the input key is a regular string keyword or a variable
-           keyword defined in metadata, which starts with '$'.
+        """Get submetadata dictionary.
 
-           :param dict metadata: The metadata dictionary.
-           :param str key: The keyword defined in the metadata.
+        Based on current metadata key. And
+        determines the input key is a regular string keyword or a variable
+        keyword defined in metadata, which starts with '$'.
+
+        :param dict metadata: The metadata dictionary.
+        :param str key: The keyword defined in the metadata.
         """
         if key in metadata:
             return (True, metadata[key])

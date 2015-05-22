@@ -31,7 +31,8 @@ class BaseVendor(object):
 
     def is_this_vendor(self, sys_info, **kwargs):
         """Determine if the host is associated with this vendor.
-           This function must be implemented by vendor itself
+
+        This function must be implemented by vendor itself
         """
         raise NotImplementedError
 
@@ -48,10 +49,11 @@ class BaseSnmpVendor(BaseVendor):
         self._matched_names = matched_names
 
     def is_this_vendor(self, sys_info, **kwargs):
-        """Determine if the switch belongs to this vendor by matching the
-           system information retrieved from the switch.
-           :param str sys_info: the system information retrieved from a switch
-           Return True
+        """Determine if the switch belongs to this vendor.
+
+        Matching the system information retrieved from the switch.
+        :param str sys_info: the system information retrieved from a switch
+        Return True
         """
         if sys_info:
             for name in self._matched_names:
@@ -62,14 +64,16 @@ class BaseSnmpVendor(BaseVendor):
 
 
 class BasePlugin(object):
-    """Extended by vendor's plugin, which processes request and
-       retrieve info directly from the switch.
+    """Extended by vendor's plugin.
+
+    This plugin processes request and retrieve info directly from the switch.
     """
     __metaclass__ = ABCMeta
 
     def process_data(self, oper='SCAN', **kwargs):
         """Each vendors will have some plugins to do some operations.
-           Plugin will process request data and return expected result.
+
+        Plugin will process request data and return expected result.
 
         :param oper: operation function name.
         :param kwargs: key-value pairs of arguments

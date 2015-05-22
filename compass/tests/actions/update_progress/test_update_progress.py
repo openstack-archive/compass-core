@@ -123,7 +123,7 @@ class TestProgressCalculator(unittest2.TestCase):
         if not self.flavor_id:
             raise Exception('flavor id not found')
 
-        #add cluster
+        # add cluster
         cluster.add_cluster(
             adapter_id=self.adapter_id,
             os_id=self.os_id,
@@ -139,7 +139,7 @@ class TestProgressCalculator(unittest2.TestCase):
         for list_cluster in list_clusters:
             self.cluster_id = list_cluster['id']
 
-        #add switch
+        # add switch
         switch.add_switch(
             ip=SWITCH_IP,
             user=self.user_object,
@@ -154,12 +154,12 @@ class TestProgressCalculator(unittest2.TestCase):
             port='1'
         )
 
-        #get machine information
+        # get machine information
         list_machines = machine.list_machines(user=self.user_object)
         for list_machine in list_machines:
             self.machine_id = list_machine['id']
 
-        #add cluster host
+        # add cluster host
         cluster.add_cluster_host(
             self.cluster_id,
             user=self.user_object,
@@ -171,7 +171,7 @@ class TestProgressCalculator(unittest2.TestCase):
             self.host_id = list_clusterhost['host_id']
             self.clusterhost_id = list_clusterhost['clusterhost_id']
 
-        #add subnet
+        # add subnet
         network.add_subnet(
             subnet=SUBNET,
             user=self.user_object,
@@ -182,7 +182,7 @@ class TestProgressCalculator(unittest2.TestCase):
         for list_subnet in list_subnets:
             self.subnet_id = list_subnet['id']
 
-        #add host network
+        # add host network
         host.add_host_network(
             self.host_id,
             user=self.user_object,
@@ -192,14 +192,14 @@ class TestProgressCalculator(unittest2.TestCase):
             is_mgmt=True
         )
 
-        #get clusterhost
+        # get clusterhost
         list_clusterhosts = cluster.list_clusterhosts(
             user=self.user_object
         )
         for list_clusterhost in list_clusterhosts:
             self.clusterhost_id = list_clusterhost['id']
 
-        #update host state
+        # update host state
         self.list_hosts = host.list_hosts(user=self.user_object)
         for list_host in self.list_hosts:
             self.host_id = list_host['id']
@@ -209,14 +209,14 @@ class TestProgressCalculator(unittest2.TestCase):
             state='INSTALLING'
         )
 
-        #update cluster state
+        # update cluster state
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
 
-        #update clusterhost state
+        # update clusterhost state
         cluster.update_clusterhost_state(
             self.clusterhost_id,
             user=self.user_object,

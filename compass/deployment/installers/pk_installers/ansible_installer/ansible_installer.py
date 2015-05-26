@@ -179,6 +179,7 @@ class AnsibleInstaller(PKInstaller):
         )
 
     def _generate_group_vars_attributes(self, global_vars_dict):
+        logging.info("global vars dict is %s", global_vars_dict)
         group_vars_tmpl_path = os.path.join(
             os.path.join(self.tmpl_dir, self.GROUPVARS_TMPL_DIR),
             self.tmpl_name

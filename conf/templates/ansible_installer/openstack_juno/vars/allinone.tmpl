@@ -18,8 +18,19 @@ INTERNAL_INTERFACE: $network_internal_nic
 #end for
 
 #set credentials = $getVar('service_credentials', {})
+#set console_credentials = $getVar('console_credentials', {})
 #set rabbit_username = $credentials.rabbitmq.username
 #set rabbit_password = $credentials.rabbitmq.password
+#set keystone_dbpass = $credentials.identity.password
+#set glance_dbpass = $credentials.image.password
+#set glance_pass = $console_credentials.image.password
+#set nova_dbpass = $credentials.compute.password
+#set nova_pass = $console_credentials.compute.password
+#set dash_dbpass = $credentials.dashboard.password 
+#set cinder_dbpass = $credentials.volume.password
+#set cinder_pass = $console_credentials.volume.password
+#set admin_pass = $console_credentials.admin.password
+#set neutron_pass = $console_credentials.network.password
 
 compute_controller_host: "{{ controller_host }}"
 db_host: "{{ controller_host }}"
@@ -45,18 +56,18 @@ ADMIN_TOKEN: admin
 CEILOMETER_TOKEN: c095d479023a0fd58a54
 
 RABBIT_PASS: $rabbit_password
-KEYSTONE_DBPASS: keystone_db_secret
+KEYSTONE_DBPASS: $keystone_dbpass
 DEMO_PASS: demo_secret
-ADMIN_PASS: admin_secret
-GLANCE_DBPASS: glance_db_secret
-GLANCE_PASS: glance_secret
-NOVA_DBPASS: nova_db_secret
-NOVA_PASS: nova_secret
-DASH_DBPASS: dash_db_secret
-CINDER_DBPASS: cinder_db_secret
-CINDER_PASS: cinder_secret
-NEUTRON_DBPASS: neutron_db_secret
-NEUTRON_PASS: netron_secret
+ADMIN_PASS: $admin_pass
+GLANCE_DBPASS: $glance_dbpass
+GLANCE_PASS: $glance_pass
+NOVA_DBPASS: $nova_dbpass
+NOVA_PASS: $nova_pass
+DASH_DBPASS: $dash_dbpass
+CINDER_DBPASS: $cinder_dbpass
+CINDER_PASS: $cinder_pass
+NEUTRON_DBPASS: $neutron_pass
+NEUTRON_PASS: $neutron_pass
 NEUTRON_TYPE_DRIVERS: ['flat', 'gre', 'vxlan']
 NEUTRON_TENANT_NETWORK_TYPES: ['vxlan']
 #NEUTRON_MECHANISM_DRIVERS: ['opendaylight']

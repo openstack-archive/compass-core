@@ -51,6 +51,7 @@ git clone -b dev/experimental git://git.openstack.org/stackforge/compass-adapter
 cp -r compass-adapters/ansible/openstack_juno compass-adapters/ansible/openstack_juno_plumgrid
 vagrant box list |grep compass
 if [ "$?" != "0" ]; then
-vagrant box add compass https://atlas.hashicorp.com/compass-dev/boxes/compass/versions/0.0.1/providers/compass.box
+# vagrant box add compass https://atlas.hashicorp.com/compass-dev/boxes/compass/versions/0.0.1/providers/compass.box
+vagrant box add compass https://s3-us-west-1.amazonaws.com/compass-vbox/compass.box
 fi
 vagrant up --provision

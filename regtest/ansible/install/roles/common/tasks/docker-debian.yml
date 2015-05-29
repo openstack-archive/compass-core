@@ -1,0 +1,5 @@
+- include: docker-debian-precise.yml
+  when: ansible_distribution_major_version == '12'
+
+- include: docker-debian-trusty.yml
+  when: ansible_distribution_major_version == '14'

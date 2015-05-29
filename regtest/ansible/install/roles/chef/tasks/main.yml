@@ -1,0 +1,22 @@
+---
+
+- include: RedHat.yml
+  when: ansible_os_family == 'RedHat' and not dockerized
+
+- include: Debian.yml
+  when: ansible_os_family == 'Debian' and not dockerized
+
+- include: docker-redhat.yml
+  when: ansible_os_family == 'Redhat' and dockerized
+
+- include: docker-debian.yml
+  when: ansible_os_family == 'Debian' and dockerized
+
+- include: chef-server.yml
+  when: not dockerized
+
+- include: knife.yml
+  when: not dockerized
+
+- include: compass.yml
+  when: not dockerized

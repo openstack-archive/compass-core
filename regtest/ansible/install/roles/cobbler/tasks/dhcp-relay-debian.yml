@@ -1,0 +1,11 @@
+---
+
+- name: get isc-dhcp-relay agent
+  apt: pkg=isc-dhcp-relay state=installed
+
+- name: make dhcp-relay agent listen to cobbler
+  lineinfile: dest=/etc/default/isc-dhcp-relay
+              regexp='^SERVERS'
+              line='SERVERS="{{ cobbler_docker_ip }}"'
+  notify:
+      restart dhcp-relay

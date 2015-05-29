@@ -1,0 +1,10 @@
+---
+
+- include: RedHat.yml
+  when: ansible_os_family == 'RedHat' and not dockerized
+
+- include: Debian.yml
+  when: ansible_os_family == 'Debian' and not dockerized
+
+- include: docker.yml
+  when: dockerized

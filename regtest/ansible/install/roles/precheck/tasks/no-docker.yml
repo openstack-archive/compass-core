@@ -1,0 +1,10 @@
+---
+
+- include: chef.yml
+  when: type == "chef"
+
+- include: cobbler.yml
+  when: type == "cobbler"
+
+- include: compass.yml
+  when: type == "compass"

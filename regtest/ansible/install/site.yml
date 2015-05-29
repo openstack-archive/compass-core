@@ -1,0 +1,18 @@
+---
+
+- hosts: chefnodes
+  sudo: True
+  roles:
+    - chef
+
+- hosts: cobblernodes
+  sudo: True
+  roles:
+    - common
+    - cobbler
+
+- hosts: compassnodes
+  sudo: True
+  roles:
+    - common
+    - compass

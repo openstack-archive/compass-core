@@ -1,0 +1,263 @@
+---
+
+# Once rebuild is marked as True, all docker images and/or packages will be destroyed and re-established
+rebuild: True
+
+# Auto-generated IP values
+chef_server: "10.145.89.139"
+cobbler_server: "{{ mgmt_next_ip }}"
+compass-server: "{{ mgmt_next_ip }}"
+
+internal_nic: eth1
+internal_interface: "ansible_{{ internal_nic }}"
+internal_ip: "{{ hostvars[inventory_hostname][internal_interface]['ipv4']['address'] }}"
+
+# Auto-generated
+dockerized_cobbler: True
+dockerized_chef: False
+
+# shared_dir on local machine
+shared_dir: "~/compass/shared"
+
+# pkg installer
+pkg_installer: ['ansible']
+
+## default urls
+
+# centos
+epel_6: "https://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm"
+
+# compass adapters
+compass_adapters: "git://git.openstack.org/stackforge/compass-adapters.git"
+
+## cobbler
+# cidr for docker bridge: compass0
+compass0_subnet: "192.168.100.1/24"
+
+# subnet ip for docker bridge: compass0
+compass0_subnet_ip: "192.168.100.0"
+
+# subnet mask for docker bridge: compass0
+compass0_subnet_mask: "255.255.255.0"
+
+# router ip for docker bridge: compass0
+compass0_router: "192.168.100.1"
+
+# dhcp range for docker bridge: compass0
+compass0_dhcp_range: "192.168.100.150 192.168.100.160"
+
+# management nic
+mgmt_nic: "eth1"
+mgmt_nic_ip: "hostvars[inventory_hostname][ansible_{{ mgmt_nic }}]['ipv4']['address']"
+# management pxe server
+mgmt_next_ip: "10.1.0.12"
+
+# management subnet ip of the cluster you want to deploy
+mgmt_subnet_ip: "10.1.0.0"
+
+# mangement cidr of the cluster you want to deploy
+mgmt_subnet: "10.1.0.0/24"
+
+# management subnet router ip
+mgmt_router: "10.1.0.1"
+
+# management subnet subnet mask
+mgmt_subnet_mask: "255.255.255.0"
+
+# management subnet dhcp range
+mgmt_dhcp_range: "10.1.0.100 10.1.0.150"
+
+
+
+## ports for cobbler ##
+
+# http port on host that maps to the cobbler container
+cobbler_mapped_http_port_on_host: "8080"
+
+# rsyslog port on host that maps to the compass container
+rsyslog_port_mapped_on_host: "12514"
+
+# tftp port on host that maps to the cobbler container
+tftp_port: "69"
+
+# xmlrpc port on host that maps to the cobbler container
+xmlrpc_port: "25151"
+
+# dns port on host that maps to the cobbler container
+dns_port: "53"
+
+# mysql port
+mysql_port: "3306"
+
+# port mapping as a paramter for running cobbler container
+cobbler_port_mapping: -p {{ cobbler_mapped_http_port_on_host }}:80 -p {{ tftp_port }}:69/udp -p {{ dns_port }}:53/udp -p {{ xmlrpc_port }}:25151 -p {{ rsyslog_port_mapped_on_host }}:514
+
+
+
+## ports for compass ##
+
+# http port on host that maps to the compass container
+compass_mapped_http_port_on_host: "5000"
+
+# ntp port on host that maps to the compass container
+ntp_port: "123"
+
+# squid proxy port on host that maps to the compass container
+proxy_port: "3128"
+
+# port mapping as a parameter for running compass container
+compass_port_mapping: -p {{ compass_mapped_http_port_on_host }}:80 -p {{ ntp_port }}:123 -p {{ proxy_port }}:3128 -p {{ mysql_port }}:3306
+
+
+## isos
+# centos iso url
+centos_url: "{{ centos_65_url }}"
+
+# ubuntu iso url
+ubuntu_url: "{{ ubuntu_1204_url }}"
+
+# centos 6.5 url
+centos_65_url: "https://s3-us-west-1.amazonaws.com/compass-local-repo/centos/6.5/CentOS-6.5-x86_64.iso"
+
+# ubuntu 12.04 url
+ubuntu_1204_url: "https://s3-us-west-1.amazonaws.com/compass-local-repo/ubuntu/12.04/Ubuntu-12.04-x86_64.iso"
+
+# os name of centos
+centos: "{{ centos_65 }}"
+
+# os name of ubuntu
+ubuntu: "{{ ubuntu_1204 }}"
+
+# centos 6.5 os name
+centos_65: "CentOS-6.5-x86_64"
+
+# ubuntu 12.04 os name
+ubuntu_1204: "Ubuntu-12.04-x86_64"
+
+# ubuntu 14.04 url
+ubuntu_1404_url: "https://s3-us-west-1.amazonaws.com/compass-local-repo/ubuntu/14.04/Ubuntu-14.04-x86_64.iso"
+
+# ubuntu 14.04 os name
+ubuntu_1404: "Ubuntu-14.04-x86_64"
+
+region: "us"
+
+distros:
+  - {
+      name: "Ubuntu-14.04-x86_64",
+      iso_us_url: "https://s3-us-west-1.amazonaws.com/compass-local-repo/ubuntu/14.04/Ubuntu-14.04-x86_64.iso",
+      ppa_us_url: "https://s3-us-west-1.amazonaws.com/compass-local-repo/ubuntu/14.04/ubuntu_14_04_ppa_repo.tar.gz",
+      iso_lab_url: "http://192.168.120.2/cobbler/iso/ubuntu/Ubuntu-14.04-x86_64.iso",
+      ppa_lab_url: "http://192.168.120.2/cobbler/ppa_repo/ubuntu_14_04_ppa_repo.tar.gz",
+      ppa_repo_name: "ubuntu_14_04_ppa_repo",
+      breed: "ubuntu",
+      kickstart: "default.seed",
+      kopts: "netcfg/choose_interface=auto"
+    }
+
+  - {
+      name: "CentOS-6.5-x86_64",
+      iso_us_url: "https://s3-us-west-1.amazonaws.com/compass-local-repo/centos/6.5/CentOS-6.5-x86_64.iso",
+      ppa_us_url: "https://s3-us-west-1.amazonaws.com/compass-local-repo/centos/6.5/centos_6_5_ppa_repo.tar.gz",
+      iso_lab_url: "http://192.168.120.2/cobbler/iso/centos/CentOS-6.5-x86_64.iso",
+      ppa_lab_url: "http://192.168.120.2/cobbler/ppa_repo/centos_6_5_ppa_repo.tar.gz",
+      ppa_repo_name: "centos_6_5_ppa_repo",
+      breed: "redhat",
+      kickstart: "default.ks",
+      kopts: ""
+    }
+
+##  volume mapping for cobbler ##
+
+# mount point for isos on cobbler host
+host_mount_point: "/root/docker-cobbler/images"
+
+# mount point inside cobbler container
+container_mount_point: "/var/lib/cobbler/mount_point"
+
+# combined mount syntax for docker run
+image_volume_mapping: "-v {{ host_mount_point }}:{{ container_mount_point }}"
+
+# log dir on cobbler host
+cobbler_host_log_dir: "/var/log/cobbler"
+
+# log dir inside cobbler container
+cobbler_container_log_dir: "/var/log/cobbler"
+
+# log the logs from container into host for future use
+log_volume_mapping: "-v {{ cobbler_host_log_dir }}:{{ cobbler_container_log_dir }}"
+
+
+
+##  volume mapping for compass ##
+
+# log dir on compass host
+compass_host_log_dir: "/var/log/compass"
+
+# log dir on inside compass container
+compass_container_log_dir: "/var/log/cobbler"
+
+# sync logs inside out of the container
+compass_volume_mapping: "-v {{ compass_host_log_dir }}:{{ compass_container_log_dir }}"
+
+
+
+## docker ##
+
+# install docker on ubuntu
+docker_apt_key_server: hkp://keyserver.ubuntu.com:80
+docker_apt_key: 36A1D7869245C8950F966E92D8576A8BA88D21E9
+
+# epel version
+epel_file_name: epel-release-6-8.noarch.rpm
+epel_base_url: http://download.fedoraproject.org/pub/epel/6/x86_64/
+
+# atomic version
+atomic_file_name: atomic-release-1.0-19.el6.art.noarch.rpm
+atomic_base_url: http://www6.atomicorp.com/channels/atomic/centos/6/x86_64/RPMS/
+
+# pxe boot macs
+#pxe_boot_macs: ['00:00:37:ed:95:4e', '00:00:79:ad:ce:6b', '00:00:0a:f6:6e:d7']
+#test: true
+
+# the key to be authorized on pxe boot machines so passwordless login can be
+# done from the machine where you grab the key.
+#push_ssh_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDUuKnIXwxS9w+Rxb4+CL3iqNQXB+kriQyr89YeLg5X7B0h+r91okw2bgodVvoynH8n7d7afHYew4KH7pMc5a3QMf/gwhhnlfoeyimQg0IOTQ6pvNxifRi5IN9xa3mB3kL9/xVmfo9rUE6ZZ4dNQ91As706SLBzEJWUuICT7fFJqCqHbxNT9aO//TWcoJJH+d+GLfLagyfVxBHb8DcoNSKTq1rFjZCFVs9pg6aO0d6Z3FcyICxOaacsAoRZOsx8+2WsHaZRk6udbqZJHt7LBs9Bc38+YCRhc31Q2jyrm37xT3QchRl4sihqq38N03cTYBksuRfV1dJaso9MUQapa/Lv root@host-1"
+pxe_boot_macs: ['00:00:82:e0:16:82','00:00:8a:16:e7:fb']
+test: true
+pxe_boot_macs: ['00:00:65:c6:2e:de','00:00:e7:05:b7:d1']
+test: true
+pxe_boot_macs: ['00:00:a7:76:fa:a2','00:00:bb:bf:d9:95']
+test: true
+pxe_boot_macs: ['00:00:25:94:20:6a','00:00:0b:8c:7b:9a','00:00:2f:29:91:ba','00:00:86:09:ca:94']
+test: true
+pxe_boot_macs: ['00:00:34:1d:00:55','00:00:6d:29:ee:60','00:00:bd:1c:18:f7','00:00:74:78:bf:4d']
+test: true
+pxe_boot_macs: ['00:00:9c:86:e3:0b','00:00:49:12:71:34','00:00:12:e6:56:da','00:00:a7:2e:b9:ff']
+test: true
+pxe_boot_macs: ['00:00:07:e1:f6:43','00:00:b8:92:82:96','00:00:1d:02:cc:3f','00:00:57:1d:04:80']
+test: true
+pxe_boot_macs: ['00:00:57:70:66:d8','00:00:56:b3:14:58','00:00:61:b4:99:04','00:00:ec:8e:0c:a7']
+test: true
+pxe_boot_macs: ['00:00:0e:a8:d5:2f','00:00:38:90:66:47','00:00:52:b4:ff:d2','00:00:4e:72:e0:f3']
+test: true
+pxe_boot_macs: ['00:00:f7:6a:10:4c']
+test: true
+pxe_boot_macs: ['00:00:34:c0:34:81']
+test: true
+pxe_boot_macs: ['00:00:00:90:69:b0']
+test: true
+pxe_boot_macs: ['00:00:c0:00:5d:b7']
+test: true
+pxe_boot_macs: ['00:00:80:29:ed:ea']
+test: true
+pxe_boot_macs: ['00:00:a7:85:ce:76']
+test: true
+pxe_boot_macs: ['00:00:50:83:57:5f']
+test: true
+pxe_boot_macs: ['00:00:57:9c:c3:31']
+test: true
+pxe_boot_macs: ['00:00:87:d1:a8:d3']
+test: true
+pxe_boot_macs: ['00:00:9d:9d:ab:e6']
+test: true

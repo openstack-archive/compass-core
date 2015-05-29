@@ -1,0 +1,4 @@
+switch,1.1.1.1,huawei,2c,public,under_monitoring
+{% for mac in pxe_boot_macs %}
+machine,1.1.1.1,8,{{ mac }}
+{% endfor %}

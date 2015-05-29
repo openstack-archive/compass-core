@@ -1,0 +1,9 @@
+---
+
+- hosts: allinone
+  sudo: True
+  roles:
+    - common
+    - chef
+    - cobbler
+    - compass

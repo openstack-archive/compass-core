@@ -1,0 +1,14 @@
+---
+
+- name: check if docker is running
+  command: ps -ef
+  register: processes
+
+- name: check if there is containers if docker is running
+  command: docker ps -a
+  register: containers
+  when: processes.stdout.find("docker") != -1
+
+- name: write files if container exists
+  local_action: file path="/tmp/{{ container_name }}" mode=0644 state=touch
+  when: processes.stdout.find("docker") != -1 and containers.stdout.find("{{ container_name }}") != -1

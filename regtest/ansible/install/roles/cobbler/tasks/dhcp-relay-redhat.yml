@@ -1,0 +1,6 @@
+- name: install dhcp on cobbler host for relay
+  yum: pkg=dhcp state=installed
+  when: ansible_os_family == "RedHat"
+
+- name: configure dhcprelay
+  shell: dhcrelay {{ cobbler_docker_ip }}

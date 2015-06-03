@@ -1,0 +1,12 @@
+---
+- name: restart dhcp-relay
+  shell: service isc-dhcp-relay restart
+
+- name: restart httpd
+  service: name=httpd state=restarted enabled=yes
+
+- name: restart cobbler
+  service: name=cobblerd state=restarted enabled=yes
+
+- name: cobbler sync
+  command: cobbler sync

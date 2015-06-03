@@ -1,0 +1,18 @@
+#!/usr/bin/python
+import logging
+
+from cobbler import api
+from subprocess import call
+
+SERVER='{{ cobbler_server }}:{{ cobbler_mapped_http_port_on_host }}'
+
+def main():
+    """main entry"""
+    cobbler_api = api.BootAPI()
+    for system in cobbler_api.systems():
+        sys_name = system.name
+        call(["cobbler", "system", "edit", "--name=%s" % sys_name, "--server=%s" % SERVER])
+    return
+
+if __name__ == '__main__':
+    main()

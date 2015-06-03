@@ -1,0 +1,10 @@
+---
+
+- hosts: compass_nodocker
+  sudo: True
+  roles:
+    - common
+    - cobbler
+    - compass
+  vars:
+    - dockerized: False

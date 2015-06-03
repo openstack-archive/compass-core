@@ -1,0 +1,60 @@
+---
+
+- name: create backup dir
+  file: path=/root/backup state=directory
+
+- name: create cookbook directory
+  file: path=/var/chef/cookbooks state=directory
+
+- name: backup cookbooks
+  shell: cp -rf /var/chef/cookbooks /root/backup/cookbooks
+
+- name: remove cookbooks
+  shell: rm -rf /var/chef/cookbooks/*
+
+- name: clone compass-adapters
+  git: repo={{ compass_adapters }} dest=/root/compass-adapters version=dev/experimental accept_hostkey=yes recursive=no
+ 
+- name: copy cookbooks to its directory
+  shell: cp -rf /root/compass-adapters/chef/cookbooks/* /var/chef/cookbooks/
+
+- name: upload cookbooks using knife
+  shell: knife cookbook upload -o /var/chef/cookbooks --all
+
+- name: create roles directory
+  file: path=/var/chef/roles state=directory
+
+- name: backup roles
+  shell: cp -rf /var/chef/roles /root/backup/roles
+
+- name: remove roles
+  shell: rm -rf /var/chef/roles/*
+
+- name: copy roles to its directory
+  shell: cp -rf /root/compass-adapters/chef/roles/* /var/chef/roles/
+
+- name: upload roles from file
+  shell: knife role from file /var/chef/roles/*.json
+
+- name: copy compass admin knife client config to chef server
+  copy: src=compass.json dest=/var/chef/compass.json mode=0644
+
+- name: check if compass client exists
+  command: knife client list
+  register: result
+
+- name: remove compass client if it exists
+  shell: knife client delete compass -y
+  when: result.stdout.find('compass') != -1
+
+- name: create chef admin client for remote control
+  shell: knife client create -a compass -f /tmp/compass.pem -y -d
+
+- name: fetch compass.pem
+  fetch: src=/tmp/compass.pem dest={{ shared_dir }}/keys/compass.pem flat=yes
+
+- name: fetch chef admin.pem
+  fetch: src=/etc/chef-server/admin.pem dest={{ shared_dir }}/keys/admin.pem flat=yes
+
+- name: fetch chef validator.pem
+  fetch: src=/etc/chef-server/chef-validator.pem dest={{ shared_dir }}/keys/chef-validator.pem flat=yes

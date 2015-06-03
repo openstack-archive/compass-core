@@ -1,0 +1,4 @@
+dockerized: False
+compass_db_user: compass
+compass_db_pass: compass
+COMPASS_PATH: /opt/compass-core

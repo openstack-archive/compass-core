@@ -1,0 +1,2 @@
+[cobblernodes]
+docker-base ansible_ssh_host=10.145.89.139 ansible_ssh_user=root ansible_ssh_pass=root dockerized=True container_name=cobbler-dev type=cobbler

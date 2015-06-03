@@ -1,0 +1,21 @@
+FROM compassindocker/cobbler
+
+ADD files/dhcp.template /etc/cobbler/dhcp.template
+ADD files/named.template /etc/cobbler/named.template
+ADD files/start.sh /root/start.sh
+{% if 'chef' in pkg_installer %}
+ADD files/admin.pem /etc/cobbler/admin.pem
+ADD files/chef-validator.pem /etc/cobbler/chef-validator.pem
+{% endif %}
+ADD files/fix_ks_server.py /var/lib/cobbler/triggers/sync/post/fix_ks_server.py
+
+RUN chmod +x /root/start.sh
+CMD ["/root/start.sh"]
+
+EXPOSE 80
+EXPOSE 67 67/udp
+EXPOSE 69 69/udp
+EXPOSE 53 53/udp
+EXPOSE 25151
+EXPOSE 443
+EXPOSE 873

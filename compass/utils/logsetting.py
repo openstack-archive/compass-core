@@ -39,7 +39,8 @@ flags.add('log_interval_unit',
           help='log interval unit', default=setting.DEFAULT_LOGINTERVAL_UNIT)
 flags.add('log_format',
           help='log format', default=setting.DEFAULT_LOGFORMAT)
-
+flags.add('log_backup_count', type='int',
+          help='log backup count', default=setting.DEFAULT_LOGBACKUPCOUNT)
 
 # mapping str setting in flag --loglevel to logging level.
 LOGLEVEL_MAPPING = {
@@ -71,12 +72,13 @@ def init():
 
     if logdir:
         if not logfile:
-            logfile = os.path.basename(sys.argv[0])
+            logfile = '%s.log' % os.path.basename(sys.argv[0])
 
         handler = logging.handlers.TimedRotatingFileHandler(
             os.path.join(logdir, logfile),
             when=flags.OPTIONS.log_interval_unit,
-            interval=flags.OPTIONS.log_interval)
+            interval=flags.OPTIONS.log_interval,
+            backupCount=flags.OPTIONS.log_backup_count)
     else:
         if not logfile:
             handler = logging.StreamHandler(sys.stderr)
@@ -84,7 +86,8 @@ def init():
             handler = logging.handlers.TimedRotatingFileHandler(
                 logfile,
                 when=flags.OPTIONS.log_interval_unit,
-                interval=flags.OPTIONS.log_interval)
+                interval=flags.OPTIONS.log_interval,
+                backupCount=flags.OPTIONS.log_backup_count)
 
     if loglevel in LOGLEVEL_MAPPING:
         logger.setLevel(LOGLEVEL_MAPPING[loglevel])

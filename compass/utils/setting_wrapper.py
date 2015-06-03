@@ -41,6 +41,7 @@ DEFAULT_LOGINTERVAL = 1
 DEFAULT_LOGINTERVAL_UNIT = 'h'
 DEFAULT_LOGFORMAT = (
     '%(asctime)s - %(filename)s - %(lineno)d - %(levelname)s - %(message)s')
+DEFAULT_LOGBACKUPCOUNT = 5
 WEB_LOGFILE = ''
 CELERY_LOGFILE = ''
 CELERYCONFIG_DIR = lazypy.delay(lambda: CONFIG_DIR)

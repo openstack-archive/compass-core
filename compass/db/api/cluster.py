@@ -398,11 +398,11 @@ def get_cluster_metadata(cluster_id, user=None, session=None, **kwargs):
         metadatas['os_config'] = metadata_api.get_os_metadata_internal(
             session, os.id
         )
-    adapter = cluster.adapter
-    if adapter:
+    flavor = cluster.flavor
+    if flavor:
         metadatas['package_config'] = (
-            metadata_api.get_package_metadata_internal(
-                session, adapter.id
+            metadata_api.get_flavor_metadata_internal(
+                session, flavor.id
             )
         )
     return metadatas
@@ -1524,8 +1524,8 @@ def review_cluster(cluster_id, review={}, user=None, session=None, **kwargs):
                 session, host, os_config=host_os_config, config_validated=True
             )
     package_config = copy.deepcopy(cluster.package_config)
-    package_config = metadata_api.autofill_package_config(
-        session, package_config, cluster.adapter_id,
+    package_config = metadata_api.autofill_flavor_config(
+        session, package_config, cluster.flavor.id,
         cluster=cluster
     )
     if package_config:
@@ -1536,9 +1536,9 @@ def review_cluster(cluster_id, review={}, user=None, session=None, **kwargs):
             clusterhost_package_config = copy.deepcopy(
                 clusterhost.package_config
             )
-            clusterhost_package_config = metadata_api.autofill_package_config(
+            clusterhost_package_config = metadata_api.autofill_flavor_config(
                 session, clusterhost_package_config,
-                cluster.adapter_id, clusterhost=clusterhost
+                cluster.flavor.id, clusterhost=clusterhost
             )
             deployed_package_config = util.merge_dict(
                 package_config, clusterhost_package_config

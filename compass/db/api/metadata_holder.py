@@ -350,3 +350,14 @@ def autofill_package_config(
         config, adapter_id, 'adapter', PACKAGE_METADATA_MAPPING,
         session=session, **kwargs
     )
+
+
+def autofill_flavor_config(
+    session, config, flavor_id, **kwargs
+):
+    if not FLAVOR_METADATA_MAPPING:
+        load_flavor_metadatas_internal(session)
+    return _autofill_config(
+        config, flavor_id, 'flavor', FLAVOR_METADATA_MAPPING,
+        session=session, **kwargs
+    )

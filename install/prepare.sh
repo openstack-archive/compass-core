@@ -224,6 +224,7 @@ fi
 cd $COMPASSDIR
 workon compass-core
 easy_install --upgrade pip
+pip install --upgrade pip
 rm -rf ${WORKON_HOME}/compass-core/build
 echo "install compass requirements"
 pip install -U -r requirements.txt

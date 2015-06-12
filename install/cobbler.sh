@@ -176,6 +176,13 @@ sudo service httpd restart
 sudo service cobblerd restart
 
 sudo cobbler get-loaders
+if [[ "$?" != "0" ]]; then
+    echo "failed to get loaders for cobbler"
+    exit 1
+else
+    echo "cobbler loaders updated"
+fi
+
 sudo cobbler sync
 if [[ "$?" != "0" ]]; then
     echo "failed to sync cobbler"
@@ -384,6 +391,30 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
     download -u "$SLES_11SP3_PPA_REPO_SOURCE" -u "$SLES_11SP3_PPA_REPO_SOURCE_ASIA" sles_11sp3_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
+if [[ $SUPPORT_UVP_11SP3 == "y" ]]; then
+    sudo mkdir -p /var/lib/cobbler/repo_mirror/sles_11sp3_ppa_repo
+    found_sles_11sp3_ppa_repo=0
+    for repo in $(cobbler repo list); do
+        if [ "$repo" == "sles_11sp3_ppa_repo" ]; then
+            found_sles_11sp3_ppa_repo=1
+        fi
+    done
+
+    if [ "$found_sles_11sp3_ppa_repo" == "0" ]; then
+        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/sles_11sp3_ppa_repo --name=sles_11sp3_ppa_repo --mirror-locally=Y --arch=x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add sles_11sp3_ppa_repo"
+            exit 1
+        else
+            echo "sles_11sp3_ppa_repo is added"
+        fi
+    else
+        echo "repo sles_11sp3_ppa_repo has already existed."
+    fi
+
+    download -u "$SLES_11SP3_PPA_REPO_SOURCE" -u "$SLES_11SP3_PPA_REPO_SOURCE_ASIA" sles_11sp3_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
+fi
+
 
 sudo cobbler reposync
 if [[ "$?" != "0" ]]; then
@@ -492,14 +523,31 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
     fi
 fi
 
+if [[ $SUPPORT_UVP_11SP3 == "y" ]]; then
+    download -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" -u "$SLES_11SP3_IMAGE_SOURCE" sles-11sp3-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
+    sudo mkdir -p /mnt/sles-11sp3-x86_64
+    if [ $(mount | grep -c "/mnt/sles-11sp3-x86_64") -eq 0 ]; then
+        sudo mount -o loop /var/lib/cobbler/iso/sles-11sp3-x86_64.iso /mnt/sles-11sp3-x86_64
+        if [[ "$?" != "0" ]]; then
+            echo "failed to mount image /mnt/sles-11sp3-x86_64"
+            exit 1
+        else
+            echo "/mnt/sles-11sp3-x86_64 is mounted"
+        fi
+    else
+        echo "/mnt/sles-11sp3-x86_64 has already mounted"
+    fi
+    download -u "$UVP_11SP3_IMAGE_SOURCE" -u "$UVP_11SP3_IMAGE_SOURCE_ASIA" uvp-os-11sp3-x86_64.tar.gz copy /var/www/cobbler/images/uvp-11sp3-x86_64.tar.gz || exit $?
+fi
+
+
 # add distro
 if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
     found_centos_6_5_distro=0
-    for distro in $(cobbler distro list); do
-        if [ "$distro" == "CentOS-6.5-x86_64" ]; then
-            found_centos_6_5_distro=1
-        fi
-    done
+    distro=$(cobbler distro find --name=CentOS-6.5-x86_64)
+    if [ "$distro" == "CentOS-6.5-x86_64" ]; then
+        found_centos_6_5_distro=1
+    fi
 
     if [ "$found_centos_6_5_distro" == "0" ]; then
         sudo cobbler import --path=/mnt/CentOS-6.5-x86_64 --name=CentOS-6.5 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
@@ -521,11 +569,10 @@ if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
     fi
 
     centos_6_5_found_profile=0
-    for profile in $(cobbler profile list); do
-        if [ "$profile" == "CentOS-6.5-x86_64" ]; then
-            centos_6_5_found_profile=1
-        fi
-    done
+    profile=$(cobbler profile find --name=CentOS-6.5-x86_64)
+    if [ "$profile" == "CentOS-6.5-x86_64" ]; then
+        centos_6_5_found_profile=1
+    fi
 
     if [ "$centos_6_5_found_profile" == "0" ]; then
         sudo cobbler profile add --name="CentOS-6.5-x86_64" --repo=centos_6_5_ppa_repo --distro=CentOS-6.5-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.5-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
@@ -549,11 +596,10 @@ fi
 
 if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
     found_centos_6_6_distro=0
-    for distro in $(cobbler distro list); do
-        if [ "$distro" == "CentOS-6.6-x86_64" ]; then
-            found_centos_6_6_distro=1
-        fi
-    done
+    distro=$(cobbler distro find --name=CentOS-6.6-x86_64)
+    if [ "$distro" == "CentOS-6.6-x86_64" ]; then
+        found_centos_6_6_distro=1
+    fi
 
     if [ "$found_centos_6_6_distro" == "0" ]; then
         sudo cobbler import --path=/mnt/CentOS-6.6-x86_64 --name=CentOS-6.6 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
@@ -575,11 +621,10 @@ if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
     fi
 
     centos_6_6_found_profile=0
-    for profile in $(cobbler profile list); do
-        if [ "$profile" == "CentOS-6.6-x86_64" ]; then
-            centos_6_6_found_profile=1
-        fi
-    done
+    profile=$(cobbler profile find --name=CentOS-6.6-x86_64)
+    if [ "$profile" == "CentOS-6.6-x86_64" ]; then
+        centos_6_6_found_profile=1
+    fi
 
     if [ "$centos_6_6_found_profile" == "0" ]; then
         sudo cobbler profile add --name="CentOS-6.6-x86_64" --repo=centos_6_6_ppa_repo --distro=CentOS-6.6-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.6-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
@@ -603,11 +648,10 @@ fi
 
 if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
     found_centos_7_0_distro=0
-    for distro in $(cobbler distro list); do
-        if [ "$distro" == "CentOS-7.0-x86_64" ]; then
-            found_centos_7_0_distro=1
-        fi
-    done
+    distro=$(cobbler distro find --name=CentOS-7.0-x86_64)
+    if [ "$distro" == "CentOS-7.0-x86_64" ]; then
+        found_centos_7_0_distro=1
+    fi
 
     if [ "$found_centos_7_0_distro" == "0" ]; then
         sudo cobbler import --path=/mnt/CentOS-7.0-x86_64 --name=CentOS-7.0 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
@@ -657,11 +701,10 @@ fi
 
 if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
     found_ubuntu_12_04_distro=0
-    for distro in $(cobbler distro list); do
-        if [ "$distro" == "Ubuntu-12.04-x86_64" ]; then
-            found_ubuntu_12_04_distro=1
-        fi
-    done
+    distro=$(cobbler distro find --name=Ubuntu-12.04-x86_64)
+    if [ "$distro" == "Ubuntu-12.04-x86_64" ]; then
+        found_ubuntu_12_04_distro=1
+    fi
 
     if [ "$found_ubuntu_12_04_distro" == "0" ]; then
         sudo cobbler import --path=/mnt/Ubuntu-12.04-x86_64 --name=Ubuntu-12.04 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
@@ -683,11 +726,10 @@ if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
     fi
 
     ubuntu_12_04_found_profile=0
-    for profile in $(cobbler profile list); do
-        if [ "$profile" == "Ubuntu-12.04-x86_64" ]; then
-            ubuntu_12_04_found_profile=1
-        fi
-    done
+    profile=$(cobbler profile find --name=Ubuntu-12.04-x86_64)
+    if [ "$profile" == "Ubuntu-12.04-x86_64" ]; then
+        ubuntu_12_04_found_profile=1
+    fi
 
     if [ "$ubuntu_12_04_found_profile" == "0" ]; then
         sudo cobbler profile add --name=Ubuntu-12.04-x86_64 --repo=ubuntu_12_04_ppa_repo --distro=Ubuntu-12.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-12.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
@@ -707,16 +749,18 @@ if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
             echo "profile Ubuntu-12.04-x86_64 is updated"
         fi
     fi
-    sudo cobbler repo remove --name=Ubuntu-12.04-x86_64
+    remove_repo=$(cobbler repo find --name=Ubuntu-12.04-x86_64)
+    if [ "$remove_repo" == "Ubuntu-12.04-x86_64" ]; then
+        sudo cobbler repo remove --name=Ubuntu-12.04-x86_64
+    fi
 fi
 
 if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
     found_ubuntu_14_04_distro=0
-    for distro in $(cobbler distro list); do
-        if [ "$distro" == "Ubuntu-14.04-x86_64" ]; then
-            found_ubuntu_14_04_distro=1
-        fi
-    done
+    distro=$(cobbler distro find --name=Ubuntu-14.04-x86_64)
+    if [ "$distro" == "Ubuntu-14.04-x86_64" ]; then
+        found_ubuntu_14_04_distro=1
+    fi
 
     if [ "$found_ubuntu_14_04_distro" == "0" ]; then
         sudo cobbler import --path=/mnt/Ubuntu-14.04-x86_64 --name=Ubuntu-14.04 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
@@ -738,11 +782,10 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
     fi
 
     ubuntu_14_04_found_profile=0
-    for profile in $(cobbler profile list); do
-        if [ "$profile" == "Ubuntu-14.04-x86_64" ]; then
-            ubuntu_14_04_found_profile=1
-        fi
-    done
+    profile=$(cobbler profile find --name=Ubuntu-14.04-x86_64)
+    if [ "$profile" == "Ubuntu-14.04-x86_64" ]; then
+        ubuntu_14_04_found_profile=1
+    fi
 
     if [ "$ubuntu_14_04_found_profile" == "0" ]; then
         sudo cobbler profile add --name=Ubuntu-14.04-x86_64 --repo=ubuntu_14_04_ppa_repo --distro=Ubuntu-14.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-14.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
@@ -762,16 +805,18 @@ if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
             echo "profile Ubuntu-14.04-x86_64 is updated"
         fi
     fi
-    sudo cobbler repo remove --name=Ubuntu-14.04-x86_64
+    remove_repo=$(cobbler repo find --name=Ubuntu-14.04-x86_64)
+    if [ "$remove_repo" == "Ubuntu-14.04-x86_64" ]; then
+        sudo cobbler repo remove --name=Ubuntu-14.04-x86_64
+    fi
 fi
 
 if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
     found_sles_11sp3_distro=0
-    for distro in $(cobbler distro list); do
-        if [ "$distro" == "sles-11sp3-x86_64" ]; then
-            found_sles_11sp3_distro=1
-        fi
-    done
+    distro=$(cobbler distro find --name=sles-11sp3-x86_64)
+    if [ "$distro" == "sles-11sp3-x86_64" ]; then
+        found_sles_11sp3_distro=1
+    fi
 
     if [ "$found_sles_11sp3_distro" == "0" ]; then
         sudo cobbler import --path=/mnt/sles-11sp3-x86_64 --name=sles-11sp3 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --breed=suse --os-version=sles11sp3
@@ -793,11 +838,10 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
     fi
 
     sles_11sp3_found_profile=0
-    for profile in $(cobbler profile list); do
-        if [ "$profile" == "sles-11sp3-x86_64" ]; then
-            sles_11sp3_found_profile=1
-        fi
-    done
+    profile=$(cobbler profile find --name=sles-11sp3-x86_64)
+    if [ "$profile" == "sles-11sp3-x86_64" ]; then
+        sles_11sp3_found_profile=1
+    fi
 
     if [ "$sles_11sp3_found_profile" == "0" ]; then
         sudo cobbler profile add --name=sles-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=sles-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64"
@@ -819,6 +863,57 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
     fi
 fi
 
+if [[ $SUPPORT_UVP_11SP3 == "y" ]]; then
+    found_uvp_11sp3_distro=0
+    distro=$(cobbler distro find --name=uvp-11sp3-x86_64)
+    if [ "$distro" == "uvp-11sp3-x86_64" ]; then
+        found_uvp_11sp3_distro=1
+    fi
+
+    if [ "$found_uvp_11sp3_distro" == "0" ]; then
+        sudo cobbler import --path=/mnt/sles-11sp3-x86_64 --name=uvp-11sp3 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --breed=suse --os-version=sles11sp3
+        if [[ "$?" != "0" ]]; then
+            echo "failed to import /mnt/sles-11sp3-x86_64"
+            exit 1
+        else
+            echo "/mnt/sles-11sp3-x86_64 is imported" 
+        fi
+    else
+        echo "distro uvp-11sp3-x86_64 has already existed"
+        sudo cobbler distro edit --name=uvp-11sp3-x86_64 --arch=x86_64 --breed=suse --os-version=sles11sp3
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit distro uvp-11sp3-x86_64"
+            exit 1
+        else
+            echo "distro uvp-11sp3-x86_64 is updated"
+        fi
+    fi
+
+    uvp_11sp3_found_profile=0
+    profile=$(cobbler profile find --name=uvp-11sp3-x86_64)
+    if [ "$profile" == "uvp-11sp3-x86_64" ]; then
+        uvp_11sp3_found_profile=1
+    fi
+
+    if [ "$uvp_11sp3_found_profile" == "0" ]; then
+        sudo cobbler profile add --name=uvp-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=uvp-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64" --kopts-post="noexec=on nohz=off console=tty0 console=ttyS0,115200 hugepagesz=2M hpet=enable selinux=0 iommu=pt default_hugepagesz=2M intel_iommu=on pci=realloc crashkernel=192M@48M highres=on nmi_watchdog=1" --ksmeta="image_kernel_version=3.0.93-0.8 image_url=http://@@http_server@@/cblr/images/uvp-11sp3-x86_64.tar.gz"
+        if [[ "$?" != "0" ]]; then
+            echo "failed to add profile uvp-11sp3-x86_64"
+            exit 1
+        else
+            echo "profile uvp-11sp3-x86_64 is added"
+        fi
+    else
+        echo "profile sles-11sp3-x86_64 has already existed."
+        sudo cobbler profile edit --name=uvp-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=sles-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64" --kopts-post="noexec=on nohz=off console=tty0 console=ttyS0,115200 hugepagesz=2M hpet=enable selinux=0 iommu=pt default_hugepagesz=2M intel_iommu=on pci=realloc crashkernel=192M@48M highres=on nmi_watchdog=1" --ksmeta="image_kernel_version=3.0.93-0.8 image_url=http://@@http_server@@/cblr/images/uvp-11sp3-x86_64.tar.gz"
+        if [[ "$?" != "0" ]]; then
+            echo "failed to edit profile uvp-11sp3-x86_64"
+            exit 1
+        else
+            echo "profile uvp-11sp3-x86_64 is updated"
+        fi
+    fi
+fi
 
 sudo cobbler reposync
 if [[ "$?" != "0" ]]; then

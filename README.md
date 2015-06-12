@@ -47,6 +47,16 @@ tools (Cobbler, Chef, Ansible) and allows third-parties (vendors) plugins for ha
 
 * service/ - contains Compass messaging service and cluster installation progress service
 
+* vagrant/ - contains scripts of downloading compass-adapters and installing the target systems onto the virtual machine(s), this directory is for testing purpose
+
+* regtest/ - contains the scripts that will be used by the continuous integrations.
+
+* monitor/ - contains a script monitor Compass server's resource utilization during an installation
+
+* misc/ - configuration files for Compass server setup
+
+* conf/ - configuration files related to newly supported target systems will be added here.
+
 
 Quick Guide to Users
 --------------------

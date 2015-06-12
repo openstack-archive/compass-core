@@ -247,7 +247,7 @@ download()
     elif [[ "$action" == "copy" ]]; then
         destdir=$2
 	echo "copy /tmp/$package to $destdir"
-        sudo cp /tmp/$package $destdir
+        sudo cp -rn /tmp/$package $destdir
 	if [[ "$?" != "0" ]]; then
 	    echo "failed to copy $package to $destdir"
 	    exit 1

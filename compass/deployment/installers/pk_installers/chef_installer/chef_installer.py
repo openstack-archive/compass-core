@@ -661,6 +661,7 @@ class ChefInstaller(PKInstaller):
         rally_node_ip = rally_node['ipaddress']
 
         command = self.config_manager.get_adapter_health_check_cmd()
+        command = command.replace('$cluster_name', cluster_name)
         option = '--url %s --clustername %s' % (callback_url, cluster_name)
         command = ' '.join((command, option))
 

@@ -48,6 +48,22 @@ start() {
         RETVAL=$?
     fi
     echo
+    retries=0
+    max_retries=10
+    output=''
+    while [ $retries -lt $max_retries ]; do
+      output=$(C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY status 2&>1)
+      RETVAL=$?
+      if [ "$RETVAL" == "0" ]; then
+          break
+      else
+          sleep 10
+      fi
+      let retries=${retries}+1
+    done
+    if [ "$RETVAL" != "0" ]; then
+        echo output
+    fi
     return $RETVAL
 }
 
@@ -86,6 +102,10 @@ case "$1" in
             RETVAL=$?
         else
             status -p /var/run/celery-worker.pid $CELERY
+            RETVAL=$?
+        fi
+        if [ "$RETVAL" == "0" ]; then
+            C_FORCE_ROOT=1 CELERY_CONFIG_MODULE=compass.utils.celeryconfig_wrapper $CELERY status
             RETVAL=$?
         fi
         ;;

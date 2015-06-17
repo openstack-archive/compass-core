@@ -192,18 +192,18 @@
         "service_plugins": [
         ],
         "ml2": {
-          "type_drivers": "$tenant_network_type",
-          "tenant_network_types": "$tenant_network_type",
+          "type_drivers": "local,flat,vlan,gre,vxlan",
+          "tenant_network_types": "vxlan, flat, vlan",
           "tunnel_id_ranges": "$tunnel_id_ranges",
-          "network_vlan_ranges": "$vlan_ranges",
+          "network_vlan_ranges": "physnet1:1:4000",
           "enable_security_group": "True"
         },
         "openvswitch": {
-          "tenant_network_type": "$tenant_network_type",
+          "tenant_network_type": "vxlan",
           "enable_tunneling": "$enable_tunneling",
           "tunnel_id_ranges": "$tunnel_id_ranges",
-          "network_vlan_ranges": "$vlan_ranges",
-          "bridge_mappings": "$bridge_mappings",
+          "network_vlan_ranges": "physnet1:1:4000",
+          "bridge_mappings": "physnet1:br-ex",
           "bind_interface": "$network_worker_tenant_nic"
         },
         "l3": {

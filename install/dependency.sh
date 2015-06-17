@@ -30,6 +30,7 @@ fi
 sudo pip install --upgrade setuptools
 sudo pip install --upgrade virtualenv
 sudo easy_install --upgrade pip
+sudo pip install --upgrade pip
 if [[ "$?" != "0" ]]; then
     echo "failed to install easy install"
     exit 1

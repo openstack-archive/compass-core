@@ -1,6 +1,8 @@
 #####################################
 # Config File for Compass Installer #
 #####################################
+# flag for regtest
+export REGTEST="True"
 # REPO_URL indicates the source where to download compass-web and compass-adapters from
 #export REPO_URL=https://review.openstack.org
 

@@ -27,8 +27,12 @@ centos65_box_vb_filename=$(basename ${centos65_box_vb_url})
 #wget ${precise_box_vb_url}
 vagrant box list |grep centos65
 if [[ $? != 0 ]]; then
-    wget ${centos65_box_vb_url}
-    mv ${centos65_box_vb_filename} centos65.box
+    if [ -f "/opt/regtest/boxes/CentOS-6.5-x86_64-v20140504.box" ]; then
+        echo "centos65 box file found"
+        mv /opt/regtest/boxes/CentOS-6.5-x86_64-v20140504.box centos65.box
+    else
+        wget ${centos65_box_vb_url}
+        mv ${centos65_box_vb_filename} centos65.box
     vagrant mutate centos65.box libvirt
 else
     echo "centos65 box already exists"

@@ -91,7 +91,7 @@ else
 fi
 # disable compass-rally when in regtest
 if $REGTEST; then
-    sed -i '/compass-rally/d' /var/roles/os-identity.json
+    sed -i '/compass-rally/d' /var/chef/roles/os-identity.json
 fi
 knife role from file /var/chef/roles/*.json
 if [[ "$?" != "0" ]]; then

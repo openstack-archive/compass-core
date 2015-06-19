@@ -1,7 +1,4 @@
-cd ..
-rm -rf compass-core
-git clone http://git.openstack.org/stackforge/compass-core -b dev/experimental
-cd compass-core
+cd ../..
 virtualenv venv
 source venv/bin/activate
 pip install -e .

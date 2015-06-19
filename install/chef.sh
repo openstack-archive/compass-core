@@ -89,7 +89,10 @@ if [[ "$?" != "0" ]]; then
 else
     echo "cookbooks are added to chef server"
 fi
-
+# disable compass-rally when in regtest
+if $REGTEST; then
+    sed -i '/compass-rally/d' /var/roles/os-identity.json
+fi
 knife role from file /var/chef/roles/*.json
 if [[ "$?" != "0" ]]; then
     echo "failed to add roles"

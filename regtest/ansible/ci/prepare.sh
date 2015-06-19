@@ -33,6 +33,7 @@ if [[ $? != 0 ]]; then
     else
         wget ${centos65_box_vb_url}
         mv ${centos65_box_vb_filename} centos65.box
+    fi
     vagrant mutate centos65.box libvirt
 else
     echo "centos65 box already exists"

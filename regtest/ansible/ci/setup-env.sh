@@ -3,7 +3,8 @@
 #cd compass-install
 
 function join { local IFS="$1"; shift; echo "$*"; }
-source ${SCRIPT_DIR}/conf/one.conf
+REGTEST_CONF=${REGTEST_CONF:-"allinone.conf"}
+source ${SCRIPT_DIR}/conf/${REGTEST_CONF}
 source ${SCRIPT_DIR}/func.sh
 if [[ ! -z $VIRT_NUMBER ]]; then
     mac_array=$(${SCRIPT_DIR}/mac_generator.sh $VIRT_NUMBER)

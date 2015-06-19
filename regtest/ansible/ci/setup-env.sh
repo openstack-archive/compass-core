@@ -3,7 +3,8 @@
 #cd compass-install
 
 function join { local IFS="$1"; shift; echo "$*"; }
-source ${SCRIPT_DIR}/conf/one.conf
+REGTEST_CONF=${REGTEST_CONF:-"allinone.conf"}
+source ${SCRIPT_DIR}/conf/${REGTEST_CONF}
 source ${SCRIPT_DIR}/func.sh
 if [[ ! -z $VIRT_NUMBER ]]; then
     mac_array=$(${SCRIPT_DIR}/mac_generator.sh $VIRT_NUMBER)
@@ -12,6 +13,7 @@ if [[ ! -z $VIRT_NUMBER ]]; then
     echo "test: true" >> ${SCRIPT_DIR}/../install/group_vars/all
 fi
 virsh list |grep compass_nodocker
+cd ${SCRIPT_DIR}/..
 if [[ $? != 0 ]]; then
     sudo vagrant up compass_nodocker
 else
@@ -34,10 +36,10 @@ if [[ -n $mac_array ]]; then
         sudo virt-install --accelerate --hvm --connect qemu:///system \
              --name pxe$i --ram=$VIRT_MEM --pxe --disk /home/pxe$i.raw,format=raw \
              --vcpus=$VIRT_CPUS --graphics vnc,listen=0.0.0.0 \
-             --network=bridge:virbr2,mac=$mac \
-             --network=bridge:virbr2 \
-             --network=bridge:virbr2 \
-             --network=bridge:virbr2 \
+             --network=bridge:installation,mac=$mac \
+             --network=bridge:installation \
+             --network=bridge:installation \
+             --network=bridge:installation \
              --noautoconsole --autostart --os-type=linux --os-variant=rhel6
         if [[ $? != 0 ]]; then
             echo "launching pxe${i} failed"

@@ -3,7 +3,8 @@
 #cd compass-install
 
 function join { local IFS="$1"; shift; echo "$*"; }
-source ${SCRIPT_DIR}/conf/one.conf
+REGTEST_CONF=${REGTEST_CONF:-"allinone.conf"}
+source ${SCRIPT_DIR}/conf/${REGTEST_CONF}
 source ${SCRIPT_DIR}/func.sh
 if [[ ! -z $VIRT_NUMBER ]]; then
     mac_array=$(${SCRIPT_DIR}/mac_generator.sh $VIRT_NUMBER)
@@ -12,6 +13,7 @@ if [[ ! -z $VIRT_NUMBER ]]; then
     echo "test: true" >> ${SCRIPT_DIR}/../install/group_vars/all
 fi
 virsh list |grep compass_nodocker
+cd ${SCRIPT_DIR}/..
 if [[ $? != 0 ]]; then
     sudo vagrant up compass_nodocker
 else

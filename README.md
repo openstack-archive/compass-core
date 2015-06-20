@@ -3,6 +3,7 @@ Compass
 
 ## Overview
 
+This is for Intel/RSA development.
 
 As a platform-independent deployment automation system, Compass simplifies the complex and error-prone deployment process of various distributed systems such as Openstack, Ceph and so on. It dramatically reduces the time of datacenter server management. Compass, designed with an extensible architecture, can be easily integrated with most of the popular automation
 tools (Cobbler, Chef, Ansible) and allows third-parties (vendors) plugins for hardware discovery.

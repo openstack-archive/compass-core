@@ -14,48 +14,87 @@ tools (Cobbler, Chef, Ansible) and allows third-parties (vendors) plugins for ha
 
 ##Quick Guide to Developers
 
+### Get started with coding and contributing
+
+** Before everything, setup your environment:**
+
+i. Make sure MySQL is installed on your development box:
+
+    e.g., ```brew install mysql``` (for your Mac OSX box)
+
+ii. Dedicately create a virtual environment for your development. You can use  [virtualenvwrapper](http://virtualenvwrapper.readthedocs.org/) to help you manage your virtual environment.
+
+  ```$mkvirtualenv compass-core``` (skip this if you already created compass-core-env)
+
+  ```$workon compass-core``` (get into compass-core-env)
+
+_Note: the above assumes you use virtualenvwrapper to manage your virtualenv_
+
+** 1. Checkout source **
+
+    (compass-core-env)$git checkout https://github.com/stackforge/compass-core.git
+
+** 2. Run the tests making sure you are working on a clean and working code base**  (i.e., did someone else break the code)
+
+``` (compass-core-env)$tox -r ```
+
+** 3. Write your  change, and make sure test your code thoroughly** (otherwise, reviewers won't approve it)
+
+``` (compass-core-env)$git branch -b [TOPIC]```
+
+working, working, working on the [TOPIC] branch ...
+
+``` (compass-core-env)$tox -r ``` (make sure your new code still works)
+
+** 4. Submit for review **
+
+```(compass-core-env)$git review ```
+
+
+
+
 
 ### Directories (How codebase is organized)
 
-* bin/ - contains Compass utility scripts
+    * bin/ - contains Compass utility scripts
 
-* compass/ - contains all Compass business logic including database & backend
+    * compass/ - contains all Compass business logic including database & backend
 
-    *  api/ - contains Compass RESTful APIs implementation
+        *  api/ - contains Compass RESTful APIs implementation
 
-    * actions/ - interface to essential functionalities executed by Celery tasks, including deploy, find servers and so on
+        * actions/ - interface to essential functionalities executed by Celery tasks, including deploy, find servers and so on
 
-    * apiclient/ - contains Compass RESTful API client
+        * apiclient/ - contains Compass RESTful API client
 
-    * db/ - contains database model and supported database operations
+        * db/ - contains database model and supported database operations
 
-    * deployment/ - contains the module for deploying a distributed system from OS installation to package installation based on user configuration via RESTful or Web UI.
+        * deployment/ - contains the module for deploying a distributed system from OS installation to package installation based on user configuration via RESTful or Web UI.
 
-    * hdsdiscovery/ - contains the module for learning server hardware spec
+        * hdsdiscovery/ - contains the module for learning server hardware spec
 
-    * log_analyzor/ - library to calculate installation progress by processing logs from the servers being deployed
+        * log_analyzor/ - library to calculate installation progress by processing logs from the servers being deployed
 
-    * tasks/ - definition of Celery tasks triggering Compass actions
+        * tasks/ - definition of Celery tasks triggering Compass actions
 
-    * utils/ - contains utility functions for other modules
+        * utils/ - contains utility functions for other modules
 
-    * tests/ - unittests level testing code
+        * tests/ - unittests level testing code
 
-    * tests_serverside/ - tests that Compass's functionality to communicate with a known chef server
+        * tests_serverside/ - tests that Compass's functionality to communicate with a known chef server
 
-* install/ - contains scripts for Compass installation on virtual machine or bare metal server
+    * install/ - contains scripts for Compass installation on virtual machine or bare metal server
 
-* service/ - contains Compass messaging service and cluster installation progress service
+    * service/ - contains Compass messaging service and cluster installation progress service
 
-* vagrant/ - contains scripts of downloading compass-adapters and installing the target systems onto the virtual machine(s), this directory is for testing purpose
+    * vagrant/ - contains scripts of downloading compass-adapters and installing the target systems onto the virtual machine(s), this directory is for testing purpose
 
-* regtest/ - contains the scripts that will be used by the continuous integrations.
+    * regtest/ - contains the scripts that will be used by the continuous integrations.
 
-* monitor/ - contains a script monitor Compass server's resource utilization during an installation
+    * monitor/ - contains a script monitor Compass server's resource utilization during an installation
 
-* misc/ - configuration files for Compass server setup
+    * misc/ - configuration files for Compass server setup
 
-* conf/ - configuration files related to newly supported target systems will be added here.
+    * conf/ - configuration files related to newly supported target systems will be added here.
 
 
 Quick Guide to Users

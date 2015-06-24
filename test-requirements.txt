@@ -1,3 +1,4 @@
+tox==1.7.1
 discover
 mock
 unittest2>=0.8.0

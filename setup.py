@@ -14,20 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Bootstrap setuptools installation
-
-If you want to use setuptools in your package's setup.py, just include this
-file in the same directory with it, and add this to the top of your setup.py::
-
-    from ez_setup import use_setuptools
-    use_setuptools()
-
-If you want to require a specific version of setuptools, set a download
-mirror, or use an alternate download directory, you can do so by supplying
-the appropriate options to ``use_setuptools()``.
-
-This file can also be run as a script to install or upgrade setuptools.
-"""
 
 """setup script."""
 try:
@@ -45,6 +31,10 @@ import os
 import sys
 
 
+# This helps python setup.py test command to utilize tox
+# See the instruction at https://testrun.org/tox/latest/example/basic.html\
+#                 #integration-with-setuptools-distribute-test-commands
+
 class Tox(TestCommand):
     """Tox to do the setup."""
 
@@ -59,11 +49,9 @@ class Tox(TestCommand):
         sys.exit(errno)
 
 
-INSTALL_REQUIRES_DIR = os.path.join(
+INSTALL_REQUIRES_FILE = os.path.join(
     os.path.dirname(__file__), 'requirements.txt')
-
-
-with open(INSTALL_REQUIRES_DIR, 'r') as requires_file:
+with open(INSTALL_REQUIRES_FILE, 'r') as requires_file:
     REQUIREMENTS = [line.strip() for line in requires_file if line != '\n']
 
 DATA_FILES_DIR = os.path.join(
@@ -80,10 +68,10 @@ setup(
     version='0.1.0',
 
     # general info
-    description='Open Deployment System for zero touch installation',
-    long_description='Open Deployment System for zero touch installation',
-    author='Compass Dev Group, Huawei Cloud',
-    author_email='shuo.yang@huawei.com',
+    description="""Compass: automation framework of
+                system deployment on baremetal""",
+    author='Compass Development Group',
+    author_email='dev@syscompass.org',
     url='https://github.com/stackforge/compass-core',
     download_url='',
 
@@ -92,7 +80,7 @@ setup(
     packages=find_packages(exclude=['compass.tests']),
     include_package_data=True,
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',

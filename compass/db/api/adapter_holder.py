@@ -25,17 +25,14 @@ from compass.db import exception
 
 SUPPORTED_FIELDS = [
     'name',
-    'distributed_system_name',
 ]
 RESP_FIELDS = [
     'id', 'name', 'roles', 'flavors',
     'os_installer', 'package_installer',
-    'distributed_system_id',
-    'distributed_system_name',
     'supported_oses', 'display_name', 'health_check_cmd'
 ]
 RESP_OS_FIELDS = [
-    'id', 'os_id', 'name'
+    'id', 'name', 'os_id'
 ]
 RESP_ROLES_FIELDS = [
     'id', 'name', 'display_name', 'description', 'optional'
@@ -45,18 +42,14 @@ RESP_FLAVORS_FIELDS = [
 ]
 
 
-@database.run_in_session()
-def load_adapters(session):
-    load_adapters_internal(session)
-
-
-def load_adapters_internal(session):
-    global ADAPTER_MAPPING
-    logging.info('load adapters into memory')
-    ADAPTER_MAPPING = adapter_api.get_adapters_internal(session)
-
-
 ADAPTER_MAPPING = {}
+
+
+def load_adapters(force_reload=False):
+    global ADAPTER_MAPPING
+    if force_reload or not ADAPTER_MAPPING:
+        logging.info('load adapters into memory')
+        ADAPTER_MAPPING = adapter_api.get_adapters_internal(force_reload=force_reload)
 
 
 def _filter_adapters(adapter_config, filter_name, filter_value):
@@ -80,15 +73,10 @@ def _filter_adapters(adapter_config, filter_name, filter_value):
 
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_LIST_ADAPTERS
 )
-@utils.output_filters(
-    name=utils.general_filter_callback,
-    distributed_system_name=utils.general_filter_callback,
-    os_installer_name=utils.general_filter_callback,
-    package_installer_name=utils.general_filter_callback
-)
+@utils.output_filters(name=utils.general_filter_callback)
 @utils.wrap_to_dict(
     RESP_FIELDS,
     supported_oses=RESP_OS_FIELDS,
@@ -97,26 +85,13 @@ def _filter_adapters(adapter_config, filter_name, filter_value):
 )
 def list_adapters(user=None, session=None, **filters):
     """list adapters."""
-    if not ADAPTER_MAPPING:
-        load_adapters_internal(session)
+    load_adapters()
     return ADAPTER_MAPPING.values()
-
-
-def get_adapter_internal(session, adapter_id):
-    """get adapter."""
-    if not ADAPTER_MAPPING:
-        load_adapters_internal(session)
-
-    if adapter_id not in ADAPTER_MAPPING:
-        raise exception.RecordNotExists(
-            'adpater %s does not exist' % adapter_id
-        )
-    return ADAPTER_MAPPING[adapter_id]
 
 
 @utils.supported_filters([])
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_LIST_ADAPTERS
 )
 @utils.wrap_to_dict(
@@ -127,4 +102,9 @@ def get_adapter_internal(session, adapter_id):
 )
 def get_adapter(adapter_id, user=None, session=None, **kwargs):
     """get adapter."""
-    return get_adapter_internal(session, adapter_id)
+    load_adapters()
+    if adapter_id not in ADAPTER_MAPPING:
+        raise exception.RecordNotExists(
+            'adpater %s does not exist' % adapter_id
+        )
+    return ADAPTER_MAPPING[adapter_id]

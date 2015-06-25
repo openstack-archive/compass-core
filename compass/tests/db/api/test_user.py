@@ -322,8 +322,8 @@ class TestAddDelUserPermission(BaseTest):
     def test_add_permission_position(self):
         user_api.add_permission(
             self.user_object.id,
-            True,
             2,
+            True,
             user=self.user_object,
         )
         permissions = user_api.get_permissions(

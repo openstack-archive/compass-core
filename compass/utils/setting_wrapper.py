@@ -86,9 +86,6 @@ PACKAGE_INSTALLER_DIR = lazypy.delay(
 OS_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'os')
 )
-DISTRIBUTED_SYSTEM_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'distributed_system')
-)
 ADAPTER_DIR = lazypy.delay(
     lambda: os.path.join(CONFIG_DIR, 'adapter')
 )

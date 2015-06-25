@@ -64,8 +64,9 @@ class ApiTestCase(unittest2.TestCase):
         )
         database.init('sqlite://')
         database.create_db()
-        adapter_api.load_adapters()
-        metadata_api.load_metadatas()
+        adapter_api.load_adapters(force_reload=True)
+        metadata_api.load_metadatas(force_reload=True)
+        metadata_api.load_flavors(force_reload=True)
 
         from compass.api import api as compass_api
         application = compass_api.app
@@ -168,6 +169,14 @@ class ApiTestCase(unittest2.TestCase):
                 for flavor in adapter['flavors']:
                     flavor_id = flavor['id']
                     break
+        if not adapter_name:
+            raise Exception('adapter name not found')
+        if not adapter_id:
+            raise Exception('adapter id not found')
+        if not os_id:
+            raise Exception('os id not found')
+        if not flavor_id:
+            raise Exception('flavor id not found')
         return (adapter_name, adapter_id, os_id, flavor_id)
 
 
@@ -403,8 +412,7 @@ class TestClusterAPI(ApiTestCase):
         # give a non-existed cluster_id
         url = '/clusters/99/hosts'
         return_value = self.get(url)
-        resp = json.loads(return_value.get_data())
-        self.assertEqual(resp, [])
+        self.assertEqual(return_value.status_code, 404)
 
     def test_show_cluster_host(self):
         # show a cluster_host successfully
@@ -951,8 +959,7 @@ class TestSwitchMachines(ApiTestCase):
         # give a non-existed switch_id
         url = '/switches/99/machines'
         return_value = self.get(url)
-        resp = json.loads(return_value.get_data())
-        self.assertEqual(resp, [])
+        self.assertEqual(return_value.status_code, 404)
 
     def test_add_switch_machine(self):
         # add a switch machine successfully

@@ -30,6 +30,7 @@ from compass.actions import update_progress
 from compass.db.api import adapter_holder as adapter_api
 from compass.db.api import database
 from compass.db.api import metadata_holder as metadata_api
+from compass.log_analyzor import progress_calculator
 
 from compass.tasks.client import celery
 from compass.utils import flags
@@ -46,6 +47,8 @@ def global_celery_init(**_):
     database.init()
     adapter_api.load_adapters()
     metadata_api.load_metadatas()
+    metadata_api.load_flavors()
+    progress_calculator.load_calculator_configurations()
 
 
 @setup_logging.connect()

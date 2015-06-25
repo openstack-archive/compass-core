@@ -58,8 +58,9 @@ class ClusterTestCase(unittest2.TestCase):
         )
         database.init('sqlite://')
         database.create_db()
-        adapter.load_adapters()
-        metadata.load_metadatas()
+        adapter.load_adapters(force_reload=True)
+        metadata.load_metadatas(force_reload=True)
+        metadata.load_flavors(force_reload=True)
 
         self.user_object = (
             user_api.get_user_object(
@@ -1771,7 +1772,7 @@ class TestGetClusterHostSelfState(ClusterTestCase):
     def test_get_cluster_host_self_state(self):
         cluster_host_self_state = cluster.get_cluster_host_self_state(
             self.cluster_id,
-            self.host_id,
+            self.host_id[0],
             user=self.user_object,
         )
         self.assertEqual(cluster_host_self_state['state'], 'UNINITIALIZED')
@@ -1823,13 +1824,13 @@ class TestUpdateClusterHostState(ClusterTestCase):
     def test_update_cluster_host_state(self):
         cluster.update_cluster_host_state(
             self.cluster_id,
-            self.host_id,
+            self.host_id[0],
             user=self.user_object,
             state='INSTALLING'
         )
         update_state = cluster.get_cluster_host_state(
             self.cluster_id,
-            self.host_id,
+            self.host_id[0],
             user=self.user_object,
         )
         self.assertEqual(update_state['state'], 'INSTALLING')

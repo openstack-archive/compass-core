@@ -52,8 +52,9 @@ class MetadataTestCase(unittest2.TestCase):
         )
         database.init('sqlite://')
         database.create_db()
-        adapter.load_adapters()
-        metadata.load_metadatas()
+        adapter.load_adapters(force_reload=True)
+        metadata.load_metadatas(force_reload=True)
+        metadata.load_flavors(force_reload=True)
 
         # Get a os_id and adapter_id
         self.user_object = (
@@ -249,6 +250,7 @@ class TestGetFlavorMetadata(MetadataTestCase):
                     config_dir, *args, **kwargs
                 )
             config = {
+                'ADAPTER': 'openstack_icehouse',
                 'FLAVOR': 'HA-multinodes',
                 'METADATA': {
                     'test_ha_proxy': {
@@ -279,7 +281,7 @@ class TestGetFlavorMetadata(MetadataTestCase):
         )
         self.assertIsNotNone(flavor_metadata)
         self.assertTrue(
-            'test_ha_proxy' in flavor_metadata['flavor_config'].keys()
+            'test_ha_proxy' in flavor_metadata['package_config'].keys()
         )
 
 
@@ -350,7 +352,7 @@ class TestGetFlavors(MetadataTestCase):
         )
         expected = {
             'display_name': 'Multi-node Cluster with HA',
-            'id': 3,
+            'id': 'openstack_icehouse:HA-multinodes',
             'template': 'ha_multinodes.tmpl',
             'name': 'HA-multinodes'
         }

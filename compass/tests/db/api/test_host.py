@@ -58,8 +58,9 @@ class HostTestCase(unittest2.TestCase):
         )
         database.init('sqlite://')
         database.create_db()
-        adapter.load_adapters()
-        metadata.load_metadatas()
+        adapter.load_adapters(force_reload=True)
+        metadata.load_metadatas(force_reload=True)
+        metadata.load_flavors(force_reload=True)
 
         self.user_object = (
             user_api.get_user_object(

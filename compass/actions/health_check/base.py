@@ -14,9 +14,7 @@
 
 """Base class for Compass Health Check."""
 from compass.actions.health_check import utils as health_check_utils
-from compass.db.api import database
-from compass.db.api import utils
-from compass.db import models
+from compass.db.api import adapter as adapter_api
 from compass.utils import setting_wrapper as setting
 
 
@@ -32,26 +30,20 @@ class BaseCheck(object):
         self.package_installer = self._get_package_installer()
 
     def _get_os_installer(self):
-        with database.session() as session:
-            installer = utils.get_db_object(
-                session, models.OSInstaller
-            )
-            os_installer = {}
-            os_installer['name'] = health_check_utils.strip_name(
-                installer.name)
-            os_installer.update(installer.settings)
+        installer = adapter_api.OS_INSTALLERS.values()[0]
+        os_installer = {}
+        os_installer['name'] = health_check_utils.strip_name(
+            installer['name'])
+        os_installer.update(installer['settings'])
         return os_installer
 
     def _get_package_installer(self):
         package_installer = {}
-        with database.session() as session:
-            installer = session.query(
-                models.PackageInstaller
-            ).first()
-            package_installer = {}
-            package_installer['name'] = health_check_utils.strip_name(
-                installer.name)
-            package_installer.update(installer.settings)
+        installer = adapter_api.PACKAGE_INSTALLERS.values()[0]
+        package_installer = {}
+        package_installer['name'] = health_check_utils.strip_name(
+            installer['name'])
+        package_installer.update(installer['settings'])
         return package_installer
 
     def _set_status(self, code, message):

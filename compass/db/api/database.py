@@ -153,12 +153,12 @@ def run_in_session():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if 'session' in kwargs.keys():
+            if 'session' in kwargs:
                 return func(*args, **kwargs)
             else:
+                logging.debug('append session into kwargs %s', kwargs)
                 with session() as my_session:
-                    kwargs['session'] = my_session
-                    return func(*args, **kwargs)
+                    return func(*args, session=my_session, **kwargs)
         return wrapper
     return decorator
 
@@ -167,8 +167,8 @@ def _setup_user_table(user_session):
     """Initialize default user."""
     logging.info('setup user table')
     from compass.db.api import user
-    user.add_user_internal(
-        user_session,
+    user.add_user(
+        session=user_session,
         email=setting.COMPASS_ADMIN_EMAIL,
         password=setting.COMPASS_ADMIN_PASSWORD,
         is_admin=True
@@ -188,110 +188,11 @@ def _setup_switch_table(switch_session):
     """Initialize switch table."""
     logging.info('setup switch table')
     from compass.db.api import switch
-    switch.add_switch_internal(
-        switch_session, long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP)),
-        True, filters=['allow ports all']
+    switch.add_switch(
+        True, setting.DEFAULT_SWITCH_IP,
+        session=switch_session,
+        filters=['allow ports all']
     )
-
-
-def _setup_os_installers(installer_session):
-    """Initialize os_installer table."""
-    logging.info('setup os installer table')
-    from compass.db.api import installer
-    installer.add_os_installers_internal(
-        installer_session
-    )
-
-
-def _setup_package_installers(installer_session):
-    """Initialize package_installer table."""
-    logging.info('setup package installer table')
-    from compass.db.api import installer
-    installer.add_package_installers_internal(
-        installer_session
-    )
-
-
-def _setup_oses(os_session):
-    """Initialize os table."""
-    logging.info('setup os table')
-    from compass.db.api import adapter
-    adapter.add_oses_internal(
-        os_session
-    )
-
-
-def _setup_distributed_systems(distributed_system_session):
-    """Initialize distributed system table."""
-    logging.info('setup distributed system table')
-    from compass.db.api import adapter
-    adapter.add_distributed_systems_internal(
-        distributed_system_session
-    )
-
-
-def _setup_adapters(adapter_session):
-    """Initialize package adapter table."""
-    logging.info('setup adapter table')
-    from compass.db.api import adapter
-    adapter.add_adapters_internal(
-        adapter_session)
-
-
-def _setup_os_fields(field_session):
-    """Initialize os field table."""
-    logging.info('setup os field table')
-    from compass.db.api import metadata
-    metadata.add_os_field_internal(field_session)
-
-
-def _setup_package_fields(field_session):
-    """Initialize package field table."""
-    logging.info('setup package field table')
-    from compass.db.api import metadata
-    metadata.add_package_field_internal(field_session)
-
-
-def _setup_flavor_fields(field_session):
-    """Initialize flavor field table."""
-    logging.info('setup flavor field table')
-    from compass.db.api import metadata
-    metadata.add_flavor_field_internal(field_session)
-
-
-def _setup_os_metadatas(metadata_session):
-    """Initialize os metadata table."""
-    logging.info('setup os metadata table')
-    from compass.db.api import metadata
-    metadata.add_os_metadata_internal(metadata_session)
-
-
-def _setup_package_metadatas(metadata_session):
-    """Initialize package metadata table."""
-    logging.info('setup package metadata table')
-    from compass.db.api import metadata
-    metadata.add_package_metadata_internal(metadata_session)
-
-
-def _setup_flavor_metadatas(metadata_session):
-    """Initialize flavor metadata table."""
-    logging.info('setup flavor metadata table')
-    from compass.db.api import metadata
-    metadata.add_flavor_metadata_internal(metadata_session)
-
-
-def _setup_adapter_roles(role_session):
-    """Initialize adapter role table."""
-    logging.info('setup adapter role table')
-    from compass.db.api import adapter
-    adapter.add_roles_internal(role_session)
-
-
-def _setup_adapter_flavors(flavor_session):
-    """Initialize adapter flavor table."""
-    logging.info('setup adapter flavor table')
-    from compass.db.api import adapter
-    adapter.add_flavors_internal(flavor_session)
 
 
 def _update_others(other_session):
@@ -317,19 +218,6 @@ def create_db(session):
     _setup_permission_table(session)
     _setup_user_table(session)
     _setup_switch_table(session)
-    _setup_os_installers(session)
-    _setup_package_installers(session)
-    _setup_oses(session)
-    _setup_distributed_systems(session)
-    _setup_adapters(session)
-    _setup_adapter_roles(session)
-    _setup_adapter_flavors(session)
-    _setup_os_fields(session)
-    _setup_package_fields(session)
-    _setup_flavor_fields(session)
-    _setup_os_metadatas(session)
-    _setup_package_metadatas(session)
-    _setup_flavor_metadatas(session)
     _update_others(session)
 
 

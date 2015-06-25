@@ -43,6 +43,57 @@ from compass.utils import util
 class AdapterTestCase(unittest2.TestCase):
     """Adapter base test case."""
 
+    def _mock_load_configs(self, config_dir):
+        if config_dir == setting.OS_INSTALLER_DIR:
+            return [{
+                'NAME': 'cobbler',
+                'INSTANCE_NAME': 'cobbler',
+                'SETTINGS': {
+                    'cobbler_url': 'http://127.0.0.1/cobbler_api',
+                    'credentials': {
+                        'username': 'cobbler',
+                        'password': 'cobbler'
+                    }
+                }
+            }]
+        elif config_dir == setting.PACKAGE_INSTALLER_DIR:
+            return [{
+                'NAME': 'chef_installer',
+                'INSTANCE_NAME': 'chef_installer',
+                'SETTINGS': {
+                    'chef_url': 'https://127.0.0.1',
+                    'key_dir': '',
+                    'client_name': '',
+                    'databags': [
+                        'user_passwords', 'db_passwords',
+                        'service_passwords', 'secrets'
+                    ]
+                }
+            }]
+        elif config_dir == setting.ADAPTER_DIR:
+            return [{
+                'NAME': 'openstack_icehouse',
+                'DISLAY_NAME': 'Test OpenStack Icehouse',
+                'PACKAGE_INSTALLER': 'chef_installer',
+                'OS_INSTALLER': 'cobbler',
+                'SUPPORTED_OS_PATTERNS': ['(?i)centos.*', '(?i)ubuntu.*'],
+                'DEPLOYABLE': True
+            }, {
+                'NAME': 'ceph(chef)',
+                'DISPLAY_NAME': 'ceph(ceph)',
+                'PACKAGE_INSTALLER': 'chef_installer',
+                'OS_INSTALLER': 'cobbler',
+                'SUPPORTED_OS_PATTERNS': ['(?i)centos.*', '(?i)ubuntu.*'],
+                'DEPLOYABLE': True
+            }, {
+                'NAME': 'os_only',
+                'OS_INSTALLER': 'cobbler',
+                'SUPPORTED_OS_PATTERNS': ['(?i)centos.*', '(?i)ubuntu.*'],
+                'DEPLOYABLE': True
+            }]
+        else:
+            return []
+
     def setUp(self):
         super(AdapterTestCase, self).setUp()
         reload(setting)
@@ -58,20 +109,9 @@ class AdapterTestCase(unittest2.TestCase):
             )
         )
 
-        mock_config = mock.Mock()
+        mock_config = mock.Mock(side_effect=self._mock_load_configs)
         self.backup_adapter_configs = util.load_configs
         util.load_configs = mock_config
-        configs = [{
-            'NAME': 'openstack_test',
-            'DISLAY_NAME': 'Test OpenStack Icehouse',
-            'PACKAGE_INSTALLER': 'chef_installer',
-            'OS_INSTALLER': 'cobbler',
-            'SUPPORTED_OS_PATTERNS': ['(?i)centos.*', '(?i)ubuntu.*'],
-            'DEPLOYABLE': True
-        }]
-        util.load_configs.return_value = configs
-        with database.session() as session:
-            adapter_api.add_adapters_internal(session)
         adapter.load_adapters()
         self.adapter_object = adapter.list_adapters(user=self.user_object)
         for adapter_obj in self.adapter_object:
@@ -106,7 +146,6 @@ class TestListAdapters(AdapterTestCase):
             'openstack_icehouse',
             'os_only',
             'ceph(chef)',
-            'openstack_test'
         ]
         self.assertIsNotNone(adapters)
         for expect in expects:

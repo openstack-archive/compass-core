@@ -48,8 +48,9 @@ class BaseTest(unittest2.TestCase):
         )
         database.init('sqlite://')
         database.create_db()
-        adapter_api.load_adapters()
-        metadata_api.load_metadatas()
+        adapter_api.load_adapters(force_reload=True)
+        metadata_api.load_metadatas(force_reload=True)
+        metadata_api.load_flavors(force_reload=True)
         self.user_object = (
             user_api.get_user_object(
                 setting.COMPASS_ADMIN_EMAIL

@@ -24,10 +24,14 @@ import unittest2
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
-from compass.actions import deploy
-from compass.actions import util
 from compass.utils import setting_wrapper as setting
 reload(setting)
+
+
+from compass.actions import deploy
+from compass.actions import util
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 class TestDeployAction(unittest2.TestCase):
@@ -169,3 +173,9 @@ class TestDeployAction(unittest2.TestCase):
         output = util.ActionHelper.get_hosts_info(1, [1], None)
         self.maxDiff = None
         self.assertDictEqual(expected_output, output)
+
+
+if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
+    unittest2.main()

@@ -408,16 +408,29 @@ class TestAddDbObject(unittest2.TestCase):
 
     def test_add_with_multiple_args(self):
         with database.session() as session:
+            db_permission = utils.add_db_object(
+                session,
+                models.Permission,
+                False,
+                'test',
+                alias='test'
+            )
+            db_user = utils.add_db_object(
+                session,
+                models.User,
+                False,
+                'test@huawei.com',
+                password='test'
+            )
             db_objs = utils.add_db_object(
                 session,
-                models.AdapterRole,
+                models.UserPermission,
                 True,
-                'test1',
-                1,
-                name='test1',
-                alias='test1'
+                db_user.id,
+                db_permission.id
             )
-            self.assertEqual('test1', db_objs.alias)
+            self.assertEqual(db_user.id, db_objs.user_id)
+            self.assertEqual(db_permission.id, db_objs.permission_id)
 
 
 class TestListDbObjects(unittest2.TestCase):

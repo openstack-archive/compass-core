@@ -28,12 +28,16 @@ import unittest2
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
+from compass.utils import setting_wrapper as compass_setting
+reload(compass_setting)
+
+
 from compass.deployment.installers.config_manager import BaseConfigManager
 from compass.deployment.installers.os_installers.cobbler.cobbler \
     import CobblerInstaller
 from compass.tests.deployment.test_data import config_data
-from compass.utils import setting_wrapper as compass_setting
-reload(compass_setting)
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 class TestCobblerInstaller(unittest2.TestCase):
@@ -291,3 +295,9 @@ class TestCobblerInstaller(unittest2.TestCase):
         }
         output = self.test_cobbler._check_and_set_system_impi(3, "test_sys_id")
         self.assertTrue(output)
+
+
+if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
+    unittest2.main()

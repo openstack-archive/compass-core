@@ -77,7 +77,7 @@ PRESET_VALUES = {
     'GATEWAY': '10.145.88.1',
     'PROXY': 'http://10.145.89.100:3128',
     'OS_NAME_PATTERN': 'CentOS.*',
-    'DISTRIBUTED_SYSTEM_NAME_PATTERN': 'openstack.*',
+    'ADAPTER_NAME': 'openstack_icehouse',
     'FLAVOR_PATTERN': 'allinone.*',
     'ROLES_LIST': ['allinone-compute'],
     'MACHINES_TO_ADD': ['00:0c:29:a7:ea:4b'],
@@ -185,14 +185,11 @@ adapters = response
 adapter_id = None
 os_id = None
 flavor_id = None
-adapter_pattern = re.compile(PRESET_VALUES['DISTRIBUTED_SYSTEM_NAME_PATTERN'])
+adapter_name = PRESET_VALUES['ADPATER_NAME']
 os_pattern = re.compile(PRESET_VALUES['OS_NAME_PATTERN'])
 flavor_pattern = re.compile(PRESET_VALUES['FLAVOR_PATTERN'])
 for adapter in adapters:
-    if (
-        'distributed_system_name' in adapter and
-        adapter_pattern.match(adapter['distributed_system_name'])
-    ):
+    if adapter_name == adapter['name']:
         adapter_id = adapter['id']
     for supported_os in adapter['supported_oses']:
         if os_pattern.match(supported_os['name']):
@@ -201,7 +198,6 @@ for adapter in adapters:
     for flavor in adapter['flavors']:
         if flavor_pattern.match(flavor['name']):
             flavor_id = flavor['id']
-
     if adapter_id and os_id and flavor_id:
         break
 

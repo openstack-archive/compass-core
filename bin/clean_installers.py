@@ -75,7 +75,7 @@ def clean_installers():
                 filtered_os_installers[os_installer_name] = os_installer
             else:
                 logging.info(
-                    'ignore os isntaller %s', os_installer_name
+                    'ignore os installer %s', os_installer_name
                 )
         else:
             logging.info(

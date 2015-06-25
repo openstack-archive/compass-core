@@ -242,18 +242,22 @@ def _replace_output(data, **output_mapping):
             for item in data
         ]
     info = {}
-    for key, value in data.items():
-        if key in output_mapping:
-            output_key = output_mapping[key]
-            if isinstance(output_key, basestring):
-                info[output_key] = value
+    try:
+        for key, value in data.items():
+            if key in output_mapping:
+                output_key = output_mapping[key]
+                if isinstance(output_key, basestring):
+                    info[output_key] = value
+                else:
+                    info[key] = (
+                        _replace_output(value, **output_key)
+                    )
             else:
-                info[key] = (
-                    _replace_output(value, **output_key)
-                )
-        else:
-            info[key] = value
-    return info
+                info[key] = value
+        return info
+    except Exception as error:
+        logging.exception(error)
+        raise error
 
 
 def get_wrapped_func(func):
@@ -296,22 +300,26 @@ def _wrapper_dict(data, support_keys, **filters):
             'response %s type is not dict' % data
         )
     info = {}
-    for key in support_keys:
-        if key in data:
-            if key in filters:
-                filter_keys = filters[key]
-                if isinstance(filter_keys, dict):
-                    info[key] = _wrapper_dict(
-                        data[key], filter_keys.keys(),
-                        **filter_keys
-                    )
+    try:
+        for key in support_keys:
+            if key in data and data[key] is not None:
+                if key in filters:
+                    filter_keys = filters[key]
+                    if isinstance(filter_keys, dict):
+                        info[key] = _wrapper_dict(
+                            data[key], filter_keys.keys(),
+                            **filter_keys
+                        )
+                    else:
+                        info[key] = _wrapper_dict(
+                            data[key], filter_keys
+                        )
                 else:
-                    info[key] = _wrapper_dict(
-                        data[key], filter_keys
-                    )
-            else:
-                info[key] = data[key]
-    return info
+                    info[key] = data[key]
+        return info
+    except Exception as error:
+        logging.exception(error)
+        raise error
 
 
 def replace_input_types(**kwarg_mapping):
@@ -472,12 +480,16 @@ def output_filters(missing_ok=False, **filter_callbacks):
 
 
 def _input_validates(args_validators, kwargs_validators, *args, **kwargs):
-    for i, value in enumerate(args):
-        if i < len(args_validators) and args_validators[i]:
-            args_validators[i](value)
-    for key, value in kwargs.items():
-        if kwargs_validators.get(key):
-            kwargs_validators[key](value)
+    try:
+        for i, value in enumerate(args):
+            if i < len(args_validators) and args_validators[i]:
+                args_validators[i](value)
+        for key, value in kwargs.items():
+            if kwargs_validators.get(key):
+                kwargs_validators[key](value)
+    except Exception as error:
+        logging.exception(error)
+        raise error
 
 
 def input_validates(*args_validators, **kwargs_validators):
@@ -504,9 +516,13 @@ def _output_validates(kwargs_validators, obj):
         raise exception.InvalidResponse(
             'response %s type is not dict' % str(obj)
         )
-    for key, value in obj.items():
-        if key in kwargs_validators:
-            kwargs_validators[key](value)
+    try:
+        for key, value in obj.items():
+            if key in kwargs_validators:
+                kwargs_validators[key](value)
+    except Exception as error:
+        logging.exception(error)
+        raise error
 
 
 def output_validates(**kwargs_validators):
@@ -526,6 +542,8 @@ def output_validates(**kwargs_validators):
 
 def get_db_object(session, table, exception_when_missing=True, **kwargs):
     """Get db object."""
+    if not session:
+        raise exception.DatabaseException('session param is None')
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s get db object %s from table %s',
@@ -552,6 +570,8 @@ def get_db_object(session, table, exception_when_missing=True, **kwargs):
 def add_db_object(session, table, exception_when_existing=True,
                   *args, **kwargs):
     """Create db object."""
+    if not session:
+        raise exception.DatabaseException('session param is None')
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s add object %s atributes %s to table %s',
@@ -603,6 +623,8 @@ def add_db_object(session, table, exception_when_existing=True,
 
 def list_db_objects(session, table, order_by=[], **filters):
     """List db objects."""
+    if not session:
+        raise exception.DatabaseException('session param is None')
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s list db objects by filters %s in table %s',
@@ -626,6 +648,8 @@ def list_db_objects(session, table, order_by=[], **filters):
 
 def del_db_objects(session, table, **filters):
     """delete db objects."""
+    if not session:
+        raise exception.DatabaseException('session param is None')
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s delete db objects by filters %s in table %s',
@@ -644,6 +668,8 @@ def del_db_objects(session, table, **filters):
 
 def update_db_objects(session, table, **filters):
     """Update db objects."""
+    if not session:
+        raise exception.DatabaseException('session param is None')
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s update db objects by filters %s in table %s',
@@ -665,6 +691,8 @@ def update_db_objects(session, table, **filters):
 
 def update_db_object(session, db_object, **kwargs):
     """Update db object."""
+    if not session:
+        raise exception.DatabaseException('session param is None')
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s update db object %s by value %s',
@@ -684,6 +712,8 @@ def update_db_object(session, db_object, **kwargs):
 
 def del_db_object(session, db_object):
     """Delete db object."""
+    if not session:
+        raise exception.DatabaseException('session param is None')
     with session.begin(subtransactions=True):
         logging.debug(
             'session %s delete db object %s',

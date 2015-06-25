@@ -65,11 +65,11 @@ class TestListUserActions(BaseTest):
             self.user_object.id,
             action='/testaction'
         )
-        user_action = user_log.list_user_actions(
-            2,
-            user=self.user_object
+        self.assertRaises(
+            exception.RecordNotExists,
+            user_log.list_user_actions,
+            2, user=self.user_object
         )
-        self.assertEqual([], user_action)
 
 
 class TestListActions(BaseTest):
@@ -92,7 +92,6 @@ class TestListActions(BaseTest):
             'action': '/testaction',
             'user_id': 1
         }
-        print action
         self.assertTrue(
             all(item in action[0].items()
                 for item in expected.items()))

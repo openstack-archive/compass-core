@@ -32,7 +32,6 @@ test_client = compass_setting.TEST_CLIENT_NAME
 
 adapter_test_config = {
     "name": "openstack_icehouse",
-    "distributed_system_name": "openstack_icehouse",
     "flavors": [
         {
             "falvor_name": "test_flavor",

@@ -38,9 +38,7 @@ from sqlalchemy import Text
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy import UniqueConstraint
 
-from compass.db import callback as metadata_callback
 from compass.db import exception
-from compass.db import validator as metadata_validator
 from compass.utils import util
 
 
@@ -118,293 +116,6 @@ class HelperMixin(object):
                     value = util.format_datetime(value)
                 dict_info[key] = value
         return dict_info
-
-
-class MetadataMixin(HelperMixin):
-    name = Column(String(80), nullable=False)
-    display_name = Column(String(80))
-    path = Column(String(256))
-    description = Column(Text)
-    is_required = Column(Boolean, default=False)
-    required_in_whole_config = Column(Boolean, default=False)
-    mapping_to = Column(String(80), default='')
-    _validator = Column('validator', Text)
-    js_validator = Column(Text)
-    default_value = Column(JSONEncoded)
-    _default_callback = Column('default_callback', Text)
-    default_callback_params = Column(
-        'default_callback_params', JSONEncoded, default={}
-    )
-    options = Column(JSONEncoded)
-    _options_callback = Column('options_callback', Text)
-    options_callback_params = Column(
-        'options_callback_params', JSONEncoded, default={}
-    )
-    _autofill_callback = Column('autofill_callback', Text)
-    autofill_callback_params = Column(
-        'autofill_callback_params', JSONEncoded, default={}
-    )
-    required_in_options = Column(Boolean, default=False)
-
-    def initialize(self):
-        if not self.display_name:
-            if self.name:
-                self.display_name = self.name
-        super(MetadataMixin, self).initialize()
-
-    def validate(self):
-        super(MetadataMixin, self).validate()
-        if not self.name:
-            raise exception.InvalidParamter(
-                'name is not set in os metadata %s' % self.id
-            )
-
-    @property
-    def validator(self):
-        if not self._validator:
-            return None
-        func = eval(
-            self._validator,
-            metadata_validator.VALIDATOR_GLOBALS,
-            metadata_validator.VALIDATOR_LOCALS
-        )
-        if not callable(func):
-            raise Exception(
-                'validator %s is not callable' % self._validator
-            )
-        return func
-
-    @validator.setter
-    def validator(self, value):
-        if not value:
-            self._validator = None
-        elif isinstance(value, basestring):
-            self._validator = value
-        elif callable(value):
-            self._validator = value.func_name
-        else:
-            raise Exception(
-                'validator %s is not callable' % value
-            )
-
-    @property
-    def default_callback(self):
-        if not self._default_callback:
-            return None
-        func = eval(
-            self._default_callback,
-            metadata_callback.CALLBACK_GLOBALS,
-            metadata_callback.CALLBACK_LOCALS
-        )
-        if not callable(func):
-            raise Exception(
-                'default callback %s is not callable' % self._default_callback
-            )
-        return func
-
-    @default_callback.setter
-    def default_callback(self, value):
-        if not value:
-            self._default_callback = None
-        elif isinstance(value, basestring):
-            self._default_callback = value
-        elif callable(value):
-            self._default_callback = value.func_name
-        else:
-            raise Exception(
-                'default callback %s is not callable' % value
-            )
-
-    @property
-    def options_callback(self):
-        if not self._options_callback:
-            return None
-        func = eval(
-            self._options_callback,
-            metadata_callback.CALLBACK_GLOBALS,
-            metadata_callback.CALLBACK_LOCALS
-        )
-        if not callable(func):
-            raise Exception(
-                'options callback %s is not callable' % self._options_callback
-            )
-        return func
-
-    @options_callback.setter
-    def options_callback(self, value):
-        if not value:
-            self._options_callback = None
-        elif isinstance(value, basestring):
-            self._options_callback = value
-        elif callable(value):
-            self._options_callback = value.func_name
-        else:
-            raise Exception(
-                'options callback %s is not callable' % value
-            )
-
-    @property
-    def autofill_callback(self):
-        if not self._autofill_callback:
-            return None
-        func = eval(
-            self._autofill_callback,
-            metadata_callback.CALLBACK_GLOBALS,
-            metadata_callback.CALLBACK_LOCALS
-        )
-        if not callable(func):
-            raise Exception(
-                'autofill callback %s is not callable' % (
-                    self._autofill_callback
-                )
-            )
-        return func
-
-    @autofill_callback.setter
-    def autofill_callback(self, value):
-        if not value:
-            self._autofill_callback = None
-        elif isinstance(value, basestring):
-            self._autofill_callback = value
-        elif callable(value):
-            self._autofill_callback = value.func_name
-        else:
-            raise Exception(
-                'autofill callback %s is not callable' % value
-            )
-
-    def to_dict(self):
-        self_dict_info = {}
-        if self.field:
-            self_dict_info.update(self.field.to_dict())
-        else:
-            self_dict_info['field_type_data'] = 'dict'
-            self_dict_info['field_type'] = dict
-        self_dict_info.update(super(MetadataMixin, self).to_dict())
-        validator = self.validator
-        if validator:
-            self_dict_info['validator'] = validator
-        default_callback = self.default_callback
-        if default_callback:
-            self_dict_info['default_callback'] = default_callback
-        options_callback = self.options_callback
-        if options_callback:
-            self_dict_info['options_callback'] = options_callback
-        autofill_callback = self.autofill_callback
-        if autofill_callback:
-            self_dict_info['autofill_callback'] = autofill_callback
-        js_validator = self.js_validator
-        if js_validator:
-            self_dict_info['js_validator'] = js_validator
-        dict_info = {
-            '_self': self_dict_info
-        }
-        for child in self.children:
-            dict_info.update(child.to_dict())
-        return {
-            self.name: dict_info
-        }
-        return dict_info
-
-
-class FieldMixin(HelperMixin):
-    id = Column(Integer, primary_key=True)
-    field = Column(String(80), unique=True, nullable=False)
-    field_type_data = Column(
-        'field_type',
-        Enum(
-            'basestring', 'int', 'float', 'list', 'bool',
-            'dict', 'object'
-        ),
-        ColumnDefault('basestring')
-    )
-    display_type = Column(
-        Enum(
-            'checkbox', 'radio', 'select',
-            'multiselect', 'combobox', 'text',
-            'multitext', 'password', 'dropdown'
-        ),
-        ColumnDefault('text')
-    )
-    _validator = Column('validator', Text)
-    js_validator = Column(Text)
-    description = Column(Text)
-
-    @property
-    def field_type(self):
-        if not self.field_type_data:
-            return None
-        field_type = eval(self.field_type_data)
-        if not type(field_type) == type:
-            raise Exception(
-                '%s is not type' % self.field_type_data
-            )
-        return field_type
-
-    @field_type.setter
-    def field_type(self, value):
-        if not value:
-            self.field_type_data = None
-        elif isinstance(value, basestring):
-            self.field_type_data = value
-        elif type(value) == type:
-            self.field_type_data = value.__name__
-        else:
-            raise Exception(
-                '%s is not type' % value
-            )
-
-    @property
-    def validator(self):
-        if not self._validator:
-            return None
-        func = eval(
-            self._validator,
-            metadata_validator.VALIDATOR_GLOBALS,
-            metadata_validator.VALIDATOR_LOCALS
-        )
-        if not callable(func):
-            raise Exception(
-                '%s is not callable' % self._validator
-            )
-        return func
-
-    @validator.setter
-    def validator(self, value):
-        if not value:
-            self._validator = None
-        elif isinstance(value, basestring):
-            self._validator = value
-        elif callable(value):
-            self._validator = value.func_name
-        else:
-            raise Exception(
-                '%s is not callable' % value
-            )
-
-    def to_dict(self):
-        dict_info = super(FieldMixin, self).to_dict()
-        dict_info['field_type'] = self.field_type
-        validator = self.validator
-        if validator:
-            dict_info['validator'] = self.validator
-        js_validator = self.js_validator
-        if js_validator:
-            dict_info['js_validator'] = self.js_validator
-        return dict_info
-
-
-class InstallerMixin(HelperMixin):
-    name = Column(String(80), nullable=False)
-    alias = Column(String(80), unique=True, nullable=False)
-    settings = Column(JSONEncoded, default={})
-
-    def validate(self):
-        super(InstallerMixin, self).validate()
-        if not self.name:
-            raise exception.InvalidParameter(
-                'name is not set in installer %s' % self.name
-            )
 
 
 class StateMixin(TimestampMixin, HelperMixin):
@@ -752,14 +463,6 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         host.deployed_os_config = value
 
     @hybrid_property
-    def distributed_system_name(self):
-        return self.cluster.distributed_system_name
-
-    @distributed_system_name.expression
-    def distributed_system_name(cls):
-        return cls.cluster.distributed_system_name
-
-    @hybrid_property
     def os_name(self):
         return self.host.os_name
 
@@ -797,7 +500,6 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @property
     def os_installed(self):
-        logging.debug('os installed: %s' % self.host.os_installed)
         return self.host.os_installed
 
     @property
@@ -805,14 +507,13 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         role_names = list(self._roles)
         if not role_names:
             return []
-        flavor = self.cluster.flavor
-        if not flavor:
+        cluster_roles = self.cluster.flavor['roles']
+        if not cluster_roles:
             return []
         roles = []
-        for flavor_role in flavor.ordered_flavor_roles:
-            role = flavor_role.role
-            if role.name in role_names:
-                roles.append(role)
+        for cluster_role in cluster_roles:
+            if cluster_role['name'] in role_names:
+                roles.append(cluster_role)
         return roles
 
     @roles.setter
@@ -843,7 +544,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         cluster = self.cluster
         host = self.host
         host_state = host.state_dict()
-        if not cluster.distributed_system:
+        if not cluster.flavor_name:
             return host_state
         clusterhost_state = self.state.to_dict()
         if clusterhost_state['state'] in ['ERROR', 'SUCCESSFUL']:
@@ -869,7 +570,6 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         dict_info.update(super(ClusterHost, self).to_dict())
         state_dict = self.state_dict()
         dict_info.update({
-            'distributed_system_name': self.distributed_system_name,
             'distributed_system_installed': self.distributed_system_installed,
             'reinstall_distributed_system': self.reinstall_distributed_system,
             'owner': self.owner,
@@ -877,10 +577,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
             'name': self.name,
             'state': state_dict['state']
         })
-        roles = self.roles
-        dict_info['roles'] = [
-            role.to_dict() for role in roles
-        ]
+        dict_info['roles'] = self.roles
         return dict_info
 
 
@@ -931,7 +628,6 @@ class Host(BASE, TimestampMixin, HelperMixin):
     __tablename__ = 'host'
 
     name = Column(String(80), unique=True, nullable=True)
-    os_id = Column(Integer, ForeignKey('os.id'))
     config_step = Column(String(80), default='')
     os_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
@@ -939,10 +635,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
     os_name = Column(String(80))
     creator_id = Column(Integer, ForeignKey('user.id'))
     owner = Column(String(80))
-    os_installer_id = Column(
-        Integer,
-        ForeignKey('os_installer.id')
-    )
+    os_installer = Column(JSONEncoded, default={})
 
     id = Column(
         Integer,
@@ -987,6 +680,14 @@ class Host(BASE, TimestampMixin, HelperMixin):
             return machine.mac
         else:
             return None
+
+    @property
+    def os_id(self):
+        return self.os_name
+
+    @os_id.setter
+    def os_id(self, value):
+        self.os_name = value
 
     @hybrid_property
     def hostname(self):
@@ -1035,11 +736,6 @@ class Host(BASE, TimestampMixin, HelperMixin):
                 else:
                     self.state.state = 'UNINITIALIZED'
                 self.state.update()
-        os = self.os
-        if os:
-            self.os_name = os.name
-        else:
-            self.os_name = None
         self.state.update()
         super(Host, self).update()
 
@@ -1050,8 +746,8 @@ class Host(BASE, TimestampMixin, HelperMixin):
             raise exception.InvalidParameter(
                 'creator is not set in host %s' % self.id
             )
-        os = self.os
-        if not os:
+        os_name = self.os_name
+        if not os_name:
             raise exception.InvalidParameter(
                 'os is not set in host %s' % self.id
             )
@@ -1059,10 +755,6 @@ class Host(BASE, TimestampMixin, HelperMixin):
         if not os_installer:
             raise exception.Invalidparameter(
                 'os_installer is not set in host %s' % self.id
-            )
-        if not os.deployable:
-            raise exception.InvalidParameter(
-                'os %s is not deployable in host %s' % (os.name, self.id)
             )
 
     @property
@@ -1093,7 +785,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
                 host_network.to_dict()
                 for host_network in self.host_networks
             ],
-            'os_installer': self.os_installer.to_dict(),
+            'os_id': self.os_id,
             'clusters': [cluster.to_dict() for cluster in self.clusters],
             'state': state_dict['state']
         })
@@ -1148,14 +840,10 @@ class ClusterState(BASE, StateMixin):
         cluster = self.cluster
         clusterhosts = cluster.clusterhosts
         self.total_hosts = len(clusterhosts)
-        if self.state in ['UNINITIALIZED', 'INITIALIZED', 'INSTALLING']:
-            self.installing_hosts = 0
-            self.failed_hosts = 0
-            self.completed_hosts = 0
-        if self.state == 'INSTALLING':
-            cluster.reinstall_distributed_system = False
-
-        if not cluster.distributed_system:
+        self.installing_hosts = 0
+        self.failed_hosts = 0
+        self.completed_hosts = 0
+        if not cluster.flavor_name:
             for clusterhost in clusterhosts:
                 host = clusterhost.host
                 host_state = host.state.state
@@ -1183,6 +871,9 @@ class ClusterState(BASE, StateMixin):
                     /
                     float(self.total_hosts)
                 )
+                if self.state == 'SUCCESSFUL':
+                    self.state = 'INSTALLING'
+                self.ready = False
         self.message = (
             'total %s, installing %s, completed: %s, error %s'
         ) % (
@@ -1193,14 +884,8 @@ class ClusterState(BASE, StateMixin):
             self.severity = 'ERROR'
 
         super(ClusterState, self).update()
-
-        if self.state == 'SUCCESSFUL':
-            self.completed_hosts = self.total_hosts
-            for clusterhost in clusterhosts:
-                clusterhost_state = clusterhost.state
-                if clusterhost_state.state != 'SUCCESSFUL':
-                    clusterhost_state.state = 'SUCCESSFUL'
-                    clusterhost.state.update()
+        if self.state == 'INSTALLING':
+            cluster.reinstall_distributed_system = False
 
 
 class Cluster(BASE, TimestampMixin, HelperMixin):
@@ -1211,27 +896,14 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     name = Column(String(80), unique=True, nullable=False)
     reinstall_distributed_system = Column(Boolean, default=True)
     config_step = Column(String(80), default='')
-    os_id = Column(Integer, ForeignKey('os.id'))
     os_name = Column(String(80))
-    flavor_id = Column(
-        Integer,
-        ForeignKey('adapter_flavor.id'),
-        nullable=True
-    )
     flavor_name = Column(String(80), nullable=True)
-    distributed_system_id = Column(
-        Integer, ForeignKey('distributed_system.id'),
-        nullable=True
-    )
-    distributed_system_name = Column(
-        String(80), nullable=True
-    )
+    flavor = Column(JSONEncoded, default={})
     os_config = Column(JSONEncoded, default={})
     package_config = Column(JSONEncoded, default={})
     deployed_os_config = Column(JSONEncoded, default={})
     deployed_package_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
-    adapter_id = Column(Integer, ForeignKey('adapter.id'))
     adapter_name = Column(String(80))
     creator_id = Column(Integer, ForeignKey('user.id'))
     owner = Column(String(80))
@@ -1268,26 +940,6 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
                 else:
                     self.state.state = 'UNINITIALIZED'
                 self.state.update()
-        os = self.os
-        if os:
-            self.os_name = os.name
-        else:
-            self.os_name = None
-            self.os_config = {}
-        adapter = self.adapter
-        if adapter:
-            self.adapter_name = adapter.name
-            distributed_system = adapter.adapter_distributed_system
-            self.distributed_system = distributed_system
-            if distributed_system:
-                self.distributed_system_name = distributed_system.name
-            else:
-                self.distributed_system_name = None
-            flavor = self.flavor
-            if flavor:
-                self.flavor_name = flavor.name
-            else:
-                self.flavor_name = None
         self.state.update()
         super(Cluster, self).update()
 
@@ -1298,54 +950,47 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
             raise exception.InvalidParameter(
                 'creator is not set in cluster %s' % self.id
             )
-        os = self.os
-        if not os:
+        os_name = self.os_name
+        if not os_name:
             raise exception.InvalidParameter(
                 'os is not set in cluster %s' % self.id
             )
-        if not os.deployable:
-            raise exception.InvalidParameter(
-                'os %s is not deployable' % os.name
-            )
-        adapter = self.adapter
-        if not adapter:
+        adapter_name = self.adapter_name
+        if not adapter_name:
             raise exception.InvalidParameter(
                 'adapter is not set in cluster %s' % self.id
             )
-        if not adapter.deployable:
-            raise exception.InvalidParameter(
-                'adapter %s is not deployable' % adapter.name
-            )
-        supported_os_ids = [
-            adapter_os.os.id for adapter_os in adapter.supported_oses
-        ]
-        if os.id not in supported_os_ids:
-            raise exception.InvalidParameter(
-                'os %s is not supported' % os.name
-            )
-        distributed_system = self.distributed_system
-        if distributed_system:
-            if not distributed_system.deployable:
-                raise exception.InvalidParamerter(
-                    'distributed system %s is not deployable' % (
-                        distributed_system.name
-                    )
-                )
-        flavor = self.flavor
-        if not flavor:
-            if distributed_system:
-                raise exception.InvalidParameter(
-                    'flavor is not set in cluster %s' % self.id
-                )
+
+    @property
+    def os_id(self):
+        return self.os_name
+
+    @os_id.setter
+    def os_id(self, value):
+        self.os_name = value
+
+    @property
+    def adapter_id(self):
+        return self.adapter_name
+
+    @adapter_id.setter
+    def adapter_id(self, value):
+        self.adapter_name = value
+
+    @property
+    def flavor_id(self):
+        if self.flavor_name:
+            return '%s:%s' % (self.adapter_name, self.flavor_name)
         else:
-            flavor_adapter_id = flavor.adapter_id
-            adapter_id = self.adapter_id
-            if flavor_adapter_id != adapter_id:
-                raise exception.InvalidParameter(
-                    'flavor adapter id %s does not match adapter id %s' % (
-                        flavor_adapter_id, adapter_id
-                    )
-                )
+            return None
+
+    @flavor_id.setter
+    def flavor_id(self, value):
+        if value:
+            _, flavor_name = value.split(':', 1)
+            self.flavor_name = flavor_name
+        else:
+            self.flavor_name = value
 
     @property
     def patched_os_config(self):
@@ -1405,8 +1050,9 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         dict_info['distributed_system_installed'] = (
             self.distributed_system_installed
         )
-        if self.flavor:
-            dict_info['flavor'] = self.flavor.to_dict()
+        dict_info['os_id'] = self.os_id
+        dict_info['adapter_id'] = self.adapter_id
+        dict_info['flavor_id'] = self.flavor_id
         return dict_info
 
 
@@ -2027,789 +1673,6 @@ class Switch(BASE, HelperMixin, TimestampMixin):
         dict_info['ip'] = self.ip
         dict_info['filters'] = self.format_filters(self._filters)
         return dict_info
-
-
-class OSConfigMetadata(BASE, MetadataMixin):
-    """OS config metadata."""
-    __tablename__ = "os_config_metadata"
-
-    id = Column(Integer, primary_key=True)
-    os_id = Column(
-        Integer,
-        ForeignKey(
-            'os.id', onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    parent_id = Column(
-        Integer,
-        ForeignKey(
-            'os_config_metadata.id', onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    field_id = Column(
-        Integer,
-        ForeignKey(
-            'os_config_field.id', onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    children = relationship(
-        'OSConfigMetadata',
-        passive_deletes=True, passive_updates=True,
-        backref=backref('parent', remote_side=id)
-    )
-    __table_args__ = (
-        UniqueConstraint('path', 'os_id', name='constraint'),
-    )
-
-    def __init__(self, os_id, path, **kwargs):
-        self.os_id = os_id
-        self.path = path
-        super(OSConfigMetadata, self).__init__(**kwargs)
-
-    def validate(self):
-        super(OSConfigMetadata, self).validate()
-        if not self.os:
-            raise exception.InvalidParameter(
-                'os is not set in os metadata %s' % self.id
-            )
-
-
-class OSConfigField(BASE, FieldMixin):
-    """OS config fields."""
-    __tablename__ = 'os_config_field'
-
-    metadatas = relationship(
-        OSConfigMetadata,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('field'))
-
-    def __init__(self, field, **kwargs):
-        self.field = field
-        super(OSConfigField, self).__init__(**kwargs)
-
-
-class AdapterOS(BASE, HelperMixin):
-    """Adapter OS table."""
-    __tablename__ = 'adapter_os'
-
-    adapter_os_id = Column('id', Integer, primary_key=True)
-    os_id = Column(
-        Integer,
-        ForeignKey(
-            'os.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    adapter_id = Column(
-        Integer,
-        ForeignKey(
-            'adapter.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-
-    def __init__(self, os_id, adapter_id, **kwargs):
-        self.os_id = os_id
-        self.adapter_id = adapter_id
-        super(AdapterOS, self).__init__(**kwargs)
-
-    def to_dict(self):
-        dict_info = self.os.to_dict()
-        dict_info.update(super(AdapterOS, self).to_dict())
-        return dict_info
-
-
-class OperatingSystem(BASE, HelperMixin):
-    """OS table."""
-    __tablename__ = 'os'
-
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(
-        Integer,
-        ForeignKey('os.id', onupdate='CASCADE', ondelete='CASCADE'),
-        nullable=True
-    )
-    name = Column(String(80), unique=True, nullable=False)
-    deployable = Column(Boolean, default=False)
-
-    metadatas = relationship(
-        OSConfigMetadata,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('os')
-    )
-    clusters = relationship(
-        Cluster,
-        backref=backref('os')
-    )
-    hosts = relationship(
-        Host,
-        backref=backref('os')
-    )
-    children = relationship(
-        'OperatingSystem',
-        passive_deletes=True, passive_updates=True,
-        backref=backref('parent', remote_side=id)
-    )
-    supported_adapters = relationship(
-        AdapterOS,
-        passive_deletes=True, passive_updates=True,
-        backref=backref('os')
-    )
-
-    def __init__(self, name):
-        self.name = name
-        super(OperatingSystem, self).__init__()
-
-    def __str__(self):
-        return 'OperatingSystem[%s:%s]' % (self.id, self.name)
-
-    @property
-    def root_metadatas(self):
-        return [
-            metadata for metadata in self.metadatas
-            if metadata.parent_id is None
-        ]
-
-    def metadata_dict(self):
-        dict_info = {}
-        if self.parent:
-            dict_info.update(self.parent.metadata_dict())
-        for metadata in self.root_metadatas:
-            util.merge_dict(dict_info, metadata.to_dict())
-        return dict_info
-
-    @property
-    def os_supported_adapters(self):
-        supported_adapters = self.supported_adapters
-        if supported_adapters:
-            return supported_adapters
-        parent = self.parent
-        if parent:
-            return parent.os_supported_adapters
-        else:
-            return []
-
-
-class AdapterFlavorRole(BASE, HelperMixin):
-    """Adapter flavor roles."""
-
-    __tablename__ = 'adapter_flavor_role'
-
-    flavor_id = Column(
-        Integer,
-        ForeignKey(
-            'adapter_flavor.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        primary_key=True
-    )
-    role_id = Column(
-        Integer,
-        ForeignKey(
-            'adapter_role.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        primary_key=True
-    )
-
-    def __init__(self, flavor_id, role_id):
-        self.flavor_id = flavor_id
-        self.role_id = role_id
-        super(AdapterFlavorRole, self).__init__()
-
-    def __str__(self):
-        return 'AdapterFlavorRole[%s:%s]' % (self.flavor_id, self.role_id)
-
-    def validate(self):
-        super(AdapterFlavorRole, self).validate()
-        flavor_adapter_id = self.flavor.adapter_id
-        role_adapter_id = self.role.adapter_id
-        if flavor_adapter_id != role_adapter_id:
-            raise exception.InvalidParameter(
-                'flavor adapter %s and role adapter %s does not match' % (
-                    flavor_adapter_id, role_adapter_id
-                )
-            )
-
-    def to_dict(self):
-        dict_info = super(AdapterFlavorRole, self).to_dict()
-        dict_info.update(
-            self.role.to_dict()
-        )
-        return dict_info
-
-
-class FlavorConfigMetadata(BASE, MetadataMixin):
-    """flavor config metadata."""
-
-    __tablename__ = "flavor_config_metadata"
-
-    id = Column(Integer, primary_key=True)
-    flavor_id = Column(
-        Integer,
-        ForeignKey(
-            'adapter_flavor.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    parent_id = Column(
-        Integer,
-        ForeignKey(
-            'flavor_config_metadata.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    field_id = Column(
-        Integer,
-        ForeignKey(
-            'flavor_config_field.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    children = relationship(
-        'FlavorConfigMetadata',
-        passive_deletes=True, passive_updates=True,
-        backref=backref('parent', remote_side=id)
-    )
-
-    __table_args__ = (
-        UniqueConstraint('path', 'flavor_id', name='constraint'),
-    )
-
-    def __init__(
-        self, flavor_id, path, **kwargs
-    ):
-        self.flavor_id = flavor_id
-        self.path = path
-        super(FlavorConfigMetadata, self).__init__(**kwargs)
-
-    def validate(self):
-        super(FlavorConfigMetadata, self).validate()
-        if not self.flavor:
-            raise exception.InvalidParameter(
-                'flavor is not set in package metadata %s' % self.id
-            )
-
-
-class FlavorConfigField(BASE, FieldMixin):
-    """Flavor config metadata fields."""
-
-    __tablename__ = "flavor_config_field"
-
-    metadatas = relationship(
-        FlavorConfigMetadata,
-        passive_deletes=True, passive_updates=True,
-        cascade="all, delete-orphan",
-        backref=backref('field')
-    )
-
-    def __init__(self, field, **kwargs):
-        self.field = field
-        super(FlavorConfigField, self).__init__(**kwargs)
-
-
-class AdapterFlavor(BASE, HelperMixin):
-    """Adapter's flavors."""
-
-    __tablename__ = 'adapter_flavor'
-
-    id = Column(Integer, primary_key=True)
-    adapter_id = Column(
-        Integer,
-        ForeignKey('adapter.id', onupdate='CASCADE', ondelete='CASCADE')
-    )
-    name = Column(String(80), nullable=False)
-    display_name = Column(String(80))
-    template = Column(String(80))
-    _ordered_flavor_roles = Column(
-        'ordered_flavor_roles', JSONEncoded, default=[]
-    )
-
-    flavor_roles = relationship(
-        AdapterFlavorRole,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('flavor')
-    )
-    clusters = relationship(
-        Cluster,
-        backref=backref('flavor')
-    )
-    metadatas = relationship(
-        FlavorConfigMetadata,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('flavor')
-    )
-
-    __table_args__ = (
-        UniqueConstraint('name', 'adapter_id', name='constraint'),
-    )
-
-    def __str__(self):
-        return 'AdapterFlavor[%s:%s]' % (self.id, self.name)
-
-    @property
-    def root_metadatas(self):
-        return [
-            metadata for metadata in self.metadatas
-            if metadata.parent_id is None
-        ]
-
-    def metadata_dict(self):
-        dict_info = {}
-        for metadata in self.root_metadatas:
-            logging.info('metadata from flavr config metadata: %s', metadata)
-            util.merge_dict(dict_info, metadata.to_dict())
-        return dict_info
-
-    @property
-    def ordered_flavor_roles(self):
-        flavor_roles = dict([
-            (flavor_role.role.name, flavor_role)
-            for flavor_role in self.flavor_roles
-        ])
-        ordered_flavor_roles = []
-        for flavor_role in list(self._ordered_flavor_roles):
-            if flavor_role in flavor_roles:
-                ordered_flavor_roles.append(flavor_roles[flavor_role])
-        return ordered_flavor_roles
-
-    @ordered_flavor_roles.setter
-    def ordered_flavor_roles(self, value):
-        self._ordered_flavor_roles = list(value)
-
-    @property
-    def patched_ordered_flavor_roles(self):
-        return self.ordered_flavor_roles
-
-    @patched_ordered_flavor_roles.setter
-    def patched_ordered_flavor_roles(self, value):
-        ordered_flavor_roles = list(self._ordered_flavor_roles)
-        ordered_flavor_roles.extend(value)
-        self._ordered_flavor_roles = ordered_flavor_roles
-
-    def __init__(self, name, adapter_id, **kwargs):
-        self.name = name
-        self.adapter_id = adapter_id
-        super(AdapterFlavor, self).__init__(**kwargs)
-
-    def initialize(self):
-        if not self.display_name:
-            self.display_name = self.name
-        super(AdapterFlavor, self).initialize()
-
-    def validate(self):
-        super(AdapterFlavor, self).validate()
-        if not self.template:
-            raise exception.InvalidParameter(
-                'template is not set in adapter flavor %s' % self.id
-            )
-
-    def to_dict(self):
-        dict_info = super(AdapterFlavor, self).to_dict()
-        dict_info['roles'] = [
-            flavor_role.to_dict()
-            for flavor_role in self.ordered_flavor_roles
-        ]
-        return dict_info
-
-
-class AdapterRole(BASE, HelperMixin):
-    """Adapter's roles."""
-
-    __tablename__ = "adapter_role"
-    id = Column(Integer, primary_key=True)
-    name = Column(String(80), nullable=False)
-    display_name = Column(String(80))
-    description = Column(Text)
-    optional = Column(Boolean, default=False)
-    adapter_id = Column(
-        Integer,
-        ForeignKey(
-            'adapter.id',
-            onupdate='CASCADE',
-            ondelete='CASCADE'
-        )
-    )
-
-    flavor_roles = relationship(
-        AdapterFlavorRole,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('role')
-    )
-
-    __table_args__ = (
-        UniqueConstraint('name', 'adapter_id', name='constraint'),
-    )
-
-    def __init__(self, name, adapter_id, **kwargs):
-        self.name = name
-        self.adapter_id = adapter_id
-        super(AdapterRole, self).__init__(**kwargs)
-
-    def __str__(self):
-        return 'AdapterRole[%s:%s]' % (self.id, self.name)
-
-    def initialize(self):
-        if not self.description:
-            self.description = self.name
-        if not self.display_name:
-            self.display_name = self.name
-        super(AdapterRole, self).initialize()
-
-
-class PackageConfigMetadata(BASE, MetadataMixin):
-    """package config metadata."""
-    __tablename__ = "package_config_metadata"
-
-    id = Column(Integer, primary_key=True)
-    adapter_id = Column(
-        Integer,
-        ForeignKey(
-            'adapter.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    parent_id = Column(
-        Integer,
-        ForeignKey(
-            'package_config_metadata.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    field_id = Column(
-        Integer,
-        ForeignKey(
-            'package_config_field.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        )
-    )
-    children = relationship(
-        'PackageConfigMetadata',
-        passive_deletes=True, passive_updates=True,
-        backref=backref('parent', remote_side=id)
-    )
-
-    __table_args__ = (
-        UniqueConstraint('path', 'adapter_id', name='constraint'),
-    )
-
-    def __init__(
-        self, adapter_id, path, **kwargs
-    ):
-        self.adapter_id = adapter_id
-        self.path = path
-        super(PackageConfigMetadata, self).__init__(**kwargs)
-
-    def validate(self):
-        super(PackageConfigMetadata, self).validate()
-        if not self.adapter:
-            raise exception.InvalidParameter(
-                'adapter is not set in package metadata %s' % self.id
-            )
-
-
-class PackageConfigField(BASE, FieldMixin):
-    """Adapter cofig metadata fields."""
-    __tablename__ = "package_config_field"
-
-    metadatas = relationship(
-        PackageConfigMetadata,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('field'))
-
-    def __init__(self, field, **kwargs):
-        self.field = field
-        super(PackageConfigField, self).__init__(**kwargs)
-
-
-class Adapter(BASE, HelperMixin):
-    """Adapter table."""
-    __tablename__ = 'adapter'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String(80), unique=True, nullable=False)
-    display_name = Column(String(80))
-    parent_id = Column(
-        Integer,
-        ForeignKey(
-            'adapter.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        nullable=True
-    )
-    distributed_system_id = Column(
-        Integer,
-        ForeignKey(
-            'distributed_system.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        nullable=True
-    )
-    os_installer_id = Column(
-        Integer,
-        ForeignKey(
-            'os_installer.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        nullable=True
-    )
-    package_installer_id = Column(
-        Integer,
-        ForeignKey(
-            'package_installer.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        nullable=True
-    )
-    deployable = Column(
-        Boolean, default=False
-    )
-
-    health_check_cmd = Column(String(80))
-
-    supported_oses = relationship(
-        AdapterOS,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('adapter')
-    )
-
-    roles = relationship(
-        AdapterRole,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('adapter')
-    )
-    flavors = relationship(
-        AdapterFlavor,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('adapter')
-    )
-    children = relationship(
-        'Adapter',
-        passive_deletes=True, passive_updates=True,
-        backref=backref('parent', remote_side=id)
-    )
-    metadatas = relationship(
-        PackageConfigMetadata,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('adapter')
-    )
-    clusters = relationship(
-        Cluster,
-        backref=backref('adapter')
-    )
-
-    __table_args__ = (
-        UniqueConstraint(
-            'distributed_system_id',
-            'os_installer_id', 'package_installer_id', name='constraint'
-        ),
-    )
-
-    def __init__(
-        self, name, **kwargs
-    ):
-        self.name = name
-        super(Adapter, self).__init__(**kwargs)
-
-    def __str__(self):
-        return 'Adapter[%s:%s]' % (self.id, self.name)
-
-    def initialize(self):
-        if not self.display_name:
-            self.display_name = self.name
-        super(Adapter, self).initialize()
-
-    @property
-    def root_metadatas(self):
-        return [
-            metadata for metadata in self.metadatas
-            if metadata.parent_id is None
-        ]
-
-    def metadata_dict(self):
-        dict_info = {}
-        if self.parent:
-            dict_info.update(self.parent.metadata_dict())
-        for metadata in self.root_metadatas:
-            util.merge_dict(dict_info, metadata.to_dict())
-        return dict_info
-
-    @property
-    def adapter_package_installer(self):
-        if self.package_installer:
-            return self.package_installer
-        elif self.parent:
-            return self.parent.adapter_package_installer
-        else:
-            return None
-
-    @property
-    def adapter_os_installer(self):
-        if self.os_installer:
-            return self.os_installer
-        elif self.parent:
-            return self.parent.adapter_os_installer
-        else:
-            return None
-
-    @property
-    def adapter_distributed_system(self):
-        distributed_system = self.distributed_system
-        if distributed_system:
-            return distributed_system
-        parent = self.parent
-        if parent:
-            return parent.adapter_distributed_system
-        else:
-            return None
-
-    @property
-    def adapter_supported_oses(self):
-        supported_oses = self.supported_oses
-        if supported_oses:
-            return supported_oses
-        parent = self.parent
-        if parent:
-            return parent.adapter_supported_oses
-        else:
-            return []
-
-    @property
-    def adapter_roles(self):
-        roles = self.roles
-        if roles:
-            return roles
-        parent = self.parent
-        if parent:
-            return parent.adapter_roles
-        else:
-            return []
-
-    @property
-    def adapter_flavors(self):
-        flavors = self.flavors
-        if flavors:
-            return flavors
-        parent = self.parent
-        if parent:
-            return parent.adapter_flavors
-        else:
-            return []
-
-    def to_dict(self):
-        dict_info = super(Adapter, self).to_dict()
-        dict_info.update({
-            'supported_oses': [
-                adapter_os.to_dict()
-                for adapter_os in self.adapter_supported_oses
-            ],
-            'flavors': [
-                flavor.to_dict() for flavor in self.adapter_flavors
-            ]
-        })
-        distributed_system = self.adapter_distributed_system
-        if distributed_system:
-            dict_info['distributed_system_id'] = distributed_system.id
-            dict_info['distributed_system_name'] = distributed_system.name
-        os_installer = self.adapter_os_installer
-        if os_installer:
-            dict_info['os_installer'] = os_installer.to_dict()
-        package_installer = self.adapter_package_installer
-        if package_installer:
-            dict_info['package_installer'] = package_installer.to_dict()
-        return dict_info
-
-
-class DistributedSystem(BASE, HelperMixin):
-    """distributed system table."""
-    __tablename__ = 'distributed_system'
-
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(
-        Integer,
-        ForeignKey(
-            'distributed_system.id',
-            onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        nullable=True
-    )
-    name = Column(String(80), unique=True, nullable=False)
-    deployable = Column(Boolean, default=False)
-
-    adapters = relationship(
-        Adapter,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('distributed_system')
-    )
-    clusters = relationship(
-        Cluster,
-        backref=backref('distributed_system')
-    )
-    children = relationship(
-        'DistributedSystem',
-        passive_deletes=True, passive_updates=True,
-        backref=backref('parent', remote_side=id)
-    )
-
-    def __init__(self, name):
-        self.name = name
-        super(DistributedSystem, self).__init__()
-
-    def __str__(self):
-        return 'DistributedSystem[%s:%s]' % (self.id, self.name)
-
-
-class OSInstaller(BASE, InstallerMixin):
-    """OS installer table."""
-    __tablename__ = 'os_installer'
-    id = Column(Integer, primary_key=True)
-    adpaters = relationship(
-        Adapter,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('os_installer')
-    )
-    hosts = relationship(
-        Host,
-        backref=backref('os_installer')
-    )
-
-    def __init__(self, alias, **kwargs):
-        self.alias = alias
-        super(OSInstaller, self).__init__(**kwargs)
-
-    def __str__(self):
-        return 'OSInstaller[%s:%s]' % (self.id, self.alias)
-
-
-class PackageInstaller(BASE, InstallerMixin):
-    """package installer table."""
-    __tablename__ = 'package_installer'
-    id = Column(Integer, primary_key=True)
-    adapters = relationship(
-        Adapter,
-        passive_deletes=True, passive_updates=True,
-        cascade='all, delete-orphan',
-        backref=backref('package_installer')
-    )
-
-    def __init__(self, alias, **kwargs):
-        self.alias = alias
-        super(PackageInstaller, self).__init__(**kwargs)
-
-    def __str__(self):
-        return 'PackageInstaller[%s:%s]' % (self.id, self.alias)
 
 
 class Subnet(BASE, TimestampMixin, HelperMixin):

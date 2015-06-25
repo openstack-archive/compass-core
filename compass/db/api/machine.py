@@ -14,6 +14,7 @@
 
 """Switch database operations."""
 import logging
+import re
 
 from compass.db.api import database
 from compass.db.api import permission
@@ -43,9 +44,20 @@ RESP_DEPLOY_FIELDS = [
 ]
 
 
+def _get_machine(session, machine_id, **kwargs):
+    if isinstance(machine_id, (int, long)):
+        return utils.get_db_object(
+            session, models.Machine,
+            id=machine_id, **kwargs
+        )
+    raise exception.InvalidParameter(
+        'machine id %s type is not int compatible' % machine_id
+    )
+
+
 @utils.supported_filters([])
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_LIST_MACHINES
 )
 @utils.wrap_to_dict(RESP_FIELDS)
@@ -54,9 +66,9 @@ def get_machine(
     user=None, session=None, **kwargs
 ):
     """get field dict of a machine."""
-    return utils.get_db_object(
-        session, models.Machine,
-        exception_when_missing, id=machine_id
+    return _get_machine(
+        session, machine_id,
+        exception_when_missing=exception_when_missing
     )
 
 
@@ -64,7 +76,7 @@ def get_machine(
     optional_support_keys=SUPPORTED_FIELDS
 )
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_LIST_MACHINES
 )
 @utils.output_filters(
@@ -82,7 +94,7 @@ def list_machines(user=None, session=None, **filters):
 @utils.wrap_to_dict(RESP_FIELDS)
 def _update_machine(session, machine_id, **kwargs):
     """Update a machine."""
-    machine = utils.get_db_object(session, models.Machine, id=machine_id)
+    machine = _get_machine(session, machine_id)
     return utils.update_db_object(session, machine, **kwargs)
 
 
@@ -92,7 +104,7 @@ def _update_machine(session, machine_id, **kwargs):
 )
 @utils.input_validates(ipmi_credentials=utils.check_ipmi_credentials)
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_ADD_MACHINE
 )
 def update_machine(machine_id, user=None, session=None, **kwargs):
@@ -112,7 +124,7 @@ def update_machine(machine_id, user=None, session=None, **kwargs):
 )
 @database.run_in_session()
 @utils.output_validates(ipmi_credentials=utils.check_ipmi_credentials)
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_ADD_MACHINE
 )
 def patch_machine(machine_id, user=None, session=None, **kwargs):
@@ -123,13 +135,13 @@ def patch_machine(machine_id, user=None, session=None, **kwargs):
 
 @utils.supported_filters()
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_DEL_MACHINE
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_machine(machine_id, user=None, session=None, **kwargs):
     """Delete a machine."""
-    machine = utils.get_db_object(session, models.Machine, id=machine_id)
+    machine = _get_machine(session, machine_id)
     if machine.host:
         host = machine.host
         raise exception.NotAcceptable(
@@ -142,7 +154,7 @@ def del_machine(machine_id, user=None, session=None, **kwargs):
 
 @utils.supported_filters(optional_support_keys=['poweron'])
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_DEPLOY_HOST
 )
 @utils.wrap_to_dict(
@@ -154,8 +166,8 @@ def poweron_machine(
 ):
     """power on machine."""
     from compass.tasks import client as celery_client
-    machine = utils.get_db_object(
-        session, models.Machine, id=machine_id
+    machine = _get_machine(
+        session, machine_id
     )
     celery_client.celery.send_task(
         'compass.tasks.poweron_machine',
@@ -169,7 +181,7 @@ def poweron_machine(
 
 @utils.supported_filters(optional_support_keys=['poweroff'])
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_DEPLOY_HOST
 )
 @utils.wrap_to_dict(
@@ -181,8 +193,8 @@ def poweroff_machine(
 ):
     """power off machine."""
     from compass.tasks import client as celery_client
-    machine = utils.get_db_object(
-        session, models.Machine, id=machine_id
+    machine = _get_machine(
+        session, machine_id
     )
     celery_client.celery.send_task(
         'compass.tasks.poweroff_machine',
@@ -196,7 +208,7 @@ def poweroff_machine(
 
 @utils.supported_filters(optional_support_keys=['reset'])
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_DEPLOY_HOST
 )
 @utils.wrap_to_dict(
@@ -208,8 +220,8 @@ def reset_machine(
 ):
     """reset machine."""
     from compass.tasks import client as celery_client
-    machine = utils.get_db_object(
-        session, models.Machine, id=machine_id
+    machine = _get_machine(
+        session, machine_id
     )
     celery_client.celery.send_task(
         'compass.tasks.reset_machine',

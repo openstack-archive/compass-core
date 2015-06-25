@@ -19,11 +19,16 @@ import unittest2
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
+
+from compass.utils import setting_wrapper as compass_setting
+reload(compass_setting)
+
+
 from compass.deployment.installers.config_manager import BaseConfigManager
 from compass.deployment.utils import constants as const
 from compass.tests.deployment.test_data import config_data
-from compass.utils import setting_wrapper as compass_setting
-reload(compass_setting)
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 class TestConfigManager(unittest2.TestCase):
@@ -225,3 +230,9 @@ class TestConfigManager(unittest2.TestCase):
         self.maxDiff = None
         output = self.test_config_manager.get_host_roles_mapping(3)
         self.assertEqual(expected_output, output)
+
+
+if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
+    unittest2.main()

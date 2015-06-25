@@ -88,7 +88,7 @@ def in_session():
 
 
 @contextmanager
-def session():
+def session(exception_when_in_session=True):
     """database session scope.
 
        .. note::
@@ -97,19 +97,33 @@ def session():
     if not ENGINE:
         init()
 
+    nested_session = False
     if hasattr(SESSION_HOLDER, 'session'):
-        logging.error('we are already in session')
-        raise exception.DatabaseException('session already exist')
+        if exception_when_in_session:
+            logging.error('we are already in session')
+            raise exception.DatabaseException('session already exist')
+        else:
+            new_session = SESSION_HOLDER.session
+            nested_session = True
+            logging.log(
+                logsetting.getLevelByName('fine'),
+                'reuse session %s', nested_session
+            )
     else:
         new_session = SCOPED_SESSION()
         setattr(SESSION_HOLDER, 'session', new_session)
-
+        logging.log(
+            logsetting.getLevelByName('fine'),
+            'enter session %s', new_session
+        )
     try:
         yield new_session
-        new_session.commit()
+        if not nested_session:
+            new_session.commit()
     except Exception as error:
-        new_session.rollback()
-        logging.error('failed to commit session')
+        if not nested_session:
+            new_session.rollback()
+            logging.error('failed to commit session')
         logging.exception(error)
         if isinstance(error, IntegrityError):
             for item in error.statement.split():
@@ -128,9 +142,14 @@ def session():
         else:
             raise exception.DatabaseException(str(error))
     finally:
-        new_session.close()
-        SCOPED_SESSION.remove()
-        delattr(SESSION_HOLDER, 'session')
+        if not nested_session:
+            new_session.close()
+            SCOPED_SESSION.remove()
+            delattr(SESSION_HOLDER, 'session')
+        logging.log(
+            logsetting.getLevelByName('fine'),
+            'exit session %s', new_session
+        )
 
 
 def current_session():
@@ -149,16 +168,25 @@ def current_session():
             raise exception.DatabaseException(str(error))
 
 
-def run_in_session():
+def run_in_session(exception_when_in_session=True):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if 'session' in kwargs.keys():
-                return func(*args, **kwargs)
-            else:
-                with session() as my_session:
-                    kwargs['session'] = my_session
+            try:
+                if 'session' in kwargs:
                     return func(*args, **kwargs)
+                else:
+                    with session(
+                        exception_when_in_session=exception_when_in_session
+                    ) as my_session:
+                        return func(*args, session=my_session, **kwargs)
+            except Exception as error:
+                logging.error(
+                    'got exception with func %s args %s kwargs %s',
+                    func, args, kwargs
+                )
+                logging.exception(error)
+                raise error
         return wrapper
     return decorator
 
@@ -167,8 +195,8 @@ def _setup_user_table(user_session):
     """Initialize default user."""
     logging.info('setup user table')
     from compass.db.api import user
-    user.add_user_internal(
-        user_session,
+    user.add_user(
+        session=user_session,
         email=setting.COMPASS_ADMIN_EMAIL,
         password=setting.COMPASS_ADMIN_PASSWORD,
         is_admin=True
@@ -188,110 +216,11 @@ def _setup_switch_table(switch_session):
     """Initialize switch table."""
     logging.info('setup switch table')
     from compass.db.api import switch
-    switch.add_switch_internal(
-        switch_session, long(netaddr.IPAddress(setting.DEFAULT_SWITCH_IP)),
-        True, filters=['allow ports all']
+    switch.add_switch(
+        True, setting.DEFAULT_SWITCH_IP,
+        session=switch_session,
+        filters=['allow ports all']
     )
-
-
-def _setup_os_installers(installer_session):
-    """Initialize os_installer table."""
-    logging.info('setup os installer table')
-    from compass.db.api import installer
-    installer.add_os_installers_internal(
-        installer_session
-    )
-
-
-def _setup_package_installers(installer_session):
-    """Initialize package_installer table."""
-    logging.info('setup package installer table')
-    from compass.db.api import installer
-    installer.add_package_installers_internal(
-        installer_session
-    )
-
-
-def _setup_oses(os_session):
-    """Initialize os table."""
-    logging.info('setup os table')
-    from compass.db.api import adapter
-    adapter.add_oses_internal(
-        os_session
-    )
-
-
-def _setup_distributed_systems(distributed_system_session):
-    """Initialize distributed system table."""
-    logging.info('setup distributed system table')
-    from compass.db.api import adapter
-    adapter.add_distributed_systems_internal(
-        distributed_system_session
-    )
-
-
-def _setup_adapters(adapter_session):
-    """Initialize package adapter table."""
-    logging.info('setup adapter table')
-    from compass.db.api import adapter
-    adapter.add_adapters_internal(
-        adapter_session)
-
-
-def _setup_os_fields(field_session):
-    """Initialize os field table."""
-    logging.info('setup os field table')
-    from compass.db.api import metadata
-    metadata.add_os_field_internal(field_session)
-
-
-def _setup_package_fields(field_session):
-    """Initialize package field table."""
-    logging.info('setup package field table')
-    from compass.db.api import metadata
-    metadata.add_package_field_internal(field_session)
-
-
-def _setup_flavor_fields(field_session):
-    """Initialize flavor field table."""
-    logging.info('setup flavor field table')
-    from compass.db.api import metadata
-    metadata.add_flavor_field_internal(field_session)
-
-
-def _setup_os_metadatas(metadata_session):
-    """Initialize os metadata table."""
-    logging.info('setup os metadata table')
-    from compass.db.api import metadata
-    metadata.add_os_metadata_internal(metadata_session)
-
-
-def _setup_package_metadatas(metadata_session):
-    """Initialize package metadata table."""
-    logging.info('setup package metadata table')
-    from compass.db.api import metadata
-    metadata.add_package_metadata_internal(metadata_session)
-
-
-def _setup_flavor_metadatas(metadata_session):
-    """Initialize flavor metadata table."""
-    logging.info('setup flavor metadata table')
-    from compass.db.api import metadata
-    metadata.add_flavor_metadata_internal(metadata_session)
-
-
-def _setup_adapter_roles(role_session):
-    """Initialize adapter role table."""
-    logging.info('setup adapter role table')
-    from compass.db.api import adapter
-    adapter.add_roles_internal(role_session)
-
-
-def _setup_adapter_flavors(flavor_session):
-    """Initialize adapter flavor table."""
-    logging.info('setup adapter flavor table')
-    from compass.db.api import adapter
-    adapter.add_flavors_internal(flavor_session)
 
 
 def _update_others(other_session):
@@ -317,19 +246,6 @@ def create_db(session):
     _setup_permission_table(session)
     _setup_user_table(session)
     _setup_switch_table(session)
-    _setup_os_installers(session)
-    _setup_package_installers(session)
-    _setup_oses(session)
-    _setup_distributed_systems(session)
-    _setup_adapters(session)
-    _setup_adapter_roles(session)
-    _setup_adapter_flavors(session)
-    _setup_os_fields(session)
-    _setup_package_fields(session)
-    _setup_flavor_fields(session)
-    _setup_os_metadatas(session)
-    _setup_package_metadatas(session)
-    _setup_flavor_metadatas(session)
     _update_others(session)
 
 

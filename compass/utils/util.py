@@ -24,6 +24,25 @@ import os
 import os.path
 import re
 import sys
+import warnings
+
+
+def deprecated(func):
+    """This is a decorator which can be used to mark functions as deprecated.
+
+    It will result in a warning being emitted when the function is used.
+    """
+    def new_func(*args, **kwargs):
+        warnings.warn(
+            "Call to deprecated function %s." % func.__name__,
+            category=DeprecationWarning
+        )
+        return func(*args, **kwargs)
+
+    new_func.__name__ = func.__name__
+    new_func.__doc__ = func.__doc__
+    new_func.__dict__.update(func.__dict__)
+    return new_func
 
 
 def parse_datetime(date_time, exception_class=Exception):
@@ -105,6 +124,16 @@ def merge_dict(lhs, rhs, override=True):
     return lhs
 
 
+def recursive_merge_dict(name, all_dicts, parents):
+    """Recursively merge parent dict into base dict."""
+    parent_name = parents.get(name, None)
+    base_dict = all_dicts.get(name, {})
+    if not parent_name:
+        return base_dict
+    merged = recursive_merge_dict(parent_name, all_dicts, parents)
+    return merge_dict(base_dict, merged, override=False)
+
+
 def encrypt(value, crypt_method=None):
     """Get encrypted value."""
     if not crypt_method:
@@ -174,7 +203,7 @@ def load_configs(
     configs = []
     config_dir = str(config_dir)
     if not os.path.exists(config_dir):
-        logging.debug('path %s does not exist', config_dir)
+        logging.error('path %s does not exist', config_dir)
         return configs
     for component in os.listdir(config_dir):
         if not component.endswith(config_name_suffix):

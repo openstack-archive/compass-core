@@ -51,6 +51,7 @@ from compass.utils import util
 
 
 def log_user_action(func):
+    """decorator used to log api request url."""
     @functools.wraps(func)
     def decorated_api(*args, **kwargs):
         user_log_api.log_user_action(current_user.id, request.path)
@@ -59,6 +60,7 @@ def log_user_action(func):
 
 
 def update_user_token(func):
+    """decorator used to update user token expire time after api request."""
     @functools.wraps(func)
     def decorated_api(*args, **kwargs):
         response = func(*args, **kwargs)
@@ -73,12 +75,14 @@ def update_user_token(func):
 
 
 def _clean_data(data, keys):
+    """remove keys from dict."""
     for key in keys:
         if key in data:
             del data[key]
 
 
 def _replace_data(data, key_mapping):
+    """replace key names in dict."""
     for key, replaced_key in key_mapping.items():
         if key in data:
             data[replaced_key] = data[key]
@@ -86,6 +90,26 @@ def _replace_data(data, key_mapping):
 
 
 def _get_data(data, key):
+    """get key's value from request arg dict.
+
+    When the value is list, return the element in the list
+    if the list size is one. If the list size is greater than one,
+    raise exception_handler.BadRequest.
+
+    Example: data = {'a': ['b'], 'b': 5, 'c': ['d', 'e'], 'd': []}
+             _get_data(data, 'a') == 'b'
+             _get_data(data, 'b') == 5
+             _get_data(data, 'c') raises exception_handler.BadRequest
+             _get_data(data, 'd') == None
+             _get_data(data, 'e') == None
+
+    Usage: Used to parse the key-value pair in request.args to expected types.
+           Depends on the different flask plugins and what kind of parameters
+           passed in, the request.args format may be as below:
+           {'a': 'b'} or {'a': ['b']}. _get_data forces translate the
+           request.args to the format {'a': 'b'}. It raises exception when some
+           parameter declares multiple times.
+    """
     if key in data:
         if isinstance(data[key], list):
             if data[key]:
@@ -106,6 +130,24 @@ def _get_data(data, key):
 
 
 def _get_data_list(data, key):
+    """get key's value as list from request arg dict.
+
+    If the value type is list, return it, otherwise return the list
+    whos only element is the value got from the dict.
+
+    Example: data = {'a': ['b'], 'b': 5, 'c': ['d', 'e'], 'd': []}
+             _get_data_list(data, 'a') == ['b']
+             _get_data_list(data, 'b') == [5]
+             _get_data_list(data, 'd') == []
+             _get_data_list(data, 'e') == []
+
+    Usage: Used to parse the key-value pair in request.args to expected types.
+           Depends on the different flask plugins and what kind of parameters
+           passed in, the request.args format may be as below:
+           {'a': 'b'} or {'a': ['b']}. _get_data_list forces translate the
+           request.args to the format {'a': ['b']}. It accepts the case that
+           some parameter declares multiple times.
+    """
     if key in data:
         if isinstance(data[key], list):
             return data[key]
@@ -116,30 +158,72 @@ def _get_data_list(data, key):
 
 
 def _get_request_data():
+    """Switch reqeust data from string to python dict.
+
+    If the request data is not json formatted, raises
+    exception_handler.BadRequest.
+    If the request data is not json formatted dict, raises
+    exception_handler.BadRequest
+    If the request data is empty, return default as empty dict.
+
+    Usage: It is used to add or update a single resource.
+    """
     if request.data:
         try:
-            return json.loads(request.data)
+            data = json.loads(request.data)
         except Exception:
             raise exception_handler.BadRequest(
                 'request data is not json formatted: %s' % request.data
             )
+        if not isinstance(data, dict):
+            raise exception_handler.BadRequest(
+                'request data is not json formatted dict: %s' % request.data
+            )
+        return data
     else:
         return {}
 
 
 def _get_request_data_as_list():
+    """Switch reqeust data from string to python list.
+
+    If the request data is not json formatted, raises
+    exception_handler.BadRequest.
+    If the request data is not json formatted list, raises
+    exception_handler.BadRequest.
+    If the request data is empty, return default as empty list.
+
+    Usage: It is used to batch add or update a list of resources.
+    """
     if request.data:
         try:
-            return json.loads(request.data)
+            data = json.loads(request.data)
         except Exception:
             raise exception_handler.BadRequest(
                 'request data is not json formatted: %s' % request.data
             )
+        if not isinstance(data, list):
+            raise exception_handler.BadRequest(
+                'request data is not json formatted list: %s' % request.data
+            )
+        return data
     else:
         return []
 
 
 def _bool_converter(value):
+    """Convert string value to bool.
+
+    This function is used to convert value in requeset args to expected type.
+    If the key exists in request args but the value is not set, it means the
+    value should be true.
+
+    Examples:
+       /<request_path>?is_admin parsed to {'is_admin', None} and it should
+       be converted to {'is_admin': True}.
+       /<request_path>?is_admin=0 parsed and converted to {'is_admin': False}.
+       /<request_path>?is_admin=1 parsed and converted to {'is_admin': True}.
+    """
     if not value:
         return True
     if value in ['False', 'false', '0']:
@@ -148,6 +232,17 @@ def _bool_converter(value):
 
 
 def _int_converter(value):
+    """Convert string value to int.
+
+    We do not use the int converter default exception since we want to make
+    sure the exact http response code.
+
+    Raises: exception_handler.BadRequest if value can not be parsed to int.
+
+    Examples:
+       /<request_path>?count=10 parsed to {'count': '10'} and it should be
+       converted to {'count': 10}.
+    """
     try:
         return int(value)
     except Exception:
@@ -157,8 +252,18 @@ def _int_converter(value):
 
 
 def _get_request_args(**kwargs):
+    """Get request args as dict.
+
+    The value in the dict is converted to expected type.
+
+    Args:
+       kwargs: for each key, the value is the type converter.
+    """
     args = dict(request.args)
-    logging.debug('origin request args: %s', args)
+    logging.log(
+        logsetting.getLevelByName('fine'),
+        'origin request args: %s', args
+    )
     for key, value in args.items():
         if key in kwargs:
             converter = kwargs[key]
@@ -166,11 +271,40 @@ def _get_request_args(**kwargs):
                 args[key] = [converter(item) for item in value]
             else:
                 args[key] = converter(value)
-    logging.debug('request args: %s', args)
+    logging.log(
+        logsetting.getLevelByName('fine'),
+        'request args: %s', args
+    )
     return args
 
 
 def _group_data_action(data, **data_callbacks):
+    """Group api actions and pass data to grouped action callback.
+
+    Example:
+       data = {
+          'add_hosts': [{'name': 'a'}, {'name': 'b'}],
+          'update_hosts': {'c': {'mac': '123'}},
+          'remove_hosts': ['d', 'e']
+       }
+       data_callbacks = {
+           'add_hosts': update_cluster_action,
+           'update_hosts': update_cluster_action,
+           'remove_hosts': update_cluster_action
+       }
+       it converts to update_cluster_action(
+           add_hosts=[{'name': 'a'}, {'name': 'b'}],
+           update_hosts={'c': {'mac': '123'}},
+           remove_hosts=['d', 'e']
+       )
+
+    Raises:
+       exception_handler.BadRequest if data is empty.
+       exception_handler.BadMethod if there are some keys in data but
+       not in data_callbacks.
+       exception_handler.BadRequest if it groups to multiple
+       callbacks.
+    """
     if not data:
         raise exception_handler.BadRequest(
             'no action to take'
@@ -196,6 +330,7 @@ def _group_data_action(data, **data_callbacks):
 
 
 def _wrap_response(func, response_code):
+    """wrap function response to json formatted http response."""
     def wrapped_func(*args, **kwargs):
         return utils.make_json_response(
             response_code,
@@ -205,6 +340,20 @@ def _wrap_response(func, response_code):
 
 
 def _reformat_host_networks(networks):
+    """Reformat networks from list to dict.
+
+    The key in the dict is the value of the key 'interface'
+    in each network.
+
+    Example: networks = [{'interface': 'eth0', 'ip': '10.1.1.1'}]
+             is reformatted to {
+                 'eth0': {'interface': 'eth0', 'ip': '10.1.1.1'}
+             }
+
+    Usage: The networks got from db api is a list of network,
+           For better parsing in json frontend, we converted the
+           format into dict to easy reference.
+    """
     network_mapping = {}
     for network in networks:
         if 'interface' in network:
@@ -213,6 +362,7 @@ def _reformat_host_networks(networks):
 
 
 def _reformat_host(host):
+    """Reformat host's networks."""
     if isinstance(host, list):
         return [_reformat_host(item) for item in host]
     if 'networks' in host:
@@ -221,7 +371,12 @@ def _reformat_host(host):
 
 
 def _login(use_cookie):
-    """User login helper function."""
+    """User login helper function.
+
+    The request data should contains at least 'email' and 'password'.
+    The cookie expiration duration is defined in flask app config.
+    If user is not authenticated, it raises Unauthorized exception.
+    """
     data = _get_request_data()
     if 'email' not in data or 'password' not in data:
         raise exception_handler.BadRequest(
@@ -244,7 +399,7 @@ def _login(use_cookie):
 
 @app.route('/users/token', methods=['POST'])
 def get_token():
-    """Get token from email and password after user authentication."""
+    """user login and return token."""
     return _login(False)
 
 
@@ -271,7 +426,10 @@ def logout():
 @login_required
 @update_user_token
 def list_users():
-    """list users."""
+    """list users.
+
+    Supported paramters: ['email', 'is_admin', 'active']
+    """
     data = _get_request_args(
         is_admin=_bool_converter,
         active=_bool_converter
@@ -286,7 +444,11 @@ def list_users():
 @login_required
 @update_user_token
 def add_user():
-    """add user."""
+    """add user.
+
+    Must parameters: ['email', 'password'],
+    Optional paramters: ['is_admin', 'active']
+    """
     data = _get_request_data()
     user_dict = user_api.add_user(user=current_user, **data)
     return utils.make_json_response(
@@ -299,7 +461,7 @@ def add_user():
 @login_required
 @update_user_token
 def show_user(user_id):
-    """Get user."""
+    """Get user by id."""
     data = _get_request_args()
     return utils.make_json_response(
         200, user_api.get_user(user_id, user=current_user, **data)
@@ -311,7 +473,7 @@ def show_user(user_id):
 @login_required
 @update_user_token
 def show_current_user():
-    """Get user."""
+    """Get current  user."""
     data = _get_request_args()
     return utils.make_json_response(
         200, user_api.get_current_user(user=current_user, **data)
@@ -323,7 +485,13 @@ def show_current_user():
 @login_required
 @update_user_token
 def update_user(user_id):
-    """Update user."""
+    """Update user.
+
+    Supported parameters by self: [
+        'email', 'firstname', 'lastname', 'password'
+    ]
+    Supported parameters by admin ['is_admin', 'active']
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -340,7 +508,10 @@ def update_user(user_id):
 @login_required
 @update_user_token
 def delete_user(user_id):
-    """Delete user."""
+    """Delete user.
+
+    Delete is only permitted by admin user.
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -367,7 +538,14 @@ def list_user_permissions(user_id):
 @login_required
 @update_user_token
 def take_user_action(user_id):
-    """Take user action."""
+    """Take user action.
+
+    Support actions: [
+        'add_permissions', 'remove_permissions',
+        'set_permissions', 'enable_user',
+        'disable_user'
+    ]
+    """
     data = _get_request_data()
     update_permissions_func = _wrap_response(
         functools.partial(
@@ -429,7 +607,11 @@ def show_user_permission(user_id, permission_id):
 @login_required
 @update_user_token
 def add_user_permission(user_id):
-    """Add permission to a specific user."""
+    """Add permission to a specific user.
+
+    add_user_permission is only permitted by admin user.
+    Must parameters: ['permission_id']
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -441,7 +623,7 @@ def add_user_permission(user_id):
 
 
 @app.route(
-    '/users/<int:user_id>/permissions/<int:permission_id>',
+    '/users/<int:user_id>/permissions/<permission_id>',
     methods=['DELETE']
 )
 @log_user_action
@@ -464,7 +646,10 @@ def delete_user_permission(user_id, permission_id):
 @login_required
 @update_user_token
 def list_permissions():
-    """List permissions."""
+    """List permissions.
+
+    Supported filters: ['id', 'name', 'alias', 'description']
+    """
     data = _get_request_args()
     return utils.make_json_response(
         200,
@@ -486,6 +671,22 @@ def show_permission(permission_id):
 
 
 def _filter_timestamp(data):
+    """parse timestamp related params to db api understandable params.
+
+    Example:
+        {'timestamp_start': '2005-12-23 12:00:00'} to
+        {'timestamp': {'ge': timestamp('2005-12-23 12:00:00')}},
+        {'timestamp_end': '2005-12-23 12:00:00'} to
+        {'timestamp': {'le': timestamp('2005-12-23 12:00:00')}},
+        {'timestamp_range': '2005-12-23 12:00:00,2005-12-24 12:00:00'} to
+        {'timestamp': {'between': [
+                timestamp('2005-12-23 12:00:00'),
+                timestamp('2005-12-24 12:00:00')
+            ]
+        }}
+
+    The timestamp related params can be declared multi times.
+    """
     timestamp_filter = {}
     start = _get_data(data, 'timestamp_start')
     if start is not None:
@@ -520,7 +721,13 @@ def _filter_timestamp(data):
 @login_required
 @update_user_token
 def list_all_user_actions():
-    """List all users actions."""
+    """List all users actions.
+
+    Supported filters: [
+        'timestamp_start', 'timestamp_end', 'timestamp_range',
+        'user_email'
+    ]
+    """
     data = _get_request_args()
     _filter_timestamp(data)
     return utils.make_json_response(
@@ -536,7 +743,12 @@ def list_all_user_actions():
 @login_required
 @update_user_token
 def list_user_actions(user_id):
-    """List user actions."""
+    """List user actions for specific user.
+
+    Supported filters: [
+        'timestamp_start', 'timestamp_end', 'timestamp_range',
+    ]
+    """
     data = _get_request_args()
     _filter_timestamp(data)
     return utils.make_json_response(
@@ -567,7 +779,7 @@ def delete_all_user_actions():
 @login_required
 @update_user_token
 def delete_user_actions(user_id):
-    """Delete user actions."""
+    """Delete user actions for specific user."""
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -577,7 +789,20 @@ def delete_user_actions(user_id):
     )
 
 
-def _filter_ip(data):
+def _filter_switch_ip(data):
+    """filter switch ip related params to db/api understandable format.
+
+    Examples:
+        {'switchIp': '10.0.0.1'} to {'ip_int': {'eq': int of '10.0.0.1'}}
+        {'switchIpStart': '10.0.0.1'} to
+        {'ip_int': {'ge': int of '10.0.0.1'}}
+        {'switchIpEnd': '10.0.0.1'} to
+        {'ip_int': {'le': int of '10.0.0.1'}}
+        {'switchIpRange': '10.0.0.1,10.0.0.254'} to
+        {'ip_int': {'between': [int of '10.0.0.1', int of '10.0.0.254']}}
+
+    the switch ip related params can be declared multi times.
+    """
     ip_filter = {}
     switch_ips = _get_data_list(data, 'switchIp')
     if switch_ips:
@@ -621,9 +846,15 @@ def _filter_ip(data):
 @login_required
 @update_user_token
 def list_switches():
-    """List switches."""
+    """List switches.
+
+    Supported filters: [
+        'switchIp', 'switchIpStart', 'switchIpEnd',
+        'switchIpEnd', 'vendor', 'state'
+    ]
+    """
     data = _get_request_args()
-    _filter_ip(data)
+    _filter_switch_ip(data)
     return utils.make_json_response(
         200,
         switch_api.list_switches(
@@ -649,7 +880,14 @@ def show_switch(switch_id):
 @login_required
 @update_user_token
 def add_switch():
-    """add switch."""
+    """add switch.
+
+    Must fields: ['ip']
+    Optional fields: [
+        'credentials', 'vendor', 'state',
+        'err_msg', 'filters'
+    ]
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -662,8 +900,14 @@ def add_switch():
 @login_required
 @update_user_token
 def add_switches():
-    """add switches."""
-    data = _get_request_data()
+    """batch add switches.
+
+    request data is a list of dict. Each dict must contain ['ip'],
+    may contain [
+        'credentials', 'vendor', 'state', 'err_msg', 'filters'
+    ]
+    """
+    data = _get_request_data_as_list()
     return utils.make_json_response(
         200,
         switch_api.add_switches(
@@ -677,7 +921,13 @@ def add_switches():
 @login_required
 @update_user_token
 def update_switch(switch_id):
-    """update switch."""
+    """update switch.
+
+    Supported fields: [
+        'ip', 'credentials', 'vendor', 'state',
+        'err_msg', 'filters'
+    ]
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -690,7 +940,12 @@ def update_switch(switch_id):
 @login_required
 @update_user_token
 def patch_switch(switch_id):
-    """patch switch."""
+    """patch switch.
+
+    Supported fields: [
+        'credentials', 'filters'
+    ]
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -711,6 +966,7 @@ def delete_switch(switch_id):
     )
 
 
+@util.deprecated
 @app.route("/switch-filters", methods=['GET'])
 @log_user_action
 @login_required
@@ -718,7 +974,7 @@ def delete_switch(switch_id):
 def list_switch_filters():
     """List switch filters."""
     data = _get_request_args()
-    _filter_ip(data)
+    _filter_switch_ip(data)
     return utils.make_json_response(
         200,
         switch_api.list_switch_filters(
@@ -727,6 +983,7 @@ def list_switch_filters():
     )
 
 
+@util.deprecated
 @app.route("/switch-filters/<int:switch_id>", methods=['GET'])
 @log_user_action
 @login_required
@@ -740,6 +997,7 @@ def show_switch_filters(switch_id):
     )
 
 
+@util.deprecated
 @app.route("/switch-filters/<int:switch_id>", methods=['PUT'])
 @log_user_action
 @login_required
@@ -753,6 +1011,7 @@ def update_switch_filters(switch_id):
     )
 
 
+@util.deprecated
 @app.route("/switch-filters/<int:switch_id>", methods=['PATCH'])
 @log_user_action
 @login_required
@@ -766,7 +1025,24 @@ def patch_switch_filters(switch_id):
     )
 
 
-def _filter_port(data):
+def _filter_switch_port(data):
+    """Generate switch machine filters by switch port related fields.
+
+    Examples:
+       {'port': 'ae20'} to {'port': {'eq': 'ae20'}}
+       {'portStart': 20, 'portPrefix': 'ae', 'portSuffix': ''} to
+       {'port': {'startswith': 'ae', 'endswith': '', 'resp_ge': 20}}
+       {'portEnd': 20, 'portPrefix': 'ae', 'portSuffix': ''} to
+       {'port': {'startswith': 'ae', 'endswith': '', 'resp_le': 20}}
+       {'portRange': '20, 40', 'portPrefix': 'ae', 'portSuffix': ''} to
+       {'port': {
+           'startswith': 'ae', 'endswith': '', 'resp_ge': 20, 'resp_le': 40
+       }}
+
+    For each switch machines port, it extracts portNumber from
+    '<portPrefix><portNumber><portSuffix>' and filter the returned switch
+    machines by the filters.
+    """
     port_filter = {}
     ports = _get_data_list(data, 'port')
     if ports:
@@ -803,6 +1079,13 @@ def _filter_port(data):
 
 
 def _filter_general(data, key):
+    """Generate general filter for db/api returned list.
+
+    Supported filter type: [
+        'resp_eq', 'resp_in', 'resp_le', 'resp_ge',
+        'resp_gt', 'resp_lt', 'resp_match'
+    ]
+    """
     general_filter = {}
     general = _get_data_list(data, key)
     if general:
@@ -810,7 +1093,30 @@ def _filter_general(data, key):
         data[key] = general_filter
 
 
-def _filter_tag(data):
+def _filter_machine_tag(data):
+    """Generate filter for machine tag.
+
+    Examples:
+       original returns:
+          [{'tag': {
+              'city': 'beijing',
+              'building': 'tsinghua main building',
+              'room': '205', 'rack': 'a2b3',
+              'stack': '20'
+          }},{'location': {
+              'city': 'beijing',
+              'building': 'tsinghua main building',
+              'room': '205', 'rack': 'a2b2',
+              'stack': '20'
+          }}]
+       filter: {'tag': 'room=205;rack=a2b3'}
+       filtered: [{'tag': {
+          'city': 'beijing',
+          'building': 'tsinghua main building',
+          'room': '205', 'rack': 'a2b3',
+          'stack': '20'
+       }}]
+    """
     tag_filter = {}
     tags = _get_data_list(data, 'tag')
     if tags:
@@ -822,7 +1128,30 @@ def _filter_tag(data):
         data['tag'] = tag_filter
 
 
-def _filter_location(data):
+def _filter_machine_location(data):
+    """Generate filter for machine location.
+
+    Examples:
+       original returns:
+          [{'location': {
+              'city': 'beijing',
+              'building': 'tsinghua main building',
+              'room': '205', 'rack': 'a2b3',
+              'stack': '20'
+          }},{'location': {
+              'city': 'beijing',
+              'building': 'tsinghua main building',
+              'room': '205', 'rack': 'a2b2',
+              'stack': '20'
+          }}]
+       filter: {'location': 'room=205;rack=a2b3'}
+       filtered: [{'location': {
+          'city': 'beijing',
+          'building': 'tsinghua main building',
+          'room': '205', 'rack': 'a2b3',
+          'stack': '20'
+       }}]
+    """
     location_filter = {}
     locations = _get_data_list(data, 'location')
     if locations:
@@ -839,12 +1168,18 @@ def _filter_location(data):
 @login_required
 @update_user_token
 def list_switch_machines(switch_id):
-    """Get switch machines."""
+    """Get switch machines.
+
+    Supported filters: [
+        'port', 'portStart', 'portEnd', 'portRange',
+        'portPrefix', 'portSuffix', 'vlans', 'tag', 'location'
+    ]
+    """
     data = _get_request_args(vlans=_int_converter)
-    _filter_port(data)
+    _filter_switch_port(data)
     _filter_general(data, 'vlans')
-    _filter_tag(data)
-    _filter_location(data)
+    _filter_machine_tag(data)
+    _filter_machine_location(data)
     return utils.make_json_response(
         200,
         switch_api.list_switch_machines(
@@ -858,13 +1193,22 @@ def list_switch_machines(switch_id):
 @login_required
 @update_user_token
 def list_switch_machines_hosts(switch_id):
-    """Get switch machines or hosts."""
+    """Get switch machines or hosts.
+
+    Supported filters: [
+        'port', 'portStart', 'portEnd', 'portRange',
+        'portPrefix', 'portSuffix', 'vlans', 'tag', 'location',
+        'os_name', 'os_id'
+    ]
+
+    """
     data = _get_request_args(vlans=_int_converter, os_id=_int_converter)
-    _filter_port(data)
+    _filter_switch_port(data)
     _filter_general(data, 'vlans')
-    _filter_tag(data)
-    _filter_location(data)
+    _filter_machine_tag(data)
+    _filter_machine_location(data)
     _filter_general(data, 'os_name')
+    # TODO(xicheng): os_id filter should be removed later
     _filter_general(data, 'os_id')
     return utils.make_json_response(
         200,
@@ -879,7 +1223,11 @@ def list_switch_machines_hosts(switch_id):
 @login_required
 @update_user_token
 def add_switch_machine(switch_id):
-    """add switch machine."""
+    """add switch machine.
+
+    Must fields: ['mac', 'port']
+    Optional fields: ['vlans', 'ipmi_credentials', 'tag', 'location']
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -892,7 +1240,12 @@ def add_switch_machine(switch_id):
 @login_required
 @update_user_token
 def add_switch_machines():
-    """add switch machines."""
+    """batch add switch machines.
+
+    request data is list of dict which contains switch machine fields.
+    Each dict must contain ['switch_ip', 'mac', 'port'],
+    may contain ['vlans', 'ipmi_credentials', 'tag', 'location'].
+    """
     data = _get_request_data_as_list()
     return utils.make_json_response(
         200, switch_api.add_switch_machines(
@@ -927,7 +1280,12 @@ def show_switch_machine(switch_id, machine_id):
 @login_required
 @update_user_token
 def update_switch_machine(switch_id, machine_id):
-    """update switch machine."""
+    """update switch machine.
+
+    Supported fields: [
+        'port', 'vlans', 'ipmi_credentials', 'tag', 'location'
+    ]
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -945,7 +1303,12 @@ def update_switch_machine(switch_id, machine_id):
 @login_required
 @update_user_token
 def patch_switch_machine(switch_id, machine_id):
-    """patch switch machine."""
+    """patch switch machine.
+
+    Supported fields: [
+        'vlans', 'ipmi_credentials', 'tag', 'location'
+    ]
+    """
     data = _get_request_data()
     return utils.make_json_response(
         200,
@@ -978,7 +1341,13 @@ def delete_switch_machine(switch_id, machine_id):
 @login_required
 @update_user_token
 def take_switch_action(switch_id):
-    """update switch."""
+    """take switch action.
+
+    Supported actions: [
+        'find_machines', 'add_machines', 'remove_machines',
+        'set_machines'
+    ]
+    """
     data = _get_request_data()
     poll_switch_machines_func = _wrap_response(
         functools.partial(
@@ -1006,7 +1375,10 @@ def take_switch_action(switch_id):
 @login_required
 @update_user_token
 def take_machine_action(machine_id):
-    """update machine."""
+    """take machine action.
+
+    Supported actions: ['tag', 'poweron', 'poweroff', 'reset']
+    """
     data = _get_request_data()
     tag_func = _wrap_response(
         functools.partial(
@@ -1048,11 +1420,11 @@ def take_machine_action(machine_id):
 def list_switchmachines():
     """List switch machines."""
     data = _get_request_args(vlans=_int_converter)
-    _filter_ip(data)
-    _filter_port(data)
+    _filter_switch_ip(data)
+    _filter_switch_port(data)
     _filter_general(data, 'vlans')
-    _filter_tag(data)
-    _filter_location(data)
+    _filter_machine_tag(data)
+    _filter_machine_location(data)
     return utils.make_json_response(
         200,
         switch_api.list_switchmachines(
@@ -1068,11 +1440,11 @@ def list_switchmachines():
 def list_switchmachines_hosts():
     """List switch machines or hosts."""
     data = _get_request_args(vlans=_int_converter, os_id=_int_converter)
-    _filter_ip(data)
-    _filter_port(data)
+    _filter_switch_ip(data)
+    _filter_switch_port(data)
     _filter_general(data, 'vlans')
-    _filter_tag(data)
-    _filter_location(data)
+    _filter_machine_tag(data)
+    _filter_machine_location(data)
     _filter_general(data, 'os_name')
     _filter_general(data, 'os_id')
     return utils.make_json_response(
@@ -1156,8 +1528,8 @@ def delete_switchmachine(switch_machine_id):
 def list_machines():
     """List machines."""
     data = _get_request_args()
-    _filter_tag(data)
-    _filter_location(data)
+    _filter_machine_tag(data)
+    _filter_machine_location(data)
     return utils.make_json_response(
         200,
         machine_api.list_machines(
@@ -1307,9 +1679,6 @@ def list_adapters():
     """List adapters."""
     data = _get_request_args()
     _filter_general(data, 'name')
-    _filter_general(data, 'distributed_system_name')
-    _filter_general(data, 'os_installer_name')
-    _filter_general(data, 'package_installer_name')
     return utils.make_json_response(
         200,
         adapter_api.list_adapters(
@@ -1318,7 +1687,7 @@ def list_adapters():
     )
 
 
-@app.route("/adapters/<int:adapter_id>", methods=['GET'])
+@app.route("/adapters/<adapter_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1333,7 +1702,7 @@ def show_adapter(adapter_id):
     )
 
 
-@app.route("/adapters/<int:adapter_id>/metadata", methods=['GET'])
+@app.route("/adapters/<adapter_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1348,7 +1717,7 @@ def show_adapter_metadata(adapter_id):
     )
 
 
-@app.route("/oses/<int:os_id>/metadata", methods=['GET'])
+@app.route("/oses/<os_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1363,27 +1732,22 @@ def show_os_metadata(os_id):
     )
 
 
-@app.route("/oses/<int:os_id>/ui_metadata", methods=['GET'])
+@app.route("/oses/<os_id>/ui_metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
 def convert_os_metadata(os_id):
     """Convert os metadata to ui os metadata."""
-    metadatas = metadata_api.get_os_metadata(
-        os_id, user=current_user
-    )
-    configs = util.load_configs(setting.OS_MAPPING_DIR)
-    metadata = metadatas['os_config']
-    config = configs[0]['OS_CONFIG_MAPPING']
+    data = _get_request_args()
     return utils.make_json_response(
         200,
-        metadata_api.get_ui_metadata(
-            metadata, config
+        metadata_api.get_os_ui_metadata(
+            os_id, user=current_user, **data
         )
     )
 
 
-@app.route("/flavors/<int:flavor_id>/metadata", methods=['GET'])
+@app.route("/flavors/<flavor_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1398,35 +1762,23 @@ def show_flavor_metadata(flavor_id):
     )
 
 
-@app.route("/flavors/<int:flavor_id>/ui_metadata", methods=['GET'])
+@app.route("/flavors/<flavor_id>/ui_metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
 def convert_flavor_metadata(flavor_id):
-    """Convert flavor metadat to ui flavor metadata."""
-    metadatas = metadata_api.get_flavor_metadata(
-        flavor_id, user=current_user
-    )
-    metadata = metadatas['flavor_config']
-    flavor = metadata_api.get_flavor(
-        flavor_id,
-        user=current_user
-    )
-    flavor_name = flavor['name'].replace('-', '_')
-    configs = util.load_configs(setting.FLAVOR_MAPPING_DIR)
-    for item in configs:
-        if flavor_name in item.keys():
-            config = item[flavor_name]
+    """Convert flavor metadata to ui flavor metadata."""
+    data = _get_request_args()
     return utils.make_json_response(
         200,
-        metadata_api.get_ui_metadata(
-            metadata, config
+        metadata_api.get_flavor_ui_metadata(
+            flavor_id, user=current_user, **data
         )
     )
 
 
 @app.route(
-    "/adapters/<int:adapter_id>/oses/<int:os_id>/metadata",
+    "/adapters/<adapter_id>/oses/<os_id>/metadata",
     methods=['GET']
 )
 @log_user_action
@@ -1464,7 +1816,7 @@ def list_clusters():
 @update_user_token
 def show_cluster(cluster_id):
     """Get cluster."""
-    data = _get_request_args(adapter_id=_int_converter)
+    data = _get_request_args()
     return utils.make_json_response(
         200,
         cluster_api.get_cluster(
@@ -1624,8 +1976,9 @@ def take_cluster_action(cluster_id):
     check_cluster_health_func = _wrap_response(
         functools.partial(
             health_report_api.start_check_cluster_health,
-            current_user, cluster_id,
-            '%s/clusters/%s/healthreports' % (url_root, cluster_id)
+            cluster_id,
+            '%s/clusters/%s/healthreports' % (url_root, cluster_id),
+            user=current_user
         ),
         202
     )
@@ -1660,17 +2013,24 @@ def create_health_reports(cluster_id):
     """Create a health check report."""
     data = _get_request_data()
     output = []
+    logging.info('create_health_reports for cluster %s: %s',
+                 cluster_id, data)
     if 'report_list' in data:
         for report in data['report_list']:
             try:
                 output.append(
-                    health_report_api.add_report_record(cluster_id, **report)
+                    health_report_api.add_report_record(
+                        cluster_id, **report
+                    )
                 )
-            except Exception:
+            except Exception as error:
+                logging.exception(error)
                 continue
 
     else:
-        output = health_report_api.add_report_record(cluster_id, **data)
+        output = health_report_api.add_report_record(
+            cluster_id, **data
+        )
 
     return utils.make_json_response(
         200,
@@ -1684,7 +2044,9 @@ def bulk_update_reports(cluster_id):
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        health_report_api.update_multi_reports(cluster_id, **data)
+        health_report_api.update_multi_reports(
+            cluster_id, **data
+        )
     )
 
 
@@ -1693,9 +2055,12 @@ def bulk_update_reports(cluster_id):
 @login_required
 @update_user_token
 def list_health_reports(cluster_id):
+    data = _get_request_data()
     return utils.make_json_response(
         200,
-        health_report_api.list_health_reports(current_user, cluster_id)
+        health_report_api.list_health_reports(
+            cluster_id, user=current_user, **data
+        )
     )
 
 
@@ -1707,7 +2072,9 @@ def update_health_report(cluster_id, name):
 
     return utils.make_json_response(
         200,
-        health_report_api.update_report(cluster_id, name, **data)
+        health_report_api.update_report(
+            cluster_id, name, **data
+        )
     )
 
 
@@ -1716,9 +2083,12 @@ def update_health_report(cluster_id, name):
 @login_required
 @update_user_token
 def get_health_report(cluster_id, name):
+    data = _get_request_data()
     return utils.make_json_response(
         200,
-        health_report_api.get_health_report(current_user, cluster_id, name)
+        health_report_api.get_health_report(
+            cluster_id, name, user=current_user, **data
+        )
     )
 
 
@@ -2096,17 +2466,31 @@ def update_cluster_host_state(cluster_id, host_id):
     )
 
 
+@util.deprecated
 @app.route(
     "/clusters/<clustername>/hosts/<hostname>/state_internal",
     methods=['PUT', 'POST']
 )
 def update_cluster_host_state_internal(clustername, hostname):
     """update clusterhost state."""
+    # TODO(xicheng): it should be merged into update_cluster_host_state
     data = _get_request_data()
+    clusters = cluster_api.list_clusters(name=clustername)
+    if not clusters:
+        raise exception_handler.ItemNotFound(
+            'no clusters found for clustername %s' % clustername
+        )
+    cluster_id = clusters[0]['id']
+    hosts = host_api.list_hosts(name=hostname)
+    if not hosts:
+        raise exception_handler.ItemNotFound(
+            'no hosts found for hostname %s' % hostname
+        )
+    host_id = hosts[0]['id']
     return utils.make_json_response(
         200,
         cluster_api.update_clusterhost_state_internal(
-            clustername, hostname, **data
+            cluster_id, host_id, **data
         )
     )
 
@@ -2129,6 +2513,7 @@ def update_clusterhost_state(clusterhost_id):
     )
 
 
+@util.deprecated
 @app.route(
     "/clusterhosts/<clusterhost_name>/state_internal",
     methods=['PUT', 'POST']
@@ -2136,10 +2521,22 @@ def update_clusterhost_state(clusterhost_id):
 def update_clusterhost_state_internal(clusterhost_name):
     """update clusterhost state."""
     data = _get_request_data()
+    clusterhosts = cluster_api.list_clusterhosts()
+    clusterhost_id = None
+    for clusterhost in clusterhosts:
+        if clusterhost['name'] == clusterhost_name:
+            clusterhost_id = clusterhost['clusterhost_id']
+            break
+    if not clusterhost_id:
+        raise exception_handler.ItemNotFound(
+            'no clusterhost found for clusterhost_name %s' % (
+                clusterhost_name
+            )
+        )
     return utils.make_json_response(
         200,
         cluster_api.update_clusterhost_state_internal(
-            clusterhost_name, **data
+            clusterhost_id, **data
         )
     )
 
@@ -2181,8 +2578,8 @@ def show_host(host_id):
 def list_machines_or_hosts():
     """Get host."""
     data = _get_request_args(os_id=_int_converter)
-    _filter_tag(data)
-    _filter_location(data)
+    _filter_machine_tag(data)
+    _filter_machine_location(data)
     _filter_general(data, 'os_name')
     _filter_general(data, 'os_id')
     return utils.make_json_response(
@@ -2518,14 +2915,21 @@ def update_host_state(host_id):
     )
 
 
+@util.deprecated
 @app.route("/hosts/<hostname>/state_internal", methods=['PUT', 'POST'])
 def update_host_state_internal(hostname):
     """update host state."""
     data = _get_request_data()
+    hosts = host_api.list_hosts(name=hostname)
+    if not hosts:
+        raise exception_handler.ItemNotFound(
+            'no hosts found for hostname %s' % hostname
+        )
+    host_id = hosts[0]['id']
     return utils.make_json_response(
         200,
         host_api.update_host_state_internal(
-            hostname, **data
+            host_id, **data
         )
     )
 
@@ -2739,6 +3143,7 @@ def init():
     database.init()
     adapter_api.load_adapters()
     metadata_api.load_metadatas()
+    metadata_api.load_flavors()
 
 
 if __name__ == '__main__':

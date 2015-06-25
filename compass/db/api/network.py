@@ -15,6 +15,7 @@
 """Network related database operations."""
 import logging
 import netaddr
+import re
 
 from compass.db.api import database
 from compass.db.api import permission
@@ -37,6 +38,7 @@ UPDATED_FIELDS = ['subnet', 'name']
 
 
 def _check_subnet(subnet):
+    """Check subnet format is correct."""
     try:
         netaddr.IPNetwork(subnet)
     except Exception as error:
@@ -47,7 +49,7 @@ def _check_subnet(subnet):
 
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_LIST_SUBNETS
 )
 @utils.wrap_to_dict(RESP_FIELDS)
@@ -58,9 +60,21 @@ def list_subnets(user=None, session=None, **filters):
     )
 
 
+def _get_subnet(subnet_id, session=None, **kwargs):
+    """Get subnet by subnet id."""
+    if isinstance(subnet_id, (int, long)):
+        return utils.get_db_object(
+            session, models.Subnet,
+            id=subnet_id, **kwargs
+        )
+    raise exception.InvalidParameter(
+        'subnet id %s type is not int compatible' % subnet_id
+    )
+
+
 @utils.supported_filters([])
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_LIST_SUBNETS
 )
 @utils.wrap_to_dict(RESP_FIELDS)
@@ -69,9 +83,9 @@ def get_subnet(
     user=None, session=None, **kwargs
 ):
     """Get subnet info."""
-    return utils.get_db_object(
-        session, models.Subnet,
-        exception_when_missing, id=subnet_id
+    return _get_subnet(
+        subnet_id, session=session,
+        exception_when_missing=exception_when_missing
     )
 
 
@@ -81,7 +95,7 @@ def get_subnet(
 )
 @utils.input_validates(subnet=_check_subnet)
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_ADD_SUBNET
 )
 @utils.wrap_to_dict(RESP_FIELDS)
@@ -102,29 +116,20 @@ def add_subnet(
 )
 @utils.input_validates(subnet=_check_subnet)
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_ADD_SUBNET
 )
 @utils.wrap_to_dict(RESP_FIELDS)
 def update_subnet(subnet_id, user=None, session=None, **kwargs):
     """Update a subnet."""
-    subnet = utils.get_db_object(
-        session, models.Subnet, id=subnet_id
+    subnet = _get_subnet(
+        subnet_id, session=session
     )
     return utils.update_db_object(session, subnet, **kwargs)
 
 
-@utils.supported_filters([])
-@database.run_in_session()
-@user_api.check_user_permission_in_session(
-    permission.PERMISSION_DEL_SUBNET
-)
-@utils.wrap_to_dict(RESP_FIELDS)
-def del_subnet(subnet_id, user=None, session=None, **kwargs):
-    """Delete a subnet."""
-    subnet = utils.get_db_object(
-        session, models.Subnet, id=subnet_id
-    )
+def _check_subnet_deletable(subnet):
+    """Check a subnet deletable."""
     if subnet.host_networks:
         host_networks = [
             '%s:%s=%s' % (
@@ -139,4 +144,17 @@ def del_subnet(subnet_id, user=None, session=None, **kwargs):
             )
         )
 
+
+@utils.supported_filters([])
+@database.run_in_session()
+@user_api.check_user_permission(
+    permission.PERMISSION_DEL_SUBNET
+)
+@utils.wrap_to_dict(RESP_FIELDS)
+def del_subnet(subnet_id, user=None, session=None, **kwargs):
+    """Delete a subnet."""
+    subnet = _get_subnet(
+        subnet_id, session=session
+    )
+    _check_subnet_deletable(subnet)
     return utils.del_db_object(session, subnet)

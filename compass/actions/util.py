@@ -30,6 +30,14 @@ from compass.deployment.utils import constants as const
 
 @contextmanager
 def lock(lock_name, blocking=True, timeout=10):
+    """acquire a lock to do some actions.
+
+    The lock is acquired by lock_name among the whole distributed
+    systems.
+    """
+    # TODO(xicheng): in future we should explicitly told which redis
+    # server we want to talk to make the lock works on distributed
+    # systems.
     redis_instance = redis.Redis()
     instance_lock = redis_instance.lock(lock_name, timeout=timeout)
     owned = False
@@ -220,6 +228,7 @@ class ActionHelper(object):
 
     @staticmethod
     def save_deployed_config(deployed_config, user):
+        """Save deployed config."""
         cluster_config = deployed_config[const.CLUSTER]
         cluster_id = cluster_config[const.ID]
         del cluster_config[const.ID]
@@ -259,6 +268,11 @@ class ActionHelper(object):
     def delete_cluster(
         cluster_id, host_id_list, user, delete_underlying_host=False
     ):
+        """Delete cluster.
+
+        If delete_underlying_host is set, underlying hosts will also
+        be deleted.
+        """
         if delete_underlying_host:
             for host_id in host_id_list:
                 host_db.del_host(
@@ -272,6 +286,10 @@ class ActionHelper(object):
     def delete_cluster_host(
         cluster_id, host_id, user, delete_underlying_host=False
     ):
+        """Delete clusterhost.
+
+        If delete_underlying_host set, also delete underlying host.
+        """
         if delete_underlying_host:
             host_db.del_host(
                 host_id, True, True, user=user
@@ -288,6 +306,7 @@ class ActionHelper(object):
 
     @staticmethod
     def host_ready(host_id, from_database_only, user):
+        """Trigger host ready."""
         host_db.update_host_state_internal(
             host_id, from_database_only=from_database_only,
             user=user, ready=True
@@ -297,6 +316,7 @@ class ActionHelper(object):
     def cluster_host_ready(
         cluster_id, host_id, from_database_only, user
     ):
+        """Trigger clusterhost ready."""
         cluster_db.update_cluster_host_state_internal(
             cluster_id, host_id, from_database_only=from_database_only,
             user=user, ready=True
@@ -304,6 +324,7 @@ class ActionHelper(object):
 
     @staticmethod
     def cluster_ready(cluster_id, from_database_only, user):
+        """Trigger cluster ready."""
         cluster_db.update_cluster_state_internal(
             cluster_id, from_database_only=from_database_only,
             user=user, ready=True

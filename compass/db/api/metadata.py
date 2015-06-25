@@ -17,6 +17,7 @@ import copy
 import logging
 import string
 
+from compass.db.api import adapter as adapter_api
 from compass.db.api import database
 from compass.db.api import utils
 from compass.db import callback as metadata_callback
@@ -29,26 +30,39 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-def _add_field_internal(session, model, configs):
-    fields = []
+OS_FIELDS = None
+PACKAGE_FIELDS = None
+FLAVOR_FIELDS = None
+OSES_METADATA = None
+PACKAGES_METADATA = None
+FLAVORS_METADATA = None
+OSES_METADATA_UI_CONVERTERS = None
+FLAVORS_METADATA_UI_CONVERTERS = None
+
+
+def _get_field_from_configuration(configs):
+    """Get fields from configurations."""
+    fields = {}
     for config in configs:
         if not isinstance(config, dict):
             raise exception.InvalidParameter(
                 'config %s is not dict' % config
             )
-        fields.append(utils.add_db_object(
-            session, model, False,
-            config['NAME'],
-            field_type=config.get('FIELD_TYPE', basestring),
-            display_type=config.get('DISPLAY_TYPE', 'text'),
-            validator=config.get('VALIDATOR', None),
-            js_validator=config.get('JS_VALIDATOR', None),
-            description=config.get('DESCRIPTION', None)
-        ))
+        field_name = config['NAME']
+        fields[field_name] = {
+            'name': field_name,
+            'id': field_name,
+            'field_type': config.get('FIELD_TYPE', basestring),
+            'display_type': config.get('DISPLAY_TYPE', 'text'),
+            'validator': config.get('VALIDATOR', None),
+            'js_validator': config.get('JS_VALIDATOR', None),
+            'description': config.get('DESCRIPTION', field_name)
+        }
     return fields
 
 
-def add_os_field_internal(session):
+def _get_os_fields_from_configuration():
+    """Get os fields from os field config dir."""
     env_locals = {}
     env_locals.update(metadata_validator.VALIDATOR_LOCALS)
     env_locals.update(metadata_callback.CALLBACK_LOCALS)
@@ -56,12 +70,13 @@ def add_os_field_internal(session):
         setting.OS_FIELD_DIR,
         env_locals=env_locals
     )
-    return _add_field_internal(
-        session, models.OSConfigField, configs
+    return _get_field_from_configuration(
+        configs
     )
 
 
-def add_package_field_internal(session):
+def _get_package_fields_from_configuration():
+    """Get package fields from package field config dir."""
     env_locals = {}
     env_locals.update(metadata_validator.VALIDATOR_LOCALS)
     env_locals.update(metadata_callback.CALLBACK_LOCALS)
@@ -69,12 +84,13 @@ def add_package_field_internal(session):
         setting.PACKAGE_FIELD_DIR,
         env_locals=env_locals
     )
-    return _add_field_internal(
-        session, models.PackageConfigField, configs
+    return _get_field_from_configuration(
+        configs
     )
 
 
-def add_flavor_field_internal(session):
+def _get_flavor_fields_from_configuration():
+    """Get flavor fields from flavor field config dir."""
     env_locals = {}
     env_locals.update(metadata_validator.VALIDATOR_LOCALS)
     env_locals.update(metadata_callback.CALLBACK_LOCALS)
@@ -82,26 +98,38 @@ def add_flavor_field_internal(session):
         setting.FLAVOR_FIELD_DIR,
         env_locals=env_locals
     )
-    return _add_field_internal(
-        session, models.FlavorConfigField, configs
+    return _get_field_from_configuration(
+        configs
     )
 
 
-def _add_metadata(
-    session, field_model, metadata_model, id, path, name, config,
-    exception_when_existing=True, parent=None, **kwargs
+def _get_metadata_from_configuration(
+    path, name, config,
+    fields, **kwargs
 ):
+    """Recursively get metadata from configuration.
+
+    Args:
+       path: used to indicate the path to the root element.
+             mainly for trouble shooting.
+       name: the key of the metadata section.
+       config: the value of the metadata section.
+       fields: all fields defined in os fields or package fields dir.
+    """
     if not isinstance(config, dict):
         raise exception.InvalidParameter(
             '%s config %s is not dict' % (path, config)
         )
     metadata_self = config.get('_self', {})
     if 'field' in metadata_self:
-        field = utils.get_db_object(
-            session, field_model, field=metadata_self['field']
-        )
+        field_name = metadata_self['field']
+        field = fields[field_name]
     else:
-        field = None
+        field = {}
+    # mapping to may contain $ like $partition. Here we replace the
+    # $partition to the key of the correspendent config. The backend then
+    # can use this kind of feature to support multi partitions when we
+    # only declare the partition metadata in one place.
     mapping_to_template = metadata_self.get('mapping_to', None)
     if mapping_to_template:
         mapping_to = string.Template(
@@ -111,33 +139,54 @@ def _add_metadata(
         )
     else:
         mapping_to = None
-    metadata = utils.add_db_object(
-        session, metadata_model, exception_when_existing,
-        id, path, name=name, parent=parent, field=field,
-        display_name=metadata_self.get('display_name', name),
-        description=metadata_self.get('description', None),
-        is_required=metadata_self.get('is_required', False),
-        required_in_whole_config=metadata_self.get(
+    self_metadata = {
+        'name': name,
+        'display_name': metadata_self.get('display_name', name),
+        'field_type': field.get('field_type', dict),
+        'display_type': field.get('display_type', None),
+        'description': metadata_self.get(
+            'description', field.get('description', None)
+        ),
+        'is_required': metadata_self.get('is_required', False),
+        'required_in_whole_config': metadata_self.get(
             'required_in_whole_config', False),
-        mapping_to=mapping_to,
-        validator=metadata_self.get('validator', None),
-        js_validator=metadata_self.get('js_validator', None),
-        default_value=metadata_self.get('default_value', None),
-        default_callback=metadata_self.get('default_callback', None),
-        default_callback_params=metadata_self.get(
+        'mapping_to': mapping_to,
+        'validator': metadata_self.get(
+            'validator', field.get('validator', None)
+        ),
+        'js_validator': metadata_self.get(
+            'js_validator', field.get('js_validator', None)
+        ),
+        'default_value': metadata_self.get('default_value', None),
+        'default_callback': metadata_self.get('default_callback', None),
+        'default_callback_params': metadata_self.get(
             'default_callback_params', {}),
-        options=metadata_self.get('options', None),
-        options_callback=metadata_self.get('options_callback', None),
-        options_callback_params=metadata_self.get(
+        'options': metadata_self.get('options', None),
+        'options_callback': metadata_self.get('options_callback', None),
+        'options_callback_params': metadata_self.get(
             'options_callback_params', {}),
-        autofill_callback=metadata_self.get(
+        'autofill_callback': metadata_self.get(
             'autofill_callback', None),
-        autofill_callback_params=metadata_self.get(
+        'autofill_callback_params': metadata_self.get(
             'autofill_callback_params', {}),
-        required_in_options=metadata_self.get(
-            'required_in_options', False),
-        **kwargs
-    )
+        'required_in_options': metadata_self.get(
+            'required_in_options', False)
+    }
+    self_metadata.update(kwargs)
+    metadata = {'_self': self_metadata}
+    # Key extension used to do two things:
+    # one is to return the extended metadata that $<something>
+    # will be replace to possible extensions.
+    # The other is to record the $<something> to extended value
+    # and used in future mapping_to subsititution.
+    # TODO(grace): select proper name instead of key_extensions if
+    # you think it is better.
+    # Suppose key_extension is {'$partition': ['/var', '/']} for $partition
+    # the metadata for $partition will be mapped to {
+    # '/var': ..., '/': ...} and kwargs={'partition': '/var'} and
+    # kwargs={'partition': '/'} will be parsed to recursive metadata parsing
+    # for sub metadata under '/var' and '/'. Then in the metadata parsing
+    # for the sub metadata, this kwargs will be used to substitute mapping_to.
     key_extensions = metadata_self.get('key_extensions', {})
     general_keys = []
     for key, value in config.items():
@@ -160,20 +209,16 @@ def _add_metadata(
                     )
                 sub_kwargs = dict(kwargs)
                 sub_kwargs[key[1:]] = extended_key
-                _add_metadata(
-                    session, field_model, metadata_model,
-                    id, '%s/%s' % (path, extended_key), extended_key, value,
-                    exception_when_existing=exception_when_existing,
-                    parent=metadata, **sub_kwargs
+                metadata[extended_key] = _get_metadata_from_configuration(
+                    '%s/%s' % (path, extended_key), extended_key, value,
+                    fields, **sub_kwargs
                 )
         else:
             if key.startswith('$'):
                 general_keys.append(key)
-            _add_metadata(
-                session, field_model, metadata_model,
-                id, '%s/%s' % (path, key), key, value,
-                exception_when_existing=exception_when_existing,
-                parent=metadata, **kwargs
+            metadata[key] = _get_metadata_from_configuration(
+                '%s/%s' % (path, key), key, value,
+                fields, **kwargs
             )
         if len(general_keys) > 1:
             raise exception.InvalidParameter(
@@ -184,8 +229,9 @@ def _add_metadata(
     return metadata
 
 
-def add_os_metadata_internal(session, exception_when_existing=True):
-    os_metadatas = []
+def _get_oses_metadata_from_configuration():
+    """Get os metadata from os metadata config dir."""
+    oses_metadata = {}
     env_locals = {}
     env_locals.update(metadata_validator.VALIDATOR_LOCALS)
     env_locals.update(metadata_callback.CALLBACK_LOCALS)
@@ -194,22 +240,28 @@ def add_os_metadata_internal(session, exception_when_existing=True):
         env_locals=env_locals
     )
     for config in configs:
-        os = utils.get_db_object(
-            session, models.OperatingSystem, name=config['OS']
-        )
+        os_name = config['OS']
+        os_metadata = oses_metadata.setdefault(os_name, {})
         for key, value in config['METADATA'].items():
-            os_metadatas.append(_add_metadata(
-                session, models.OSConfigField,
-                models.OSConfigMetadata,
-                os.id, key, key, value,
-                exception_when_existing=exception_when_existing,
-                parent=None
-            ))
-    return os_metadatas
+            os_metadata[key] = _get_metadata_from_configuration(
+                key, key, value, OS_FIELDS
+            )
+
+    oses = adapter_api.OSES
+    parents = {}
+    for os_name, os in oses.items():
+        parent = os.get('parent', None)
+        parents[os_name] = parent
+    for os_name, os in oses.items():
+        oses_metadata[os_name] = util.recursive_merge_dict(
+            os_name, oses_metadata, parents
+        )
+    return oses_metadata
 
 
-def add_package_metadata_internal(session, exception_when_existing=True):
-    package_metadatas = []
+def _get_packages_metadata_from_configuration():
+    """Get package metadata from package metadata config dir."""
+    packages_metadata = {}
     env_locals = {}
     env_locals.update(metadata_validator.VALIDATOR_LOCALS)
     env_locals.update(metadata_callback.CALLBACK_LOCALS)
@@ -218,22 +270,27 @@ def add_package_metadata_internal(session, exception_when_existing=True):
         env_locals=env_locals
     )
     for config in configs:
-        adapter = utils.get_db_object(
-            session, models.Adapter, name=config['ADAPTER']
-        )
+        adapter_name = config['ADAPTER']
+        package_metadata = packages_metadata.setdefault(adapter_name, {})
         for key, value in config['METADATA'].items():
-            package_metadatas.append(_add_metadata(
-                session, models.PackageConfigField,
-                models.PackageConfigMetadata,
-                adapter.id, key, key, value,
-                exception_when_existing=exception_when_existing,
-                parent=None
-            ))
-    return package_metadatas
+            package_metadata[key] = _get_metadata_from_configuration(
+                key, key, value, PACKAGE_FIELDS
+            )
+    adapters = adapter_api.ADAPTERS
+    parents = {}
+    for adapter_name, adapter in adapters.items():
+        parent = adapter.get('parent', None)
+        parents[adapter_name] = parent
+    for adapter_name, adapter in adapters.items():
+        packages_metadata[adapter_name] = util.recursive_merge_dict(
+            adapter_name, packages_metadata, parents
+        )
+    return packages_metadata
 
 
-def add_flavor_metadata_internal(session, exception_when_existing=True):
-    flavor_metadatas = []
+def _get_flavors_metadata_from_configuration():
+    """Get flavor metadata from flavor metadata config dir."""
+    flavors_metadata = {}
     env_locals = {}
     env_locals.update(metadata_validator.VALIDATOR_LOCALS)
     env_locals.update(metadata_callback.CALLBACK_LOCALS)
@@ -242,18 +299,26 @@ def add_flavor_metadata_internal(session, exception_when_existing=True):
         env_locals=env_locals
     )
     for config in configs:
-        flavor = utils.get_db_object(
-            session, models.AdapterFlavor, name=config['FLAVOR']
-        )
+        adapter_name = config['ADAPTER']
+        flavor_name = config['FLAVOR']
+        flavor_metadata = flavors_metadata.setdefault(
+            adapter_name, {}
+        ).setdefault(flavor_name, {})
         for key, value in config['METADATA'].items():
-            flavor_metadatas.append(_add_metadata(
-                session, models.FlavorConfigField,
-                models.FlavorConfigMetadata,
-                flavor.id, key, key, value,
-                exception_when_existing=exception_when_existing,
-                parent=None
-            ))
-    return flavor_metadatas
+            flavor_metadata[key] = _get_metadata_from_configuration(
+                key, key, value, FLAVOR_FIELDS
+            )
+
+    packages_metadata = PACKAGES_METADATA
+    adapters_flavors = adapter_api.ADAPTERS_FLAVORS
+    for adapter_name, adapter_flavors in adapters_flavors.items():
+        package_metadata = packages_metadata.get(adapter_name, {})
+        for flavor_name, flavor in adapter_flavors.items():
+            flavor_metadata = flavors_metadata.setdefault(
+                adapter_name, {}
+            ).setdefault(flavor_name, {})
+            util.merge_dict(flavor_metadata, package_metadata, override=False)
+    return flavors_metadata
 
 
 def _filter_metadata(metadata, **kwargs):
@@ -295,282 +360,158 @@ def _filter_metadata(metadata, **kwargs):
     return filtered_metadata
 
 
-def get_package_metadatas_internal(session):
+def _load_metadata(force_reload=False):
+    """Load metadata information into memory.
+
+    If force_reload, the metadata information will be reloaded
+    even if the metadata is already loaded.
+    """
+    adapter_api.load_adapters_internal(force_reload=force_reload)
+    global OS_FIELDS
+    if force_reload or OS_FIELDS is None:
+        OS_FIELDS = _get_os_fields_from_configuration()
+    global PACKAGE_FIELDS
+    if force_reload or PACKAGE_FIELDS is None:
+        PACKAGE_FIELDS = _get_package_fields_from_configuration()
+    global FLAVOR_FIELDS
+    if force_reload or FLAVOR_FIELDS is None:
+        FLAVOR_FIELDS = _get_flavor_fields_from_configuration()
+    global OSES_METADATA
+    if force_reload or OSES_METADATA is None:
+        OSES_METADATA = _get_oses_metadata_from_configuration()
+    global PACKAGES_METADATA
+    if force_reload or PACKAGES_METADATA is None:
+        PACKAGES_METADATA = _get_packages_metadata_from_configuration()
+    global FLAVORS_METADATA
+    if force_reload or FLAVORS_METADATA is None:
+        FLAVORS_METADATA = _get_flavors_metadata_from_configuration()
+    global OSES_METADATA_UI_CONVERTERS
+    if force_reload or OSES_METADATA_UI_CONVERTERS is None:
+        OSES_METADATA_UI_CONVERTERS = (
+            _get_oses_metadata_ui_converters_from_configuration()
+        )
+    global FLAVORS_METADATA_UI_CONVERTERS
+    if force_reload or FLAVORS_METADATA_UI_CONVERTERS is None:
+        FLAVORS_METADATA_UI_CONVERTERS = (
+            _get_flavors_metadata_ui_converters_from_configuration()
+        )
+
+
+def _get_oses_metadata_ui_converters_from_configuration():
+    """Get os metadata ui converters from os metadata mapping config dir.
+
+    os metadata ui converter is used to convert os metadata to
+    the format UI can understand and show.
+    """
+    oses_metadata_ui_converters = {}
+    configs = util.load_configs(setting.OS_MAPPING_DIR)
+    for config in configs:
+        os_name = config['OS']
+        oses_metadata_ui_converters[os_name] = config.get('CONFIG_MAPPING', {})
+
+    oses = adapter_api.OSES
+    parents = {}
+    for os_name, os in oses.items():
+        parent = os.get('parent', None)
+        parents[os_name] = parent
+    for os_name, os in oses.items():
+        oses_metadata_ui_converters[os_name] = util.recursive_merge_dict(
+            os_name, oses_metadata_ui_converters, parents
+        )
+    return oses_metadata_ui_converters
+
+
+def _get_flavors_metadata_ui_converters_from_configuration():
+    """Get flavor metadata ui converters from flavor mapping config dir."""
+    flavors_metadata_ui_converters = {}
+    configs = util.load_configs(setting.FLAVOR_MAPPING_DIR)
+    for config in configs:
+        adapter_name = config['ADAPTER']
+        flavor_name = config['FLAVOR']
+        flavors_metadata_ui_converters.setdefault(
+            adapter_name, {}
+        )[flavor_name] = config.get('CONFIG_MAPPING', {})
+    adapters = adapter_api.ADAPTERS
+    parents = {}
+    for adapter_name, adapter in adapters.items():
+        parent = adapter.get('parent', None)
+        parents[adapter_name] = parent
+    for adapter_name, adapter in adapters.items():
+        flavors_metadata_ui_converters[adapter_name] = (
+            util.recursive_merge_dict(
+                adapter_name, flavors_metadata_ui_converters, parents
+            )
+        )
+    return flavors_metadata_ui_converters
+
+
+def get_packages_metadata_internal(force_reload=False):
+    """Get deployable package metadata."""
+    _load_metadata(force_reload=force_reload)
     metadata_mapping = {}
-    adapters = utils.list_db_objects(
-        session, models.Adapter
-    )
-    for adapter in adapters:
-        if adapter.deployable:
-            metadata_dict = adapter.metadata_dict()
-            metadata_mapping[adapter.id] = _filter_metadata(
-                metadata_dict, session=session
+    adapters = adapter_api.ADAPTERS
+    for adapter_name, adapter in adapters.items():
+        if adapter.get('deployable'):
+            metadata_mapping[adapter_name] = _filter_metadata(
+                PACKAGES_METADATA.get(adapter_name, {})
             )
         else:
             logging.info(
                 'ignore metadata since its adapter %s is not deployable',
-                adapter.id
+                adapter_name
             )
     return metadata_mapping
 
 
-def get_flavor_metadatas_internal(session):
+def get_flavors_metadata_internal(force_reload=False):
+    """Get deployable flavor metadata."""
+    _load_metadata(force_reload=force_reload)
     metadata_mapping = {}
-    flavors = utils.list_db_objects(
-        session, models.AdapterFlavor
-    )
-    for flavor in flavors:
-        flavor_metadata_dict = flavor.metadata_dict()
-        metadata_mapping[flavor.id] = _filter_metadata(
-            flavor_metadata_dict, session=session
-        )
-        adapters = utils.list_db_objects(
-            session, models.Adapter, id=flavor.adapter_id
-        )
-        for adapter in adapters:
-            package_metadata_dict = adapter.metadata_dict()
-            metadata_mapping[flavor.id].update(_filter_metadata(
-                package_metadata_dict, session=session
-            ))
+    adapters_flavors = adapter_api.ADAPTERS_FLAVORS
+    for adapter_name, adapter_flavors in adapters_flavors.items():
+        adapter = adapter_api.ADAPTERS[adapter_name]
+        if not adapter.get('deployable'):
+            logging.info(
+                'ignore metadata since its adapter %s is not deployable',
+                adapter_name
+            )
+            continue
+        for flavor_name, flavor in adapter_flavors.items():
+            flavor_metadata = FLAVORS_METADATA.get(
+                adapter_name, {}
+            ).get(flavor_name, {})
+            metadata = _filter_metadata(flavor_metadata)
+            metadata_mapping.setdefault(
+                adapter_name, {}
+            )[flavor_name] = metadata
     return metadata_mapping
 
 
-def get_os_metadatas_internal(session):
+def get_flavors_metadata_ui_converters_internal(force_reload=False):
+    """Get usable flavor metadata ui converters."""
+    _load_metadata(force_reload=force_reload)
+    return FLAVORS_METADATA_UI_CONVERTERS
+
+
+def get_oses_metadata_internal(force_reload=False):
+    """Get deployable os metadata."""
+    _load_metadata(force_reload=force_reload)
     metadata_mapping = {}
-    oses = utils.list_db_objects(
-        session, models.OperatingSystem
-    )
-    for os in oses:
-        if os.deployable:
-            metadata_dict = os.metadata_dict()
-            metadata_mapping[os.id] = _filter_metadata(
-                metadata_dict, session=session
+    oses = adapter_api.OSES
+    for os_name, os in oses.items():
+        if os.get('deployable'):
+            metadata_mapping[os_name] = _filter_metadata(
+                OSES_METADATA.get(os_name, {})
             )
         else:
             logging.info(
                 'ignore metadata since its os %s is not deployable',
-                os.id
+                os_name
             )
     return metadata_mapping
 
 
-def _validate_self(
-    config_path, config_key, config,
-    metadata, whole_check,
-    **kwargs
-):
-    logging.debug('validate config self %s', config_path)
-    if '_self' not in metadata:
-        if isinstance(config, dict):
-            _validate_config(
-                config_path, config, metadata, whole_check, **kwargs
-            )
-        return
-    field_type = metadata['_self'].get('field_type', basestring)
-    if not isinstance(config, field_type):
-        raise exception.InvalidParameter(
-            '%s config type is not %s' % (config_path, field_type)
-        )
-    is_required = metadata['_self'].get(
-        'is_required', False
-    )
-    required_in_whole_config = metadata['_self'].get(
-        'required_in_whole_config', False
-    )
-    if isinstance(config, basestring):
-        if config == '' and not is_required and not required_in_whole_config:
-            # ignore empty config when it is optional
-            return
-    required_in_options = metadata['_self'].get(
-        'required_in_options', False
-    )
-    options = metadata['_self'].get('options', None)
-    if required_in_options:
-        if field_type in [int, basestring, float, bool]:
-            if options and config not in options:
-                raise exception.InvalidParameter(
-                    '%s config is not in %s' % (config_path, options)
-                )
-        elif field_type in [list, tuple]:
-            if options and not set(config).issubset(set(options)):
-                raise exception.InvalidParameter(
-                    '%s config is not in %s' % (config_path, options)
-                )
-        elif field_type == dict:
-            if options and not set(config.keys()).issubset(set(options)):
-                raise exception.InvalidParameter(
-                    '%s config is not in %s' % (config_path, options)
-                )
-    validator = metadata['_self'].get('validator', None)
-    logging.debug('validate by validator %s', validator)
-    if validator:
-        if not validator(config_key, config, **kwargs):
-            raise exception.InvalidParameter(
-                '%s config is invalid' % config_path
-            )
-    if isinstance(config, dict):
-        _validate_config(
-            config_path, config, metadata, whole_check, **kwargs
-        )
-
-
-def _validate_config(
-    config_path, config, metadata, whole_check,
-    **kwargs
-):
-    logging.debug('validate config %s', config_path)
-    generals = {}
-    specified = {}
-    for key, value in metadata.items():
-        if key.startswith('$'):
-            generals[key] = value
-        elif key.startswith('_'):
-            pass
-        else:
-            specified[key] = value
-    config_keys = set(config.keys())
-    specified_keys = set(specified.keys())
-    intersect_keys = config_keys & specified_keys
-    not_found_keys = config_keys - specified_keys
-    redundant_keys = specified_keys - config_keys
-    for key in redundant_keys:
-        if '_self' not in specified[key]:
-            continue
-        if specified[key]['_self'].get('is_required', False):
-            raise exception.InvalidParameter(
-                '%s/%s does not find but it is required' % (
-                    config_path, key
-                )
-            )
-        if (
-            whole_check and
-            specified[key]['_self'].get(
-                'required_in_whole_config', False
-            )
-        ):
-            raise exception.InvalidParameter(
-                '%s/%s does not find but it is required in whole config' % (
-                    config_path, key
-                )
-            )
-    for key in intersect_keys:
-        _validate_self(
-            '%s/%s' % (config_path, key),
-            key, config[key], specified[key], whole_check,
-            **kwargs
-        )
-    for key in not_found_keys:
-        if not generals:
-            raise exception.InvalidParameter(
-                'key %s missing in metadata %s' % (
-                    key, config_path
-                )
-            )
-        for general_key, general_value in generals.items():
-            _validate_self(
-                '%s/%s' % (config_path, key),
-                key, config[key], general_value, whole_check,
-                **kwargs
-            )
-
-
-def _autofill_self_config(
-    config_path, config_key, config,
-    metadata,
-    **kwargs
-):
-    if '_self' not in metadata:
-        if isinstance(config, dict):
-            _autofill_config(
-                config_path, config, metadata, **kwargs
-            )
-        return config
-    logging.debug(
-        'autofill %s by metadata %s', config_path, metadata['_self']
-    )
-    autofill_callback = metadata['_self'].get(
-        'autofill_callback', None
-    )
-    autofill_callback_params = metadata['_self'].get(
-        'autofill_callback_params', {}
-    )
-    callback_params = dict(kwargs)
-    if autofill_callback_params:
-        callback_params.update(autofill_callback_params)
-    default_value = metadata['_self'].get(
-        'default_value', None
-    )
-    if default_value is not None:
-        callback_params['default_value'] = default_value
-    options = metadata['_self'].get(
-        'options', None
-    )
-    if options is not None:
-        callback_params['options'] = options
-    if autofill_callback:
-        config = autofill_callback(
-            config_key, config, **callback_params
-        )
-    if config is None:
-        new_config = {}
-    else:
-        new_config = config
-    if isinstance(new_config, dict):
-        _autofill_config(
-            config_path, new_config, metadata, **kwargs
-        )
-        if new_config:
-            config = new_config
-    return config
-
-
-def _autofill_config(
-    config_path, config, metadata, **kwargs
-):
-    generals = {}
-    specified = {}
-    for key, value in metadata.items():
-        if key.startswith('$'):
-            generals[key] = value
-        elif key.startswith('_'):
-            pass
-        else:
-            specified[key] = value
-    config_keys = set(config.keys())
-    specified_keys = set(specified.keys())
-    intersect_keys = config_keys & specified_keys
-    not_found_keys = config_keys - specified_keys
-    redundant_keys = specified_keys - config_keys
-    for key in redundant_keys:
-        self_config = _autofill_self_config(
-            '%s/%s' % (config_path, key),
-            key, None, specified[key], **kwargs
-        )
-        if self_config is not None:
-            config[key] = self_config
-    for key in intersect_keys:
-        config[key] = _autofill_self_config(
-            '%s/%s' % (config_path, key),
-            key, config[key], specified[key],
-            **kwargs
-        )
-    for key in not_found_keys:
-        for general_key, general_value in generals.items():
-            config[key] = _autofill_self_config(
-                '%s/%s' % (config_path, key),
-                key, config[key], general_value,
-                **kwargs
-            )
-    return config
-
-
-def validate_config_internal(
-    config, metadata, whole_check, **kwargs
-):
-    _validate_config('', config, metadata, whole_check, **kwargs)
-
-
-def autofill_config_internal(
-    config, metadata, **kwargs
-):
-    return _autofill_config('', config, metadata, **kwargs)
+def get_oses_metadata_ui_converters_internal(force_reload=False):
+    """Get usable os metadata ui converters."""
+    _load_metadata(force_reload=force_reload)
+    return OSES_METADATA_UI_CONVERTERS

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module to reinstall a given cluster
+"""Module to receive installation callback.
 
    .. moduleauthor:: Xiaodong Wang <xiaodongwang@huawei.com>
 """
@@ -34,6 +34,8 @@ def os_installed(
 
     :param host_id: host that os is installed.
     :type host_id: integer
+    :param clusterhosts_ready: the clusterhosts that should trigger ready.
+    :param clusters_os_ready: the cluster that should trigger os ready.
 
     .. note::
         The function should be called out of database session.
@@ -110,6 +112,11 @@ def package_installed(
 ):
     """Callback when package is installed.
 
+    :param cluster_id: cluster id.
+    :param host_id: host id.
+    :param cluster_ready: if the cluster should trigger ready.
+    :param host_ready: if the host should trigger ready.
+
     .. note::
         The function should be called out of database session.
     """
@@ -152,6 +159,9 @@ def cluster_installed(
     username=None
 ):
     """Callback when cluster is installed.
+
+    :param cluster_id: cluster id
+    :param clusterhosts_ready: clusterhosts that should trigger ready.
 
     .. note::
         The function should be called out of database session.

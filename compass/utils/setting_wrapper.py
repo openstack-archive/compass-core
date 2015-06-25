@@ -24,7 +24,7 @@ import os.path
 
 
 # default setting
-CONFIG_DIR = '/etc/compass'
+CONFIG_DIR = os.environ.get('COMPASS_CONFIG_DIR', '/etc/compass')
 SQLALCHEMY_DATABASE_URI = 'sqlite://'
 SQLALCHEMY_DATABASE_POOL_TYPE = 'static'
 COBBLER_INSTALLATION_LOGDIR = '/var/log/cobbler/anamon'
@@ -77,67 +77,28 @@ TEST_CLIENT_NAME = "graceyu"
 
 PROGRESS_UPDATE_PID_FILE = '/var/run/progress_update.pid'
 
-OS_INSTALLER_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'os_installer')
-)
-PACKAGE_INSTALLER_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'package_installer')
-)
-OS_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'os')
-)
-DISTRIBUTED_SYSTEM_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'distributed_system')
-)
-ADAPTER_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'adapter')
-)
-OS_METADATA_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'os_metadata')
-)
-PACKAGE_METADATA_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'package_metadata')
-)
-FLAVOR_METADATA_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'flavor_metadata')
-)
-OS_FIELD_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'os_field')
-)
-PACKAGE_FIELD_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'package_field')
-)
-FLAVOR_FIELD_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'flavor_field')
-)
-ADAPTER_ROLE_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'role')
-)
-ADAPTER_FLAVOR_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'flavor')
-)
-VALIDATOR_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'validator')
-)
-CALLBACK_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'callback')
-)
-TMPL_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'templates')
-)
-MACHINE_LIST_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'machine_list')
-)
-PROGRESS_CALCULATOR_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'progress_calculator')
-)
-OS_MAPPING_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'os_mapping')
-)
-FLAVOR_MAPPING_DIR = lazypy.delay(
-    lambda: os.path.join(CONFIG_DIR, 'flavor_mapping')
-)
 PROXY_URL_PREFIX = 'http://10.145.81.205:5000'
+
+OS_INSTALLER_DIR = ''
+PACKAGE_INSTALLER_DIR = ''
+OS_DIR = ''
+ADAPTER_DIR = ''
+OS_METADATA_DIR = ''
+PACKAGE_METADATA_DIR = ''
+FLAVOR_METADATA_DIR = ''
+OS_FIELD_DIR = ''
+PACKAGE_FIELD_DIR = ''
+FLAVOR_FIELD_DIR = ''
+ADAPTER_ROLE_DIR = ''
+ADAPTER_FLAVOR_DIR = ''
+VALIDATOR_DIR = ''
+CALLBACK_DIR = ''
+TMPL_DIR = ''
+MACHINE_LIST_DIR = ''
+PROGRESS_CALCULATOR_DIR = ''
+OS_MAPPING_DIR = ''
+FLAVOR_MAPPING_DIR = ''
+
 
 if (
     'COMPASS_IGNORE_SETTING' in os.environ and
@@ -156,3 +117,60 @@ else:
     except Exception as error:
         logging.exception(error)
         raise error
+
+if not OS_INSTALLER_DIR:
+    OS_INSTALLER_DIR = os.path.join(CONFIG_DIR, 'os_installer')
+
+if not PACKAGE_INSTALLER_DIR:
+    PACKAGE_INSTALLER_DIR = os.path.join(CONFIG_DIR, 'package_installer')
+
+if not OS_DIR:
+    OS_DIR = os.path.join(CONFIG_DIR, 'os')
+
+if not ADAPTER_DIR:
+    ADAPTER_DIR = os.path.join(CONFIG_DIR, 'adapter')
+
+if not OS_METADATA_DIR:
+    OS_METADATA_DIR = os.path.join(CONFIG_DIR, 'os_metadata')
+
+if not PACKAGE_METADATA_DIR:
+    PACKAGE_METADATA_DIR = os.path.join(CONFIG_DIR, 'package_metadata')
+
+if not FLAVOR_METADATA_DIR:
+    FLAVOR_METADATA_DIR = os.path.join(CONFIG_DIR, 'flavor_metadata')
+
+if not OS_FIELD_DIR:
+    OS_FIELD_DIR = os.path.join(CONFIG_DIR, 'os_field')
+
+if not PACKAGE_FIELD_DIR:
+    PACKAGE_FIELD_DIR = os.path.join(CONFIG_DIR, 'package_field')
+
+if not FLAVOR_FIELD_DIR:
+    FLAVOR_FIELD_DIR = os.path.join(CONFIG_DIR, 'flavor_field')
+
+if not ADAPTER_ROLE_DIR:
+    ADAPTER_ROLE_DIR = os.path.join(CONFIG_DIR, 'role')
+
+if not ADAPTER_FLAVOR_DIR:
+    ADAPTER_FLAVOR_DIR = os.path.join(CONFIG_DIR, 'flavor')
+
+if not VALIDATOR_DIR:
+    VALIDATOR_DIR = os.path.join(CONFIG_DIR, 'validator')
+
+if not CALLBACK_DIR:
+    CALLBACK_DIR = os.path.join(CONFIG_DIR, 'callback')
+
+if not TMPL_DIR:
+    TMPL_DIR = os.path.join(CONFIG_DIR, 'templates')
+
+if not MACHINE_LIST_DIR:
+    MACHINE_LIST_DIR = os.path.join(CONFIG_DIR, 'machine_list')
+
+if not PROGRESS_CALCULATOR_DIR:
+    PROGRESS_CALCULATOR_DIR = os.path.join(CONFIG_DIR, 'progress_calculator')
+
+if not OS_MAPPING_DIR:
+    OS_MAPPING_DIR = os.path.join(CONFIG_DIR, 'os_mapping')
+
+if not FLAVOR_MAPPING_DIR:
+    FLAVOR_MAPPING_DIR = os.path.join(CONFIG_DIR, 'flavor_mapping')

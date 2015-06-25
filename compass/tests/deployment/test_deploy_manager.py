@@ -34,6 +34,8 @@ reload(setting)
 
 from compass.deployment.deploy_manager import DeployManager
 from compass.tests.deployment.test_data import config_data
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 class TestDeployManager(unittest2.TestCase):
@@ -54,3 +56,9 @@ class TestDeployManager(unittest2.TestCase):
 
         test_manager = DeployManager(adapter_info, cluster_info, hosts_info)
         self.assertIsNotNone(test_manager)
+
+
+if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
+    unittest2.main()

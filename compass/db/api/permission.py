@@ -13,14 +13,17 @@
 # limitations under the License.
 
 """Permission database operations."""
+import re
+
 from compass.db.api import database
 from compass.db.api import user as user_api
 from compass.db.api import utils
 from compass.db import exception
 from compass.db import models
+from compass.utils import util
 
 
-SUPPORTED_FIELDS = ['name', 'alias', 'description']
+SUPPORTED_FIELDS = ['id', 'name', 'alias', 'description']
 RESP_FIELDS = ['id', 'name', 'alias', 'description']
 
 
@@ -291,6 +294,7 @@ PERMISSIONS = [
 ]
 
 
+@util.deprecated
 def list_permissions_internal(session, **filters):
     """internal functions used only by other db.api modules."""
     return utils.list_db_objects(session, models.Permission, **filters)
@@ -298,7 +302,7 @@ def list_permissions_internal(session, **filters):
 
 @utils.supported_filters(optional_support_keys=SUPPORTED_FIELDS)
 @database.run_in_session()
-@user_api.check_user_permission_in_session(PERMISSION_LIST_PERMISSIONS)
+@user_api.check_user_permission(PERMISSION_LIST_PERMISSIONS)
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_permissions(user=None, session=None, **filters):
     """list permissions."""
@@ -307,22 +311,36 @@ def list_permissions(user=None, session=None, **filters):
     )
 
 
+def _get_permission(permission_id, session=None, **kwargs):
+    """Get permission object by the unique key of Permission table."""
+    if isinstance(permission_id, (int, long)):
+        return utils.get_db_object(
+            session, models.Permission, id=permission_id, **kwargs)
+    raise exception.InvalidParameter(
+        'permission id %s type is not int compatible' % permission_id
+    )
+
+
+def get_permission_internal(permission_id, session=None, **kwargs):
+    return _get_permission(permission_id, session=session, **kwargs)
+
+
 @utils.supported_filters()
 @database.run_in_session()
-@user_api.check_user_permission_in_session(PERMISSION_LIST_PERMISSIONS)
+@user_api.check_user_permission(PERMISSION_LIST_PERMISSIONS)
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_permission(
     permission_id, exception_when_missing=True,
     user=None, session=None, **kwargs
 ):
     """get permissions."""
-    return utils.get_db_object(
-        session, models.Permission,
-        exception_when_missing, id=permission_id
+    return _get_permission(
+        permission_id, session=session,
+        exception_when_missing=exception_when_missing
     )
 
 
-def add_permissions_internal(session):
+def add_permissions_internal(session=None):
     """internal functions used by other db.api modules only."""
     permissions = []
     for permission in PERMISSIONS:

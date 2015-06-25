@@ -24,10 +24,32 @@ import os
 import os.path
 import re
 import sys
+import warnings
+
+
+def deprecated(func):
+    """This is a decorator which can be used to mark functions as deprecated.
+
+    It will result in a warning being emitted when the function is used.
+    """
+    def new_func(*args, **kwargs):
+        warnings.warn(
+            "Call to deprecated function %s." % func.__name__,
+            category=DeprecationWarning
+        )
+        return func(*args, **kwargs)
+
+    new_func.__name__ = func.__name__
+    new_func.__doc__ = func.__doc__
+    new_func.__dict__.update(func.__dict__)
+    return new_func
 
 
 def parse_datetime(date_time, exception_class=Exception):
-    """Parse datetime str to get datetime object."""
+    """Parse datetime str to get datetime object.
+
+    The date time format is %Y-%m-%d %H:%M:%S
+    """
     try:
         return datetime.datetime.strptime(
             date_time, '%Y-%m-%d %H:%M:%S'
@@ -40,7 +62,10 @@ def parse_datetime(date_time, exception_class=Exception):
 
 
 def parse_datetime_range(date_time_range, exception_class=Exception):
-    """parse datetime range str to pair of datetime objects."""
+    """parse datetime range str to pair of datetime objects.
+
+    The date time range format is %Y-%m-%d %H:%M:%S,%Y-%m-%d %H:%M:%S
+    """
     try:
         start, end = date_time_range.split(',')
     except Exception as error:
@@ -60,7 +85,11 @@ def parse_datetime_range(date_time_range, exception_class=Exception):
 
 
 def parse_request_arg_dict(arg, exception_class=Exception):
-    """parse string to dict."""
+    """parse string to dict.
+
+    The str is formatted like a=b;c=d and parsed to
+    {'a': 'b', 'c': 'd'}
+    """
     arg_dict = {}
     arg_pairs = arg.split(';')
     for arg_pair in arg_pairs:
@@ -105,6 +134,16 @@ def merge_dict(lhs, rhs, override=True):
     return lhs
 
 
+def recursive_merge_dict(name, all_dicts, parents):
+    """Recursively merge parent dict into base dict."""
+    parent_name = parents.get(name, None)
+    base_dict = all_dicts.get(name, {})
+    if not parent_name:
+        return base_dict
+    merged = recursive_merge_dict(parent_name, all_dicts, parents)
+    return merge_dict(base_dict, merged, override=False)
+
+
 def encrypt(value, crypt_method=None):
     """Get encrypted value."""
     if not crypt_method:
@@ -129,6 +168,12 @@ def encrypt(value, crypt_method=None):
 
 
 def parse_time_interval(time_interval_str):
+    """parse string of time interval to time interval.
+
+    supported time interval unit: ['d', 'w', 'h', 'm', 's']
+    Examples:
+       time_interval_str: '3d 2h' time interval to 3 days and 2 hours.
+    """
     if not time_interval_str:
         return 0
 
@@ -171,10 +216,11 @@ def load_configs(
     config_dir, config_name_suffix='.conf',
     env_globals={}, env_locals={}
 ):
+    """Load configurations from config dir."""
     configs = []
     config_dir = str(config_dir)
     if not os.path.exists(config_dir):
-        logging.debug('path %s does not exist', config_dir)
+        logging.error('path %s does not exist', config_dir)
         return configs
     for component in os.listdir(config_dir):
         if not component.endswith(config_name_suffix):
@@ -192,22 +238,6 @@ def load_configs(
             raise error
         configs.append(config_locals)
     return configs
-
-
-def is_instance(instance, expected_types):
-    """Check instance type is in one of expected types.
-
-    :param instance: instance to check the type.
-    :param expected_types: types to check if instance type is in them.
-    :type expected_types: list of type
-
-    :returns: True if instance type is in expect_types.
-    """
-    for expected_type in expected_types:
-        if isinstance(instance, expected_type):
-            return True
-
-    return False
 
 
 def pretty_print(*contents):

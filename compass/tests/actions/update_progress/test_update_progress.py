@@ -27,8 +27,6 @@ os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
 
 from compass.utils import setting_wrapper as setting
-
-
 reload(setting)
 
 
@@ -60,6 +58,7 @@ from compass.log_analyzor import progress_calculator
 from compass.utils import flags
 from compass.utils import logsetting
 
+
 ADAPTER_NAME = 'openstack_icehouse'
 OS_NAME = 'CentOS-6.5-x86_64'
 SWITCH_IP = '172.29.8.40'
@@ -72,8 +71,9 @@ class TestProgressCalculator(unittest2.TestCase):
     """Test end to end."""
 
     def _prepare_database(self):
-        adapter.load_adapters()
-        metadata.load_metadatas()
+        adapter.load_adapters(force_reload=True)
+        metadata.load_metadatas(force_reload=True)
+        adapter.load_flavors(force_reload=True)
 
         self.user_object = (
             user_api.get_user_object(
@@ -87,25 +87,24 @@ class TestProgressCalculator(unittest2.TestCase):
 
         # get adapter information
         list_adapters = adapter.list_adapters(user=self.user_object)
-        for adptr in list_adapters:
+        for adpt in list_adapters:
             self.adapter_id = None
-            if adptr['name'] != ADAPTER_NAME:
+            if adpt['name'] != ADAPTER_NAME:
                 continue
-            self.adapter_id = adptr['id']
+            self.adapter_id = adpt['id']
             self.os_id = None
-            for supported_os in adptr['supported_oses']:
+            for supported_os in adpt['supported_oses']:
                 if supported_os['name'] == OS_NAME:
                     self.os_id = supported_os['os_id']
                     break
             if not self.os_id:
                 continue
             if (
-                'package_installer' in adptr.keys() and
-                adptr['flavors'] != [] and
-                adptr['distributed_system_name'] == 'openstack'
+                'package_installer' in adpt.keys() and
+                adpt['flavors'] != []
             ):
                 self.flavor_id = None
-                for flavor in adptr['flavors']:
+                for flavor in adpt['flavors']:
                     if flavor['name'] == 'allinone':
                         self.flavor_id = flavor['id']
                         break
@@ -401,7 +400,7 @@ class TestProgressCalculator(unittest2.TestCase):
             with open(target_log, 'w') as f:
                 for single_line in raw_file:
                     f.write(single_line + '\n')
-            f.close
+            f.close()
 
     def _mock_lock(self):
         @contextmanager
@@ -419,10 +418,15 @@ class TestProgressCalculator(unittest2.TestCase):
 
     def setUp(self):
         super(TestProgressCalculator, self).setUp()
+        os.environ['COMPASS_IGNORE_SETTING'] = 'true'
         parent_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__), "../../../.."
         ))
-        setting.CONFIG_DIR = os.path.join(parent_path, 'conf')
+        os.environ['COMPASS_CONFIG_DIR'] = os.path.join(
+            parent_path,
+            'conf'
+        )
+        reload(setting)
         logsetting.init()
         self._mock_lock()
         database.init('sqlite://')
@@ -439,7 +443,7 @@ class TestProgressCalculator(unittest2.TestCase):
             'CobblerInstaller': setting.COBBLER_INSTALLATION_LOGDIR,
             'ChefInstaller': setting.CHEF_INSTALLATION_LOGDIR
         }
-        reload(progress_calculator)
+        progress_calculator.load_calculator_configurations(force_reload=True)
 
     def tearDown(self):
         super(TestProgressCalculator, self).tearDown()

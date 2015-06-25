@@ -17,17 +17,23 @@
 
 import os
 import simplejson as json
+import unittest2
 
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+
+
 from compass.utils import setting_wrapper as setting
 reload(setting)
 
 
+from test_api import ApiTestCase
+
+
 from compass.db.api import cluster as cluster_db
 from compass.db.api import health_check_report as health_check_db
-from compass.db import models
-from compass.tests.api.test_api import ApiTestCase
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 report_sample = {
@@ -152,9 +158,14 @@ class TestHealthCheckAPI(ApiTestCase):
         self.assertEqual(403, return_value.status_code)
 
         # Cluster has been deployed successfully.
-        user = models.User.query.filter_by(email='admin@huawei.com').first()
         cluster_db.update_cluster_state(
-            self.cluster_id, user=user, state='SUCCESSFUL'
+            self.cluster_id, state='SUCCESSFUL'
         )
         return_value = self.test_client.post(url, data=request_data)
         self.assertEqual(202, return_value.status_code)
+
+
+if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
+    unittest2.main()

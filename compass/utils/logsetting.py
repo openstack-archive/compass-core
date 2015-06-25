@@ -60,6 +60,10 @@ logging.addLevelName(LOGLEVEL_MAPPING['finest'], 'finest')
 logging.getLogger().setLevel(logging.CRITICAL)
 
 
+def getLevelByName(level_name):
+    return LOGLEVEL_MAPPING[level_name]
+
+
 def init():
     """Init loggsetting. It should be called after flags.init."""
     loglevel = flags.OPTIONS.loglevel.lower()

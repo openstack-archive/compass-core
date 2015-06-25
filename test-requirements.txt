@@ -6,4 +6,4 @@ testrepository>=0.0.17
 mimeparse
 coverage>=3.6
 hacking
-pycrypto<=2.0.1
+pycrypto

@@ -51,6 +51,7 @@ from compass.utils import util
 
 
 def log_user_action(func):
+    """decrator used to log api request url."""
     @functools.wraps(func)
     def decorated_api(*args, **kwargs):
         user_log_api.log_user_action(current_user.id, request.path)
@@ -59,6 +60,7 @@ def log_user_action(func):
 
 
 def update_user_token(func):
+    """decrator used to update user token expire time after api request."""
     @functools.wraps(func)
     def decorated_api(*args, **kwargs):
         response = func(*args, **kwargs)
@@ -73,12 +75,14 @@ def update_user_token(func):
 
 
 def _clean_data(data, keys):
+    """remove keys from dict."""
     for key in keys:
         if key in data:
             del data[key]
 
 
 def _replace_data(data, key_mapping):
+    """replace key names in dict."""
     for key, replaced_key in key_mapping.items():
         if key in data:
             data[replaced_key] = data[key]
@@ -86,6 +90,17 @@ def _replace_data(data, key_mapping):
 
 
 def _get_data(data, key):
+    """get key's value from request arg dict.
+
+    When the value is list, return the first element of the list.
+
+    Example: data = {'a': ['b'], 'b': 5, 'c': ['d', 'e'], 'd': []}
+             _get_data(data, 'a') == 'b'
+             _get_data(data, 'b') == 5
+             _get_data(data, 'c') raises exception_handler.BadRequest
+             _get_data(data, 'd') == None
+             _get_data(data, 'e') == None
+    """
     if key in data:
         if isinstance(data[key], list):
             if data[key]:
@@ -106,6 +121,11 @@ def _get_data(data, key):
 
 
 def _get_data_list(data, key):
+    """get key's value as list from request arg dict.
+
+    If the value type is list, return it, otherwise return the list
+    whos first element is the value got from the dict.
+    """
     if key in data:
         if isinstance(data[key], list):
             return data[key]
@@ -116,6 +136,10 @@ def _get_data_list(data, key):
 
 
 def _get_request_data():
+    """Switch reqeust data from string to python object.
+
+    If the request data is empty, return default as empty dict.
+    """
     if request.data:
         try:
             return json.loads(request.data)
@@ -128,6 +152,10 @@ def _get_request_data():
 
 
 def _get_request_data_as_list():
+    """Switch reqeust data from string to python object.
+
+    If the request data is empty, return default as empty list.
+    """
     if request.data:
         try:
             return json.loads(request.data)
@@ -140,6 +168,7 @@ def _get_request_data_as_list():
 
 
 def _bool_converter(value):
+    """Convert string value to bool."""
     if not value:
         return True
     if value in ['False', 'false', '0']:
@@ -148,6 +177,7 @@ def _bool_converter(value):
 
 
 def _int_converter(value):
+    """Convert string value to int."""
     try:
         return int(value)
     except Exception:
@@ -157,6 +187,13 @@ def _int_converter(value):
 
 
 def _get_request_args(**kwargs):
+    """Get request args as dict.
+
+    The value in the dict is converted to expected type.
+
+    Args:
+       kwargs: for each key, the value is the type converter.
+    """
     args = dict(request.args)
     logging.debug('origin request args: %s', args)
     for key, value in args.items():
@@ -294,12 +331,12 @@ def add_user():
     )
 
 
-@app.route("/users/<int:user_id>", methods=['GET'])
+@app.route("/users/<user_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
 def show_user(user_id):
-    """Get user."""
+    """Get user by id or email."""
     data = _get_request_args()
     return utils.make_json_response(
         200, user_api.get_user(user_id, user=current_user, **data)
@@ -318,7 +355,7 @@ def show_current_user():
     )
 
 
-@app.route("/users/<int:user_id>", methods=['PUT'])
+@app.route("/users/<user_id>", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -335,7 +372,7 @@ def update_user(user_id):
     )
 
 
-@app.route("/users/<int:user_id>", methods=['DELETE'])
+@app.route("/users/<user_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -350,7 +387,7 @@ def delete_user(user_id):
     )
 
 
-@app.route("/users/<int:user_id>/permissions", methods=['GET'])
+@app.route("/users/<user_id>/permissions", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -362,7 +399,7 @@ def list_user_permissions(user_id):
     )
 
 
-@app.route("/users/<int:user_id>/action", methods=['POST'])
+@app.route("/users/<user_id>/action", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -406,7 +443,7 @@ def take_user_action(user_id):
 
 
 @app.route(
-    '/users/<int:user_id>/permissions/<int:permission_id>',
+    '/users/<user_id>/permissions/<int:permission_id>',
     methods=['GET']
 )
 @log_user_action
@@ -424,7 +461,7 @@ def show_user_permission(user_id, permission_id):
     )
 
 
-@app.route("/users/<int:user_id>/permissions", methods=['POST'])
+@app.route("/users/<user_id>/permissions", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -441,7 +478,7 @@ def add_user_permission(user_id):
 
 
 @app.route(
-    '/users/<int:user_id>/permissions/<int:permission_id>',
+    '/users/<user_id>/permissions/<permission_id>',
     methods=['DELETE']
 )
 @log_user_action
@@ -472,7 +509,7 @@ def list_permissions():
     )
 
 
-@app.route("/permissions/<int:permission_id>", methods=['GET'])
+@app.route("/permissions/<permission_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -531,7 +568,7 @@ def list_all_user_actions():
     )
 
 
-@app.route("/users/<int:user_id>/logs", methods=['GET'])
+@app.route("/users/<user_id>/logs", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -562,7 +599,7 @@ def delete_all_user_actions():
     )
 
 
-@app.route("/users/<int:user_id>/logs", methods=['DELETE'])
+@app.route("/users/<user_id>/logs", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -632,7 +669,7 @@ def list_switches():
     )
 
 
-@app.route("/switches/<int:switch_id>", methods=['GET'])
+@app.route("/switches/<switch_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -672,7 +709,7 @@ def add_switches():
     )
 
 
-@app.route("/switches/<int:switch_id>", methods=['PUT'])
+@app.route("/switches/<switch_id>", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -685,7 +722,7 @@ def update_switch(switch_id):
     )
 
 
-@app.route("/switches/<int:switch_id>", methods=['PATCH'])
+@app.route("/switches/<switch_id>", methods=['PATCH'])
 @log_user_action
 @login_required
 @update_user_token
@@ -698,7 +735,7 @@ def patch_switch(switch_id):
     )
 
 
-@app.route("/switches/<int:switch_id>", methods=['DELETE'])
+@app.route("/switches/<switch_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -711,6 +748,7 @@ def delete_switch(switch_id):
     )
 
 
+@util.deprecated
 @app.route("/switch-filters", methods=['GET'])
 @log_user_action
 @login_required
@@ -727,7 +765,8 @@ def list_switch_filters():
     )
 
 
-@app.route("/switch-filters/<int:switch_id>", methods=['GET'])
+@util.deprecated
+@app.route("/switch-filters/<switch_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -740,7 +779,8 @@ def show_switch_filters(switch_id):
     )
 
 
-@app.route("/switch-filters/<int:switch_id>", methods=['PUT'])
+@util.deprecated
+@app.route("/switch-filters/<switch_id>", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -753,7 +793,8 @@ def update_switch_filters(switch_id):
     )
 
 
-@app.route("/switch-filters/<int:switch_id>", methods=['PATCH'])
+@util.deprecated
+@app.route("/switch-filters/<switch_id>", methods=['PATCH'])
 @log_user_action
 @login_required
 @update_user_token
@@ -834,7 +875,7 @@ def _filter_location(data):
         data['location'] = location_filter
 
 
-@app.route("/switches/<int:switch_id>/machines", methods=['GET'])
+@app.route("/switches/<switch_id>/machines", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -853,7 +894,7 @@ def list_switch_machines(switch_id):
     )
 
 
-@app.route("/switches/<int:switch_id>/machines-hosts", methods=['GET'])
+@app.route("/switches/<switch_id>/machines-hosts", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -874,7 +915,7 @@ def list_switch_machines_hosts(switch_id):
     )
 
 
-@app.route("/switches/<int:switch_id>/machines", methods=['POST'])
+@app.route("/switches/<switch_id>/machines", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -902,7 +943,7 @@ def add_switch_machines():
 
 
 @app.route(
-    '/switches/<int:switch_id>/machines/<int:machine_id>',
+    '/switches/<switch_id>/machines/<machine_id>',
     methods=['GET']
 )
 @log_user_action
@@ -920,7 +961,7 @@ def show_switch_machine(switch_id, machine_id):
 
 
 @app.route(
-    '/switches/<int:switch_id>/machines/<int:machine_id>',
+    '/switches/<switch_id>/machines/<machine_id>',
     methods=['PUT']
 )
 @log_user_action
@@ -938,7 +979,7 @@ def update_switch_machine(switch_id, machine_id):
 
 
 @app.route(
-    '/switches/<int:switch_id>/machines/<int:machine_id>',
+    '/switches/<switch_id>/machines/<machine_id>',
     methods=['PATCH']
 )
 @log_user_action
@@ -956,7 +997,7 @@ def patch_switch_machine(switch_id, machine_id):
 
 
 @app.route(
-    '/switches/<int:switch_id>/machines/<int:machine_id>',
+    '/switches/<switch_id>/machines/<machine_id>',
     methods=['DELETE']
 )
 @log_user_action
@@ -973,7 +1014,7 @@ def delete_switch_machine(switch_id, machine_id):
     )
 
 
-@app.route("/switches/<int:switch_id>/action", methods=['POST'])
+@app.route("/switches/<switch_id>/action", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1001,7 +1042,7 @@ def take_switch_action(switch_id):
     )
 
 
-@app.route("/machines/<int:machine_id>/action", methods=['POST'])
+@app.route("/machines/<machine_id>/action", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1084,7 +1125,7 @@ def list_switchmachines_hosts():
 
 
 @app.route(
-    '/switch-machines/<int:switch_machine_id>',
+    '/switch-machines/<switch_machine_id>',
     methods=['GET']
 )
 @log_user_action
@@ -1102,7 +1143,7 @@ def show_switchmachine(switch_machine_id):
 
 
 @app.route(
-    '/switch-machines/<int:switch_machine_id>',
+    '/switch-machines/<switch_machine_id>',
     methods=['PUT']
 )
 @log_user_action
@@ -1119,7 +1160,7 @@ def update_switchmachine(switch_machine_id):
     )
 
 
-@app.route('/switch-machines/<int:switch_machine_id>', methods=['PATCH'])
+@app.route('/switch-machines/<switch_machine_id>', methods=['PATCH'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1134,7 +1175,7 @@ def patch_switchmachine(switch_machine_id):
     )
 
 
-@app.route("/switch-machines/<int:switch_machine_id>", methods=['DELETE'])
+@app.route("/switch-machines/<switch_machine_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1166,7 +1207,7 @@ def list_machines():
     )
 
 
-@app.route("/machines/<int:machine_id>", methods=['GET'])
+@app.route("/machines/<machine_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1181,7 +1222,7 @@ def show_machine(machine_id):
     )
 
 
-@app.route("/machines/<int:machine_id>", methods=['PUT'])
+@app.route("/machines/<machine_id>", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1196,7 +1237,7 @@ def update_machine(machine_id):
     )
 
 
-@app.route("/machines/<int:machine_id>", methods=['PATCH'])
+@app.route("/machines/<machine_id>", methods=['PATCH'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1211,7 +1252,7 @@ def patch_machine(machine_id):
     )
 
 
-@app.route("/machines/<int:machine_id>", methods=['DELETE'])
+@app.route("/machines/<machine_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1241,7 +1282,7 @@ def list_subnets():
     )
 
 
-@app.route("/subnets/<int:subnet_id>", methods=['GET'])
+@app.route("/subnets/<subnet_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1269,7 +1310,7 @@ def add_subnet():
     )
 
 
-@app.route("/subnets/<int:subnet_id>", methods=['PUT'])
+@app.route("/subnets/<subnet_id>", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1284,7 +1325,7 @@ def update_subnet(subnet_id):
     )
 
 
-@app.route("/subnets/<int:subnet_id>", methods=['DELETE'])
+@app.route("/subnets/<subnet_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1307,9 +1348,6 @@ def list_adapters():
     """List adapters."""
     data = _get_request_args()
     _filter_general(data, 'name')
-    _filter_general(data, 'distributed_system_name')
-    _filter_general(data, 'os_installer_name')
-    _filter_general(data, 'package_installer_name')
     return utils.make_json_response(
         200,
         adapter_api.list_adapters(
@@ -1318,7 +1356,7 @@ def list_adapters():
     )
 
 
-@app.route("/adapters/<int:adapter_id>", methods=['GET'])
+@app.route("/adapters/<adapter_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1333,7 +1371,7 @@ def show_adapter(adapter_id):
     )
 
 
-@app.route("/adapters/<int:adapter_id>/metadata", methods=['GET'])
+@app.route("/adapters/<adapter_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1348,7 +1386,7 @@ def show_adapter_metadata(adapter_id):
     )
 
 
-@app.route("/oses/<int:os_id>/metadata", methods=['GET'])
+@app.route("/oses/<os_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1363,27 +1401,22 @@ def show_os_metadata(os_id):
     )
 
 
-@app.route("/oses/<int:os_id>/ui_metadata", methods=['GET'])
+@app.route("/oses/<os_id>/ui_metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
 def convert_os_metadata(os_id):
     """Convert os metadata to ui os metadata."""
-    metadatas = metadata_api.get_os_metadata(
-        os_id, user=current_user
-    )
-    configs = util.load_configs(setting.OS_MAPPING_DIR)
-    metadata = metadatas['os_config']
-    config = configs[0]['OS_CONFIG_MAPPING']
+    data = _get_request_args()
     return utils.make_json_response(
         200,
-        metadata_api.get_ui_metadata(
-            metadata, config
+        metadata_api.get_os_ui_metadata(
+            os_id, user=current_user, **data
         )
     )
 
 
-@app.route("/flavors/<int:flavor_id>/metadata", methods=['GET'])
+@app.route("/flavors/<flavor_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1398,35 +1431,23 @@ def show_flavor_metadata(flavor_id):
     )
 
 
-@app.route("/flavors/<int:flavor_id>/ui_metadata", methods=['GET'])
+@app.route("/flavors/<flavor_id>/ui_metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
 def convert_flavor_metadata(flavor_id):
-    """Convert flavor metadat to ui flavor metadata."""
-    metadatas = metadata_api.get_flavor_metadata(
-        flavor_id, user=current_user
-    )
-    metadata = metadatas['flavor_config']
-    flavor = metadata_api.get_flavor(
-        flavor_id,
-        user=current_user
-    )
-    flavor_name = flavor['name'].replace('-', '_')
-    configs = util.load_configs(setting.FLAVOR_MAPPING_DIR)
-    for item in configs:
-        if flavor_name in item.keys():
-            config = item[flavor_name]
+    """Convert flavor metadata to ui flavor metadata."""
+    data = _get_request_args()
     return utils.make_json_response(
         200,
-        metadata_api.get_ui_metadata(
-            metadata, config
+        metadata_api.get_flavor_ui_metadata(
+            flavor_id, user=current_user, **data
         )
     )
 
 
 @app.route(
-    "/adapters/<int:adapter_id>/oses/<int:os_id>/metadata",
+    "/adapters/<adapter_id>/oses/<os_id>/metadata",
     methods=['GET']
 )
 @log_user_action
@@ -1458,13 +1479,13 @@ def list_clusters():
     )
 
 
-@app.route("/clusters/<int:cluster_id>", methods=['GET'])
+@app.route("/clusters/<cluster_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
 def show_cluster(cluster_id):
     """Get cluster."""
-    data = _get_request_args(adapter_id=_int_converter)
+    data = _get_request_args()
     return utils.make_json_response(
         200,
         cluster_api.get_cluster(
@@ -1486,7 +1507,7 @@ def add_cluster():
     )
 
 
-@app.route("/clusters/<int:cluster_id>", methods=['PUT'])
+@app.route("/clusters/<cluster_id>", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1501,7 +1522,7 @@ def update_cluster(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>", methods=['DELETE'])
+@app.route("/clusters/<cluster_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1521,7 +1542,7 @@ def delete_cluster(cluster_id):
         )
 
 
-@app.route("/clusters/<int:cluster_id>/config", methods=['GET'])
+@app.route("/clusters/<cluster_id>/config", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1536,7 +1557,7 @@ def show_cluster_config(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/metadata", methods=['GET'])
+@app.route("/clusters/<cluster_id>/metadata", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1551,7 +1572,7 @@ def show_cluster_metadata(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/config", methods=['PUT'])
+@app.route("/clusters/<cluster_id>/config", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1566,7 +1587,7 @@ def update_cluster_config(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/config", methods=['PATCH'])
+@app.route("/clusters/<cluster_id>/config", methods=['PATCH'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1579,7 +1600,7 @@ def patch_cluster_config(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/config", methods=['DELETE'])
+@app.route("/clusters/<cluster_id>/config", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1594,7 +1615,7 @@ def delete_cluster_config(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/action", methods=['POST'])
+@app.route("/clusters/<cluster_id>/action", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1624,8 +1645,9 @@ def take_cluster_action(cluster_id):
     check_cluster_health_func = _wrap_response(
         functools.partial(
             health_report_api.start_check_cluster_health,
-            current_user, cluster_id,
-            '%s/clusters/%s/healthreports' % (url_root, cluster_id)
+            cluster_id,
+            '%s/clusters/%s/healthreports' % (url_root, cluster_id),
+            user=current_user
         ),
         202
     )
@@ -1640,7 +1662,7 @@ def take_cluster_action(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/state", methods=['GET'])
+@app.route("/clusters/<cluster_id>/state", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1655,22 +1677,32 @@ def get_cluster_state(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/healthreports", methods=['POST'])
+@app.route("/clusters/<cluster_id>/healthreports", methods=['POST'])
+@log_user_action
+@login_required
+@update_user_token
 def create_health_reports(cluster_id):
     """Create a health check report."""
     data = _get_request_data()
     output = []
+    logging.info('create_health_reports for cluster %s: %s',
+                 cluster_id, data)
     if 'report_list' in data:
         for report in data['report_list']:
             try:
                 output.append(
-                    health_report_api.add_report_record(cluster_id, **report)
+                    health_report_api.add_report_record(
+                        cluster_id, user=current_user, **report
+                    )
                 )
-            except Exception:
+            except Exception as error:
+                logging.exception(error)
                 continue
 
     else:
-        output = health_report_api.add_report_record(cluster_id, **data)
+        output = health_report_api.add_report_record(
+            cluster_id, user=current_user, **data
+        )
 
     return utils.make_json_response(
         200,
@@ -1678,28 +1710,39 @@ def create_health_reports(cluster_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/healthreports", methods=['PUT'])
+@app.route("/clusters/<cluster_id>/healthreports", methods=['PUT'])
+@log_user_action
+@login_required
+@update_user_token
 def bulk_update_reports(cluster_id):
     """Bulk update reports."""
     data = _get_request_data()
     return utils.make_json_response(
         200,
-        health_report_api.update_multi_reports(cluster_id, **data)
+        health_report_api.update_multi_reports(
+            cluster_id, user=current_user, **data
+        )
     )
 
 
-@app.route("/clusters/<int:cluster_id>/healthreports", methods=['GET'])
+@app.route("/clusters/<cluster_id>/healthreports", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
 def list_health_reports(cluster_id):
+    data = _get_request_data()
     return utils.make_json_response(
         200,
-        health_report_api.list_health_reports(current_user, cluster_id)
+        health_report_api.list_health_reports(
+            cluster_id, user=current_user, **data
+        )
     )
 
 
-@app.route("/clusters/<int:cluster_id>/healthreports/<name>", methods=['PUT'])
+@app.route("/clusters/<cluster_id>/healthreports/<name>", methods=['PUT'])
+@log_user_action
+@login_required
+@update_user_token
 def update_health_report(cluster_id, name):
     data = _get_request_data()
     if 'error_message' not in data:
@@ -1707,22 +1750,27 @@ def update_health_report(cluster_id, name):
 
     return utils.make_json_response(
         200,
-        health_report_api.update_report(cluster_id, name, **data)
+        health_report_api.update_report(
+            cluster_id, name, user=current_user, **data
+        )
     )
 
 
-@app.route("/clusters/<int:cluster_id>/healthreports/<name>", methods=['GET'])
+@app.route("/clusters/<cluster_id>/healthreports/<name>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
 def get_health_report(cluster_id, name):
+    data = _get_request_data()
     return utils.make_json_response(
         200,
-        health_report_api.get_health_report(current_user, cluster_id, name)
+        health_report_api.get_health_report(
+            cluster_id, name, user=current_user, **data
+        )
     )
 
 
-@app.route("/clusters/<int:cluster_id>/hosts", methods=['GET'])
+@app.route("/clusters/<cluster_id>/hosts", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1752,7 +1800,7 @@ def list_clusterhosts():
     )
 
 
-@app.route("/clusters/<int:cluster_id>/hosts/<int:host_id>", methods=['GET'])
+@app.route("/clusters/<cluster_id>/hosts/<host_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1767,7 +1815,7 @@ def show_cluster_host(cluster_id, host_id):
     )
 
 
-@app.route("/clusterhosts/<int:clusterhost_id>", methods=['GET'])
+@app.route("/clusterhosts/<clusterhost_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1782,7 +1830,7 @@ def show_clusterhost(clusterhost_id):
     )
 
 
-@app.route("/clusters/<int:cluster_id>/hosts", methods=['POST'])
+@app.route("/clusters/<cluster_id>/hosts", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1796,7 +1844,7 @@ def add_cluster_host(cluster_id):
 
 
 @app.route(
-    '/clusters/<int:cluster_id>/hosts/<int:host_id>',
+    '/clusters/<cluster_id>/hosts/<host_id>',
     methods=['PUT']
 )
 @log_user_action
@@ -1814,7 +1862,7 @@ def update_cluster_host(cluster_id, host_id):
 
 
 @app.route(
-    '/clusterhosts/<int:clusterhost_id>',
+    '/clusterhosts/<clusterhost_id>',
     methods=['PUT']
 )
 @log_user_action
@@ -1832,7 +1880,7 @@ def update_clusterhost(clusterhost_id):
 
 
 @app.route(
-    '/clusters/<int:cluster_id>/hosts/<int:host_id>',
+    '/clusters/<cluster_id>/hosts/<host_id>',
     methods=['PATCH']
 )
 @log_user_action
@@ -1850,7 +1898,7 @@ def patch_cluster_host(cluster_id, host_id):
 
 
 @app.route(
-    '/clusterhosts/<int:clusterhost_id>',
+    '/clusterhosts/<clusterhost_id>',
     methods=['PATCH']
 )
 @log_user_action
@@ -1868,7 +1916,7 @@ def patch_clusterhost(clusterhost_id):
 
 
 @app.route(
-    '/clusters/<int:cluster_id>/hosts/<int:host_id>',
+    '/clusters/<cluster_id>/hosts/<host_id>',
     methods=['DELETE']
 )
 @log_user_action
@@ -1891,7 +1939,7 @@ def delete_cluster_host(cluster_id, host_id):
 
 
 @app.route(
-    '/clusterhosts/<int:clusterhost_id>',
+    '/clusterhosts/<clusterhost_id>',
     methods=['DELETE']
 )
 @log_user_action
@@ -1914,7 +1962,7 @@ def delete_clusterhost(clusterhost_id):
 
 
 @app.route(
-    "/clusters/<int:cluster_id>/hosts/<int:host_id>/config",
+    "/clusters/<cluster_id>/hosts/<host_id>/config",
     methods=['GET']
 )
 @log_user_action
@@ -1931,7 +1979,7 @@ def show_cluster_host_config(cluster_id, host_id):
     )
 
 
-@app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['GET'])
+@app.route("/clusterhosts/<clusterhost_id>/config", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1947,7 +1995,7 @@ def show_clusterhost_config(clusterhost_id):
 
 
 @app.route(
-    "/clusters/<int:cluster_id>/hosts/<int:host_id>/config",
+    "/clusters/<cluster_id>/hosts/<host_id>/config",
     methods=['PUT']
 )
 @log_user_action
@@ -1964,7 +2012,7 @@ def update_cluster_host_config(cluster_id, host_id):
     )
 
 
-@app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['PUT'])
+@app.route("/clusterhosts/<clusterhost_id>/config", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -1980,7 +2028,7 @@ def update_clusterhost_config(clusterhost_id):
 
 
 @app.route(
-    "/clusters/<int:cluster_id>/hosts/<int:host_id>/config",
+    "/clusters/<cluster_id>/hosts/<host_id>/config",
     methods=['PATCH']
 )
 @log_user_action
@@ -1997,7 +2045,7 @@ def patch_cluster_host_config(cluster_id, host_id):
     )
 
 
-@app.route("/clusterhosts/<int:clusterhost_id>", methods=['PATCH'])
+@app.route("/clusterhosts/<clusterhost_id>", methods=['PATCH'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2013,7 +2061,7 @@ def patch_clusterhost_config(clusterhost_id):
 
 
 @app.route(
-    "/clusters/<int:cluster_id>/hosts/<int:host_id>/config",
+    "/clusters/<cluster_id>/hosts/<host_id>/config",
     methods=['DELETE']
 )
 @log_user_action
@@ -2030,7 +2078,7 @@ def delete_cluster_host_config(cluster_id, host_id):
     )
 
 
-@app.route("/clusterhosts/<int:clusterhost_id>/config", methods=['DELETE'])
+@app.route("/clusterhosts/<clusterhost_id>/config", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2046,7 +2094,7 @@ def delete_clusterhost_config(clusterhost_id):
 
 
 @app.route(
-    "/clusters/<int:cluster_id>/hosts/<int:host_id>/state",
+    "/clusters/<cluster_id>/hosts/<host_id>/state",
     methods=['GET']
 )
 @log_user_action
@@ -2063,7 +2111,7 @@ def show_cluster_host_state(cluster_id, host_id):
     )
 
 
-@app.route("/clusterhosts/<int:clusterhost_id>/state", methods=['GET'])
+@app.route("/clusterhosts/<clusterhost_id>/state", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2079,7 +2127,7 @@ def show_clusterhost_state(clusterhost_id):
 
 
 @app.route(
-    "/clusters/<int:cluster_id>/hosts/<int:host_id>/state",
+    "/clusters/<cluster_id>/hosts/<host_id>/state",
     methods=['PUT', 'POST']
 )
 @log_user_action
@@ -2112,7 +2160,7 @@ def update_cluster_host_state_internal(clustername, hostname):
 
 
 @app.route(
-    "/clusterhosts/<int:clusterhost_id>/state",
+    "/clusterhosts/<clusterhost_id>/state",
     methods=['PUT', 'POST']
 )
 @log_user_action
@@ -2159,7 +2207,7 @@ def list_hosts():
     )
 
 
-@app.route("/hosts/<int:host_id>", methods=['GET'])
+@app.route("/hosts/<host_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2193,7 +2241,7 @@ def list_machines_or_hosts():
     )
 
 
-@app.route("/machines-hosts/<int:host_id>", methods=['GET'])
+@app.route("/machines-hosts/<host_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2208,7 +2256,7 @@ def show_machine_or_host(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>", methods=['PUT'])
+@app.route("/hosts/<host_id>", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2238,7 +2286,7 @@ def update_hosts():
     )
 
 
-@app.route("/hosts/<int:host_id>", methods=['DELETE'])
+@app.route("/hosts/<host_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2258,7 +2306,7 @@ def delete_host(host_id):
         )
 
 
-@app.route("/hosts/<int:host_id>/clusters", methods=['GET'])
+@app.route("/hosts/<host_id>/clusters", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2273,7 +2321,7 @@ def get_host_clusters(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/config", methods=['GET'])
+@app.route("/hosts/<host_id>/config", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2288,7 +2336,7 @@ def show_host_config(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/config", methods=['PUT'])
+@app.route("/hosts/<host_id>/config", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2301,7 +2349,7 @@ def update_host_config(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>", methods=['PATCH'])
+@app.route("/hosts/<host_id>", methods=['PATCH'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2314,7 +2362,7 @@ def patch_host_config(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/config", methods=['DELETE'])
+@app.route("/hosts/<host_id>/config", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2329,7 +2377,7 @@ def delete_host_config(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/networks", methods=['GET'])
+@app.route("/hosts/<host_id>/networks", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2365,7 +2413,7 @@ def list_hostnetworks():
 
 
 @app.route(
-    "/hosts/<int:host_id>/networks/<int:host_network_id>",
+    "/hosts/<host_id>/networks/<host_network_id>",
     methods=['GET']
 )
 @log_user_action
@@ -2382,7 +2430,7 @@ def show_host_network(host_id, host_network_id):
     )
 
 
-@app.route("/host/networks/<int:host_network_id>", methods=['GET'])
+@app.route("/host/networks/<host_network_id>", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2397,7 +2445,7 @@ def show_hostnetwork(host_network_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/networks", methods=['POST'])
+@app.route("/hosts/<host_id>/networks", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2423,7 +2471,7 @@ def update_host_networks():
 
 
 @app.route(
-    "/hosts/<int:host_id>/networks/<int:host_network_id>",
+    "/hosts/<host_id>/networks/<host_network_id>",
     methods=['PUT']
 )
 @log_user_action
@@ -2440,7 +2488,7 @@ def update_host_network(host_id, host_network_id):
     )
 
 
-@app.route("/host-networks/<int:host_network_id>", methods=['PUT'])
+@app.route("/host-networks/<host_network_id>", methods=['PUT'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2456,7 +2504,7 @@ def update_hostnetwork(host_network_id):
 
 
 @app.route(
-    "/hosts/<int:host_id>/networks/<int:host_network_id>",
+    "/hosts/<host_id>/networks/<host_network_id>",
     methods=['DELETE']
 )
 @log_user_action
@@ -2473,7 +2521,7 @@ def delete_host_network(host_id, host_network_id):
     )
 
 
-@app.route("/host-networks/<int:host_network_id>", methods=['DELETE'])
+@app.route("/host-networks/<host_network_id>", methods=['DELETE'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2488,7 +2536,7 @@ def delete_hostnetwork(host_network_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/state", methods=['GET'])
+@app.route("/hosts/<host_id>/state", methods=['GET'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2503,7 +2551,7 @@ def show_host_state(host_id):
     )
 
 
-@app.route("/hosts/<int:host_id>/state", methods=['PUT', 'POST'])
+@app.route("/hosts/<host_id>/state", methods=['PUT', 'POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2557,7 +2605,7 @@ def _reset_host(*args, **kwargs):
     )
 
 
-@app.route("/hosts/<int:host_id>/action", methods=['POST'])
+@app.route("/hosts/<host_id>/action", methods=['POST'])
 @log_user_action
 @login_required
 @update_user_token
@@ -2739,6 +2787,7 @@ def init():
     database.init()
     adapter_api.load_adapters()
     metadata_api.load_metadatas()
+    metadata_api.load_flavors()
 
 
 if __name__ == '__main__':

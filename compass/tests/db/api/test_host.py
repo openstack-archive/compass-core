@@ -51,15 +51,17 @@ class HostTestCase(unittest2.TestCase):
 
     def setUp(self):
         super(HostTestCase, self).setUp()
-        reload(setting)
-        setting.CONFIG_DIR = os.path.join(
+        os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+        os.environ['COMPASS_CONFIG_DIR'] = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             'data'
         )
+        reload(setting)
         database.init('sqlite://')
         database.create_db()
-        adapter.load_adapters()
-        metadata.load_metadatas()
+        adapter.load_adapters(force_reload=True)
+        metadata.load_metadatas(force_reload=True)
+        metadata.load_flavors(force_reload=True)
 
         self.user_object = (
             user_api.get_user_object(

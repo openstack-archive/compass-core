@@ -20,6 +20,8 @@ import logging
 
 from compass.log_analyzor.adapter_matcher import OSMatcher
 from compass.log_analyzor.adapter_matcher import PackageMatcher
+from compass.log_analyzor.environment import ENV_GLOBALS
+from compass.log_analyzor.environment import ENV_LOCALS
 from compass.log_analyzor.file_matcher import FileReaderFactory
 
 from compass.utils import setting_wrapper as setting
@@ -30,90 +32,102 @@ PACKAGE_ADAPTER_CONFIGURATIONS = None
 PROGRESS_CALCULATOR_CONFIGURATIONS = None
 
 
-def _load_calculator_configurations():
+def _load_calculator_configurations(force=False):
     global PROGRESS_CALCULATOR_CONFIGURATIONS
-    if PROGRESS_CALCULATOR_CONFIGURATIONS is None:
+    if force or PROGRESS_CALCULATOR_CONFIGURATIONS is None:
+        env_locals = {}
+        env_locals.update(ENV_GLOBALS)
+        env_locals.update(ENV_LOCALS)
         PROGRESS_CALCULATOR_CONFIGURATIONS = util.load_configs(
-            setting.PROGRESS_CALCULATOR_DIR
+            setting.PROGRESS_CALCULATOR_DIR,
+            env_locals=env_locals
         )
-        progress_calculator_configuration = (
-            PROGRESS_CALCULATOR_CONFIGURATIONS[0]
-        )
-        os_installer_configurations = None
-        package_installer_configurations = None
-        if progress_calculator_configuration is not None:
-            if 'OS_INSTALLER_CONFIGURATIONS' in (
+        if not PROGRESS_CALCULATOR_CONFIGURATIONS:
+            logging.info('No configuration found for progress calculator.')
+
+    global OS_ADAPTER_CONFIGURATIONS
+    if force or OS_ADAPTER_CONFIGURATIONS is None:
+        OS_ADAPTER_CONFIGURATIONS = []
+        for progress_calculator_configuration in (
+            PROGRESS_CALCULATOR_CONFIGURATIONS
+        ):
+            if 'OS_LOG_CONFIGURATIONS' in (
                 progress_calculator_configuration
             ):
                 os_installer_configurations = (
-                    (progress_calculator_configuration[
-                     'OS_INSTALLER_CONFIGURATIONS'])
+                    progress_calculator_configuration['OS_LOG_CONFIGURATIONS']
                 )
-            if 'PACKAGE_INSTALLER_CONFIGURATIONS' in (
+                for os_installer_configuration in os_installer_configurations:
+                    OS_ADAPTER_CONFIGURATIONS.append(OSMatcher(
+                        os_installer_name=(
+                            os_installer_configuration['os_installer_name']
+                        ),
+                        os_pattern=os_installer_configuration['os_pattern'],
+                        item_matcher=(
+                            os_installer_configuration['item_matcher']
+                        ),
+                        file_reader_factory=FileReaderFactory(
+                            os_installer_configuration['logdir']
+                        )
+                    ))
+        if not OS_ADAPTER_CONFIGURATIONS:
+            logging.info(
+                'no OS_LOG_CONFIGURATIONS section found '
+                'in progress calculator.'
+            )
+        else:
+            logging.debug(
+                'OS_ADAPTER_CONFIGURATIONS is\n%s',
+                OS_ADAPTER_CONFIGURATIONS
+            )
+
+    global PACKAGE_ADAPTER_CONFIGURATIONS
+    if force or PACKAGE_ADAPTER_CONFIGURATIONS is None:
+        PACKAGE_ADAPTER_CONFIGURATIONS = []
+        for progress_calculator_configuration in (
+            PROGRESS_CALCULATOR_CONFIGURATIONS
+        ):
+            if 'ADAPTER_LOG_CONFIGURATIONS' in (
                 progress_calculator_configuration
             ):
                 package_installer_configurations = (
-                    (progress_calculator_configuration[
-                     'PACKAGE_INSTALLER_CONFIGURATIONS'])
+                    progress_calculator_configuration[
+                        'ADAPTER_LOG_CONFIGURATIONS'
+                    ]
                 )
+                for package_installer_configuration in (
+                    package_installer_configurations
+                ):
+                    PACKAGE_ADAPTER_CONFIGURATIONS.append(PackageMatcher(
+                        package_installer_name=(
+                            package_installer_configuration[
+                                'package_installer_name'
+                            ]
+                        ),
+                        adapter_pattern=(
+                            package_installer_configuration['adapter_pattern']
+                        ),
+                        item_matcher=(
+                            package_installer_configuration['item_matcher']
+                        ),
+                        file_reader_factory=FileReaderFactory(
+                            package_installer_configuration['logdir']
+                        )
+                    ))
+        if not PACKAGE_ADAPTER_CONFIGURATIONS:
+            logging.info(
+                'no PACKAGE_LOG_CONFIGURATIONS section found '
+                'in progress calculator.'
+            )
         else:
-            logging.debug('No configuration found for progress calculator.')
+            logging.debug(
+                'PACKAGE_ADAPTER_CONFIGURATIONS is\n%s',
+                PACKAGE_ADAPTER_CONFIGURATIONS
+            )
 
-    global OS_ADAPTER_CONFIGURATIONS
-    if OS_ADAPTER_CONFIGURATIONS is None:
-        if os_installer_configurations is not None:
-            OS_ADAPTER_CONFIGURATIONS = [
-                OSMatcher(
-                    os_installer_name='cobbler',
-                    os_pattern='CentOS-6.*',
-                    item_matcher=(
-                        (os_installer_configurations[
-                         'cobbler']['CentOS6'])
-                    ),
-                    file_reader_factory=FileReaderFactory(
-                        setting.INSTALLATION_LOGDIR['CobblerInstaller']
-                    )
-                ),
-                OSMatcher(
-                    os_installer_name='cobbler',
-                    os_pattern='CentOS-7.*',
-                    item_matcher=(
-                        (os_installer_configurations[
-                         'cobbler']['CentOS7'])
-                    ),
-                    file_reader_factory=FileReaderFactory(
-                        setting.INSTALLATION_LOGDIR['CobblerInstaller']
-                    )
-                ),
-                OSMatcher(
-                    os_installer_name='cobbler',
-                    os_pattern='Ubuntu.*',
-                    item_matcher=(
-                        (os_installer_configurations[
-                         'cobbler']['Ubuntu'])
-                    ),
-                    file_reader_factory=FileReaderFactory(
-                        setting.INSTALLATION_LOGDIR['CobblerInstaller']
-                    )
-                )
-            ]
 
-    global PACKAGE_ADAPTER_CONFIGURATIONS
-    if PACKAGE_ADAPTER_CONFIGURATIONS is None:
-        if package_installer_configurations is not None:
-            PACKAGE_ADAPTER_CONFIGURATIONS = [
-                PackageMatcher(
-                    package_installer_name='chef_installer',
-                    distributed_system_pattern='openstack.*',
-                    item_matcher=(
-                        (package_installer_configurations[
-                         'chef_installer']['openstack'])
-                    ),
-                    file_reader_factory=FileReaderFactory(
-                        setting.INSTALLATION_LOGDIR['ChefInstaller']
-                    )
-                )
-            ]
+def load_calculator_configurations(force_reload=False):
+    _load_calculator_configurations(force=force_reload)
 
 
 def _get_os_matcher(os_installer_name, os_name):
@@ -131,22 +145,22 @@ def _get_os_matcher(os_installer_name, os_name):
 
 
 def _get_package_matcher(
-    package_installer_name, distributed_system_name
+    package_installer_name, adapter_name
 ):
-    """Get package adapter matcher by pacakge name and installer name."""
+    """Get package adapter matcher by adapter name and installer name."""
     _load_calculator_configurations()
     for configuration in PACKAGE_ADAPTER_CONFIGURATIONS:
         if configuration.match(
             package_installer_name,
-            distributed_system_name
+            adapter_name
         ):
             return configuration
         else:
             logging.debug('configuration %s does not match %s and %s',
-                          configuration, distributed_system_name,
+                          configuration, adapter_name,
                           package_installer_name)
-    logging.error('No configuration found for package installer %s os %s',
-                  package_installer_name, distributed_system_name)
+    logging.error('No configuration found for package installer %s adapter %s',
+                  package_installer_name, adapter_name)
     return None
 
 
@@ -174,11 +188,11 @@ def update_clusterhost_progress(clusterhost_mapping):
     ) in (
         clusterhost_mapping.items()
     ):
-        distributed_system_name = clusterhost['distributed_system_name']
+        adapter_name = clusterhost['adapter_name']
         package_installer_name = clusterhost['package_installer']['name']
         package_matcher = _get_package_matcher(
             package_installer_name,
-            distributed_system_name
+            adapter_name
         )
         if not package_matcher:
             continue

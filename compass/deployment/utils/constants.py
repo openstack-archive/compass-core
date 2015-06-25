@@ -30,7 +30,6 @@ USERNAME = 'username'
 
 
 # Adapter info related keywords
-DIST_SYS_NAME = 'distributed_system_name'
 FLAVOR = 'flavor'
 FLAVORS = 'flavors'
 PLAYBOOK = 'playbook'

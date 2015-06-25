@@ -128,16 +128,17 @@ def health_check(cluster_id, report_uri, username):
         except Exception as exc:
             logging.error("health_check exception: ============= %s" % exc)
             data = {'state': 'error', 'error_message': str(exc), 'report': {}}
-            reports = health_check_db.list_health_reports(user, cluster_id)
+            reports = health_check_db.list_health_reports(
+                cluster_id, user=user)
             if not reports:
                 # Exception before executing command remotely for health check.
                 # No reports names sending back yet. Create a report
                 name = 'pre_remote_health_check'
                 health_check_db.add_report_record(
-                    cluster_id, name=name, **data
+                    cluster_id, name, user=user, **data
                 )
 
-            health_check_db.update_multi_reports(cluster_id, **data)
+            health_check_db.update_multi_reports(cluster_id, user=user, **data)
 
 
 class ServerPowerMgmt(object):

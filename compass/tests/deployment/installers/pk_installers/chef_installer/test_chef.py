@@ -27,14 +27,17 @@ import unittest2
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
-from compass.deployment.installers.config_manager import BaseConfigManager
-from compass.tests.deployment.test_data import config_data
+
 from compass.utils import setting_wrapper as compass_setting
 reload(compass_setting)
 
 
+from compass.deployment.installers.config_manager import BaseConfigManager
 from compass.deployment.installers.pk_installers.chef_installer.chef_installer\
     import ChefInstaller
+from compass.tests.deployment.test_data import config_data
+from compass.utils import flags
+from compass.utils import logsetting
 
 
 class TestChefInstaller(unittest2.TestCase):
@@ -816,3 +819,9 @@ class TestChefInstaller(unittest2.TestCase):
             output = self.test_chef.generate_installer_config()
             self.maxDiff = None
             self.assertDictEqual(entry["excepted_output"], output)
+
+
+if __name__ == '__main__':
+    flags.init()
+    logsetting.init()
+    unittest2.main()

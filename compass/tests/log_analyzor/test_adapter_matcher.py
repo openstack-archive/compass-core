@@ -251,7 +251,7 @@ class TestPackageMatcher(unittest2.TestCase):
         )
         self.package_matcher = adapter_matcher.PackageMatcher(
             package_installer_name='chef',
-            distributed_system_pattern=r'openstack',
+            adapter_pattern=r'openstack',
             item_matcher=self.item_matcher,
             file_reader_factory=self.file_reader_factory
         )
@@ -262,7 +262,7 @@ class TestPackageMatcher(unittest2.TestCase):
     def test_match_none(self):
         test_match_none = {
             'package_installer_name': None,
-            'distributed_system_name': 'openstack'
+            'adapter_name': 'openstack'
         }
         matcher = self.package_matcher.match(**test_match_none)
         self.assertFalse(matcher)
@@ -270,7 +270,7 @@ class TestPackageMatcher(unittest2.TestCase):
     def test_match(self):
         test_match = {
             'package_installer_name': 'chef',
-            'distributed_system_name': 'openstack'
+            'adapter_name': 'openstack'
         }
         matcher = self.package_matcher.match(**test_match)
         self.assertTrue(matcher)
@@ -278,7 +278,7 @@ class TestPackageMatcher(unittest2.TestCase):
     def test_installer_unmatch(self):
         test_unmatch = {
             'package_installer_name': 'dummy',
-            'distributed_system_name': 'openstack'
+            'adapter_name': 'openstack'
         }
         matcher = self.package_matcher.match(**test_unmatch)
         self.assertFalse(matcher)
@@ -286,7 +286,7 @@ class TestPackageMatcher(unittest2.TestCase):
     def test_name_unmatch(self):
         test_unmatch = {
             'package_installer_name': 'chef',
-            'distributed_system_name': 'dummy'
+            'adapter_name': 'dummy'
         }
         matcher = self.package_matcher.match(**test_unmatch)
         self.assertFalse(matcher)
@@ -294,7 +294,7 @@ class TestPackageMatcher(unittest2.TestCase):
     def test_both_unmatch(self):
         test_unmatch = {
             'package_installer_name': 'dummy',
-            'distributed_system_name': 'dummy'
+            'adapter_name': 'dummy'
         }
         matcher = self.package_matcher.match(**test_unmatch)
         self.assertFalse(matcher)

@@ -23,4 +23,3 @@ SQLAlchemy>=0.9.0
 simplejson
 requests
 redis
-

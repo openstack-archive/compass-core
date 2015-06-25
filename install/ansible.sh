@@ -5,7 +5,7 @@ echo "Installing Ansible"
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $DIR/install.conf
 if [ -f $DIR/env.conf ]; then
-    source env.conf
+    source $DIR/env.conf
 else
     echo "failed to load environment"
     exit 1

@@ -1510,7 +1510,6 @@ mediaType: application/json
                           "cobbler_url": "http://10.145.88.211/cobbler_api"
                       }
                   },
-                  "distributed_system_id": 1,
                   "supported_oses": [
                       {
                           "os_id": 1,
@@ -1523,13 +1522,11 @@ mediaType: application/json
                           "name": "CentOS-6.5-x86_64"
                       }
                   ],
-                  "distributed_system_name": "openstack",
                   "display_name": "OpenStack Icehouse",
                   "id": 3
               }]
     queryParameters:
       name: 
-      distributed_system_name:
     description: Lists information for all adapters
     headers:
       Access-token:
@@ -1870,44 +1867,41 @@ mediaType: application/json
           application/json:
             example: |
               [
-                {
-                  "created_at": "2014-10-18 23:01:23",
-                  "os_name": "CentOS-6.5-x86_64",
-                  "name": "cluster1",
-                  "reinstall_distributed_system": true,
-                  "distributed_system_id": 1,
-                  "adapter_id": 3,
-                  "updated_at": "2014-10-18 23:01:23",
-                  "owner": "admin@huawei.com",
-                  "os_id": 2,
-                  "distributed_system_name": "openstack",
-                  "distributed_system_installed": false,
-                  "flavor": {
-                    "display_name": "All-In-One",
-                    "name": "allinone",
-                    "roles": [
-                      {
-                        "display_name": "all in one compute",
-                        "description": "all in one compute",
-                        "adapter_id": 3,
-                        "role_id": 35,
-                        "flavor_id": 4,
-                        "optional": true,
-                        "id": 35,
-                        "name": "allinone-compute"
-                      }
-                    ],
-                    "adapter_id": 3,
-                    "template": "allinone.tmpl",
-                    "id": 4
-                  },
-                  "id": 1
-                }
+                  {
+                      "created_at": "2014-10-18 23:01:23",
+                      "os_name": "CentOS-6.5-x86_64",
+                      "name": "cluster1",
+                      "reinstall_distributed_system": true,
+                      "adapter_id": 3,
+                      "updated_at": "2014-10-18 23:01:23",
+                      "owner": "admin@huawei.com",
+                      "os_id": 2,
+                      "distributed_system_installed": false,
+                      "flavor": {
+                          "display_name": "All-In-One",
+                          "name": "allinone",
+                          "roles": [
+                              {
+                                  "display_name": "all in one compute",
+                                  "description": "all in one compute",
+                                  "adapter_id": 3,
+                                  "role_id": 35,
+                                  "flavor_id": 4,
+                                  "optional": true,
+                                  "id": 35,
+                                  "name": "allinone-compute"
+                              }
+                          ],
+                          "adapter_id": 3,
+                          "template": "allinone.tmpl",
+                          "id": 4
+                      },
+                      "id": 1
+                  }
               ]
     queryParameters:
       name: 
       os_name: 
-      distributed_system_name: 
       owner: 
       adapter_name: 
       flavor_name:
@@ -1937,12 +1931,10 @@ mediaType: application/json
                   "os_name": "CentOS-6.5-x86_64",
                   "name": "cluster1",
                   "reinstall_distributed_system": true,
-                  "distributed_system_id": 1,
                   "adapter_id": 3,
                   "updated_at": "2014-10-18 23:01:23",
                   "owner": "admin@huawei.com",
                   "os_id": 2,
-                  "distributed_system_name": "openstack",
                   "distributed_system_installed": false,
                   "flavor": {
                     "display_name": "All-In-One",
@@ -1990,12 +1982,10 @@ mediaType: application/json
                     "os_name": "CentOS-6.5-x86_64",
                     "name": "cluster1",
                     "reinstall_distributed_system": true,
-                    "distributed_system_id": 1,
                     "adapter_id": 3,
                     "updated_at": "2014-10-18 23:01:23",
                     "owner": "admin@huawei.com",
                     "os_id": 2,
-                    "distributed_system_name": "openstack",
                     "distributed_system_installed": false,
                     "flavor": {
                         "display_name": "All-In-One",
@@ -2048,12 +2038,10 @@ mediaType: application/json
                   "os_name": "CentOS-6.5-x86_64",
                   "name": "cluster_new",
                   "reinstall_distributed_system": true,
-                  "distributed_system_id": 1,
                   "adapter_id": 3,
                   "updated_at": "2014-10-18 23:16:39",
                   "owner": "admin@huawei.com",
                   "os_id": 2,
-                  "distributed_system_name": "openstack",
                   "distributed_system_installed": false,
                   "flavor": {
                     "display_name": "All-In-One",
@@ -2100,12 +2088,10 @@ mediaType: application/json
                     "os_name": "CentOS-6.5-x86_64",
                     "name": "cluster1",
                     "reinstall_distributed_system": true,
-                    "distributed_system_id": 1,
                     "adapter_id": 3,
                     "updated_at": "2014-10-18 23:01:23",
                     "owner": "admin@huawei.com",
                     "os_id": 2,
-                    "distributed_system_name": "openstack",
                     "distributed_system_installed": false,
                     "flavor": {
                         "display_name": "All-In-One",
@@ -2454,7 +2440,6 @@ mediaType: application/json
                       "owner": "admin@huawei.com",
                       "port": "4",
                       "location": {},
-                      "distributed_system_name": "openstack",
                       "os_name": "CentOS-6.5-x86_64",
                       "reinstall_distributed_system": true,
                       "mac": "00:0c:29:2b:c9:d4",
@@ -2568,7 +2553,6 @@ mediaType: application/json
                         "owner": "admin@huawei.com",
                         "port": "4",
                         "location": {},
-                        "distributed_system_name": "openstack",
                         "os_name": "CentOS-6.5-x86_64",
                         "reinstall_distributed_system": true,
                         "mac": "00:0c:29:2b:c9:d4",
@@ -2650,7 +2634,6 @@ mediaType: application/json
                         "owner": "admin@huawei.com",
                         "port": "4",
                         "location": {},
-                        "distributed_system_name": "openstack",
                         "os_name": "CentOS-6.5-x86_64",
                         "reinstall_distributed_system": true,
                         "mac": "00:0c:29:2b:c9:d4",
@@ -3336,7 +3319,6 @@ mediaType: application/json
                       "created_at": "2014-10-18 23:16:02",
                       "adapter_id": 3,
                       "updated_at": "2014-10-18 23:16:39",
-                      "distributed_system_name": "openstack",
                       "owner": "admin@huawei.com",
                       "distributed_system_installed": false,
                       "id": 2

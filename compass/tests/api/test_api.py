@@ -57,15 +57,17 @@ class ApiTestCase(unittest2.TestCase):
 
     def setUp(self):
         super(ApiTestCase, self).setUp()
-        reload(setting)
-        setting.CONFIG_DIR = os.path.join(
+        os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+        os.environ['COMPASS_CONFIG_DIR'] = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             'data'
         )
+        reload(setting)
         database.init('sqlite://')
         database.create_db()
-        adapter_api.load_adapters()
-        metadata_api.load_metadatas()
+        adapter_api.load_adapters(force_reload=True)
+        metadata_api.load_metadatas(force_reload=True)
+        adapter_api.load_flavors(force_reload=True)
 
         from compass.api import api as compass_api
         application = compass_api.app
@@ -168,6 +170,14 @@ class ApiTestCase(unittest2.TestCase):
                 for flavor in adapter['flavors']:
                     flavor_id = flavor['id']
                     break
+        if not adapter_name:
+            raise Exception('adapter name not found')
+        if not adapter_id:
+            raise Exception('adapter id not found')
+        if not os_id:
+            raise Exception('os id not found')
+        if not flavor_id:
+            raise Exception('flavor id not found')
         return (adapter_name, adapter_id, os_id, flavor_id)
 
 
@@ -336,9 +346,18 @@ class TestClusterAPI(ApiTestCase):
         data['name'] = 'cluster_invalid'
         data['adapter_id'] = 9
         data['os_id'] = 1
+        data['flavor_id'] = flavor_id
+        return_value = self.post(url, data)
+        self.assertEqual(return_value.status_code, 404)
+
+        # add a cluster with a non-existed flavor-id
+        data = {}
+        data['name'] = 'cluster_invalid'
+        data['adapter_id'] = adapter_id
+        data['os_id'] = 1
         data['flavor_id'] = 1
         return_value = self.post(url, data)
-        self.assertEqual(return_value.status_code, 400)
+        self.assertEqual(return_value.status_code, 404)
 
     def test_update_cluster(self):
         # update a cluster sucessfully
@@ -403,8 +422,7 @@ class TestClusterAPI(ApiTestCase):
         # give a non-existed cluster_id
         url = '/clusters/99/hosts'
         return_value = self.get(url)
-        resp = json.loads(return_value.get_data())
-        self.assertEqual(resp, [])
+        self.assertEqual(return_value.status_code, 404)
 
     def test_show_cluster_host(self):
         # show a cluster_host successfully
@@ -951,8 +969,7 @@ class TestSwitchMachines(ApiTestCase):
         # give a non-existed switch_id
         url = '/switches/99/machines'
         return_value = self.get(url)
-        resp = json.loads(return_value.get_data())
-        self.assertEqual(resp, [])
+        self.assertEqual(return_value.status_code, 404)
 
     def test_add_switch_machine(self):
         # add a switch machine successfully
@@ -978,12 +995,12 @@ class TestSwitchMachines(ApiTestCase):
         self.assertEqual(return_value.status_code, 409)
 
         # add a invalid switch machine
-        url = '/switches/2/machines'
+        url = 's/witchedes'
         data = {
             'mac': 'xxx'
         }
         return_value = self.post(url, data)
-        self.assertEqual(return_value.status_code, 400)
+        self.assertEqual(return_value.status_code, 404)
 
     def test_add_switch_machines(self):
         # batch switch machines
@@ -1030,7 +1047,7 @@ class TestSwitchMachines(ApiTestCase):
             'port': '200',
             'mac': 'b1:b2:c3:d4:e5:f6'
         }]
-        expect_duplicate = {'mac': 'a1:b2:c3:d4:e5:f6', 'port': '101'}
+        expect_duplicate = [{'mac': 'a1:b2:c3:d4:e5:f6', 'port': '101'}]
         expect_failed = [
             {'mac': 'a1:b2:f3:d4:e5:f6', 'port': '100'},
             {'mac': 'a1:b2:c3:d4:e5:f6', 'port': '102'}
@@ -1049,18 +1066,21 @@ class TestSwitchMachines(ApiTestCase):
             if k == 'fail_switches_machines':
                 for item in v:
                     res_fail.append(item)
+        self.assertEqual(len(res), len(expected))
         for i, v in enumerate(res):
-            self.assertTrue(
-                all(item in res[i].items() for item in expected[i].items())
+            self.assertDictContainsSubset(
+                expected[i], res[i]
             )
+        self.assertEqual(len(res_fail), len(expect_failed))
         for i, v in enumerate(res_fail):
-            self.assertTrue(
-                all(item in res_fail[i].items() for
-                    item in expect_failed[i].items())
+            self.assertDictContainsSubset(
+                expect_failed[i], res_fail[i]
             )
-        self.assertTrue(
-            all(item in res_du[0].items() for item in expect_duplicate.items())
-        )
+        self.assertEqual(len(res_du), len(expect_duplicate))
+        for i, v in enumerate(res_du):
+            self.assertDictContainsSubset(
+                expect_duplicate[i], res_du[i]
+            )
 
     def test_show_switch_machine(self):
         # show a switch_machine successfully

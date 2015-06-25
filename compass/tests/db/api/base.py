@@ -41,15 +41,17 @@ class BaseTest(unittest2.TestCase):
 
     def setUp(self):
         super(BaseTest, self).setUp()
-        reload(setting)
-        setting.CONFIG_DIR = os.path.join(
+        os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+        os.environ['COMPASS_CONFIG_DIR'] = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             'data'
         )
+        reload(setting)
         database.init('sqlite://')
         database.create_db()
-        adapter_api.load_adapters()
-        metadata_api.load_metadatas()
+        adapter_api.load_adapters(force_reload=True)
+        metadata_api.load_metadatas(force_reload=True)
+        adapter_api.load_flavors(force_reload=True)
         self.user_object = (
             user_api.get_user_object(
                 setting.COMPASS_ADMIN_EMAIL

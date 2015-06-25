@@ -96,27 +96,27 @@ class PackageMatcher(object):
     """Progress matcher for package installer."""
 
     def __init__(
-        self, package_installer_name, distributed_system_pattern,
+        self, package_installer_name, adapter_pattern,
         item_matcher, file_reader_factory
     ):
         self.name_ = re.compile(package_installer_name)
-        self.ds_regex_ = re.compile(distributed_system_pattern)
+        self.adapter_regex_ = re.compile(adapter_pattern)
         self.matcher_ = item_matcher
         self.file_reader_factory_ = file_reader_factory
 
     def __repr__(self):
-        return '%s[name:%s, ds_pattern:%s, matcher:%s]' % (
+        return '%s[name:%s, adapter_pattern:%s, matcher:%s]' % (
             self.__class__.__name__, self.name_.pattern,
-            self.ds_regex_.pattern, self.matcher_)
+            self.adapter_regex_.pattern, self.matcher_)
 
-    def match(self, package_installer_name, distributed_system_name):
+    def match(self, package_installer_name, adapter_name):
         """Check if the package matcher is acceptable."""
         if package_installer_name is None:
             return False
         else:
             return all([
                 self.name_.match(package_installer_name),
-                self.ds_regex_.match(distributed_system_name)
+                self.adapter_regex_.match(adapter_name)
             ])
 
     def update_progress(self, name, state, log_history_mapping):

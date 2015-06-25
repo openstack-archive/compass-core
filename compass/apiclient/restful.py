@@ -490,20 +490,10 @@ class Client(object):
     def delete_subnet(self, subnet_id):
         return self._delete('/subnets/%s' % subnet_id)
 
-    def list_adapters(self, name=None, distributed_system_name=None,
-                      os_installer_name=None, package_installer_name=None):
+    def list_adapters(self, name=None):
         data = {}
         if name:
             data['name'] = name
-
-        if distributed_system_name:
-            data['distributed_system_name'] = distributed_system_name
-
-        if os_installer_name:
-            data['os_installer_name'] = os_installer_name
-
-        if package_installer_name:
-            data['package_installer_name'] = package_installer_name
 
         return self._get('/adapters', data=data)
 
@@ -520,7 +510,7 @@ class Client(object):
         return self._get('/oses/%s/metadata' % os_id)
 
     def list_clusters(self, name=None, os_name=None,
-                      distributed_system_name=None, owner=None,
+                      owner=None,
                       adapter_id=None):
         data = {}
         if name:
@@ -528,9 +518,6 @@ class Client(object):
 
         if os_name:
             data['os_name'] = os_name
-
-        if distributed_system_name:
-            data['distributed_system_name'] = distributed_system_name
 
         if owner:
             data['owner'] = owner

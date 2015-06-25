@@ -1,9 +1,9 @@
 discover
-mock
+mock==1.0
 unittest2>=0.8.0
 testtools>=0.9.32
 testrepository>=0.0.17
 mimeparse
 coverage>=3.6
 hacking
-pycrypto<=2.0.1
+pycrypto

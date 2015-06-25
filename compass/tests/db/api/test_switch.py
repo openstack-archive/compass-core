@@ -234,7 +234,7 @@ class TestPatchSwitch(BaseTest):
         switch.patch_switch(
             1,
             user=self.user_object,
-            patched_credentials={
+            credentials={
                 'version': '2c',
                 'community': 'public'
             }
@@ -316,7 +316,7 @@ class TestUpdateSwitchFilters(BaseTest):
         switch.update_switch_filters(
             1,
             user=self.user_object,
-            filters=[
+            machine_filters=[
                 {
                     'filter_type': 'allow'
                 }
@@ -352,7 +352,7 @@ class TestPatchSwitchFilter(BaseTest):
         switch.patch_switch_filter(
             2,
             user=self.user_object,
-            patched_filters=[
+            machine_filters=[
                 {
                     'filter_type': 'allow'
                 }
@@ -811,7 +811,7 @@ class TestPatchSwitchMachine(BaseTest):
     def tearDown(self):
         super(TestPatchSwitchMachine, self).tearDown()
 
-    def test_pathc_switch_machine(self):
+    def test_patch_switch_machine(self):
         switch.add_switch_machine(
             1,
             mac='28:6e:d4:46:c4:25',
@@ -822,7 +822,7 @@ class TestPatchSwitchMachine(BaseTest):
             1,
             1,
             user=self.user_object,
-            patched_tag={
+            tag={
                 'patched_tag': 'test_patched_tag'
             }
         )
@@ -858,7 +858,7 @@ class TestPatchSwitchmachine(BaseTest):
         switch.patch_switchmachine(
             1,
             user=self.user_object,
-            patched_location={
+            location={
                 'patched_location': 'test_location'
             }
         )

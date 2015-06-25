@@ -30,6 +30,14 @@ from compass.deployment.utils import constants as const
 
 @contextmanager
 def lock(lock_name, blocking=True, timeout=10):
+    """acquire a lock to do some actions.
+
+    The lock is acquired by lock_name among the whole distributed
+    systems.
+    """
+    # TODO(xicheng): in future we should explicitly told which redis
+    # server we want to talk to make the lock works on distributed
+    # systems.
     redis_instance = redis.Redis()
     instance_lock = redis_instance.lock(lock_name, timeout=timeout)
     owned = False

@@ -28,10 +28,13 @@ def delete_cluster(
     cluster_id, host_id_list,
     username=None, delete_underlying_host=False
 ):
-    """Delete cluster.
+    """Delete cluster and all clusterhosts on it.
 
     :param cluster_id: id of the cluster.
     :type cluster_id: int
+
+    If delete_underlying_host is set, all underlying hosts will
+    be deleted.
 
     .. note::
         The function should be called out of database session.
@@ -66,6 +69,19 @@ def delete_cluster_host(
     cluster_id, host_id,
     username=None, delete_underlying_host=False
 ):
+    """Delete clusterhost.
+
+    :param cluster_id: id of the cluster.
+    :type cluster_id: int
+    :param host_id: id of the host.
+    :type host_id: int
+
+    If delete_underlying_host is set, the underlying host
+    will be deleted too.
+
+    .. note::
+        The function should be called out of database session.
+    """
     with util.lock('serialized_action', timeout=100) as lock:
         if not lock:
             raise Exception('failed to acquire lock to delete clusterhost')
@@ -94,6 +110,14 @@ def delete_cluster_host(
 def delete_host(
     host_id, cluster_id_list, username=None
 ):
+    """Delete host and all clusterhosts on it.
+
+    :param host_id: id of the host.
+    :type host_id: int
+
+    .. note::
+        The function should be called out of database session.
+    """
     with util.lock('serialized_action', timeout=100) as lock:
         if not lock:
             raise Exception('failed to acquire lock to delete host')

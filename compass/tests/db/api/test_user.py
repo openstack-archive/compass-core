@@ -38,11 +38,12 @@ class TestGetUserObject(unittest2.TestCase):
 
     def setUp(self):
         super(TestGetUserObject, self).setUp()
-        reload(setting)
-        setting.CONFIG_DIR = os.path.join(
+        os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+        os.environ['COMPASS_CONFIG_DIR'] = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             'data'
         )
+        reload(setting)
         database.init('sqlite://')
         database.create_db()
 
@@ -322,8 +323,8 @@ class TestAddDelUserPermission(BaseTest):
     def test_add_permission_position(self):
         user_api.add_permission(
             self.user_object.id,
-            True,
             2,
+            True,
             user=self.user_object,
         )
         permissions = user_api.get_permissions(

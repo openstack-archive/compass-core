@@ -16,6 +16,7 @@
 import datetime
 import functools
 import logging
+import re
 
 from flask.ext.login import UserMixin
 
@@ -53,36 +54,14 @@ PERMISSION_RESP_FIELDS = [
 
 
 def _check_email(email):
+    """Check email is email format."""
     if '@' not in email:
         raise exception.InvalidParameter(
             'there is no @ in email address %s.' % email
         )
 
 
-def get_user_internal(session, exception_when_missing=True, **kwargs):
-    """internal function used only by other db.api modules."""
-    return utils.get_db_object(
-        session, models.User, exception_when_missing, **kwargs
-    )
-
-
-def add_user_internal(
-    session, exception_when_existing=True,
-    email=None, **kwargs
-):
-    """internal function used only by other db.api modules."""
-    user = utils.add_db_object(
-        session, models.User,
-        exception_when_existing, email,
-        **kwargs)
-    _add_user_permissions(
-        session, user,
-        name=setting.COMPASS_DEFAULT_PERMISSIONS
-    )
-    return user
-
-
-def _check_user_permission(session, user, permission):
+def _check_user_permission(user, permission, session=None):
     """Check user has permission."""
     if not user:
         logging.info('empty user means the call is from internal')
@@ -102,14 +81,19 @@ def _check_user_permission(session, user, permission):
         )
 
 
-def check_user_permission_in_session(permission):
+def check_user_permission(permission):
+    """Decorator to check user having permission."""
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if 'user' in kwargs.keys() and 'session' in kwargs.keys():
-                session = kwargs['session']
-                user = kwargs['user']
-                _check_user_permission(session, user, permission)
+            user = kwargs.get('user')
+            if user is not None:
+                session = kwargs.get('session')
+                if session is None:
+                    raise exception.DatabaseException(
+                        'wrapper check_user_permission does not run in session'
+                    )
+                _check_user_permission(user, permission, session=session)
                 return func(*args, **kwargs)
             else:
                 return func(*args, **kwargs)
@@ -118,11 +102,12 @@ def check_user_permission_in_session(permission):
 
 
 def check_user_admin():
+    """Decorator to check user is admin."""
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if 'user' in kwargs.keys():
-                user = kwargs['user']
+            user = kwargs.get('user')
+            if user is not None:
                 if not user.is_admin:
                     raise exception.Forbidden(
                         'User %s is not admin.' % (
@@ -137,48 +122,56 @@ def check_user_admin():
 
 
 def check_user_admin_or_owner():
+    """Decorator to check user is admin or the owner of the resource."""
     def decorator(func):
         @functools.wraps(func)
         def wrapper(user_id, *args, **kwargs):
-            if 'user' in kwargs.keys():
-                user = kwargs['user']
-                if not user.is_admin and user.id != user_id:
+            user = kwargs.get('user')
+            if user is not None:
+                session = kwargs.get('session')
+                if session is None:
+                    raise exception.DatabaseException(
+                        'wrapper check_user_admin_or_owner is '
+                        'not called in session'
+                    )
+                check_user = _get_user(user_id, session=session)
+                if not user.is_admin and user.id != check_user.id:
                     raise exception.Forbidden(
-                        'User %s is not admin or the owner of user id %s.' % (
-                            user.email, user_id
+                        'User %s is not admin or the owner of user %s.' % (
+                            user.email, check_user.email
                         )
                     )
-                return func(user_id, *args, **kwargs)
+
+                return func(
+                    user_id, *args, **kwargs
+                )
             else:
-                return func(user_id, *args, **kwargs)
+                return func(
+                    user_id, *args, **kwargs
+                )
         return wrapper
     return decorator
 
 
-def check_user_permission_internal(session, user, permission):
-    """internal function only used by other db.api modules."""
-    _check_user_permission(session, user, permission)
-
-
-def _add_user_permissions(session, user, **permission_filters):
+def _add_user_permissions(user, session=None, **permission_filters):
     """add permissions to a user."""
     from compass.db.api import permission as permission_api
-    for api_permission in permission_api.list_permissions_internal(
-        session, **permission_filters
+    for api_permission in permission_api.list_permissions(
+        session=session, **permission_filters
     ):
         utils.add_db_object(
             session, models.UserPermission, False,
-            user.id, api_permission.id
+            user.id, api_permission['id']
         )
 
 
-def _remove_user_permissions(session, user, **permission_filters):
-    """remove permissions to a user."""
+def _remove_user_permissions(user, session=None, **permission_filters):
+    """remove permissions from a user."""
     from compass.db.api import permission as permission_api
     permission_ids = [
-        api_permission.id
-        for api_permission in permission_api.list_permissions_internal(
-            session, **permission_filters
+        api_permission['id']
+        for api_permission in permission_api.list_permissions(
+            session=session, **permission_filters
         )
     ]
     utils.del_db_objects(
@@ -187,7 +180,7 @@ def _remove_user_permissions(session, user, **permission_filters):
     )
 
 
-def _set_user_permissions(session, user, **permission_filters):
+def _set_user_permissions(user, session=None, **permission_filters):
     """set permissions to a user."""
     utils.del_db_objects(
         session, models.UserPermission,
@@ -197,6 +190,8 @@ def _set_user_permissions(session, user, **permission_filters):
 
 
 class UserWrapper(UserMixin):
+    """Wrapper class provided to flask."""
+
     def __init__(
         self, id, email, crypted_password,
         active=True, is_admin=False,
@@ -241,6 +236,7 @@ class UserWrapper(UserMixin):
 
 @database.run_in_session()
 def get_user_object(email, session=None, **kwargs):
+    """get user and convert to UserWrapper object."""
     user = utils.get_db_object(
         session, models.User, False, email=email
     )
@@ -253,8 +249,13 @@ def get_user_object(email, session=None, **kwargs):
     return UserWrapper(**user_dict)
 
 
-@database.run_in_session()
+@database.run_in_session(exception_when_in_session=False)
 def get_user_object_from_token(token, session=None):
+    """Get user from token and convert to UserWrapper object.
+
+    ::note:
+       get_user_object_from_token may be called in session.
+    """
     expire_timestamp = {
         'ge': datetime.datetime.now()
     }
@@ -266,8 +267,8 @@ def get_user_object_from_token(token, session=None):
         raise exception.Unauthorized(
             'invalid user token: %s' % token
         )
-    user_dict = utils.get_db_object(
-        session, models.User, id=user_token.user_id
+    user_dict = _get_user(
+        user_token.user_id, session=session
     ).to_dict()
     user_dict['token'] = token
     expire_timestamp = user_token.expire_timestamp
@@ -310,17 +311,29 @@ def clean_user_token(token, user=None, session=None):
     )
 
 
+def _get_user(user_id, session=None, **kwargs):
+    """Get user object by user id."""
+    if isinstance(user_id, (int, long)):
+        return utils.get_db_object(
+            session, models.User, id=user_id, **kwargs
+        )
+    raise exception.InvalidParameter(
+        'user id %s type is not int compatible' % user_id
+    )
+
+
 @utils.supported_filters()
-@check_user_admin_or_owner()
 @database.run_in_session()
+@check_user_admin_or_owner()
 @utils.wrap_to_dict(RESP_FIELDS)
 def get_user(
     user_id, exception_when_missing=True,
     user=None, session=None, **kwargs
 ):
-    """get field dict of a user."""
-    return utils.get_db_object(
-        session, models.User, exception_when_missing, id=user_id
+    """get a user."""
+    return _get_user(
+        user_id, session=session,
+        exception_when_missing=exception_when_missing
     )
 
 
@@ -331,20 +344,21 @@ def get_current_user(
     exception_when_missing=True, user=None,
     session=None, **kwargs
 ):
-    """get field dict of a user."""
-    return utils.get_db_object(
-        session, models.User, exception_when_missing, id=user.id
+    """get current user."""
+    return _get_user(
+        user.id, session=session,
+        exception_when_missing=exception_when_missing
     )
 
 
 @utils.supported_filters(
     optional_support_keys=SUPPORTED_FIELDS
 )
-@check_user_admin()
 @database.run_in_session()
+@check_user_admin()
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_users(user=None, session=None, **filters):
-    """List fields of all users by some fields."""
+    """List all users."""
     return utils.list_db_objects(
         session, models.User, **filters
     )
@@ -356,27 +370,34 @@ def list_users(user=None, session=None, **filters):
     optional_support_keys=OPTIONAL_ADDED_FIELDS,
     ignore_support_keys=IGNORE_FIELDS
 )
-@check_user_admin()
 @database.run_in_session()
+@check_user_admin()
 @utils.wrap_to_dict(RESP_FIELDS)
 def add_user(
     exception_when_existing=True, user=None,
-    session=None, **kwargs
+    session=None, email=None, **kwargs
 ):
     """Create a user and return created user object."""
-    return add_user_internal(
-        session, exception_when_existing, **kwargs
+    add_user = utils.add_db_object(
+        session, models.User,
+        exception_when_existing, email,
+        **kwargs)
+    _add_user_permissions(
+        add_user,
+        session=session,
+        name=setting.COMPASS_DEFAULT_PERMISSIONS
     )
+    return add_user
 
 
 @utils.supported_filters()
-@check_user_admin()
 @database.run_in_session()
+@check_user_admin()
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_user(user_id, user=None, session=None, **kwargs):
     """delete a user and return the deleted user object."""
-    user = utils.get_db_object(session, models.User, id=user_id)
-    return utils.del_db_object(session, user)
+    del_user = _get_user(user_id, session=session)
+    return utils.del_db_object(session, del_user)
 
 
 @utils.supported_filters(
@@ -388,13 +409,13 @@ def del_user(user_id, user=None, session=None, **kwargs):
 @utils.wrap_to_dict(RESP_FIELDS)
 def update_user(user_id, user=None, session=None, **kwargs):
     """Update a user and return the updated user object."""
-    user = utils.get_db_object(
-        session, models.User, id=user_id
+    update_user = _get_user(
+        user_id, session=session,
     )
     allowed_fields = set()
     if user.is_admin:
         allowed_fields |= set(ADMIN_UPDATED_FIELDS)
-    if user.id == user_id:
+    if user.id == update_user.id:
         allowed_fields |= set(SELF_UPDATED_FIELDS)
     unsupported_fields = set(kwargs) - allowed_fields
     if unsupported_fields:
@@ -404,47 +425,67 @@ def update_user(user_id, user=None, session=None, **kwargs):
                 user.email, user.email, unsupported_fields
             )
         )
-    return utils.update_db_object(session, user, **kwargs)
+    return utils.update_db_object(session, update_user, **kwargs)
 
 
 @utils.supported_filters(optional_support_keys=PERMISSION_SUPPORTED_FIELDS)
-@check_user_admin_or_owner()
 @database.run_in_session()
+@check_user_admin_or_owner()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
-def get_permissions(user_id, user=None, session=None, **kwargs):
+def get_permissions(
+    user_id, user=None, exception_when_missing=True,
+    session=None, **kwargs
+):
     """List permissions of a user."""
+    get_user = _get_user(
+        user_id, session=session,
+        exception_when_missing=exception_when_missing
+    )
     return utils.list_db_objects(
-        session, models.UserPermission, user_id=user_id, **kwargs
+        session, models.UserPermission, user_id=get_user.id, **kwargs
+    )
+
+
+def _get_permission(user_id, permission_id, session=None, **kwargs):
+    """Get user permission by user id and permission id."""
+    user = _get_user(user_id, session=session)
+    from compass.db.api import permission as permission_api
+    permission = permission_api.get_permission_internal(
+        permission_id, session=session
+    )
+    return utils.get_db_object(
+        session, models.UserPermission,
+        user_id=user.id, permission_id=permission.id,
+        **kwargs
     )
 
 
 @utils.supported_filters()
-@check_user_admin_or_owner()
 @database.run_in_session()
+@check_user_admin_or_owner()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
 def get_permission(
     user_id, permission_id, exception_when_missing=True,
     user=None, session=None, **kwargs
 ):
-    """Get a specific user permission."""
-    return utils.get_db_object(
-        session, models.UserPermission,
-        exception_when_missing,
-        user_id=user_id, permission_id=permission_id,
+    """Get a permission of a user."""
+    return _get_permission(
+        user_id, permission_id,
+        exception_when_missing=exception_when_missing,
+        session=session,
         **kwargs
     )
 
 
 @utils.supported_filters()
-@check_user_admin_or_owner()
 @database.run_in_session()
+@check_user_admin_or_owner()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
 def del_permission(user_id, permission_id, user=None, session=None, **kwargs):
-    """Delete a specific user permission."""
-    user_permission = utils.get_db_object(
-        session, models.UserPermission,
-        user_id=user_id, permission_id=permission_id,
-        **kwargs
+    """Delete a permission from a user."""
+    user_permission = _get_permission(
+        user_id, permission_id,
+        session=session, **kwargs
     )
     return utils.del_db_object(session, user_permission)
 
@@ -453,21 +494,27 @@ def del_permission(user_id, permission_id, user=None, session=None, **kwargs):
     PERMISSION_ADDED_FIELDS,
     ignore_support_keys=IGNORE_FIELDS
 )
-@check_user_admin()
 @database.run_in_session()
+@check_user_admin()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
 def add_permission(
-    user_id, exception_when_missing=True,
-    permission_id=None, user=None, session=None
+    user_id, permission_id=None, exception_when_existing=True,
+    user=None, session=None
 ):
-    """Add an user permission."""
+    """Add a permission to a user."""
+    get_user = _get_user(user_id, session=session)
+    from compass.db.api import permission as permission_api
+    get_permission = permission_api.get_permission_internal(
+        permission_id, session=session
+    )
     return utils.add_db_object(
-        session, models.UserPermission, exception_when_missing,
-        user_id, permission_id
+        session, models.UserPermission, exception_when_existing,
+        get_user.id, get_permission.id
     )
 
 
 def _get_permission_filters(permission_ids):
+    """Helper function to filter permissions."""
     if permission_ids == 'all':
         return {}
     else:
@@ -479,28 +526,28 @@ def _get_permission_filters(permission_ids):
         'add_permissions', 'remove_permissions', 'set_permissions'
     ]
 )
-@check_user_admin()
 @database.run_in_session()
+@check_user_admin()
 @utils.wrap_to_dict(PERMISSION_RESP_FIELDS)
 def update_permissions(
     user_id, add_permissions=[], remove_permissions=[],
     set_permissions=None, user=None, session=None, **kwargs
 ):
     """update user permissions."""
-    user = utils.get_db_object(session, models.User, id=user_id)
+    update_user = _get_user(user_id, session=session)
     if remove_permissions:
         _remove_user_permissions(
-            session, user,
+            update_user, session=session,
             **_get_permission_filters(remove_permissions)
         )
     if add_permissions:
         _add_user_permissions(
-            session, user,
+            update_user, session=session,
             **_get_permission_filters(add_permissions)
         )
     if set_permissions is not None:
         _set_user_permissions(
-            session, user,
+            update_user, session=session,
             **_get_permission_filters(set_permissions)
         )
-    return user.user_permissions
+    return update_user.user_permissions

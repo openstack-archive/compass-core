@@ -75,9 +75,6 @@ flags.add('adapter_name',
 flags.add('adapter_os_pattern',
           help='adapter os name',
           default=r'^(?i)centos.*')
-flags.add('adapter_target_system_pattern',
-          help='adapter target system name',
-          default='^openstack$')
 flags.add('adapter_flavor_pattern',
           help='adapter flavor name',
           default='allinone')
@@ -342,112 +339,50 @@ def _poll_switches(client):
 
 def _get_adapter(client):
     """get adapter."""
-    status, resp = client.list_adapters()
+    adapter_name = flags.OPTIONS.adapter_name
+    status, resp = client.list_adapters(
+        name=adapter_name
+    )
     logging.info(
-        'get all adapters status: %s, resp: %s',
-        status, resp
+        'get all adapters for name %s status: %s, resp: %s',
+        adapter_name, status, resp
     )
     if status >= 400:
         msg = 'failed to get adapters'
         raise Exception(msg)
 
-    adapter_name = flags.OPTIONS.adapter_name
+    if not resp:
+        msg = 'no adapter found'
+        raise Exception(msg)
+
+    adapter = resp[0]
     os_pattern = flags.OPTIONS.adapter_os_pattern
     if os_pattern:
         os_re = re.compile(os_pattern)
     else:
         os_re = None
-    target_system_pattern = flags.OPTIONS.adapter_target_system_pattern
-    if target_system_pattern:
-        target_system_re = re.compile(target_system_pattern)
-    else:
-        target_system_re = None
     flavor_pattern = flags.OPTIONS.adapter_flavor_pattern
     if flavor_pattern:
         flavor_re = re.compile(flavor_pattern)
     else:
         flavor_re = None
-    adapter_id = None
+
+    adapter_id = adapter['id']
     os_id = None
-    distributed_system_id = None
     flavor_id = None
-    adapter = None
-    for item in resp:
-        adapter_id = None
-        os_id = None
-        flavor_id = None
-        adapter = item
-        for supported_os in adapter['supported_oses']:
-            if not os_re or os_re.match(supported_os['name']):
-                os_id = supported_os['os_id']
-                break
-
-        if not os_id:
-            logging.info('no os found for adapter %s', adapter)
-            continue
-
-        if 'flavors' in adapter:
-            for flavor in adapter['flavors']:
-                if not flavor_re or flavor_re.match(flavor['name']):
-                    flavor_id = flavor['id']
-                    break
-
-        if adapter_name:
-            if adapter['name'] == adapter_name:
-                adapter_id = adapter['id']
-                logging.info('adapter name %s matches: %s',
-                             adapter_name, adapter)
-            else:
-                logging.info('adapter name %s does not match %s',
-                             adapter_name, adapter)
-        elif (
-            'distributed_system_name' in item and
-            adapter['distributed_system_name']
-        ):
-            if (
-                target_system_re and
-                target_system_re.match(adapter['distributed_system_name'])
-            ):
-                adapter_id = adapter['id']
-                logging.info(
-                    'distributed system name pattern %s matches: %s',
-                    target_system_pattern, adapter
-                )
-            else:
-                logging.info(
-                    'distributed system name pattern %s does not match: %s',
-                    target_system_pattern, adapter
-                )
-        else:
-            if not target_system_re:
-                adapter_id = adapter['id']
-                logging.info(
-                    'os only adapter matches no target_system_pattern'
-                )
-            else:
-                logging.info(
-                    'distributed system name pattern defined '
-                    'but the adapter does not have '
-                    'distributed_system_name attributes'
-                )
-
-        if adapter_id and target_system_re:
-            distributed_system_id = adapter['distributed_system_id']
-
-        if adapter_id:
-            logging.info('adadpter matches: %s', adapter)
+    for supported_os in adapter['supported_oses']:
+        if not os_re or os_re.match(supported_os['name']):
+            os_id = supported_os['os_id']
             break
 
-    if not adapter_id:
-        msg = 'no adapter found'
-        raise Exception(msg)
+    if 'flavors' in adapter:
+        for flavor in adapter['flavors']:
+            if not flavor_re or flavor_re.match(flavor['name']):
+                flavor_id = flavor['id']
+                break
 
     if not os_id:
         msg = 'no os found for %s' % os_pattern
-        raise Exception(msg)
-
-    if target_system_re and not distributed_system_id:
-        msg = 'no distributed system found for %s' % target_system_pattern
         raise Exception(msg)
 
     if flavor_re and not flavor_id:
@@ -455,7 +390,7 @@ def _get_adapter(client):
         raise Exception(msg)
 
     logging.info('adpater for deploying a cluster: %s', adapter_id)
-    return (adapter_id, os_id, distributed_system_id, flavor_id)
+    return (adapter_id, os_id, flavor_id)
 
 
 def _add_subnets(client):
@@ -1059,14 +994,14 @@ def main():
         machines = _get_machines(client)
     logging.info('machines are %s', machines)
     subnet_mapping = _add_subnets(client)
-    adapter_id, os_id, distributed_system_id, flavor_id = _get_adapter(client)
+    adapter_id, os_id, flavor_id = _get_adapter(client)
     cluster_id, host_mapping, role_mapping = _add_cluster(
         client, adapter_id, os_id, flavor_id, machines)
     host_ips = _set_host_networking(
         client, host_mapping, subnet_mapping
     )
     _set_cluster_os_config(client, cluster_id, host_ips)
-    if distributed_system_id:
+    if flavor_id:
         _set_cluster_package_config(client, cluster_id)
     if role_mapping:
         _set_hosts_roles(client, cluster_id, host_mapping, role_mapping)

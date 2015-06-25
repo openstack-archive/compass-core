@@ -16,7 +16,9 @@
 """Cluster health check report."""
 import logging
 
+from compass.db.api import cluster as cluster_api
 from compass.db.api import database
+from compass.db.api import host as host_api
 from compass.db.api import permission
 from compass.db.api import user as user_api
 from compass.db.api import utils
@@ -39,16 +41,23 @@ RESP_ACTION_FIELDS = ['cluster_id', 'status']
 @utils.supported_filters(REQUIRED_INSERT_FIELDS, OPTIONAL_INSERT_FIELDS)
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
-def add_report_record(cluster_id, name, report={},
+def add_report_record(cluster_id, name=None, report={},
                       state='verifying', session=None, **kwargs):
     """Create a health check report record."""
     # Replace any white space into '-'
     words = name.split()
     name = '-'.join(words)
-
+    cluster = cluster_api.get_cluster_internal(cluster_id, session=session)
     return utils.add_db_object(
-        session, models.HealthCheckReport, True, cluster_id, name,
+        session, models.HealthCheckReport, True, cluster.id, name,
         report=report, state=state, **kwargs
+    )
+
+
+def _get_report(cluster_id, name, session=None):
+    cluster = cluster_api.get_cluster_internal(cluster_id, session=session)
+    return utils.get_db_object(
+        session, models.HealthCheckReport, cluster_id=cluster.id, name=name
     )
 
 
@@ -57,9 +66,7 @@ def add_report_record(cluster_id, name, report={},
 @utils.wrap_to_dict(RESP_FIELDS)
 def update_report(cluster_id, name, session=None, **kwargs):
     """Update health check report."""
-    report = utils.get_db_object(
-        session, models.HealthCheckReport, cluster_id=cluster_id, name=name
-    )
+    report = _get_report(cluster_id, name, session=session)
     if report.state == 'finished':
         err_msg = 'Report cannot be updated if state is in "finished"'
         raise exception.Forbidden(err_msg)
@@ -72,106 +79,109 @@ def update_report(cluster_id, name, session=None, **kwargs):
 @utils.wrap_to_dict(RESP_FIELDS)
 def update_multi_reports(cluster_id, session=None, **kwargs):
     """Bulk update reports."""
+    # TODO(grace): rename the fuction if needed to reflect the fact.
     return set_error(cluster_id, session=session, **kwargs)
 
 
 def set_error(cluster_id, report={}, session=None,
               state='error', error_message=None):
-    with session.begin(subtransactions=True):
-        logging.debug(
-            "session %s updates all reports as %s in cluster %s",
-            id(session), state, cluster_id
-        )
-        session.query(
-            models.HealthCheckReport
-        ).filter_by(cluster_id=cluster_id).update(
-            {"report": {}, 'state': 'error', 'error_message': error_message}
-        )
-
-        reports = session.query(
-            models.HealthCheckReport
-        ).filter_by(cluster_id=cluster_id).all()
-
-        return reports
+    cluster = cluster_api.get_cluster_internal(cluster_id, session=session)
+    logging.debug(
+        "updates all reports as %s in cluster %s",
+        state, cluster_id
+    )
+    return utils.update_db_objects(
+        session, models.HealthCheckReport,
+        updates={
+            'report': {},
+            'state': 'error',
+            'error_message': error_message
+        }, cluster_id=cluster.id
+    )
 
 
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_LIST_HEALTH_REPORT
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def list_health_reports(user, cluster_id, session=None):
+def list_health_reports(cluster_id, user=None, session=None):
     """List all reports in the specified cluster."""
+    cluster = cluster_api.get_cluster_internal(cluster_id, session=session)
     return utils.list_db_objects(
-        session, models.HealthCheckReport, cluster_id=cluster_id
+        session, models.HealthCheckReport, cluster_id=cluster.id
     )
 
 
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_GET_HEALTH_REPORT
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def get_health_report(user, cluster_id, name, session=None):
-    return utils.get_db_object(
-        session, models.HealthCheckReport, cluster_id=cluster_id, name=name
+def get_health_report(cluster_id, name, user=None, session=None):
+    return _get_report(
+        cluster_id, name, session=session
     )
 
 
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_DELETE_REPORT
 )
 @utils.wrap_to_dict(RESP_FIELDS)
-def delete_reports(user, cluster_id, name=None, session=None):
-    if not name:
-        report = utils.get_db_object(
-            session, models.HealthCheckReport, cluster_id=cluster_id, name=name
-        )
+def delete_reports(cluster_id, name=None, user=None, session=None):
+    # TODO(grace): better to separate this function into two.
+    # One is to delete a report of a cluster, the other to delete all
+    # reports under a cluster.
+    if name:
+        report = _get_report(cluster_id, name, session=session)
         return utils.del_db_object(session, report)
-
-    return utils.del_db_objects(
-        session, models.HealthCheckReport, cluster_id=cluster_id
-    )
+    else:
+        cluster = cluster_api.get_cluster_internal(
+            cluster_id, session=session
+        )
+        return utils.del_db_objects(
+            session, models.HealthCheckReport, cluster_id=cluster.id
+        )
 
 
 @utils.supported_filters(optional_support_keys=['check_health'])
 @database.run_in_session()
-@user_api.check_user_permission_in_session(
+@user_api.check_user_permission(
     permission.PERMISSION_CHECK_CLUSTER_HEALTH
 )
 @utils.wrap_to_dict(RESP_ACTION_FIELDS)
-def start_check_cluster_health(user, cluster_id, send_report_url,
-                               session=None, check_health={}):
+def start_check_cluster_health(cluster_id, send_report_url,
+                               user=None, session=None, check_health={}):
     """Start to check cluster health."""
-    cluster_state = utils.get_db_object(
-        session, models.Cluster, True, id=cluster_id
-    ).state_dict()
+    cluster = cluster_api.get_cluster_internal(cluster_id, session=session)
 
-    if cluster_state['state'] != 'SUCCESSFUL':
-        logging.debug("state is %s" % cluster_state['state'])
+    if cluster.state.state != 'SUCCESSFUL':
+        logging.debug("state is %s" % cluster.state.state)
         err_msg = "Healthcheck starts only after cluster finished deployment!"
         raise exception.Forbidden(err_msg)
 
     reports = utils.list_db_objects(
         session, models.HealthCheckReport,
-        cluster_id=cluster_id, state='verifying'
+        cluster_id=cluster.id, state='verifying'
     )
     if reports:
         err_msg = 'Healthcheck in progress, please wait for it to complete!'
         raise exception.Forbidden(err_msg)
 
     # Clear all preivous report
+    # TODO(grace): the delete should be moved into celery task.
+    # We should consider the case that celery task is down.
     utils.del_db_objects(
-        session, models.HealthCheckReport, cluster_id=cluster_id
+        session, models.HealthCheckReport, cluster_id=cluster.id
     )
 
     from compass.tasks import client as celery_client
     celery_client.celery.send_task(
         'compass.tasks.cluster_health',
-        (cluster_id, send_report_url, user.email)
+        (cluster.id, send_report_url, user.email)
     )
     return {
-        "cluster_id": cluster_id,
+        "cluster_id": cluster.id,
         "status": "start to check cluster health."
     }

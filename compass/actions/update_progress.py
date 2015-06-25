@@ -147,19 +147,6 @@ def update_progress():
                 )
                 continue
             clusterhost_id = clusterhost['clusterhost_id']
-            if 'distributed_system_name' not in clusterhost:
-                logging.error(
-                    'distributed_system_name is not in clusterhost %s',
-                    clusterhost
-                )
-                continue
-            clusterhost_dirname = setting.CLUSTERHOST_INATALLATION_LOGDIR_NAME
-            if clusterhost_dirname not in clusterhost:
-                logging.error(
-                    '%s is not in clusterhost %s',
-                    clusterhost_dirname, clusterhost
-                )
-                continue
             if 'cluster_id' not in clusterhost:
                 logging.error(
                     'cluster_id not in clusterhost %s',
@@ -176,6 +163,19 @@ def update_progress():
                 )
                 continue
             cluster, _ = cluster_mapping[cluster_id]
+            if 'flavor_name' not in cluster:
+                logging.error(
+                    'flavor_name is not in clusterhost %s related cluster',
+                    clusterhost
+                )
+                continue
+            clusterhost_dirname = setting.CLUSTERHOST_INATALLATION_LOGDIR_NAME
+            if clusterhost_dirname not in clusterhost:
+                logging.error(
+                    '%s is not in clusterhost %s',
+                    clusterhost_dirname, clusterhost
+                )
+                continue
             adapter_id = cluster['adapter_id']
             if adapter_id not in adapter_mapping:
                 logging.info(
@@ -196,6 +196,7 @@ def update_progress():
                 continue
             package_installer = adapter['package_installer']
             clusterhost['package_installer'] = package_installer
+            clusterhost['adapter_name'] = adapter['name']
             clusterhost_state = cluster_api.get_clusterhost_self_state(
                 clusterhost_id, user=user
             )

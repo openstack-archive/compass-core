@@ -60,10 +60,10 @@ if [ ! -f /etc/chef-server/chef-validator.pem ]; then
 fi
 
 sudo knife configure -y -i --defaults -r ~/chef-repo -s https://$IPADDR:443 -u $USER --admin-client-name admin --admin-client-key /etc/chef-server/admin.pem --validation-client-name chef-validator --validation-key /etc/chef-server/chef-validator.pem <<EOF
-$CHEF_PASSWORD
+$CHEF_PASSWD
 EOF
-sudo sed -i "/node_name/c\node_name                \'admin\'" /$USER/.chef/knife.rb
-sudo sed -i "/client_key/c\client_key               \'\/etc\/chef-server\/admin.pem\'" /$USER/.chef/knife.rb
+sudo sed -i "/node_name/c\node_name                \'admin\'" /$HOME/.chef/knife.rb
+sudo sed -i "/client_key/c\client_key               \'\/etc\/chef-server\/admin.pem\'" /$HOME/.chef/knife.rb
 
 
 sudo rm -rf /var/chef

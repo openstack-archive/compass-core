@@ -45,15 +45,17 @@ class MetadataTestCase(unittest2.TestCase):
 
     def setUp(self):
         super(MetadataTestCase, self).setUp()
-        reload(setting)
-        setting.CONFIG_DIR = os.path.join(
+        os.environ['COMPASS_IGNORE_SETTING'] = 'true'
+        os.environ['COMPASS_CONFIG_DIR'] = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             'data'
         )
+        reload(setting)
         database.init('sqlite://')
         database.create_db()
-        adapter.load_adapters()
-        metadata.load_metadatas()
+        adapter.load_adapters(force_reload=True)
+        metadata.load_metadatas(force_reload=True)
+        adapter.load_flavors(force_reload=True)
 
         # Get a os_id and adapter_id
         self.user_object = (
@@ -249,6 +251,7 @@ class TestGetFlavorMetadata(MetadataTestCase):
                     config_dir, *args, **kwargs
                 )
             config = {
+                'ADAPTER': 'openstack_icehouse',
                 'FLAVOR': 'HA-multinodes',
                 'METADATA': {
                     'test_ha_proxy': {
@@ -279,7 +282,7 @@ class TestGetFlavorMetadata(MetadataTestCase):
         )
         self.assertIsNotNone(flavor_metadata)
         self.assertTrue(
-            'test_ha_proxy' in flavor_metadata['flavor_config'].keys()
+            'test_ha_proxy' in flavor_metadata['package_config'].keys()
         )
 
 
@@ -307,55 +310,6 @@ class TestGetPackageOsMetadata(MetadataTestCase):
             self.adapter_id,
             99,
             user=self.user_object
-        )
-
-
-class TestListFlavors(MetadataTestCase):
-    def setUp(self):
-        super(TestListFlavors, self).setUp()
-
-    def tesrDown(self):
-        super(TestListFlavors, self).tearDown()
-
-    def test_list_flavors(self):
-        """Test list flavors."""
-        flavors = metadata.list_flavors(
-            user=self.user_object
-        )
-        flavor_name = []
-        for flavor in flavors:
-            flavor_name.append(flavor['name'])
-        expected = [
-            'allinone',
-            'multiroles',
-            'HA-multinodes',
-            'single-contoller-multi-compute'
-        ]
-        for expect in expected:
-            self.assertIn(expect, flavor_name)
-
-
-class TestGetFlavors(MetadataTestCase):
-    def setUp(self):
-        super(TestGetFlavors, self).setUp()
-
-    def tearDown(self):
-        super(TestGetFlavors, self).tearDown()
-
-    def test_get_flavor(self):
-        """Test get a flavor."""
-        flavor = metadata.get_flavor(
-            self.flavor_id,
-            user=self.user_object
-        )
-        expected = {
-            'display_name': 'Multi-node Cluster with HA',
-            'id': 3,
-            'template': 'ha_multinodes.tmpl',
-            'name': 'HA-multinodes'
-        }
-        self.assertTrue(
-            all(item in flavor.items() for item in expected.items())
         )
 
 

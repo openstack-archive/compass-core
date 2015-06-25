@@ -158,7 +158,7 @@ class LineMatcher(object):
             self.progress_ = SameProgress()
         elif isinstance(progress, ProgressCalculator):
             self.progress_ = progress
-        elif util.is_instance(progress, [int, float]):
+        elif isinstance(progress, (int, long, float)):
             self.progress_ = RelativeProgress(progress)
         else:
             raise TypeError(

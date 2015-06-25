@@ -36,14 +36,15 @@ def log_user_action(user_id, action, session=None):
 
 
 @utils.supported_filters(optional_support_keys=USER_SUPPORTED_FIELDS)
-@user_api.check_user_admin_or_owner()
 @database.run_in_session()
+@user_api.check_user_admin_or_owner()
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_user_actions(user_id, user=None, session=None, **filters):
-    """list user actions."""
+    """list user actions of a user."""
+    list_user = user_api.get_user(user_id, user=user, session=session)
     return utils.list_db_objects(
         session, models.UserLog, order_by=['timestamp'],
-        user_id=user_id, **filters
+        user_id=list_user['id'], **filters
     )
 
 
@@ -52,29 +53,30 @@ def list_user_actions(user_id, user=None, session=None, **filters):
 @database.run_in_session()
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_actions(user=None, session=None, **filters):
-    """list actions."""
+    """list actions of all users."""
     return utils.list_db_objects(
         session, models.UserLog, order_by=['timestamp'], **filters
     )
 
 
 @utils.supported_filters()
-@user_api.check_user_admin_or_owner()
 @database.run_in_session()
+@user_api.check_user_admin_or_owner()
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_user_actions(user_id, user=None, session=None, **filters):
-    """delete user actions."""
+    """delete actions of a user."""
+    del_user = user_api.get_user(user_id, user=user, session=session)
     return utils.del_db_objects(
-        session, models.UserLog, user_id=user_id, **filters
+        session, models.UserLog, user_id=del_user['id'], **filters
     )
 
 
 @utils.supported_filters()
-@user_api.check_user_admin()
 @database.run_in_session()
+@user_api.check_user_admin()
 @utils.wrap_to_dict(RESP_FIELDS)
 def del_actions(user=None, session=None, **filters):
-    """delete actions."""
+    """delete actions of all users."""
     return utils.del_db_objects(
         session, models.UserLog, **filters
     )

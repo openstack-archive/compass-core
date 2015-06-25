@@ -42,6 +42,7 @@ flags.add('log_format',
 flags.add('log_backup_count', type='int',
           help='log backup count', default=setting.DEFAULT_LOGBACKUPCOUNT)
 
+
 # mapping str setting in flag --loglevel to logging level.
 LOGLEVEL_MAPPING = {
     'finest': logging.DEBUG - 2,  # more detailed log.
@@ -53,11 +54,18 @@ LOGLEVEL_MAPPING = {
     'critical': logging.CRITICAL,
 }
 
+
 logging.addLevelName(LOGLEVEL_MAPPING['fine'], 'fine')
 logging.addLevelName(LOGLEVEL_MAPPING['finest'], 'finest')
 
+
 # disable logging when logsetting.init not called
 logging.getLogger().setLevel(logging.CRITICAL)
+
+
+def getLevelByName(level_name):
+    """Get log level by level name."""
+    return LOGLEVEL_MAPPING[level_name]
 
 
 def init():

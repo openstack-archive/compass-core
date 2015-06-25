@@ -24,6 +24,15 @@ from compass.hdsdiscovery.hdmanager import HDManager
 
 
 def _poll_switch(ip_addr, credentials, req_obj='mac', oper="SCAN"):
+    """Poll switch by ip addr.
+
+
+    Args:
+       ip_addr: ip addr of the switch.
+       credentials: credentials of the switch.
+
+    Returns: switch attributes dict and list of machine attributes dict.
+    """
     under_monitoring = 'under_monitoring'
     unreachable = 'unreachable'
     polling_error = 'error'
@@ -124,6 +133,12 @@ def poll_switch(poller_email, ip_addr, credentials,
                 'failed to acquire lock to poll switch %s' % ip_addr
             )
 
+        # TODO(grace): before repoll the switch, set the state to repolling.
+        # and when the poll switch is timeout, set the state to error.
+        # the frontend should only consider some main state like INTIALIZED,
+        # ERROR and SUCCESSFUL, REPOLLING is as an intermediate state to
+        # indicate the switch is in learning the mac of the machines connected
+        # to it.
         logging.debug('poll switch: %s', ip_addr)
         switch_dict, machine_dicts = _poll_switch(
             ip_addr, credentials, req_obj=req_obj, oper=oper

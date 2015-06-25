@@ -17,6 +17,7 @@ import traceback
 
 
 class DatabaseException(Exception):
+    """Base class for all database exceptions."""
     def __init__(self, message):
         super(DatabaseException, self).__init__(message)
         self.traceback = traceback.format_exc()

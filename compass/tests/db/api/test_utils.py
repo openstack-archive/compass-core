@@ -32,6 +32,16 @@ from compass.db import models
 from compass.utils import flags
 from compass.utils import logsetting
 
+from compass.db.api import adapter_holder as adapter
+from compass.db.api import cluster
+from compass.db.api import host
+from compass.db.api import machine
+from compass.db.api import metadata as metadata_api
+from compass.db.api import metadata_holder as metadata
+from compass.db.api import network
+from compass.db.api import switch
+from compass.db.api import user as user_api
+
 
 class TestModelQuery(unittest2.TestCase):
     """Test model query."""
@@ -663,6 +673,240 @@ class TestCheckMac(unittest2.TestCase):
             utils.check_mac,
             mac
         )
+
+
+class TestExport(unittest2.TestCase):
+    def setUp(self):
+        super(TestExport, self).setUp()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
+        database.init('sqlite://')
+        database.create_db()
+        adapter.load_adapters()
+        metadata.load_metadatas()
+        self.user_object = (
+            user_api.get_user_object(
+                setting.COMPASS_ADMIN_EMAIL
+            )
+        )
+
+        self.adapter_id = None
+        self.os_id = None
+        self.flavor_id = None
+        self.cluster_id = None
+
+        # get adapter information
+        list_adapters = adapter.list_adapters(user=self.user_object)
+        for list_adapter in list_adapters:
+            for supported_os in list_adapter['supported_oses']:
+                self.os_id = supported_os['os_id']
+                break
+            if list_adapter['flavors']:
+                details = list_adapter['flavors']
+                for detail in details:
+                    if detail['display_name'] == 'allinone':
+                        roles = detail['roles']
+                        for role in roles:
+                            self.adapter_id = role['adapter_id']
+                            self.flavor_id = role['flavor_id']
+                            break
+        cluster_names = ['test_cluster1', 'test_cluster2']
+        for cluster_name in cluster_names:
+            cluster.add_cluster(
+                user=self.user_object,
+                adapter_id=self.adapter_id,
+                os_id=self.os_id,
+                flavor_id=self.flavor_id,
+                name=cluster_name
+            )
+        clusters = cluster.list_clusters(user=self.user_object)
+        self.roles = None
+        for list_cluster in clusters:
+            for item in list_cluster['flavor']['roles']:
+                self.roles = item
+            if list_cluster['name'] == 'test_cluster1':
+                self.cluster_id = list_cluster['id']
+                break
+        switch.add_switch(
+            user=self.user_object,
+            ip='172.29.8.40'
+        )
+        switches = switch.list_switches(user=self.user_object)
+        self.switch_id = None
+        for item in switches:
+            self.switch_id = item['id']
+        macs = ['28:6e:d4:46:c4:25', '00:0c:29:bf:eb:1d']
+        for mac in macs:
+            switch.add_switch_machine(
+                self.switch_id,
+                user=self.user_object,
+                mac=mac,
+                port='1'
+            )
+        # get machine information
+        machines = machine.list_machines(user=self.user_object)
+        self.machine_ids = []
+        for item in machines:
+            self.machine_ids.append(item['id'])
+        # add cluster host
+        name = ['newname1', 'newname2']
+        for i in range(0, 2):
+            cluster.add_cluster_host(
+                self.cluster_id,
+                user=self.user_object,
+                machine_id=self.machine_ids[i],
+                name=name[i]
+            )
+
+    def tearDown(self):
+        database.drop_db()
+        reload(setting)
+        super(TestExport, self).tearDown()
+
+    def test_export(self):
+        with database.session() as session:
+            results = utils.export_database(session)
+        expects = [
+            'test_cluster1',
+            'test_cluster2',
+            'newname1',
+            'newname2',
+            '28:6e:d4:46:c4:25',
+            '00:0c:29:bf:eb:1d',
+            '172.29.8.40',
+            'admin@huawei.com',
+        ]
+        result_list = []
+        for result in results:
+            for item in result:
+                result_list.append(item)
+        for expect in expects:
+            self.assertIn(expect, result_list)
+
+
+class TestImport(unittest2.TestCase):
+    """Test Import into database."""
+
+    def setUp(self):
+        super(TestImport, self).setUp()
+        reload(setting)
+        setting.CONFIG_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
+        database.init('sqlite://')
+        database.create_db()
+        adapter.load_adapters()
+        metadata.load_metadatas()
+        self.user_object = (
+            user_api.get_user_object(
+                setting.COMPASS_ADMIN_EMAIL
+            )
+        )
+
+    def tearDown(self):
+        super(TestImport, self).tearDown()
+
+    def test_impot(self):
+        import_data = {
+            'user': [{
+                'email': 'test@huawei.com',
+                'password': 'test',
+                'is_admin': True,
+                'active': True
+            }, {
+                'email': 'test1@huawei.com',
+                'password': 'test',
+                'is_admin': True,
+                'active': True
+            }],
+            'permission': [{
+                'name': 'test_permission',
+                'alias': 'test permission',
+                'description': 'test the permissions'
+            }],
+            'user_permission': [{
+                'user_permission.user.email': 'test@huawei.com',
+                'user_permission.permission.name': 'test_permission'
+            }],
+            'switch': [{
+                'ip': '192.168.1.1',
+                'credentials': {
+                    "version": "2c",
+                    "community": "public"
+                }
+            }],
+            'machine': [{
+                'mac': '00:0c:29:43:41:05'
+            }],
+            'switch_machine': [{
+                'switch_machine.switch.ip': '192.168.1.1',
+                'switch_machine.machine.mac': '00:0c:29:43:41:05',
+                'port': 1
+            }],
+            'subnet': [{
+                'name': 'test_subnet',
+                'subnet': '10.145.88.0/23'
+            }],
+            'cluster': [{
+                'name': 'test_cluster',
+                'reinstall_distributed_system': True,
+                'cluster.os.name': 'CentOS-6.5-x86_64',
+                'os_name': 'CentOS-6.5-x86_64',
+                'cluster.flavor.name': 'allinone',
+                'flavor_name': 'allinone',
+                'cluster.distributed_system.name': 'openstack',
+                'distributed_system_name': 'openstack',
+                'config_validated': False,
+                'cluster.adapter.name': 'openstack_icehouse',
+                'adapter_name': 'openstack_icehouse',
+                'cluster.creator.email': 'test@huawei.com',
+                'owner': 'test@huawei.com'
+            }],
+            'host': [{
+                'host.machine.mac': '00:0c:29:43:41:05',
+                'name': 'test_host',
+                'host.os.name': 'CentOS-6.5-x86_64',
+                'config_validated': False,
+                'os_name': 'CentOS-6.5-x86_64',
+                'host.creator.email': 'test@huawei.com',
+                'owner': 'test@huawei.com',
+                'host.os_installer.name': 'cobbler',
+                'reinstall_os': True
+            }],
+            'host_network': [{
+                'host_network.host.name': 'test_host',
+                'interface': 'eth0',
+                'host_network.subnet.subnet': '10.145.88.0/23',
+                'ip_int': '10.145.89.152'
+            }],
+            'clusterhost': [{
+                'roles': ["os-controller"],
+                'clusterhost.cluster.name': 'test_cluster',
+                'clusterhost.host.name': 'test_host'
+            }]
+        }
+        with database.session() as session:
+            result = utils.import_database(session, import_data)
+        self.assertEqual(result, 'Data has been import into database.')
+
+    def test_import_missing_tables(self):
+        import_data = {
+            'user': [{
+                'email': 'test@huawei.com',
+                'password': 'test'
+            }]
+        }
+        with database.session() as session:
+            self.assertRaises(
+                exception.DatabaseException,
+                utils.import_database,
+                session,
+                import_data
+            )
 
 
 if __name__ == '__main__':

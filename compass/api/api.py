@@ -15,17 +15,20 @@
 
 """Define all the RestfulAPI entry points."""
 
+import csv
 import datetime
 import functools
 import logging
 import netaddr
 import requests
 import simplejson as json
+import StringIO
 
 from flask.ext.login import current_user
 from flask.ext.login import login_required
 from flask.ext.login import login_user
 from flask.ext.login import logout_user
+from flask import make_response
 from flask import request
 
 from compass.api import app
@@ -2731,6 +2734,41 @@ def proxy_delete(url):
     )
     return utils.make_json_response(
         response.status_code, _get_response_json(response)
+    )
+
+
+@app.route("/export/")
+@app.route("/export/<table_name>")
+@log_user_action
+@login_required
+@update_user_token
+def export_db(table_name=None):
+    """Export database as csv file."""
+    logging.info('export cvs here, table name is %s.', table_name)
+    csvList = user_api.export_database(table_name, user=current_user)
+    si = StringIO.StringIO()
+    cw = csv.writer(si)
+    cw.writerows(csvList)
+    output = make_response(si.getvalue())
+    output.headers['Content-Disposition'] = (
+        'attachment; filename %s.csv' % table_name
+    )
+    output.headers['Content-type'] = 'text/csv'
+    return output
+
+
+@app.route("/import", methods=['POST'])
+@log_user_action
+@login_required
+@update_user_token
+def import_db():
+    """Import a csv file into database."""
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        user_api.import_database(
+            data, user=current_user
+        )
     )
 
 

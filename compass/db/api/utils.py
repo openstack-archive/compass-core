@@ -803,3 +803,260 @@ def check_switch_credentials(credentials):
                 'function %s is not defined',
                 key_check_func_name
             )
+
+
+def export_database(session, table=None):
+    """Export user related tables to csv."""
+
+    def _get_attribute(object, attribute_list, result):
+            if len(attribute_list) == 1:
+                return result.append(getattr(object, attribute_list[0]))
+            else:
+                for item in attribute_list:
+                    sub_object = getattr(object, item)
+                    attribute_list.pop(0)
+                    _get_attribute(sub_object, attribute_list, result)
+
+    if table is not None:
+        logging.info('get info from table %s', table)
+        rm_column = ['created_at', 'updated_at', 'id']
+        header = []
+        if table.__tablename__ is not 'host':
+            headers = []
+            for column in table.__mapper__.columns:
+                if column.name not in rm_column:
+                    headers.append(column.name)
+            header.append(headers)
+        else:
+            headers = []
+            for column in table.__mapper__.columns:
+                if column.name not in ['created_at', 'updated_at']:
+                    headers.append(column.name)
+            header.append(headers)
+        if hasattr(table, 'foreign_table_keys'):
+            for i in range(len(header[0])):
+                for key, value in table.foreign_table_keys.items():
+                    if header[0][i] == key:
+                        header[0][i] = value
+
+        data = []
+        records = list_db_objects(session, table)
+        for record in records:
+            data_line = []
+            for table_header in header[0]:
+                if '.' in table_header:
+                    object_names = table_header.split('.')
+                    object_names.pop(0)
+                    _get_attribute(record, object_names, data_line)
+                else:
+                    data_line.append(getattr(record, table_header))
+            data.append(data_line)
+        export_datas = header + data
+        logging.info('final export data: %s', export_datas)
+        return export_datas
+
+    else:
+        all_tables = []
+        export_datas = []
+        for table in dir(models):
+            table_object = getattr(models, table)
+            if hasattr(table_object, 'able_to_export') and (
+                table_object.able_to_export is True
+            ):
+                all_tables.append(table_object)
+        for table in all_tables:
+            table_name = [[table.__table__.name]]
+            rm_column = ['created_at', 'updated_at', 'id']
+            header = []
+            if table.__tablename__ is not 'host':
+                headers = []
+                for column in table.__mapper__.columns:
+                    if column.name not in rm_column:
+                        headers.append(column.name)
+                header.append(headers)
+            else:
+                headers = []
+                for column in table.__mapper__.columns:
+                    if column.name not in rm_column:
+                        headers.append(column.name)
+                header.append(headers)
+            if hasattr(table, 'foreign_table_keys'):
+                for i in range(len(header[0])):
+                    for key, value in table.foreign_table_keys.items():
+                        if header[0][i] == key:
+                            header[0][i] = value
+            data = []
+            records = list_db_objects(session, table)
+            for record in records:
+                data_line = []
+                for table_header in header[0]:
+                    if '.' in table_header:
+                        object_names = table_header.split('.')
+                        object_names.pop(0)
+                        _get_attribute(record, object_names, data_line)
+                    else:
+                        data_line.append(getattr(record, table_header))
+                data.append(data_line)
+            export_datas += [[]] + table_name + header + data
+        logging.info('final export data None: %s', export_datas)
+        return export_datas
+
+
+def import_database(session, import_data):
+    logging.info('import_data: %s', import_data)
+    desire_table = []
+    foreign_tables = []
+    foreign_objects = []
+    second_tables = ['clusterhost', 'host_network']
+    second_objects = [models.ClusterHost, models.HostNetwork]
+    for table in dir(models):
+        table_object = getattr(models, table)
+        if hasattr(table_object, 'able_to_export') and (
+            table_object.able_to_export is True
+        ):
+            desire_table.append(table_object.__table__.name)
+        if hasattr(table_object, 'foreign_table_keys'):
+            foreign_objects.append(table_object)
+            foreign_tables.append(table_object.__table__.name)
+    missing_table = set(desire_table) - set(import_data.keys())
+    if missing_table:
+        logging.error('missing tables: %s', missing_table)
+        raise exception.DatabaseException(
+            'missing tables %s' % missing_table
+        )
+    for raw_name, datas in import_data.items():
+        table_name = ''.join(name.capitalize() for name in raw_name.split('_'))
+        if raw_name not in foreign_tables:
+            if raw_name == 'switch':
+                for data in datas:
+                    for key, value in data.items():
+                        if key == 'ip':
+                            data['ip_int'] = value
+                            data.pop('ip')
+                            break
+            for data in datas:
+                table_obj = getattr(models, table_name)
+                logging.info('add %s to table %s', data, table_name)
+                db_object = table_obj(**data)
+                session.add(db_object)
+                session.flush()
+            import_data.pop(raw_name)
+
+    for raw_name, datas in import_data.items():
+        table_name = ''.join(name.capitalize() for name in raw_name.split('_'))
+        if raw_name in (set(foreign_tables) - set(second_tables)):
+            for foreign_object in foreign_objects:
+                foreign_keys = foreign_object.foreign_table_keys
+                for data in datas:
+                    for key, value in data.items():
+                        if '.' in key:
+                            foreign_data = key.split('.')
+                            foreign_data.pop(0)
+                            if foreign_data[0] == 'creator':
+                                user = get_db_object(
+                                    session,
+                                    models.User,
+                                    email=value
+                                )
+                                data['creator_id'] = user.id
+                                data.pop(key)
+                                break
+                            elif foreign_data[0] == 'switch':
+                                switch = get_db_object(
+                                    session,
+                                    models.Switch,
+                                    ip_int=value
+                                )
+                                data['switch_id'] = switch.id
+                                data.pop(key)
+                                break
+                            elif foreign_data[0] == 'machine':
+                                machine = get_db_object(
+                                    session,
+                                    models.Machine,
+                                    mac=value
+                                )
+                                for k, v in foreign_keys.items():
+                                    if v == key:
+                                        data[k] = machine.id
+                                        data.pop(key)
+                            elif foreign_data[0] == 'subnet':
+                                subnet = get_db_object(
+                                    session,
+                                    models.Subnet,
+                                    subnet=value
+                                )
+                                data['subnet_id'] = subnet.id
+                                data.pop(key)
+                                break
+                            else:
+                                model_name = ''.join(
+                                    name.capitalize() for name in (
+                                        foreign_data[0].split('_')
+                                    )
+                                )
+                                if model_name == 'Os':
+                                    model_name = 'OperatingSystem'
+                                elif model_name == 'Flavor':
+                                    model_name = 'AdapterFlavor'
+                                elif model_name == 'OsInstaller':
+                                    model_name = 'OSInstaller'
+                                object = get_db_object(
+                                    session,
+                                    getattr(models, model_name),
+                                    name=value
+                                )
+                                for k, v in foreign_keys.items():
+                                    if key == v:
+                                        data[k] = object.id
+                                        data.pop(key)
+            for data in datas:
+                table_obj = getattr(models, table_name)
+                logging.info('add %s to table %s', data, table_name)
+                db_object = table_obj(**data)
+                session.add(db_object)
+                session.flush()
+            import_data.pop(raw_name)
+
+    for raw_name, datas in import_data.items():
+        table_name = ''.join(name.capitalize() for name in raw_name.split('_'))
+        for second_object in second_objects:
+            foreign_keys = second_object.foreign_table_keys
+            for data in datas:
+                for key, value in data.items():
+                    if '.' in key:
+                        foreign_data = key.split('.')
+                        foreign_data.pop(0)
+                        if foreign_data[0] == 'subnet':
+                            subnet = get_db_object(
+                                session,
+                                models.Subnet,
+                                subnet=value
+                            )
+                            data['subnet_id'] = subnet.id
+                            data.pop(key)
+                        else:
+                            model_name = ''.join(
+                                name.capitalize() for name in (
+                                    foreign_data[0].split('_')
+                                )
+                            )
+                            object = get_db_object(
+                                session,
+                                getattr(models, model_name),
+                                name=value
+                            )
+                            for k, v in foreign_keys.items():
+                                if v == key:
+                                    data[k] = object.id
+                                    data.pop(key)
+        for data in datas:
+            if raw_name == 'clusterhost':
+                table_obj = models.ClusterHost
+            else:
+                table_obj = getattr(models, table_name)
+            logging.info('add %s to table %s', data, table_name)
+            db_object = table_obj(**data)
+            session.add(db_object)
+            session.flush()
+    return 'Data has been import into database.'

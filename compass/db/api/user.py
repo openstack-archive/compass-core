@@ -504,3 +504,27 @@ def update_permissions(
             **_get_permission_filters(set_permissions)
         )
     return user.user_permissions
+
+
+@check_user_admin()
+@database.run_in_session()
+def export_database(table_name=None, user=None, session=None, **kwargs):
+    """Export database."""
+    if table_name is not None:
+        table = ''.join(name.capitalize() for name in table_name.split('_'))
+        table_obj = getattr(models, table)
+    else:
+        table_obj = None
+    logging.info('export table object is %s', table_obj )
+    return utils.export_database(session, table_obj)
+
+
+@check_user_admin()
+@database.run_in_session()
+def import_database(import_data, user=None, session=None):
+    """Import database."""
+    logging.info('import_data: %s', import_data)
+    if import_data is None:
+        logging.debug('import data is empty.')
+    else:
+        return utils.import_database(session, import_data)

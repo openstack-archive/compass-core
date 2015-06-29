@@ -14,6 +14,7 @@
 
 """Database model"""
 import copy
+import csv
 import datetime
 import logging
 import netaddr
@@ -479,6 +480,11 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
     ip_int = Column(BigInteger, unique=True, nullable=False)
     is_mgmt = Column(Boolean, default=False)
     is_promiscuous = Column(Boolean, default=False)
+    able_to_export = True
+    foreign_table_keys = {
+        'host_id': 'host_network.host.name',
+        'subnet_id': 'host_network.subnet.subnet'
+    }
 
     __table_args__ = (
         UniqueConstraint('host_id', 'interface', name='constraint'),
@@ -559,6 +565,7 @@ class ClusterHostLogHistory(BASE, LogHistoryMixin):
         Integer,
         ForeignKey('host.id')
     )
+    able_to_export = False
 
     def __init__(self, clusterhost_id, filename, **kwargs):
         self.clusterhost_id = clusterhost_id
@@ -587,6 +594,7 @@ class HostLogHistory(BASE, LogHistoryMixin):
         ForeignKey('host.id', onupdate='CASCADE', ondelete='CASCADE'),
         primary_key=True)
     filename = Column(String(80), primary_key=True, nullable=False)
+    able_to_export = False
 
     def __init__(self, id, filename, **kwargs):
         self.id = id
@@ -609,6 +617,7 @@ class ClusterHostState(BASE, StateMixin):
         ),
         primary_key=True
     )
+    able_to_export = False
 
     def __str__(self):
         return 'ClusterHostState[%s state %s percentage %s]' % (
@@ -650,6 +659,11 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     package_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
     deployed_package_config = Column(JSONEncoded, default={})
+    able_to_export = True
+    foreign_table_keys = {
+        'cluster_id': 'clusterhost.cluster.name',
+        'host_id': 'clusterhost.host.name'
+    }
 
     log_history = relationship(
         ClusterHostLogHistory,
@@ -893,6 +907,7 @@ class HostState(BASE, StateMixin):
         ForeignKey('host.id', onupdate='CASCADE', ondelete='CASCADE'),
         primary_key=True
     )
+    able_to_export = False
 
     def __str__(self):
         return 'HostState[%s state %s percentage %s]' % (
@@ -939,6 +954,15 @@ class Host(BASE, TimestampMixin, HelperMixin):
     os_name = Column(String(80))
     creator_id = Column(Integer, ForeignKey('user.id'))
     owner = Column(String(80))
+
+    able_to_export = True
+    foreign_table_keys = {
+        'id': 'host.machine.mac',
+        'os_id': 'host.os.name',
+        'creator_id': 'host.creator.email',
+        'os_installer_id': 'host.os_installer.name'
+    }
+
     os_installer_id = Column(
         Integer,
         ForeignKey('os_installer.id')
@@ -1125,6 +1149,7 @@ class ClusterState(BASE, StateMixin):
         Integer,
         default=0
     )
+    able_to_export = False
 
     def __init__(self, **kwargs):
         super(ClusterState, self).__init__(**kwargs)
@@ -1235,6 +1260,16 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     adapter_name = Column(String(80))
     creator_id = Column(Integer, ForeignKey('user.id'))
     owner = Column(String(80))
+
+    able_to_export = True
+    foreign_table_keys = {
+        'creator_id': 'cluster.creator.email',
+        'adapter_id': 'cluster.adapter.name',
+        'distributed_system_id': 'cluster.distributed_system.name',
+        'os_id': 'cluster.os.name',
+        'flavor_id': 'cluster.flavor.name',
+    }
+
     clusterhosts = relationship(
         ClusterHost,
         passive_deletes=True, passive_updates=True,
@@ -1426,6 +1461,11 @@ class UserPermission(BASE, HelperMixin, TimestampMixin):
     __table_args__ = (
         UniqueConstraint('user_id', 'permission_id', name='constraint'),
     )
+    able_to_export = True
+    foreign_table_keys = {
+        'user_id': 'user_permission.user.email',
+        'permission_id': 'user_permission.permission.name'
+    }
 
     def __init__(self, user_id, permission_id, **kwargs):
         self.user_id = user_id
@@ -1458,6 +1498,7 @@ class Permission(BASE, HelperMixin, TimestampMixin):
         cascade='all, delete-orphan',
         backref=backref('permission')
     )
+    able_to_export = True
 
     def __init__(self, name, **kwargs):
         self.name = name
@@ -1478,6 +1519,7 @@ class UserToken(BASE, HelperMixin):
     )
     token = Column(String(256), unique=True, nullable=False)
     expire_timestamp = Column(DateTime, nullable=True)
+    able_to_export = False
 
     def __init__(self, token, **kwargs):
         self.token = token
@@ -1502,6 +1544,7 @@ class UserLog(BASE, HelperMixin):
     )
     action = Column(Text)
     timestamp = Column(DateTime, default=lambda: datetime.datetime.now())
+    able_to_export = False
 
     @hybrid_property
     def user_email(self):
@@ -1526,6 +1569,8 @@ class User(BASE, HelperMixin, TimestampMixin):
     lastname = Column(String(80))
     is_admin = Column(Boolean, default=False)
     active = Column(Boolean, default=True)
+    able_to_export = True
+
     user_permissions = relationship(
         UserPermission,
         passive_deletes=True, passive_updates=True,
@@ -1608,6 +1653,12 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
     )
     port = Column(String(80), nullable=True)
     vlans = Column(JSONEncoded, default=[])
+    able_to_export = True
+    foreign_table_keys = {
+        'switch_id': 'switch_machine.switch.ip',
+        'machine_id': 'switch_machine.machine.mac'
+    }
+
     __table_args__ = (
         UniqueConstraint('switch_id', 'machine_id', name='constraint'),
     )
@@ -1752,6 +1803,7 @@ class Machine(BASE, HelperMixin, TimestampMixin):
     ipmi_credentials = Column(JSONEncoded, default={})
     tag = Column(JSONEncoded, default={})
     location = Column(JSONEncoded, default={})
+    able_to_export = True
 
     switch_machines = relationship(
         SwitchMachine,
@@ -1847,6 +1899,8 @@ class Switch(BASE, HelperMixin, TimestampMixin):
                         name='switch_state'),
                    ColumnDefault('initialized'))
     _filters = Column('filters', JSONEncoded, default=[])
+    able_to_export = True
+
     switch_machines = relationship(
         SwitchMachine,
         passive_deletes=True, passive_updates=True,
@@ -2052,6 +2106,7 @@ class OSConfigMetadata(BASE, MetadataMixin):
             'os_config_field.id', onupdate='CASCADE', ondelete='CASCADE'
         )
     )
+    able_to_export = False
     children = relationship(
         'OSConfigMetadata',
         passive_deletes=True, passive_updates=True,
@@ -2083,6 +2138,7 @@ class OSConfigField(BASE, FieldMixin):
         passive_deletes=True, passive_updates=True,
         cascade='all, delete-orphan',
         backref=backref('field'))
+    able_to_export = False
 
     def __init__(self, field, **kwargs):
         self.field = field
@@ -2108,6 +2164,7 @@ class AdapterOS(BASE, HelperMixin):
             onupdate='CASCADE', ondelete='CASCADE'
         )
     )
+    able_to_export = False
 
     def __init__(self, os_id, adapter_id, **kwargs):
         self.os_id = os_id
@@ -2132,6 +2189,7 @@ class OperatingSystem(BASE, HelperMixin):
     )
     name = Column(String(80), unique=True, nullable=False)
     deployable = Column(Boolean, default=False)
+    able_to_export = False
 
     metadatas = relationship(
         OSConfigMetadata,
@@ -2213,6 +2271,7 @@ class AdapterFlavorRole(BASE, HelperMixin):
         ),
         primary_key=True
     )
+    able_to_export = False
 
     def __init__(self, flavor_id, role_id):
         self.flavor_id = flavor_id
@@ -2268,6 +2327,7 @@ class FlavorConfigMetadata(BASE, MetadataMixin):
             onupdate='CASCADE', ondelete='CASCADE'
         )
     )
+    able_to_export = False
     children = relationship(
         'FlavorConfigMetadata',
         passive_deletes=True, passive_updates=True,
@@ -2298,6 +2358,7 @@ class FlavorConfigField(BASE, FieldMixin):
 
     __tablename__ = "flavor_config_field"
 
+    able_to_export = False
     metadatas = relationship(
         FlavorConfigMetadata,
         passive_deletes=True, passive_updates=True,
@@ -2326,6 +2387,7 @@ class AdapterFlavor(BASE, HelperMixin):
     _ordered_flavor_roles = Column(
         'ordered_flavor_roles', JSONEncoded, default=[]
     )
+    able_to_export = False
 
     flavor_roles = relationship(
         AdapterFlavorRole,
@@ -2434,6 +2496,7 @@ class AdapterRole(BASE, HelperMixin):
             ondelete='CASCADE'
         )
     )
+    able_to_export = False
 
     flavor_roles = relationship(
         AdapterFlavorRole,
@@ -2488,6 +2551,8 @@ class PackageConfigMetadata(BASE, MetadataMixin):
             onupdate='CASCADE', ondelete='CASCADE'
         )
     )
+    able_to_export = False
+
     children = relationship(
         'PackageConfigMetadata',
         passive_deletes=True, passive_updates=True,
@@ -2517,6 +2582,7 @@ class PackageConfigField(BASE, FieldMixin):
     """Adapter cofig metadata fields."""
     __tablename__ = "package_config_field"
 
+    able_to_export = False
     metadatas = relationship(
         PackageConfigMetadata,
         passive_deletes=True, passive_updates=True,
@@ -2572,6 +2638,7 @@ class Adapter(BASE, HelperMixin):
     )
 
     health_check_cmd = Column(String(80))
+    able_to_export = False
 
     supported_oses = relationship(
         AdapterOS,
@@ -2745,6 +2812,7 @@ class DistributedSystem(BASE, HelperMixin):
     )
     name = Column(String(80), unique=True, nullable=False)
     deployable = Column(Boolean, default=False)
+    able_to_export = False
 
     adapters = relationship(
         Adapter,
@@ -2774,6 +2842,7 @@ class OSInstaller(BASE, InstallerMixin):
     """OS installer table."""
     __tablename__ = 'os_installer'
     id = Column(Integer, primary_key=True)
+    able_to_export = False
     adpaters = relationship(
         Adapter,
         passive_deletes=True, passive_updates=True,
@@ -2797,6 +2866,7 @@ class PackageInstaller(BASE, InstallerMixin):
     """package installer table."""
     __tablename__ = 'package_installer'
     id = Column(Integer, primary_key=True)
+    able_to_export = False
     adapters = relationship(
         Adapter,
         passive_deletes=True, passive_updates=True,
@@ -2819,6 +2889,7 @@ class Subnet(BASE, TimestampMixin, HelperMixin):
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=True)
     subnet = Column(String(80), unique=True, nullable=False)
+    able_to_export = True
 
     host_networks = relationship(
         HostNetwork,
@@ -2863,6 +2934,7 @@ class HealthCheckReport(BASE, HelperMixin):
         nullable=False
     )
     error_message = Column(Text, default='')
+    able_to_export = False
 
     def __init__(self, cluster_id, name, **kwargs):
         self.cluster_id = cluster_id

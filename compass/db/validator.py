@@ -183,6 +183,18 @@ def is_valid_size(name, size, **kwargs):
     return False
 
 
+def is_valid_neutron_config(name, config, **kwargs):
+    """Valid neutron config."""
+    if name == 'network_vlan_ranges' or name == 'bridge_mappings':
+        if re.match(r'^([0-9A-Za-z_-]+):(.[0-9a-zA-Z_-]+)*', config[0]):
+            return True
+    if name == 'tunnel_id_ranges':
+        if re.match(r'^([0-9_-]+):(.[0-9_-]+)*', config[0]):
+            return True
+    logging.debug('%s invalid neutron config %s', name, config[0])
+    return False
+
+
 VALIDATOR_GLOBALS = globals()
 VALIDATOR_LOCALS = locals()
 VALIDATOR_CONFIGS = util.load_configs(

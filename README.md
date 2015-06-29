@@ -14,7 +14,7 @@ tools (Cobbler, Chef, Ansible) and allows third-parties (vendors) plugins for ha
 
 ##Quick Guide to Developers
 
-### Get started with coding and contributing
+###Get started with coding and contributing
 
 ** Before everything, setup your environment:**
 
@@ -30,15 +30,15 @@ ii. Dedicatedly create a virtual environment for your development. You can use  
 
 _Note: the above assumes you use virtualenvwrapper to manage your virtualenv_
 
-** 1. Checkout source **
+**1. Checkout source**
 
     (compass-core-env)$git checkout https://github.com/stackforge/compass-core.git
 
-** 2. Run the tests making sure you are working on a clean and working code base**  (i.e., did someone else break the code)
+**2. Run the tests making sure you are working on a clean and working code base**  (i.e., did someone else break the code)
 
 ``` (compass-core-env)$tox -r ```
 
-** 3. Write your  change, and make sure test your code thoroughly** (otherwise, reviewers won't approve it)
+**3. Write your  change, and make sure test your code thoroughly** (otherwise, reviewers won't approve it)
 
 ``` (compass-core-env)$git branch -b [TOPIC]```
 
@@ -46,7 +46,7 @@ working, working, working on the [TOPIC] branch ...
 
 ``` (compass-core-env)$tox -r ``` (make sure your new code still works)
 
-** 4. Submit for review **
+**4. Submit for review**
 
 ```(compass-core-env)$git review ```
 

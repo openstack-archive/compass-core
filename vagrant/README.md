@@ -58,7 +58,7 @@ Currently customized service credentials are not supported(will be soon). Defaul
 
 ### Ansible code
 
-* All ansible-related code on github: [https://github.com/stackforge/compass-adatpers](https://github.com/stackforge/compass-adapters), switch to branch *dev/experimental* and ansible files are under /ansible directory
+* All ansible-related code on github: [https://github.com/stackforge/compass-adatpers](https://github.com/stackforge/compass-adapters).
 
 * On the Compass virtualbox, to access ansible playbooks, go to ```/var/ansible/openstack_juno```. To check/modify the ansible code on any existing environment, go to ```/var/ansible/run/{{ cluster_name }}```
 
@@ -70,6 +70,6 @@ To clean up an existing compass cluster, do ```sudo /opt/compass/bin/refresh.sh`
 
 To make sure refresh has cleaned up the ansible running directory, check if ```/var/ansible/run``` is empty
 
-### DO NOT:
+### NOTE:
 
-* Select adapters other than "OpenStack Juno"
+* To make sure the `box` file is at its minimum size, it only contains OpenStack Juno release related packages and ISOs. Selecting adapters other than "OpenStack Juno" will result in a failure deployment.

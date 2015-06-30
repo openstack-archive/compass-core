@@ -252,7 +252,28 @@ def get_ui_metadata(metadata, config):
                 if 'data' == key:
                     result_data = []
                     _get_data(metadata[config_key], value, result_data)
-                    data_dict['data'] = result_data
+                    if config_key == 'neutron_config':
+                        data_dict['data'] = [{
+                            'name': 'openvswitch',
+                            'content': result_data
+                        }]
+                    elif config_key == 'ceph_config':
+                        global_list = []
+                        osd_list = []
+                        for item in result_data:
+                            if item['name'] in ['op_threads', 'journal_size']:
+                                global_list.append(item)
+                            else:
+                                osd_list.append(item)
+                        data_dict['data'] = [{
+                            'name': 'global_config',
+                            'content': global_list
+                        }, {
+                            'name': 'osd_config',
+                            'content': osd_list
+                        }]
+                    else:
+                        data_dict['data'] = result_data
                 else:
                     data_dict[key] = value
         result_config[config['mapped_name']].append(data_dict)
@@ -280,6 +301,9 @@ def _get_data(metadata, config, result_data):
                         data_dict[item] = metadata['_self'][item]
         else:
             data_dict[key] = config_value
+        if key == 'openvswitch':
+            result_data = [{'name': key, 'content': result_data}]
+
     if data_dict:
         result_data.append(data_dict)
     return result_data

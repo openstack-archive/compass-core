@@ -96,6 +96,8 @@ working, working, working on the [TOPIC] branch ...
 
     * conf/ - configuration files related to newly supported target systems will be added here.
 
+Code Structure in Runtime:
+    ![alt text](./runtime_code_path.jpg "Modular Components")
 
 Quick Guide to Users
 --------------------

@@ -163,3 +163,5 @@ Quick Guide to Users
 
   * Where are the utility scripts for compass?
    They are at `/opt/compass/bin/`
+
+- (Xicheng)I am adding this line as a trigger to see if CI works, testing..sffsafdasdf

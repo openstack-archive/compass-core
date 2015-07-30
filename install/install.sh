@@ -82,21 +82,21 @@ fi
 
 sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
 
-### Add atomic repo
-sudo rpm -q atomic-release
+### Add remi repo
+sudo rpm -q remi-release
 if [ "$?" != "0" ]; then
-    sudo rpm -Uvh http://www6.atomicorp.com/channels/atomic/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/RPMS/atomic-release-1.0-19.${IMAGE_TYPE_OTHER}${IMAGE_VERSION_MAJOR}.art.noarch.rpm >& /dev/null
+    sudo rpm -Uvh $REMI >& /dev/null
     if [ "$?" != "0" ]; then
-        echo "failed to install atomic-release"
+        echo "failed to install remi-release"
         exit 1
     else
-        echo "successfully installed atomic-release"
+        echo "successfully installed remi-release"
     fi
 else
-    echo "atomic-release is already installed"
+    echo "remi-release is already installed"
 fi 
 
-sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/atomic.repo
+# sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/atomic.repo
 
 ### Trap any error code with related filename and line.
 errtrap()

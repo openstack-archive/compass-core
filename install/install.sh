@@ -85,7 +85,7 @@ sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
 ### Add atomic repo
 sudo rpm -q atomic-release
 if [ "$?" != "0" ]; then
-    sudo rpm -Uvh http://www6.atomicorp.com/channels/atomic/${IMAGE_TYPE,,}/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/RPMS/atomic-release-1.0-19.${IMAGE_TYPE_OTHER}${IMAGE_VERSION_MAJOR}.art.noarch.rpm >& /dev/null
+    sudo rpm -Uvh $ATOMIC >& /dev/null
     if [ "$?" != "0" ]; then
         echo "failed to install atomic-release"
         exit 1

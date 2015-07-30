@@ -10,6 +10,9 @@ export OS_INSTALLER=cobbler
 # PACKAGE_INSTALLER indicates the tool for Package provisioning, default is 'chef'.
 export PACKAGE_INSTALLER=chef
 
+# set atomic release
+export ATOMIC=https://s3-us-west-1.amazonaws.com/compass-local-repo/atomic-release-1.0-19.el6.art.noarch.rpm
+
 # service NIC (A bridge "installation" is used for jenkins CI)
 export NIC=installation
 

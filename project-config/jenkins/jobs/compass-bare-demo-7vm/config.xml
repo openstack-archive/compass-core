@@ -1,0 +1,99 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <logRotator class="hudson.tasks.LogRotator">
+    <daysToKeep>30</daysToKeep>
+    <numToKeep>-1</numToKeep>
+    <artifactDaysToKeep>-1</artifactDaysToKeep>
+    <artifactNumToKeep>-1</artifactNumToKeep>
+  </logRotator>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.ZMQEventPublisher.HudsonNotificationProperty plugin="zmq-event-publisher@0.0.3">
+      <enabled>false</enabled>
+    </org.jenkinsci.plugins.ZMQEventPublisher.HudsonNotificationProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>compass-demo</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>true</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>#!/bin/bash -x
+if [[ ! -e compass-core ]]; then
+    git clone http://git.openstack.org/stackforge/compass-core
+    cd compass-core
+    if [[ ! -z $GERRIT_REFSPEC ]]; then
+    git fetch https://review.openstack.org/stackforge/compass-core $GERRIT_REFSPEC &amp;&amp; git cherry-pick FETCH_HEAD
+    cd ..
+    fi
+else
+    cd compass-core
+    git remote set-url origin https://review.openstack.org/stackforge/compass-core
+    git remote update
+    git reset --hard
+    git clean -x -f -d -q
+    git checkout master
+    git reset --hard remotes/origin/master
+    git clean -x -f -d -q
+    if [[ ! -z $GERRIT_REFSPEC ]]; then
+    git fetch https://review.openstack.org/stackforge/compass-core $GERRIT_REFSPEC &amp;&amp; git cherry-pick FETCH_HEAD
+    fi
+    cd ..
+fi</command>
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command>#!/bin/bash -x
+cp compass-core/misc/ci/*.sh .
+export tempest=true
+./test-install.sh</command>
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command>source compass-core/install/install.conf.template
+compass check</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers>
+    <be.certipost.hudson.plugin.SCPRepositoryPublisher plugin="scp@1.9-SNAPSHOT">
+      <siteName>ci_log_server</siteName>
+      <entries>
+        <be.certipost.hudson.plugin.Entry>
+          <filePath>$JOB_NAME/$BUILD_ID</filePath>
+          <sourceFile></sourceFile>
+          <keepHierarchy>true</keepHierarchy>
+          <copyConsoleLog>true</copyConsoleLog>
+          <copyAfterFailure>true</copyAfterFailure>
+        </be.certipost.hudson.plugin.Entry>
+        <be.certipost.hudson.plugin.Entry>
+          <filePath>$JOB_NAME/$BUILD_ID</filePath>
+          <sourceFile>cobbler_logs/**</sourceFile>
+          <keepHierarchy>true</keepHierarchy>
+          <copyConsoleLog>false</copyConsoleLog>
+          <copyAfterFailure>true</copyAfterFailure>
+        </be.certipost.hudson.plugin.Entry>
+        <be.certipost.hudson.plugin.Entry>
+          <filePath>$JOB_NAME/$BUILD_ID</filePath>
+          <sourceFile>compass_logs/*.log</sourceFile>
+          <keepHierarchy>true</keepHierarchy>
+          <copyConsoleLog>false</copyConsoleLog>
+          <copyAfterFailure>true</copyAfterFailure>
+        </be.certipost.hudson.plugin.Entry>
+        <be.certipost.hudson.plugin.Entry>
+          <filePath>$JOB_NAME/$BUILD_ID</filePath>
+          <sourceFile>compass_logs/*.py</sourceFile>
+          <keepHierarchy>true</keepHierarchy>
+          <copyConsoleLog>false</copyConsoleLog>
+          <copyAfterFailure>true</copyAfterFailure>
+        </be.certipost.hudson.plugin.Entry>
+      </entries>
+    </be.certipost.hudson.plugin.SCPRepositoryPublisher>
+  </publishers>
+  <buildWrappers>
+    <hudson.plugins.timestamper.TimestamperBuildWrapper plugin="timestamper@1.3.2"/>
+  </buildWrappers>
+</project>

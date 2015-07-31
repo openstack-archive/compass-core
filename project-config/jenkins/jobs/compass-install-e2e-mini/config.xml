@@ -1,0 +1,121 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <logRotator class="hudson.tasks.LogRotator">
+    <daysToKeep>30</daysToKeep>
+    <numToKeep>-1</numToKeep>
+    <artifactDaysToKeep>-1</artifactDaysToKeep>
+    <artifactNumToKeep>-1</artifactNumToKeep>
+  </logRotator>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.ZMQEventPublisher.HudsonNotificationProperty plugin="zmq-event-publisher@0.0.3">
+      <enabled>false</enabled>
+    </org.jenkinsci.plugins.ZMQEventPublisher.HudsonNotificationProperty>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>OFFLINE_NODE_WHEN_COMPLETE</name>
+          <description></description>
+          <defaultValue>1</defaultValue>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>centos-install</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>true</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>#!/bin/bash -x
+if [[ ! -e compass-core ]]; then
+    git clone https://git.openstack.org/stackforge/compass-core
+else
+    cd compass-core
+    git remote set-url origin https://git.openstack.org/stackforge/compass-core
+    git remote update
+    git reset --hard
+    git clean -x -f -d -q
+    git checkout master
+    git reset --hard remotes/origin/master
+    git clean -x -f -d -q
+    cd ..
+fi
+cd compass-core
+if [[ ! -z $ZUUL_REF || ! -z $GERRIT_REFSPEC ]]; then
+    if [[ ! -z $ZUUL_REF ]]; then
+        git_repo=$ZUUL_URL/stackforge/compass-core
+        git_ref=$ZUUL_REF
+        git_branch=$ZUUL_BRANCH
+    elif [[ ! -z $GERRIT_REFSPEC ]]; then
+        git_repo=https://$GERRIT_HOST/stackforge/compass-core
+        git_ref=$GERRIT_REFSPEC
+        git_branch=$GERRIT_BRANCH
+    fi
+    git reset --hard remotes/origin/$git_branch
+    git fetch $git_repo $git_ref &amp;&amp; git checkout FETCH_HEAD
+    if [ $? -ne 0 ]; then
+        echo &quot;failed to git fetch $git_repo $git_ref or no ref for this project&quot;
+    fi
+    git clean -x -f
+fi</command>
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command>#!/bin/bash -x
+cp compass-core/misc/ci/*.sh .
+export tempest=true
+./test-install.sh</command>
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command>source compass-core/install/install.conf.template
+export USE_POLL_SWITCHES=false
+source compass-core/regtest/regtest_dashboard.conf
+export DEPLOYMENT_TIMEOUT=120
+/bin/bash compass-core/regtest/regtest.sh</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers>
+    <be.certipost.hudson.plugin.SCPRepositoryPublisher plugin="scp@1.9-SNAPSHOT">
+      <siteName>ci_log_server</siteName>
+      <entries>
+        <be.certipost.hudson.plugin.Entry>
+          <filePath>$LOG_PATH</filePath>
+          <sourceFile></sourceFile>
+          <keepHierarchy>true</keepHierarchy>
+          <copyConsoleLog>true</copyConsoleLog>
+          <copyAfterFailure>true</copyAfterFailure>
+        </be.certipost.hudson.plugin.Entry>
+        <be.certipost.hudson.plugin.Entry>
+          <filePath>$LOG_PATH</filePath>
+          <sourceFile>cobbler_logs/**</sourceFile>
+          <keepHierarchy>true</keepHierarchy>
+          <copyConsoleLog>false</copyConsoleLog>
+          <copyAfterFailure>true</copyAfterFailure>
+        </be.certipost.hudson.plugin.Entry>
+        <be.certipost.hudson.plugin.Entry>
+          <filePath>$LOG_PATH</filePath>
+          <sourceFile>compass_logs/*.log</sourceFile>
+          <keepHierarchy>true</keepHierarchy>
+          <copyConsoleLog>false</copyConsoleLog>
+          <copyAfterFailure>true</copyAfterFailure>
+        </be.certipost.hudson.plugin.Entry>
+        <be.certipost.hudson.plugin.Entry>
+          <filePath>$LOG_PATH</filePath>
+          <sourceFile>compass_logs/*.py</sourceFile>
+          <keepHierarchy>true</keepHierarchy>
+          <copyConsoleLog>false</copyConsoleLog>
+          <copyAfterFailure>true</copyAfterFailure>
+        </be.certipost.hudson.plugin.Entry>
+      </entries>
+    </be.certipost.hudson.plugin.SCPRepositoryPublisher>
+  </publishers>
+  <buildWrappers>
+    <hudson.plugins.timestamper.TimestamperBuildWrapper plugin="timestamper@1.3.2"/>
+  </buildWrappers>
+</project>

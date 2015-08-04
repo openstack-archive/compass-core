@@ -177,19 +177,21 @@ def validate_flavor_config(
 ):
     """Validate flavor config."""
     load_metadatas()
-    if flavor_id not in FLAVOR_METADATA_MAPPING:
+    if not flavor_id:
+        logging.info('There is no flavor, skipping flavor validation...')
+    elif flavor_id not in FLAVOR_METADATA_MAPPING:
         raise exception.InvalidParameter(
             'flavor %s is not found in flavor metedata mapping' % flavor_id
         )
-    _validate_config(
-        '', config, FLAVOR_METADATA_MAPPING[flavor_id],
-        whole_check, **kwargs
-    )
+    else:
+        _validate_config(
+            '', config, FLAVOR_METADATA_MAPPING[flavor_id],
+            whole_check, **kwargs
+        )
 
 
 def _filter_metadata(metadata, **kwargs):
     """Filter metadata before return it to api.
-
 
     Some metadata fields are not json compatible or
     only used in db/api internally.
@@ -251,11 +253,14 @@ def get_package_metadata(adapter_id, user=None, session=None, **kwargs):
 def _get_flavor_metadata(flavor_id):
     """get flavor metadata."""
     load_metadatas()
-    if flavor_id not in FLAVOR_METADATA_MAPPING:
+    if not flavor_id:
+        logging.info('There is no flavor id, skipping...')
+    elif flavor_id not in FLAVOR_METADATA_MAPPING:
         raise exception.RecordNotExists(
             'flavor %s does not exist' % flavor_id
         )
-    return _filter_metadata(FLAVOR_METADATA_MAPPING[flavor_id])
+    else:
+        return _filter_metadata(FLAVOR_METADATA_MAPPING[flavor_id])
 
 
 @utils.supported_filters([])
@@ -714,11 +719,13 @@ def autofill_flavor_config(
     config, flavor_id, **kwargs
 ):
     load_metadatas()
-    if flavor_id not in FLAVOR_METADATA_MAPPING:
+    if not flavor_id:
+        logging.info('There is no flavor, skipping...')
+    elif flavor_id not in FLAVOR_METADATA_MAPPING:
         raise exception.InvalidParameter(
             'flavor %s is not found in flavor metadata mapping' % flavor_id
         )
-
-    return _autofill_config(
-        '', config, FLAVOR_METADATA_MAPPING[flavor_id], **kwargs
-    )
+    else:
+        return _autofill_config(
+            '', config, FLAVOR_METADATA_MAPPING[flavor_id], **kwargs
+        )

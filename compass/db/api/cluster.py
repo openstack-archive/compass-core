@@ -1597,8 +1597,9 @@ def update_cluster_hosts(
         _set_clusterhosts(
             cluster, session=session, user=user, **set_hosts
         )
+
     return {
-        'hosts': cluster.clusterhosts
+        'hosts': list_cluster_hosts(cluster_id, session=session)
     }
 
 

@@ -104,7 +104,7 @@ Quick Guide to Users
 
 ### Install Compass from source?
 
- 1. Run `git clone -b dev/exeperimental git://git.openstack.org/stackforge/compass-core.git`
+ 1. Run `git clone git://git.openstack.org/stackforge/compass-core.git`
  2. Run `cd compass` to the Compass project directory.
  3. Run `./install/install.sh` to setup compass environment. Please note that before you execute `install.sh`, you may setup your environment variables in `install/install.conf`, explanations and examples of those variables can be found in `install.conf`.
  4. Run `./bin/refresh.sh` to initialize database.

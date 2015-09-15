@@ -357,7 +357,7 @@ echo "Install the OS Installer Tool"
 source ${COMPASSDIR}/install/$OS_INSTALLER.sh || exit $?
 
 echo "Install the Package Installer Tool"
-source ${COMPASSDIR}/install/chef.sh || exit $?
+# source ${COMPASSDIR}/install/chef.sh || exit $?
 source ${COMPASSDIR}/install/ansible.sh || exit $?
 
 echo "Download and install Compass Web"

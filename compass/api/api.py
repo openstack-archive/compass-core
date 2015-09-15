@@ -392,6 +392,7 @@ def _login(use_cookie):
         datetime.datetime.now() + app.config['REMEMBER_COOKIE_DURATION']
     )
     data['expire_timestamp'] = expire_timestamp
+    #print user, " ********************"
     user = auth_handler.authenticate_user(**data)
     if not login_user(user, remember=data.get('remember', False)):
         raise exception_handler.UserDisabled('failed to login: %s' % user)

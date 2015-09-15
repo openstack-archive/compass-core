@@ -268,8 +268,8 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
 fi
 
 # download chef related packages
-download -u "$CHEF_SRV" -u "$CHEF_SRV_HUAWEI" || exit $?
-download -u "$CHEF_CLIENT" -u "$CHEF_CLIENT_HUAWEI" || exit $?
+# download -u "$CHEF_SRV" -u "$CHEF_SRV_HUAWEI" || exit $?
+# download -u "$CHEF_CLIENT" -u "$CHEF_CLIENT_HUAWEI" || exit $?
 
 # download os images
 if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then

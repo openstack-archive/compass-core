@@ -107,6 +107,7 @@ fi
 echo "update mysqld"
 mkdir -p /var/log/mysql
 chmod -R 777 /var/log/mysql
+sleep 10
 sudo service mysqld restart
 sudo sleep 10
 sudo service mysqld status
@@ -302,13 +303,6 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
     download -u "$SLES_11SP3_IMAGE_SOURCE" -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" sles-11sp3-x86_64.iso || exit $?
 fi
 
-if [[ $SUPPORT_UVP_11SP3 == "y" ]]; then
-    echo "download sles11sp3 image"
-    download -u "$SLES_11SP3_IMAGE_SOURCE" -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" sles-11sp3-x86_64.iso || exit $?
-    echo "download uvp image"
-    download -u "$UVP_11SP3_IMAGE_SOURCE" -u "$UVP_11SP3_IMAGE_SOURCE_ASIA" uvp-os-11sp3-x86_64.tar.gz || exit $?
-fi
-
 # download local repo
 if [[ $LOCAL_REPO == "y" ]]; then
     echo "download gem local repo"
@@ -338,10 +332,6 @@ if [[ $LOCAL_REPO == "y" ]]; then
     if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
 	echo "download sles11sp3 local repo"
 	download -u "${LOCAL_REPO_US}/sles/11sp3/sles_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/sles/11sp3/sles_repo.tar.gz" sles-11sp3-x86_64.tar.gz || exit $?
-    fi
-    if [[ $SUPPORT_UVP_11SP3 == "y" ]]; then
-	echo "download uvp11sp3 local repo"
-	download -u "${LOCAL_REPO_US}/uvp/11sp3/uvp_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/uvp/11sp3/uvp_repo.tar.gz" uvp-11sp3-x86_64.tar.gz || exit $?
     fi
 fi
 

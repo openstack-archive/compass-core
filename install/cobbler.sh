@@ -394,31 +394,7 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
     download -u "$SLES_11SP3_PPA_REPO_SOURCE" -u "$SLES_11SP3_PPA_REPO_SOURCE_ASIA" sles_11sp3_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
-if [[ $SUPPORT_UVP_11SP3 == "y" ]]; then
-    sudo mkdir -p /var/lib/cobbler/repo_mirror/sles_11sp3_ppa_repo
-    found_sles_11sp3_ppa_repo=0
-    for repo in $(cobbler repo list); do
-        if [ "$repo" == "sles_11sp3_ppa_repo" ]; then
-            found_sles_11sp3_ppa_repo=1
-        fi
-    done
-
-    if [ "$found_sles_11sp3_ppa_repo" == "0" ]; then
-        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/sles_11sp3_ppa_repo --name=sles_11sp3_ppa_repo --mirror-locally=Y --arch=x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add sles_11sp3_ppa_repo"
-            exit 1
-        else
-            echo "sles_11sp3_ppa_repo is added"
-        fi
-    else
-        echo "repo sles_11sp3_ppa_repo has already existed."
-    fi
-
-    download -u "$SLES_11SP3_PPA_REPO_SOURCE" -u "$SLES_11SP3_PPA_REPO_SOURCE_ASIA" sles_11sp3_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
-fi
-
-
+sudo cobbler repo remove --name Ubuntu-14.04-x86_64
 sudo cobbler reposync
 if [[ "$?" != "0" ]]; then
     echo "cobbler reposync failed"
@@ -525,24 +501,6 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
         echo "/mnt/sles-11sp3-x86_64 has already mounted"
     fi
 fi
-
-if [[ $SUPPORT_UVP_11SP3 == "y" ]]; then
-    download -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" -u "$SLES_11SP3_IMAGE_SOURCE" sles-11sp3-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
-    sudo mkdir -p /mnt/sles-11sp3-x86_64
-    if [ $(mount | grep -c "/mnt/sles-11sp3-x86_64") -eq 0 ]; then
-        sudo mount -o loop /var/lib/cobbler/iso/sles-11sp3-x86_64.iso /mnt/sles-11sp3-x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to mount image /mnt/sles-11sp3-x86_64"
-            exit 1
-        else
-            echo "/mnt/sles-11sp3-x86_64 is mounted"
-        fi
-    else
-        echo "/mnt/sles-11sp3-x86_64 has already mounted"
-    fi
-    download -u "$UVP_11SP3_IMAGE_SOURCE" -u "$UVP_11SP3_IMAGE_SOURCE_ASIA" uvp-os-11sp3-x86_64.tar.gz copy /var/www/cobbler/aux/uvp-11sp3-x86_64.tar.gz || exit $?
-fi
-
 
 # add distro
 if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
@@ -862,58 +820,6 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
             exit 1
         else
             echo "profile sles-11sp3-x86_64 is updated"
-        fi
-    fi
-fi
-
-if [[ $SUPPORT_UVP_11SP3 == "y" ]]; then
-    found_uvp_11sp3_distro=0
-    distro=$(cobbler distro find --name=uvp-11sp3-x86_64)
-    if [ "$distro" == "uvp-11sp3-x86_64" ]; then
-        found_uvp_11sp3_distro=1
-    fi
-
-    if [ "$found_uvp_11sp3_distro" == "0" ]; then
-        sudo cobbler import --path=/mnt/sles-11sp3-x86_64 --name=uvp-11sp3 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --breed=suse --os-version=sles11sp3
-        if [[ "$?" != "0" ]]; then
-            echo "failed to import /mnt/sles-11sp3-x86_64"
-            exit 1
-        else
-            echo "/mnt/sles-11sp3-x86_64 is imported" 
-        fi
-    else
-        echo "distro uvp-11sp3-x86_64 has already existed"
-        sudo cobbler distro edit --name=uvp-11sp3-x86_64 --arch=x86_64 --breed=suse --os-version=sles11sp3
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit distro uvp-11sp3-x86_64"
-            exit 1
-        else
-            echo "distro uvp-11sp3-x86_64 is updated"
-        fi
-    fi
-
-    uvp_11sp3_found_profile=0
-    profile=$(cobbler profile find --name=uvp-11sp3-x86_64)
-    if [ "$profile" == "uvp-11sp3-x86_64" ]; then
-        uvp_11sp3_found_profile=1
-    fi
-
-    if [ "$uvp_11sp3_found_profile" == "0" ]; then
-        sudo cobbler profile add --name=uvp-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=uvp-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64" --kopts-post="noexec=on nohz=off console=tty0 console=ttyS0,115200 hugepagesz=2M hpet=enable selinux=0 iommu=pt default_hugepagesz=2M intel_iommu=on pci=realloc crashkernel=192M@48M highres=on nmi_watchdog=1" --ksmeta="image_kernel_version=3.0.93-0.8 image_url=http://@@http_server@@/cblr/aux/uvp-11sp3-x86_64.tar.gz"
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add profile uvp-11sp3-x86_64"
-            exit 1
-        else
-            echo "profile uvp-11sp3-x86_64 is added"
-        fi
-    else
-        echo "profile sles-11sp3-x86_64 has already existed."
-        sudo cobbler profile edit --name=uvp-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=sles-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64" --kopts-post="noexec=on nohz=off console=tty0 console=ttyS0,115200 hugepagesz=2M hpet=enable selinux=0 iommu=pt default_hugepagesz=2M intel_iommu=on pci=realloc crashkernel=192M@48M highres=on nmi_watchdog=1" --ksmeta="image_kernel_version=3.0.93-0.8 image_url=http://@@http_server@@/cblr/aux/uvp-11sp3-x86_64.tar.gz"
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit profile uvp-11sp3-x86_64"
-            exit 1
-        else
-            echo "profile uvp-11sp3-x86_64 is updated"
         fi
     fi
 fi

@@ -217,15 +217,37 @@ def load_configs(
     env_globals={}, env_locals={}
 ):
     """Load configurations from config dir."""
+    """The config file could be in the config_dir or in plugins config_dir"""
+    """The plugins config_dir is formed as, for example /etc/compass/adapter"""
+    """Then the plugins config_dir is /etc/compass/plugins/xxx/adapter"""
+
     configs = []
+    config_files = []
     config_dir = str(config_dir)
-    if not os.path.exists(config_dir):
-        logging.error('path %s does not exist', config_dir)
-        return configs
-    for component in os.listdir(config_dir):
-        if not component.endswith(config_name_suffix):
-            continue
-        path = os.path.join(config_dir, component)
+
+    """search for config_dir"""
+    if os.path.exists(config_dir):
+        for component in os.listdir(config_dir):
+            if not component.endswith(config_name_suffix):
+                continue
+            config_files.append(os.path.join(config_dir, component))
+
+    """search for plugins config_dir"""
+    index = config_dir.rfind("/")
+    plugins_path = os.path.join(config_dir[0:index], "plugins")
+    if os.path.exists(plugins_path):
+        for plugin in os.listdir(plugins_path):
+            plugin_path = os.path.join(plugins_path, plugin)
+            plugin_config = os.path.join(plugin_path, config_dir[index + 1:])
+            if os.path.exists(plugin_config):
+                for component in os.listdir(plugin_config):
+                    if not component.endswith(config_name_suffix):
+                        continue
+                    config_files.append(os.path.join(plugin_config, component))
+
+    if not config_files:
+        logging.error('path %s and plugins does not exist', config_dir)
+    for path in config_files:
         logging.debug('load config from %s', path)
         config_globals = {}
         config_globals.update(env_globals)

@@ -16,7 +16,7 @@ else
     dhclient -r installation
     dhclient installation
 fi
-git clone http://git.openstack.org/stackforge/compass-core -b dev/experimental ||exit $?
+git clone http://git.openstack.org/openstack/compass-core -b dev/experimental ||exit $?
 cd compass-core
 source install/install.conf.template
 source install/install.conf

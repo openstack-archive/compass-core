@@ -99,7 +99,7 @@ jobs:
     voting: false
 
 projects:
-  - name: stackforge/compass-core
+  - name: openstack/compass-core
     check:
       - compass-demo
       - compass-bare-e2e-allin1
@@ -109,7 +109,7 @@ projects:
       - compass-bare-e2e-allin1-ubuntu
       - compass-bare-e2e-single-contoller-multi-compute-ubuntu
 
-  - name: stackforge/compass-adapters
+  - name: openstack/compass-adapters
     check:
       - compass-demo
       - compass-bare-e2e-allin1

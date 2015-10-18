@@ -1,5 +1,5 @@
 #rm -rf compass-install
-#git clone http://git.openstack.org/stackforge/compass-install
+#git clone http://git.openstack.org/openstack/compass-install
 #cd compass-install
 
 function join { local IFS="$1"; shift; echo "$*"; }

@@ -42,8 +42,8 @@ export NAMESERVER_DOMAINS=ods.com
 export NAMESERVER_REVERSE_ZONES=unused
 
 # the repo url
-export WEB_SOURCE='http://git.openstack.org/stackforge'/compass-web
-export ADAPTERS_SOURCE='http://git.openstack.org/stackforge/compass-adapters'
+export WEB_SOURCE='http://git.openstack.org/openstack'/compass-web
+export ADAPTERS_SOURCE='http://git.openstack.org/openstack/compass-adapters'
 # set the default cobbler user "cobbler" password, if not set, the default will be cobbler/cobbler
 export CBLR_USER=cobbler
 export CBLR_PASSWD=cobbler

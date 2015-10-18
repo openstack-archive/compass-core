@@ -1,5 +1,5 @@
 #dockerized: True
-compass_adapter_source: http://git.openstack.org/stackforge/compass-adapters
+compass_adapter_source: http://git.openstack.org/openstack/compass-adapters
 compass_adapter_version: dev/experimental
 epel_file_name: epel-release-6-8.noarch.rpm
 epel_base_url: http://download.fedoraproject.org/pub/epel/6/x86_64/

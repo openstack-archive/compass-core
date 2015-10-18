@@ -36,7 +36,7 @@
 if [[ -e compass-core ]]; then
     rm -rf compass-core
 fi
-git clone https://git.openstack.org/stackforge/compass-core -b $ZUUL_BRANCH
+git clone https://git.openstack.org/openstack/compass-core -b $ZUUL_BRANCH
 cd compass-core
 if [[ -z $ZUUL_PROJECT ]]; then
     echo "ZUUL_PROJECT is not set"
@@ -44,10 +44,10 @@ elif [[ -z $ZUUL_BRANCH ]]; then
     echo "ZUUL_BRANCH is not set"
 elif [[ -z $ZUUL_REF ]]; then
     echo "ZUUL_REF is not set"
-elif [[ "$ZUUL_PROJECT" != "stackforge/compass-core" ]]; then
-    echo "$ZUUL_PROJECT is not stackforge/compass-core"
+elif [[ "$ZUUL_PROJECT" != "openstack/compass-core" ]]; then
+    echo "$ZUUL_PROJECT is not openstack/compass-core"
 else
-    git_repo=$ZUUL_URL/stackforge/compass-core
+    git_repo=$ZUUL_URL/openstack/compass-core
     git_ref=$ZUUL_REF
     git_branch=$ZUUL_BRANCH
     git reset --hard remotes/origin/$git_branch

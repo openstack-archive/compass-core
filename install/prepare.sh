@@ -165,13 +165,13 @@ if [ -z $WEB_SOURCE ]; then
     echo "web source $WEB_SOURCE is not set"
     exit 1
 fi
-copy2dir "$WEB_SOURCE" "$WEB_HOME" "stackforge/compass-web" || exit $?
+copy2dir "$WEB_SOURCE" "$WEB_HOME" "openstack/compass-web" || exit $?
 
 if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "stackforge/compass-adapters" ${local_branch} || exit $?
+copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" "openstack/compass-adapters" ${local_branch} || exit $?
 
 if [ "$tempest" == "true" ]; then
     echo "download tempest packages"

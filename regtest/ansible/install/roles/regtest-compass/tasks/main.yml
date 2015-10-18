@@ -15,7 +15,7 @@
   pip: name=virtualenv
 
 - name: cloning compass-core
-  git: repo=http://git.openstack.org/stackforge/compass-core.git
+  git: repo=http://git.openstack.org/openstack/compass-core.git
        dest={{ COMPASS_PATH }}
        version=dev/experimental
 

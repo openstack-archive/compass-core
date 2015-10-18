@@ -26,15 +26,15 @@
     <hudson.tasks.Shell>
       <command>#!/bin/bash -x
 if [[ ! -e compass-core ]]; then
-    git clone http://git.openstack.org/stackforge/compass-core
+    git clone http://git.openstack.org/openstack/compass-core
     cd compass-core
     if [[ ! -z $GERRIT_REFSPEC ]]; then
-    git fetch https://review.openstack.org/stackforge/compass-core $GERRIT_REFSPEC &amp;&amp; git cherry-pick FETCH_HEAD
+    git fetch https://review.openstack.org/openstack/compass-core $GERRIT_REFSPEC &amp;&amp; git cherry-pick FETCH_HEAD
     cd ..
     fi
 else
     cd compass-core
-    git remote set-url origin https://review.openstack.org/stackforge/compass-core
+    git remote set-url origin https://review.openstack.org/openstack/compass-core
     git remote update
     git reset --hard
     git clean -x -f -d -q
@@ -42,7 +42,7 @@ else
     git reset --hard remotes/origin/master
     git clean -x -f -d -q
     if [[ ! -z $GERRIT_REFSPEC ]]; then
-    git fetch https://review.openstack.org/stackforge/compass-core $GERRIT_REFSPEC &amp;&amp; git cherry-pick FETCH_HEAD
+    git fetch https://review.openstack.org/openstack/compass-core $GERRIT_REFSPEC &amp;&amp; git cherry-pick FETCH_HEAD
     fi
     cd ..
 fi</command>

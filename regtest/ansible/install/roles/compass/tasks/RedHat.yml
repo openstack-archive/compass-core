@@ -82,7 +82,7 @@
   pip: name=virtualenv
 
 - name: cloning compass-core
-  git: repo=http://git.openstack.org/stackforge/compass-core.git
+  git: repo=http://git.openstack.org/openstack/compass-core.git
        dest={{ COMPASS_PATH }}
        version=dev/experimental
        force=yes
@@ -212,7 +212,7 @@
     restart http service
 
 - name: clone compass web
-  git: repo=http://git.openstack.org/stackforge/compass-web.git
+  git: repo=http://git.openstack.org/openstack/compass-web.git
        dest=/opt/compass-web
        force=yes
 

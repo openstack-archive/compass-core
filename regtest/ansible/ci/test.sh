@@ -18,7 +18,7 @@ mv ${centos65_box_vb_filename} centos65.box
 vagrant mutate precise64.box libvirt
 vagrant mutate centos65.box libvirt
 sudo pip install ansible
-git clone http://git.openstack.org/stackforge/compass-install
+git clone http://git.openstack.org/openstack/compass-install
 cd compass-install
 
 function join { local IFS="$1"; shift; echo "$*"; }
@@ -82,7 +82,7 @@ if [[ -n $mac_array ]]
 fi
 
 rm -rf compass-core
-git clone http://git.openstack.org/stackforge/compass-core -b dev/experimental
+git clone http://git.openstack.org/openstack/compass-core -b dev/experimental
 cd compass-core
 virtualenv venv
 source venv/bin/activate

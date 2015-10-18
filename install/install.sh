@@ -326,8 +326,8 @@ fi
 
 loadvars NAMESERVER_DOMAINS "ods.com"
 loadvars NAMESERVER_REVERSE_ZONES "unused"
-loadvars WEB_SOURCE 'http://git.openstack.org/stackforge/compass-web'
-loadvars ADAPTERS_SOURCE 'http://git.openstack.org/stackforge/compass-adapters'
+loadvars WEB_SOURCE 'http://git.openstack.org/openstack/compass-web'
+loadvars ADAPTERS_SOURCE 'http://git.openstack.org/openstack/compass-adapters'
 
 echo "script dir: $SCRIPT_DIR"
 echo "compass dir is $COMPASSDIR"

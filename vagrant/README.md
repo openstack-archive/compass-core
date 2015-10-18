@@ -58,7 +58,7 @@ Currently customized service credentials are not supported(will be soon). Defaul
 
 ### Ansible code
 
-* All ansible-related code on github: [https://github.com/stackforge/compass-adatpers](https://github.com/stackforge/compass-adapters).
+* All ansible-related code on github: [https://github.com/openstack/compass-adatpers](https://github.com/openstack/compass-adapters).
 
 * On the Compass virtualbox, to access ansible playbooks, go to ```/var/ansible/openstack_juno```. To check/modify the ansible code on any existing environment, go to ```/var/ansible/run/{{ cluster_name }}```
 

@@ -38,10 +38,10 @@ if [[ -e compass-core ]]; then
     rm -rf compass-core
 fi
 if [[ ! -e compass-core ]]; then
-    git clone https://git.openstack.org/stackforge/compass-core -b $ZUUL_BRANCH
+    git clone https://git.openstack.org/openstack/compass-core -b $ZUUL_BRANCH
 else
     cd compass-core
-    git remote set-url origin https://git.openstack.org/stackforge/compass-core
+    git remote set-url origin https://git.openstack.org/openstack/compass-core
     git remote update
     git reset --hard
     git clean -x -f -d -q
@@ -53,11 +53,11 @@ fi
 cd compass-core
 if [[ ! -z $ZUUL_REF || ! -z $GERRIT_REFSPEC ]]; then
     if [[ ! -z $ZUUL_REF ]]; then
-        git_repo=$ZUUL_URL/stackforge/compass-core
+        git_repo=$ZUUL_URL/openstack/compass-core
         git_ref=$ZUUL_REF
         git_branch=$ZUUL_BRANCH
     elif [[ ! -z $GERRIT_REFSPEC ]]; then
-        git_repo=https://$GERRIT_HOST/stackforge/compass-core
+        git_repo=https://$GERRIT_HOST/openstack/compass-core
         git_ref=$GERRIT_REFSPEC
         git_branch=$GERRIT_BRANCH
     fi

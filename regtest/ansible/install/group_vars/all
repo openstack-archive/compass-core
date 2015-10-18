@@ -28,7 +28,7 @@ pkg_installer: ['ansible']
 epel_6: "https://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm"
 
 # compass adapters
-compass_adapters: "git://git.openstack.org/stackforge/compass-adapters.git"
+compass_adapters: "git://git.openstack.org/openstack/compass-adapters.git"
 
 ## cobbler
 # cidr for docker bridge: compass0

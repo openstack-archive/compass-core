@@ -72,7 +72,7 @@ setup(
                 system deployment on baremetal""",
     author='Compass Development Group',
     author_email='dev@syscompass.org',
-    url='https://github.com/stackforge/compass-core',
+    url='https://github.com/openstack/compass-core',
     download_url='',
 
     # dependency

@@ -98,7 +98,7 @@ MACHINE_LIST_DIR = ''
 PROGRESS_CALCULATOR_DIR = ''
 OS_MAPPING_DIR = ''
 FLAVOR_MAPPING_DIR = ''
-
+PLUGINS_DIR = ''
 
 if (
     'COMPASS_IGNORE_SETTING' in os.environ and
@@ -174,3 +174,6 @@ if not OS_MAPPING_DIR:
 
 if not FLAVOR_MAPPING_DIR:
     FLAVOR_MAPPING_DIR = os.path.join(CONFIG_DIR, 'flavor_mapping')
+
+if not PLUGINS_DIR:
+    PLUGINS_DIR = os.path.join(CONFIG_DIR, 'plugins')

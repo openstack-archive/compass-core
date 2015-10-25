@@ -37,6 +37,7 @@ class ChefInstaller(PKInstaller):
     ENV_TMPL_DIR = 'environments'
     NODE_TMPL_DIR = 'nodes'
     DATABAG_TMPL_DIR = 'databags'
+    TMPL_DIR = 'chef_installer/templates'
 
     # keywords in package installer settings of adapter info
     DATABAGS = "databags"
@@ -64,7 +65,7 @@ class ChefInstaller(PKInstaller):
     @classmethod
     def get_tmpl_path(cls, adapter_name):
         tmpl_path = os.path.join(
-            os.path.join(compass_setting.TMPL_DIR, 'chef_installer'),
+            os.path.join(compass_setting.PLUGINS_DIR, cls.TMPL_DIR),
             adapter_name
         )
         return tmpl_path

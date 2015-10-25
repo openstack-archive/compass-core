@@ -59,7 +59,8 @@ class TestChefInstaller(unittest2.TestCase):
 
         ChefInstaller.get_tmpl_path = Mock()
         test_tmpl_dir = os.path.join(
-            os.path.join(config_data.test_tmpl_dir, 'chef_installer'),
+            os.path.join(config_data.test_plugins_dir,
+                         'chef_installer/templates'),
             'openstack_icehouse'
         )
         ChefInstaller.get_tmpl_path.return_value = test_tmpl_dir

@@ -23,6 +23,7 @@ import logging
 import os
 import os.path
 import re
+import setting_wrapper as setting
 import sys
 import warnings
 
@@ -221,6 +222,10 @@ def load_configs(
     """The plugins config_dir is formed as, for example /etc/compass/adapter"""
     """Then the plugins config_dir is /etc/compass/plugins/xxx/adapter"""
 
+    # TODO(Carl) instead of using config_dir, it should use a name such as
+    # adapter etc, however, doing it requires a lot client sites changes,
+    # will do it later.
+
     configs = []
     config_files = []
     config_dir = str(config_dir)
@@ -234,7 +239,7 @@ def load_configs(
 
     """search for plugins config_dir"""
     index = config_dir.rfind("/")
-    plugins_path = os.path.join(config_dir[0:index], "plugins")
+    plugins_path = setting.PLUGINS_DIR
     if os.path.exists(plugins_path):
         for plugin in os.listdir(plugins_path):
             plugin_path = os.path.join(plugins_path, plugin)

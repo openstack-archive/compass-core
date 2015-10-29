@@ -25,6 +25,7 @@ import os
 import simplejson as json
 
 from compass.deployment.installers.config_manager import BaseConfigManager
+from compass.utils import setting_wrapper as compass_setting
 from compass.utils import util
 
 
@@ -272,6 +273,12 @@ class PKInstaller(BaseInstaller):
             return None
 
         path = os.path.join(cls.INSTALLER_BASE_DIR, name)
+        if not os.path.exists(path):
+            path = os.path.join(os.path.join(os.path.join(
+                compass_setting.PLUGINS_DIR, name), "implementation"), name)
+        if not os.path.exists(path):
+            logging.info("Installer '%s' is not existed!" % name)
+            return None
         installer = super(PKInstaller, cls).get_installer(name, path,
                                                           adapter_info,
                                                           cluster_info,

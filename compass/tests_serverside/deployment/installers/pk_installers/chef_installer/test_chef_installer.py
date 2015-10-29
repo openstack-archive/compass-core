@@ -33,8 +33,9 @@ reload(compass_setting)
 
 
 from compass.deployment.installers.config_manager import BaseConfigManager
-from compass.deployment.installers.pk_installers.chef_installer.chef_installer\
-    import ChefInstaller
+
+# TODO(Carl) move this test to plugins
+from plugins.chef_installer.implementation.chef_installer import ChefInstaller
 
 
 class TestChefInstaller(unittest2.TestCase):

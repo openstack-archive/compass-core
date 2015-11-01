@@ -209,6 +209,32 @@ class TestParseTimeInterval(unittest2.TestCase):
         super(TestParseTimeInterval, self).tearDown()
 
 
+class TestGetPluginsConfigFiles(unittest2.TestCase):
+    """Test get plugins config files."""
+
+    def setUp(self):
+        super(TestGetPluginsConfigFiles, self).setUp()
+        self.TEST_UTIL_HOME = os.path.dirname(os.path.realpath(__file__))
+
+    def tearDown(self):
+        super(TestGetPluginsConfigFiles, self).tearDown()
+
+    def test_get_plugins_config_files(self):
+        setting.PLUGINS_DIR = self.TEST_UTIL_HOME + '/data/plugins'
+        loaded = util.get_plugins_config_files(
+            'adapter'
+        )
+        expected = [
+            setting.PLUGINS_DIR + '/test_installer1/adapter/test.conf',
+            setting.PLUGINS_DIR + '/test_installer1/adapter/test1.conf',
+            setting.PLUGINS_DIR + '/test_installer2/adapter/test.conf',
+            setting.PLUGINS_DIR + '/test_installer2/adapter/test2.conf',
+        ]
+        loaded.sort()
+        expected.sort()
+        self.assertEqual(loaded, expected)
+
+
 class TestLoadConfigs(unittest2.TestCase):
     """Test load configs."""
 

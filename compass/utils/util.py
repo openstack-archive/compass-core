@@ -213,6 +213,24 @@ def parse_time_interval(time_interval_str):
         ) / 1e6
 
 
+def get_plugins_config_files(name, suffix=".conf"):
+    """walk through each of plugin to find all the config files in the"""
+    """name directory"""
+
+    plugins_path = setting.PLUGINS_DIR
+    files = []
+    if os.path.exists(plugins_path):
+        for plugin in os.listdir(plugins_path):
+            plugin_path = os.path.join(plugins_path, plugin)
+            plugin_config = os.path.join(plugin_path, name)
+            if os.path.exists(plugin_config):
+                for component in os.listdir(plugin_config):
+                    if not component.endswith(suffix):
+                        continue
+                    files.append(os.path.join(plugin_config, component))
+    return files
+
+
 def load_configs(
     config_dir, config_name_suffix='.conf',
     env_globals={}, env_locals={}
@@ -239,16 +257,9 @@ def load_configs(
 
     """search for plugins config_dir"""
     index = config_dir.rfind("/")
-    plugins_path = setting.PLUGINS_DIR
-    if os.path.exists(plugins_path):
-        for plugin in os.listdir(plugins_path):
-            plugin_path = os.path.join(plugins_path, plugin)
-            plugin_config = os.path.join(plugin_path, config_dir[index + 1:])
-            if os.path.exists(plugin_config):
-                for component in os.listdir(plugin_config):
-                    if not component.endswith(config_name_suffix):
-                        continue
-                    config_files.append(os.path.join(plugin_config, component))
+
+    config_files.extend(get_plugins_config_files(config_dir[index + 1:],
+                                                 config_name_suffix))
 
     if not config_files:
         logging.error('path %s and plugins does not exist', config_dir)

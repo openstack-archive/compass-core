@@ -27,17 +27,26 @@ import unittest2
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
 
-from compass.tests.deployment.test_data import config_data
+
 from compass.utils import setting_wrapper as compass_setting
 reload(compass_setting)
 
+import config_data
 
 from compass.deployment.installers.config_manager import BaseConfigManager
-
-# TODO(Carl) move this test to plugins
 from plugins.chef_installer.implementation.chef_installer import ChefInstaller
 
+"""It requires Chef server installed, in that case, this test can be run by
+removing skip annontation
+"""
 
+# For test chef server. please replace these config info with your own.
+TEST_CHEF_URL = "https://api.opscode.com/organizations/compasscheftest"
+TEST_CLIENT_KEY_PATH = "/etc/compass/client.pem"
+TEST_CLIENT_NAME = "graceyu"
+
+
+@unittest2.skip("showing class skipping")
 class TestChefInstaller(unittest2.TestCase):
     """Test installer functionality."""
     def setUp(self):
@@ -66,9 +75,9 @@ class TestChefInstaller(unittest2.TestCase):
 
     def _get_testchefapi(self):
         import chef
-        return chef.ChefAPI(config_data.test_chef_url,
-                            config_data.test_client_key,
-                            config_data.test_client)
+        return chef.ChefAPI(TEST_CHEF_URL,
+                            TEST_CLIENT_KEY_PATH,
+                            TEST_CLIENT_NAME)
 
     def _register(self, obj):
         self.objects.append(obj)
@@ -83,7 +92,7 @@ class TestChefInstaller(unittest2.TestCase):
 
         ChefInstaller.get_tmpl_path = Mock()
         test_tmpl_dir = os.path.join(os.path.join(config_data.test_plugins_dir,
-                                                  'chef_installer/templates'),
+                                                  'templates'),
                                      'openstack_icehouse')
         ChefInstaller.get_tmpl_path.return_value = test_tmpl_dir
 

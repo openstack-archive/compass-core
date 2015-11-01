@@ -176,4 +176,5 @@ if not FLAVOR_MAPPING_DIR:
     FLAVOR_MAPPING_DIR = os.path.join(CONFIG_DIR, 'flavor_mapping')
 
 if not PLUGINS_DIR:
-    PLUGINS_DIR = os.path.join(CONFIG_DIR, 'plugins')
+    PLUGINS_DIR = os.environ.get('COMPASS_PLUGINS_DIR',
+                                 os.path.join(CONFIG_DIR, 'plugins'))

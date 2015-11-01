@@ -24,6 +24,8 @@ reload(compass_setting)
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
 test_tmpl_dir = os.path.join(curr_dir, 'templates')
+test_plugins_dir = curr_dir
+
 
 adapter_test_config = {
     "name": "openstack_icehouse",

@@ -70,11 +70,6 @@ COMPASS_SUPPORTED_DOMAINS = []
 COMPASS_SUPPORTED_DEFAULT_GATEWAY = '127.0.0.1'
 COMPASS_SUPPORTED_LOCAL_REPO = 'http://127.0.0.1'
 
-# For test chef server. please replace these config info with your own.
-TEST_CHEF_URL = "https://api.opscode.com/organizations/compasscheftest"
-TEST_CLIENT_KEY_PATH = "/etc/compass/client.pem"
-TEST_CLIENT_NAME = "graceyu"
-
 PROGRESS_UPDATE_PID_FILE = '/var/run/progress_update.pid'
 
 PROXY_URL_PREFIX = 'http://10.145.81.205:5000'
@@ -176,4 +171,5 @@ if not FLAVOR_MAPPING_DIR:
     FLAVOR_MAPPING_DIR = os.path.join(CONFIG_DIR, 'flavor_mapping')
 
 if not PLUGINS_DIR:
-    PLUGINS_DIR = os.path.join(CONFIG_DIR, 'plugins')
+    PLUGINS_DIR = os.environ.get('COMPASS_PLUGINS_DIR',
+                                 os.path.join(CONFIG_DIR, 'plugins'))

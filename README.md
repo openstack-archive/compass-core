@@ -94,7 +94,9 @@ working, working, working on the [TOPIC] branch ...
 
     * misc/ - configuration files for Compass server setup
 
-    * conf/ - configuration files related to newly supported target systems will be added here.
+    * conf/ - legacy configuration files related to supported target systems are stored here.
+    
+    * plugins/ - new configuration files and/or package installers will be added here (see plugins/README.md)
 
 Code Structure in Runtime:
     ![alt text](./imgs/runtime_code_path.jpg "Modular Components")

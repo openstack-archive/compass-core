@@ -5,6 +5,27 @@
 exec > >(sudo tee install.log)
 exec 2>&1
 
+if [ "$(cat /etc/redhat-release | grep 7.)" ]
+then
+        echo "Pre-install some things in CentOS 7"
+
+	setenforce 0
+	yum install -y wget git
+
+	yum install -y epel-release
+	yum install -y atomic-release
+
+	#wget -q -O - http://www.atomicorp.com/installers/atomic | sh
+	yum repolist
+
+	yum install -y iptables-services
+	yum install -y http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
+	yum install -y net-tools ntpdate ntp httpd bind squid xinetd dhcp mysql-server mysql-devel
+	yum install -y rabbitmq-server
+	service rabbitmq-server start
+fi
+
+
 ### Creat a lock to avoid running multiple instances of script.
 LOCKFILE="/tmp/`basename $0`"
 LOCKFD=99
@@ -170,13 +191,14 @@ if [ $? -ne 0 ]; then
     echo "There is no nic '$NIC' yet"
     exit 1
 fi
-sudo ifconfig $NIC | grep 'inet addr:' >& /dev/null
+
+sudo ifconfig $NIC | grep 'inet ' >& /dev/null
 if [ $? -ne 0 ]; then
     echo "There is not any IP address assigned to the NIC '$NIC' yet, please assign an IP address first."
     exit 1
 fi
 
-export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+export ipaddr=$(ifconfig $NIC | grep 'inet ' | cut -d: -f2 | awk '{ print $1}')
 loadvars IPADDR ${ipaddr}
 ipcalc $IPADDR -c
 if [ $? -ne 0 ]; then

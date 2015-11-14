@@ -1,6 +1,12 @@
 #!/bin/bash
 #
 
+if [ "$(cat /etc/redhat-release | grep 7.)" ]
+then
+	echo "Disabled in CentOS 7"
+	exit
+fi
+
 echo "Installing chef"
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $DIR/install.conf

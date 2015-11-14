@@ -15,6 +15,16 @@ service redis status || exit $?
 redis-cli flushall
 service cobblerd restart
 service cobblerd status || exit $?
+
+if [ "$(cat /etc/redhat-release | grep 7.)" ]
+then
+	echo "Chef disabled in centos7"
+	sleep 5
+else
+	chef-server-ctl restart
+	sleep 10
+fi
+
 service compass-celeryd restart
 service compass-celeryd status || exit $?
 service compass-progress-updated restart

@@ -178,6 +178,9 @@ sudo killall -9 dnsmasq
 sudo service httpd restart
 sudo service cobblerd restart
 
+# VMs are slow
+sleep 10
+
 sudo cobbler get-loaders
 if [[ "$?" != "0" ]]; then
     echo "failed to get loaders for cobbler"
@@ -185,6 +188,9 @@ if [[ "$?" != "0" ]]; then
 else
     echo "cobbler loaders updated"
 fi
+
+# VMs are slow
+sleep 10
 
 sudo cobbler sync
 if [[ "$?" != "0" ]]; then

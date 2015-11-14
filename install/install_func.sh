@@ -83,34 +83,36 @@ copy2dir()
             fi
         fi
 	cd $destdir
-        if [[ -z $ZUUL_PROJECT ]]; then
-	    echo "ZUUL_PROJECT is not set"
-	elif [[ -z $ZUUL_BRANCH ]]; then
-	    echo "ZUUL_BRANCH is not set"
-        elif [[ -z $ZUUL_REF ]]; then
-	    echo "ZUUL_REF is not set"
-        elif [[ "$ZUUL_PROJECT" != "$git_project" ]]; then
-	    echo "ZUUL_PROJECT $ZUUL_PROJECT is not equal to git_project $git_project"
-        elif [[ "$ZUUL_BRANCH" != "$git_branch" ]]; then
-	    echo "ZUUL_BRANCH $ZUUL_BRANCH is not equal git_branch $git_branch"
-	else
-            git_repo=$ZUUL_URL/$ZUUL_PROJECT
-            git_ref=$ZUUL_REF
-            git reset --hard remotes/origin/$git_branch
-            git fetch $git_repo $git_ref
-            if [ $? -ne 0 ]; then
-                echo "failed to git fetch $git_repo $git_ref"
-		cd -
-		exit 1
-            fi
-	    git merge FETCH_HEAD
-	    if [ $? -ne 0 ]; then
-		echo "failed to git merge $git_ref"
-		cd -
-		exit 1
-	    fi
-            git clean -x -f
-        fi
+
+#        if [[ -z $ZUUL_PROJECT ]]; then
+#	    echo "ZUUL_PROJECT is not set"
+#	elif [[ -z $ZUUL_BRANCH ]]; then
+#	    echo "ZUUL_BRANCH is not set"
+#        elif [[ -z $ZUUL_REF ]]; then
+#	    echo "ZUUL_REF is not set"
+#        elif [[ "$ZUUL_PROJECT" != "$git_project" ]]; then
+#	    echo "ZUUL_PROJECT $ZUUL_PROJECT is not equal to git_project $git_project"
+#        elif [[ "$ZUUL_BRANCH" != "$git_branch" ]]; then
+#	    echo "ZUUL_BRANCH $ZUUL_BRANCH is not equal git_branch $git_branch"
+#	else
+#            git_repo=$ZUUL_URL/$ZUUL_PROJECT
+#            git_ref=$ZUUL_REF
+#            git reset --hard remotes/origin/$git_branch
+#            git fetch $git_repo $git_ref
+#            if [ $? -ne 0 ]; then
+#                echo "failed to git fetch $git_repo $git_ref"
+#		cd -
+#		exit 1
+#            fi
+#	    git merge FETCH_HEAD
+#	    if [ $? -ne 0 ]; then
+#		echo "failed to git merge $git_ref"
+#		cd -
+#		exit 1
+#	    fi
+#            git clean -x -f
+#        fi
+
 	cd -
     else
         sudo rm -rf $destdir

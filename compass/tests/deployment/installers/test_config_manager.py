@@ -61,11 +61,6 @@ class TestConfigManager(unittest2.TestCase):
         output = self.test_config_manager.get_host_id_list()
         self.assertEqual(expected_output, output)
 
-    def test_get_cluster_flavor_info(self):
-        expected_output = self.cluster_test_info[const.FLAVOR]
-        output = self.test_config_manager.get_cluster_flavor_info()
-        self.assertDictEqual(expected_output, output)
-
     def test_get_cluster_roles_mapping(self):
         expected_output = {
             "os_controller": [{

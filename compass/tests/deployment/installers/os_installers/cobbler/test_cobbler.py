@@ -23,6 +23,7 @@ from copy import deepcopy
 from mock import Mock
 import os
 import unittest2
+import xmlrpclib
 
 
 os.environ['COMPASS_IGNORE_SETTING'] = 'true'
@@ -59,14 +60,16 @@ class TestCobblerInstaller(unittest2.TestCase):
                         "netmask": "255.255.255.0",
                         "is_mgmt": True,
                         "is_promiscuous": False,
-                        "subnet": "12.234.32.0/24"
+                        "subnet": "12.234.32.0/24",
+                        "interface": "vnet0"
                     },
                     "vnet1": {
                         "ip": "172.16.1.1",
                         "netmask": "255.255.255.0",
                         "is_mgmt": False,
                         "is_promiscuous": False,
-                        "subnet": "172.16.1.0/24"
+                        "subnet": "172.16.1.0/24",
+                        "interface": "vnet1"
                     }
                 }
             },
@@ -115,7 +118,8 @@ class TestCobblerInstaller(unittest2.TestCase):
                                            hosts_info)
 
         CobblerInstaller._get_cobbler_server = Mock()
-        CobblerInstaller._get_cobbler_server.return_value = "mock_server"
+        CobblerInstaller._get_cobbler_server.return_value = \
+            DummyCobblerRemote()
         CobblerInstaller._get_token = Mock()
         CobblerInstaller._get_token.return_value = "mock_token"
 
@@ -284,18 +288,17 @@ class TestCobblerInstaller(unittest2.TestCase):
         self.maxDiff = None
         self.assertDictEqual(expected_output, output)
 
-    def test_check_and_set_system_impi(self):
-        self.test_cobbler._update_system_config = Mock()
-        self.test_cobbler.dump_system_info = Mock()
-        self.test_cobbler.dump_system_info.return_value = {
-            'power_type': 'ipmilan',
-            'power_address': '',
-            'power_user': '',
-            'power_pass': ''
-        }
-        output = self.test_cobbler._check_and_set_system_impi(3, "test_sys_id")
-        self.assertTrue(output)
 
+class DummyCobblerRemote:
+
+    def __init__(self):
+        return
+
+    def get_profile_handle(self, profilename, token):
+        return "dummyprofilehandle"
+
+    def save_profile(self, profile_id, token):
+        return "dummysaveprofile"
 
 if __name__ == '__main__':
     flags.init()

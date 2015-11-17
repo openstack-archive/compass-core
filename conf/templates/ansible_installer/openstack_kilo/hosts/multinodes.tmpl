@@ -1,0 +1,110 @@
+#set compute_controllers = $getVar('compute_controller', [])
+#set compute_workers = $getVar('compute_worker', [])
+#set network_servers = $getVar('network_server', [])
+#set network_workers = $getVar('network_worker', [])
+#set databases = $getVar('database', [])
+#set messagings = $getVar('messaging', [])
+#set images = $getVar('image', [])
+#set dashboards = $getVar('dashboard', [])
+#set identities = $getVar('identity', [])
+#set storage_controllers = $getVar('storage_controller', [])
+#set storage_volumes = $getVar('storage_volume', [])
+#if not $isinstance($compute_controllers, list)
+    #set compute_controllers = [$compute_controllers]
+#end if
+#if not $isinstance($compute_workers, list)
+    #set compute_workers = [$compute_workers]
+#end if
+#if not $isinstance($network_servers, list)
+    #set network_servers = [$network_servers]
+#end if
+#if not $isinstance($network_workers, list)
+    #set network_workers = [$network_workers]
+#end if
+#if not $isinstance($databases, list)
+    #set databases = [$databases]
+#end if
+#if not $isinstance($messagings, list)
+    #set messagings = [$messagings]
+#end if
+#if not $isinstance($images, list)
+    #set images = [$images]
+#end if
+#if not $isinstance($dashboards, list)
+    #set dashboards = [$dashboards]
+#end if
+#if not $isinstance($identities, list)
+    #set identities = [$identities]
+#end if
+#if not $isinstance($storage_controllers, list)
+    #set storage_controllers = [$storage_controllers]
+#end if
+#if not $isinstance($storage_volumes, list)
+    #set storage_volumes = [$storage_volumes]
+#end if
+# compute-controller
+#for worker in $compute_controllers
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# database
+#for worker in $databases
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# messaging
+#for worker in $messagings
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# storage-controller
+#for worker in $storage_controllers
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# image
+#for worker in $images
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# identity
+#for worker in $identities
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# network-server
+#for worker in $network_servers
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# dashboard
+#for worker in $dashboards
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# storage-volume
+#for worker in $storage_volumes
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# network-worker
+#for worker in $network_workers
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# compute-worker
+#for worker in $compute_workers
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for

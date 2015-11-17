@@ -186,7 +186,9 @@ flags.add('dashboard_url',
 flags.add('dashboard_link_pattern',
           help='dashboard link pattern',
           default=r'(?m)(http://\d+\.\d+\.\d+\.\d+:5000/v2\.0)')
-
+flags.add('cluster_vip',
+          help='cluster ip address',
+          default='')
 
 def _load_config(config_filename):
     if not config_filename:
@@ -436,12 +438,18 @@ def _add_cluster(client, adapter_id, os_id, flavor_id, machines):
     status, resp = client.add_cluster(
         cluster_name, adapter_id,
         os_id, flavor_id)
-    logging.info('add cluster %s status: %s, resp: %s',
-                 cluster_name, status, resp)
-    if status >= 400:
+    if status >= 400 and resp['message'].find("exist")<0:
         msg = 'failed to add cluster %s with adapter %s os %s flavor %s' % (
             cluster_name, adapter_id, os_id, flavor_id)
         raise Exception(msg)
+    logging.info('add cluster %s status: %s resp:%s',
+                 cluster_name, status,resp)
+    #if cluster exsist
+    if status >= 400 and resp['message'].find("exist")>0:
+        status, resp = client.list_clusters(cluster_name)
+        logging.info('meimei log : list cluster status: %s,  cluster id :%s resp: %s',
+              status, resp[0]['id'], resp)
+        resp = resp[0]
 
     cluster = resp
     cluster_id = cluster['id']
@@ -661,11 +669,18 @@ def _set_host_networking(client, host_mapping, subnet_mapping):
                 hostname, interface, ip_addr, properties,
                 status, response
             )
-            if status >= 400:
+
+            if status >= 400 and (response['message'].find("exist")<0):
                 msg = 'failed to set host %s interface %s network' % (
                     hostname, interface
                 )
                 raise Exception(msg)
+            status, resp = client.get_host_network( host_id, subnet_id)
+            logging.info(
+                'meimei log : status: %s, host network %s ',
+                status, resp
+            )
+
             host_ips.setdefault(hostname, []).append(ip_addr)
     return host_ips
 
@@ -742,6 +757,12 @@ def _set_cluster_package_config(client, cluster_id):
         util.merge_dict(
             package_config, _load_config(package_config_filename)
         )
+
+    if flags.OPTIONS.cluster_vip != '':
+        package_config.setdefault(
+                 'ha_proxy', {}
+            )['vip'] = flags.OPTIONS.cluster_vip
+
     status, resp = client.update_cluster_config(
         cluster_id, package_config=package_config)
     logging.info(

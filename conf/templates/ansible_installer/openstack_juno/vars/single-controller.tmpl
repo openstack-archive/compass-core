@@ -45,7 +45,7 @@ INTERNAL_INTERFACE: $network_internal_nic
 #set neutron_pass = $console_credentials.network.password
 
 cluster_name: $cluster_name
-
+deploy_type: $getVar('deploy_type', 'virtual')
 compute_controller_host: "{{ controller_host }}"
 db_host: "{{ controller_host }}"
 rabbit_host: "{{ controller_host }}"
@@ -56,8 +56,8 @@ network_server_host: "{{ controller_host }}"
 dashboard_host: "{{ controller_host }}"
 odl_controller: 10.1.0.15
 
-DEBUG: False
-VERBOSE: False
+DEBUG: true
+VERBOSE: true
 NTP_SERVER_LOCAL: "{{ controller_host }}"
 DB_HOST: "{{ controller_host }}"
 MQ_BROKER: rabbitmq
@@ -67,6 +67,7 @@ juno_cloud_archive: deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-
 ADMIN_TOKEN: admin
 CEILOMETER_TOKEN: c095d479023a0fd58a54
 
+RABBIT_USER: $rabbit_username
 RABBIT_PASS: $rabbit_password
 KEYSTONE_DBPASS: $keystone_dbpass
 DEMO_PASS: demo_secret
@@ -101,7 +102,7 @@ physical_device: /dev/sdb
 
 internal_interface: "ansible_{{ INTERNAL_INTERFACE }}"
 internal_ip: "{{ hostvars[inventory_hostname][internal_interface]['ipv4']['address'] }}"
-
+HA_VIP: "{{ internal_ip }}"
 odl_username: admin
 odl_password: admin
 odl_api_port: 8080

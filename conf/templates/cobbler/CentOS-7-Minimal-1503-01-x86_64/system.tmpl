@@ -1,0 +1,76 @@
+{
+    "name": "$hostname",
+    "hostname": "$hostname",
+    "profile": "$profile",
+    "gateway": "$gateway",
+    #import simplejson as json
+    #set nameservers = json.dumps($nameservers, encoding='utf-8')
+    "name_servers": $nameservers,
+    #set search_path = ' '.join($search_path)
+    "name_servers_search": "$search_path",
+    "proxy": "$getVar('http_proxy', '')",
+    "modify_interface":
+        #set networks = $networks
+        #set rekeyed = {}
+        #set promic_nic = ""
+        #for $nic, $val in $networks.iteritems():
+            #set ip_key = '-'.join(('ipaddress', $nic))
+            #set netmask_key = '-'.join(('netmask', $nic))
+            #set mgmt_key = '-'.join(('management', $nic))
+            #set static_key = '-'.join(('static', $nic))
+            #set $rekeyed[$ip_key] = $val.ip
+            #set $rekeyed[$netmask_key] = $val.netmask
+            #set $rekeyed[$mgmt_key] = $val.is_mgmt
+            #set $rekeyed[$static_key] = True
+
+            #set dns_key = '-'.join(('dnsname', $nic))
+            #if $val.is_mgmt
+                #set $rekeyed[$dns_key] = $dns
+            #else
+                #if '.' in $dns
+                    #set $dns_name, $dns_domain = $dns.split('.', 1)
+                    #set $dns_nic = '%s-%s.%s' % ($dns_name, $nic, $dns_domain)
+                #else
+                    #set $dns_nic = '%s-%s' % ($dns, $nic)
+                #end if
+                #set $rekeyed[$dns_key] = $dns_nic
+            #end if
+
+            #if $val.is_promiscuous:
+                #set promic_nic = $nic
+            #end if
+            #if $val.is_mgmt:
+                #set mac_key = '-'.join(('macaddress', $nic))
+                #set $rekeyed[$mac_key] = $mac
+            #end if
+        #end for
+        #set nic_info = json.dumps($rekeyed, encoding='utf-8')
+        $nic_info
+    ,
+    "ksmeta":{
+        #set partition_config = ''
+        #for k, v in $partition.iteritems():
+            #set path = ''
+            #if v['vol_percentage']:
+                #set $path = k + ' ' + str(v['vol_percentage']) + '%'
+            #else:
+                #set $path = k + ' ' + str(v['vol_size'])
+            #end if
+            #set partition_config = ';'.join((partition_config, $path))
+        #end for
+        #set partition_config = partition_config[1:]
+        #import crypt
+        #set $password = crypt.crypt($server_credentials.password, "az")
+        #set no_proxy = ','.join($getVar('no_proxy', []))
+        "username": "$server_credentials.username",
+        "password": "$password",
+        "promisc_nics": "$promic_nic",
+        "partition": "$partition_config",
+        "https_proxy": "$getVar('https_proxy', '')",
+        "ntp_server": "$ntp_server",
+        "timezone": "$timezone",
+        "ignore_proxy": "$no_proxy",
+        "local_repo": "$getVar('local_repo', '')",
+        "disk_num": "1"
+    }
+}

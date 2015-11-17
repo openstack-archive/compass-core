@@ -33,6 +33,18 @@ from compass.utils import util
 NAME = "AnsibleInstaller"
 
 
+def byteify(input):
+    if isinstance(input, dict):
+        return dict([(byteify(key), byteify(value))
+                    for key, value in input.iteritems()])
+    elif isinstance(input, list):
+        return [byteify(element) for element in input]
+    elif isinstance(input, unicode):
+        return input.encode('utf-8')
+    else:
+        return input
+
+
 class AnsibleInstaller(PKInstaller):
     INVENTORY_TMPL_DIR = 'inventories'
     GROUPVARS_TMPL_DIR = 'vars'
@@ -161,7 +173,15 @@ class AnsibleInstaller(PKInstaller):
         logging.info("cluster role mapping is %s", mapping)
         cluster_vars_dict[const.ROLES_MAPPING] = mapping
 
-        return cluster_vars_dict
+        # get ip settings to vars_dict
+        hosts_ip_settings = self.config_manager.get_hosts_ip_settings(
+            pk_meta_dict["network_cfg"]["ip_settings"],
+            pk_meta_dict["network_cfg"]["sys_intf_mappings"]
+        )
+        logging.info("hosts_ip_settings is %s", hosts_ip_settings)
+        cluster_vars_dict["ip_settings"] = hosts_ip_settings
+
+        return byteify(cluster_vars_dict)
 
     def _generate_inventory_attributes(self, global_vars_dict):
         inventory_tmpl_path = os.path.join(
@@ -244,11 +264,16 @@ class AnsibleInstaller(PKInstaller):
         dirs = self.runner_dirs
         files = self.runner_files
         for dir in dirs:
+            items = dir.split(':')
+            src, dst = items[0], items[-1]
+            if not os.path.exists(os.path.join(self.ansible_dir, src)):
+                continue
+
             shutil.copytree(
-                os.path.join(self.ansible_dir, dir),
+                os.path.join(self.ansible_dir, src),
                 os.path.join(
                     ansible_run_destination,
-                    dir
+                    dst
                 )
             )
         for file in files:

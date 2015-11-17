@@ -39,6 +39,7 @@ class CobblerInstaller(OSInstaller):
     TMPL_DIR = 'tmpl_dir'
     SYS_TMPL = 'system.tmpl'
     SYS_TMPL_NAME = 'system.tmpl'
+    SYS_PROFILE_NAME = 'profile.tmpl'
     PROFILE = 'profile'
 
     POWER_TYPE = 'power_type'
@@ -129,6 +130,8 @@ class CobblerInstaller(OSInstaller):
         profile = self._get_profile_from_server(os_version)
 
         global_vars_dict = self._get_cluster_tmpl_vars_dict()
+
+        self.update_profile_config_to_cobbler(profile, global_vars_dict)
 
         hosts_deploy_config = {}
 
@@ -242,6 +245,16 @@ class CobblerInstaller(OSInstaller):
 
         return system_config
 
+    def _generate_profile_config(self, cluster_vars_dict):
+        os_version = self.config_manager.get_os_version()
+        tmpl_path = os.path.join(
+            os.path.join(self.tmpl_dir, os_version), self.SYS_PROFILE_NAME
+        )
+        #if not os.path.exists(tmpl_path):
+        #    return {}
+
+        return self.get_config_from_template(tmpl_path, cluster_vars_dict)
+
     def _get_profile_from_server(self, os_version):
         """Get profile from cobbler server."""
         result = self.remote.find_profile({'name': os_version})
@@ -267,6 +280,10 @@ class CobblerInstaller(OSInstaller):
 
         return sys_id
 
+    def _get_profile_id(self, profilename):
+        """get profile reference id for the cluster."""
+        return self.remote.get_profile_handle(profilename, self.token)
+
     def _clean_system(self, hostname):
         """clean system."""
         sys_name = hostname
@@ -282,6 +299,12 @@ class CobblerInstaller(OSInstaller):
             self.remote.modify_system(sys_id, str(key), value, self.token)
 
         self.remote.save_system(sys_id, self.token)
+
+    def _update_profile_config(self, profile_id, profile_config):
+        for key, value in profile_config.iteritems():
+            self.remote.modify_profile(profile_id, str(key), value, self.token)
+
+        self.remote.save_profile(profile_id, self.token)
 
     def _netboot_enabled(self, sys_id):
         """enable netboot."""
@@ -302,6 +325,16 @@ class CobblerInstaller(OSInstaller):
 
         self._update_system_config(sys_id, system_config)
         self._netboot_enabled(sys_id)
+
+    def update_profile_config_to_cobbler(self, profilename, cluster_vars_dict):
+        """update profile config and upload to cobbler server."""
+
+        profile_id = self._get_profile_id(profilename)
+
+        profile_config = self._generate_profile_config(cluster_vars_dict)
+        logging.debug('%s profile config to update: %s', profilename, profile_config)
+
+        self._update_profile_config(profile_id, profile_config)
 
     def delete_hosts(self):
         hosts_id_list = self.config_manager.get_host_id_list()

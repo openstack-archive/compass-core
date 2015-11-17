@@ -230,6 +230,21 @@ def get_cluster(
         exception_when_missing=exception_when_missing
     )
 
+@database.run_in_session()
+@user_api.check_user_permission_in_session(
+    permission.PERMISSION_LIST_CLUSTERS)
+def is_cluster_os_ready(
+    cluster_id, exception_when_missing=True,
+    user=None, session=None, **kwargs
+):
+    cluster = utils.get_db_object(
+        session, models.Cluster, exception_when_missing, id=cluster_id)
+   
+    all_states = ([i.host.state.ready for i in cluster.clusterhosts]) 
+
+    logging.info("is_cluster_os_ready: all_states %s" % all_states)
+
+    return all(all_states)
 
 def check_cluster_validated(cluster):
     """Check cluster is validated."""
@@ -510,6 +525,7 @@ def get_cluster_metadata(cluster_id, user=None, session=None, **kwargs):
                 os_name, session=session
             )
         )
+<<<<<<< HEAD
     flavor_id = cluster.flavor_id
     if flavor_id:
         metadatas.update(
@@ -518,6 +534,12 @@ def get_cluster_metadata(cluster_id, user=None, session=None, **kwargs):
                 user=user, session=session
             )
         )
+=======
+
+    metadatas['package_config'] = metadata_api.get_flavor_metadata_internal(
+        session, cluster.flavor_id   
+    )
+>>>>>>> 1f3b0cf... init compass-core
     return metadatas
 
 

@@ -71,38 +71,21 @@ def os_installed(
 
             deploy_manager = DeployManager(
                 adapter_info, cluster_info, hosts_info)
+
             if not os_installed_triggered:
                 deploy_manager.os_installed()
                 util.ActionHelper.host_ready(host_id, True, user)
                 os_installed_triggered = True
 
             if clusterhost_ready:
-                deploy_manager.cluster_os_installed()
+                #deploy_manager.cluster_os_installed()
                 util.ActionHelper.cluster_host_ready(
                     cluster_id, host_id, False, user
                 )
 
-        for cluster_id, cluster_os_ready in clusters_os_ready.items():
-            if not cluster_os_ready and os_installed_triggered:
-                continue
 
-            cluster_info = util.ActionHelper.get_cluster_info(
-                cluster_id, user)
-            adapter_id = cluster_info[const.ADAPTER_ID]
-
-            adapter_info = util.ActionHelper.get_adapter_info(
-                adapter_id, cluster_id, user)
-            hosts_info = util.ActionHelper.get_hosts_info(
-                cluster_id, [host_id], user)
-
-            deploy_manager = DeployManager(
-                adapter_info, cluster_info, hosts_info)
-            if not os_installed_triggered:
-                deploy_manager.os_installed()
-                util.ActionHelper.host_ready(host_id, True, user)
-                os_installed_triggered = True
-
-            if cluster_os_ready:
+            if util.ActionHelper.is_cluster_os_ready(cluster_id, user):
+                logging.info("deploy_manager begin cluster_os_installed")
                 deploy_manager.cluster_os_installed()
 
 

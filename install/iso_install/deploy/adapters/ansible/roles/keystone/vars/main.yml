@@ -1,0 +1,104 @@
+---
+packages_noarch:
+  - python-keystoneclient
+
+services_noarch: []
+os_services:
+  - name: keystone
+    type: identity
+    region: regionOne
+    description: "OpenStack Identity"
+    publicurl: "http://{{ public_vip.ip }}:5000/v2.0"
+    internalurl: "http://{{ internal_vip.ip }}:5000/v2.0"
+    adminurl: "http://{{ internal_vip.ip }}:35357/v2.0"
+
+  - name: glance
+    type: image
+    region: regionOne
+    description: "OpenStack Image Service"
+    publicurl: "http://{{ public_vip.ip }}:9292"
+    internalurl: "http://{{ internal_vip.ip }}:9292"
+    adminurl: "http://{{ internal_vip.ip }}:9292"
+
+  - name: nova
+    type: compute
+    region: regionOne
+    description: "OpenStack Compute"
+    publicurl: "http://{{ public_vip.ip }}:8774/v2/%(tenant_id)s"
+    internalurl: "http://{{ internal_vip.ip }}:8774/v2/%(tenant_id)s"
+    adminurl: "http://{{ internal_vip.ip }}:8774/v2/%(tenant_id)s"
+
+  - name: neutron
+    type: network
+    region: regionOne
+    description: "OpenStack Networking"
+    publicurl: "http://{{ public_vip.ip }}:9696"
+    internalurl: "http://{{ internal_vip.ip }}:9696"
+    adminurl: "http://{{ internal_vip.ip }}:9696"
+
+  - name: ceilometer
+    type: metering
+    region: regionOne
+    description: "OpenStack Telemetry"
+    publicurl: "http://{{ public_vip.ip }}:8777/v2.0"
+    internalurl: "http://{{ internal_vip.ip }}:8777/v2.0"
+    adminurl: "http://{{ internal_vip.ip }}:8777/v2.0"
+
+  - name: cinder
+    type: volume
+    region: regionOne
+    description: "OpenStack Block Storage"
+    publicurl: "http://{{ public_vip.ip }}:8776/v1/%(tenant_id)s"
+    internalurl: "http://{{ internal_vip.ip }}:8776/v1/%(tenant_id)s"
+    adminurl: "http://{{ internal_vip.ip }}:8776/v1/%(tenant_id)s"
+
+
+os_users:
+  - user: admin
+    password: "{{ ADMIN_PASS }}"
+    email: admin@admin.com
+    role: admin
+    tenant: admin
+    tenant_description: "Admin Tenant"
+
+  - user: glance
+    password: "{{ GLANCE_PASS }}"
+    email: glance@admin.com
+    role: admin
+    tenant: service
+    tenant_description: "Service Tenant"
+
+  - user: nova
+    password: "{{ NOVA_PASS }}"
+    email: nova@admin.com
+    role: admin
+    tenant: service
+    tenant_description: "Service Tenant"
+
+  - user: keystone
+    password: "{{ keystone_PASS }}"
+    email: keystone@admin.com
+    role: admin
+    tenant: service
+    tenant_description: "Service Tenant"
+
+  - user: neutron
+    password: "{{ NEUTRON_PASS }}"
+    email: neutron@admin.com
+    role: admin
+    tenant: service
+    tenant_description: "Service Tenant"
+
+  - user: ceilometer
+    password: "{{ CEILOMETER_PASS }}"
+    email: ceilometer@admin.com
+    role: admin
+    tenant: service
+    tenant_description: "Service Tenant"
+
+  - user: cinder
+    password: "{{ CINDER_PASS }}"
+    email: cinder@admin.com
+    role: admin
+    tenant: service
+    tenant_description: "Service Tenant"

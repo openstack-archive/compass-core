@@ -1,0 +1,9 @@
+---
+
+cron_path: "/var/spool/cron/crontabs"
+
+packages:
+  - keystone
+
+services:
+  - keystone

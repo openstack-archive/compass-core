@@ -1,0 +1,7 @@
+---
+- name: nova db sync
+  nova_manage: action=dbsync
+  notify:
+    - restart nova service
+
+- meta: flush_handlers

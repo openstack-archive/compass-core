@@ -1,0 +1,13 @@
+---
+packages:
+  - openvswitch
+
+pip_packages:
+  - crudini
+
+pip_conf: pip.conf
+
+services:
+  - openvswitch
+
+ntp_service: ntpd

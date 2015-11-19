@@ -1,0 +1,16 @@
+#if $getVar('ntp_server', '') == ""
+    #set $ntp_server = '0.pool.ntp.org'
+#end if
+  <ntp-client>
+    <configure_dhcp config:type="boolean">false</configure_dhcp>
+    <peers config:type="list">
+      <peer>
+        <address>$ntp_server</address>
+        <initial_sync config:type="boolean">true</initial_sync>
+        <options></options>
+        <type>server</type>
+      </peer>
+    </peers>
+    <start_at_boot config:type="boolean">true</start_at_boot>
+    <start_in_chroot config:type="boolean">true</start_in_chroot>
+  </ntp-client>

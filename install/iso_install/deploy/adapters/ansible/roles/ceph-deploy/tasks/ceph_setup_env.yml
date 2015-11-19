@@ -1,0 +1,75 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: copy rsa secret key from compass-core to host1
+  copy: src=/root/.ssh/id_rsa dest=/root/.ssh/id_rsa mode=0600
+
+- name: copy rsa pub key from compass-core to host1
+  copy: src=/root/.ssh/id_rsa.pub dest=/root/.ssh/id_rsa.pub mode=0644
+
+- name: gen ssh key for no-ask access to every nodes
+  shell: if [ ! -f ~/.ssh/id_rsa.pub ]; then ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -N ""; else echo "already gen ssh key!"; fi;
+
+- name: copy key to node
+  shell: ssh-copy-id -i ~/.ssh/id_rsa.pub -o StrictHostKeyChecking=no root@{{ item }}
+  with_items:
+    - "{{ groups['all'] }}"
+
+- name: install ceph-related packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: clear cluster_hosts_name
+  file: path=cluster_hosts_name state=absent
+  tags:
+    - create_ceph_cluster
+    - ceph_install
+
+- name: clear cluster_controller_nodes
+  file: path=cluster_controller_nodes state=absent
+  tags:
+    - create_ceph_cluster
+    - ceph_install
+
+
+- name: echo hosts name to file
+  shell: echo -n "{{ item }} " >> cluster_hosts_name
+  with_items:
+    - "{{ groups['all'] }}"
+  tags:
+    - create_ceph_cluster
+    - ceph_install
+
+- name: register hosts name
+  shell: cat cluster_hosts_name
+  register: ceph_cluster_hosts
+  tags:
+    - create_ceph_cluster
+    - echo_hosts
+    - ceph_install
+
+- name: echo controller name to file
+  shell: echo -n "{{ item }} " >> cluster_controller_nodes
+  with_items:
+    - "{{ groups['controller'] }}"
+  tags:
+    - create_ceph_cluster
+    - ceph_install
+
+- name: register controller nodes
+  shell: cat cluster_controller_nodes
+  register: controller_nodes
+  tags:
+    - create_ceph_cluster
+    - echo_hosts
+    - ceph_install
+
+
+- name: gen clean ceph script
+  template: src=clean_ceph.j2 dest=~/clean_ceph.sh mode=0777
+
+- name: clean ceph data of last deploy
+  shell: ~/clean_ceph.sh
+
+- name: mkdir for ceph-cluster
+  file: path={{ ceph_cluster_dir[0] }} state=directory mode=0755

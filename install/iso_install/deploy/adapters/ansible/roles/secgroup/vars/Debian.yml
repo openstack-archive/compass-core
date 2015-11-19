@@ -1,0 +1,27 @@
+---
+configs_templates:
+  - src: nova.j2
+    dest:
+      - /etc/nova/nova.conf
+  - src: neutron.j2
+    dest:
+      - /etc/neutron/plugins/ml2/ml2_conf.ini
+      - /etc/neutron/plugins/openvswitch/ovs_neutron_plugin.ini
+      - /etc/neutron/plugins/ml2/restproxy.ini
+
+controller_services:
+  - nova-api
+  - nova-cert
+  - nova-conductor
+  - nova-consoleauth
+  - nova-novncproxy
+  - nova-scheduler
+  - neutron-server
+  - neutron-plugin-openvswitch-agent
+  - neutron-l3-agent
+  - neutron-dhcp-agent
+  - neutron-metadata-agent
+
+compute_services:
+  - nova-compute
+  - neutron-plugin-openvswitch-agent

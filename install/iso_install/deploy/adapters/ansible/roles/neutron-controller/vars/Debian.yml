@@ -1,0 +1,6 @@
+---
+packages:
+  - neutron-server
+  - neutron-plugin-ml2
+
+services: []

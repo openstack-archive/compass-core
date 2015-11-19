@@ -1,0 +1,603 @@
+# Start post_install_network_config generated code
+#if $getVar('promisc_nics', '') != ""
+    #set promisc_interfaces = [promisc.strip() for promisc in $promisc_nics.split(',') if promisc.strip()]
+#else
+    #set promisc_interfaces = []
+#end if
+
+#if $gateway != ""
+# set the gateway in the network configuration file
+grep -v GATEWAY /etc/sysconfig/network > /etc/sysconfig/network.cobbler
+echo "GATEWAY=$gateway" >> /etc/sysconfig/network.cobbler
+rm -f /etc/sysconfig/network
+mv -f /etc/sysconfig/network.cobbler /etc/sysconfig/network
+#end if
+
+cat << EOF > /sbin/ifup-local
+#raw
+#!/bin/bash
+RC=0
+PROM=\$(egrep -i 'promisc' /etc/sysconfig/network-scripts/ifcfg-\$1 | awk -F"=" '{ print \$2 }')
+if [[ "\$PROM" == "yes" ]]; then
+  ip link set dev \$1 promisc on
+  RC=\$?
+fi
+exit \$RC
+#end raw
+EOF
+chmod +x /sbin/ifup-local
+
+#if $hostname != ""
+# set the hostname in the network configuration file
+grep -v HOSTNAME /etc/sysconfig/network > /etc/sysconfig/network.cobbler
+echo "HOSTNAME=$hostname" >> /etc/sysconfig/network.cobbler
+rm -f /etc/sysconfig/network
+mv -f /etc/sysconfig/network.cobbler /etc/sysconfig/network
+/bin/hostname $hostname
+#end if
+
+$SNIPPET('kickstart_hosts')
+
+#set $num_ns_search = $len($name_servers_search)
+#if $num_ns_search > 0
+sed -i -e "/^search /d" /etc/resolv.conf
+echo -n "search " >>/etc/resolv.conf
+        #for $nameserversearch in $name_servers_search
+echo -n "$nameserversearch " >>/etc/resolv.conf
+        #end for
+echo "" >>/etc/resolv.conf
+#end if
+
+#set $num_ns = $len($name_servers)
+#if $num_ns > 0
+sed -i -e "/^nameserver /d" /etc/resolv.conf
+    #for $nameserver in $name_servers
+echo "nameserver $nameserver" >>/etc/resolv.conf
+    #end for
+#end if
+
+# get physical interfaces
+declare -A physical_interfaces
+set \$(ip -o link | grep -v lo | awk '{print \$2}' | sed 's/://')
+let physical_interface_num=\$#;
+let physical_interface_offset=0
+echo "network interface numbers: \$physical_interface_num" > /tmp/network_log
+while [ \$physical_interface_offset -lt \$physical_interface_num ];
+do
+    physical_interfaces[\$1]=\$1
+    let physical_interface_offset=\$physical_interface_offset+1
+    shift 1
+done
+
+echo "interfaces: \${physical_interfaces[@]}" >> /tmp/network_log
+
+# map physical interface to mac address
+declare -A physical_interface_mac
+declare -A physical_mac_interface
+for physical_interface in \${physical_interfaces[@]}; do
+    mac=\$(cat /sys/class/net/\${physical_interface}/address)
+    mac=\${mac^^}
+    physical_interface_mac[\${physical_interface}]=\$mac
+    physical_mac_interface[\$mac]=\${physical_interface}
+done
+for key in \${!physical_interface_mac[@]}; do
+    echo "interface to mac: $key => \${physical_interface_mac[\$key]}" >> /tmp/network_log
+done
+for key in \${!physical_mac_interface[@]}; do
+    echo "mac to interface: $key => \${physical_mac_interface[\$key]}" >> /tmp/network_log
+done
+
+declare -A logical_interfaces
+declare -A logical_interface_mapping
+declare -A physical_interface_mapping
+
+#set ikeys = $interfaces.keys()
+#set osversion = $getVar("os_version","")
+#import re
+#set $vlanpattern = $re.compile("([a-zA-Z0-9]+)[\.][0-9]+")
+#set $subinterfacepattern = $re.compile("([a-zA-Z0-9]+)[:][0-9]+")
+#set $numbondingdevs = 0
+#for $iname in $ikeys
+    #set $idata = $interfaces[$iname]
+    #set $mac = $idata.get("mac_address", "").upper()
+    #set $interface_type = $idata.get("interface_type", "").lower()
+    #if $interface_type in ("master","bond","bonded_bridge_slave")
+        #set $numbondingdevs += 1
+    #end if
+    #if $interface_type in ("master","bond","bridge","bonded_bridge_slave")
+        #continue
+    #end if
+    #if $vlanpattern.match($iname)
+        #set $interface_matched = $vlanpattern.match($iname)
+        #set $interface_name = $interface_matched.group(1)
+logical_interface=${interface_name}
+    #elif $subinterfacepattern.match($iname)
+        #set $interface_matched = $subinterfacepattern.match($iname)
+        #set $interface_name = $interface_matched.group(1)
+logical_interface=${interface_name}
+    #else
+logical_interface=$iname
+    #end if
+logical_interfaces[\${logical_interface}]=\${logical_interface}
+    #if $mac != ""
+physical_interface=\${physical_mac_interface[$mac]}
+logical_interface_mapping[\${logical_interface}]=\${physical_interface}
+if [ ! -z "\$physical_interface" ]; then
+    physical_interface_mapping[\${physical_interface}]=\${logical_interface}
+fi
+    #else
+if [ -z "\${logical_interface_mapping[\${logical_interface}]}" ]; then
+    logical_interface_mapping[\${logical_interface}]=""
+fi
+    #end if
+#end for
+
+echo "finish mapping logical interfaces in network config to physical interfaces" >> /tmp/network_log
+for key in \${!logical_interface_mapping[@]}; do
+    echo "map logical interface to physical interface: \$key => \${logical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+for key in \${!physical_interface_mapping[@]}; do
+    echo "map physical interface to logical interface: \$key => \${physical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+# map unmapped logical interface to the same name physical interface
+echo "mapping unmapped logical interfaces to the same name physical interfaces" >> /tmp/network_log
+for logical_interface in \${!logical_interface_mapping[@]}; do
+    physical_interface=\${logical_interface_mapping[\${logical_interface}]}
+    if [ -z "\${physical_interface}" ]; then
+        # check if the same name physical interface is mapped
+    mapped_logical_interface=\${physical_interface_mapping[\${logical_interface}]}
+    if [ -z "\${mapped_logical_interface}" ]; then
+            # check if the same name physical interface exists
+            if [ ! -z "\${physical_interfaces[\${logical_interface}]}" ]; then
+                logical_interface_mapping[\${logical_interface}]=\${logical_interface}
+            physical_interface_mapping[\${logical_interface}]=\${logical_interface}
+        else
+            echo "ignore logical interface \${logical_interface} since the same name physical interface does not exist" >> /tmp/network_log
+            fi
+    else
+        echo "ignore logical interface \${logical_interface} since the same name physical interface is mapped by logical interface \${mapped_logical_interface}" >> /tmp/network_log
+    fi
+    else
+        echo "ignore logical interface \${logical_interface} since it is mapped to physical interface \${physical_interface}" >> /tmp/network_log
+    fi
+done
+
+echo "finish mapping unmapped logical interfaces in network config to the same name physical interfaces" >> /tmp/network_log
+for key in \${!logical_interface_mapping[@]}; do
+    echo "map logical interface to physical interface: \$key => \${logical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+for key in \${!physical_interface_mapping[@]}; do
+    echo "map physical interface to logical interface: \$key => \${physical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+declare -A unset_logical_interfaces
+declare -A unset_physical_interfaces
+
+echo "get unset logical interfaces from \${logical_interfaces[@]}" >> /tmp/network_log
+for logical_interface in \${logical_interfaces[@]}; do
+    physical_interface=\${logical_interface_mapping[\${logical_interface}]}
+    if [ -z "\${physical_interface}" ]; then
+        unset_logical_interfaces[\${logical_interface}]=\${logical_interface}
+    else
+        echo "ignore logical interface \${logical_interface} => \${physical_interface}" >> /tmp/network_log
+    fi
+done
+echo "got unset logical interfaces: \${unset_logical_interfaces[@]}" >> /tmp/network_log
+
+echo "get unset physical interfaces" >> /tmp/network_log
+for physical_interface in \${physical_interfaces[@]}; do
+    logical_interface=\${physical_interface_mapping[\${physical_interface}]}
+    if [ -z "\${logical_interface}" ]; then
+        unset_physical_interfaces[\${physical_interface}]=\${physical_interface}
+    else
+        echo "ignore physical interface \${physical_interface} => \${logical_interface}" >> /tmp/network_log
+    fi
+done
+echo "got unset physical interfaces: \${unset_physical_interfaces[@]}" >> /tmp/network_log
+
+sorted_unset_physical_interfaces=(\$(printf '%s\n' \${unset_physical_interfaces[@]} | sort))
+echo "sorted unset physical interfaces: \${sorted_unset_physical_interfaces[@]}" >> /tmp/network_log
+sorted_unset_logical_interfaces=(\$(printf '%s\n' \${unset_logical_interfaces[@]} | sort))
+echo "sorted unset logical interfaces: \${sorted_unset_logical_interfaces[@]}" >> /tmp/network_log
+
+# map unset logical interface to unset physical interface
+while [ \${#sorted_unset_physical_interfaces[@]} -gt 0 -a \${#sorted_unset_logical_interfaces[@]} -gt 0 ]; do
+    physical_interface=\${sorted_unset_physical_interfaces[0]}
+    logical_interface=\${sorted_unset_logical_interfaces[0]}
+    echo "map unset logical interface \${logical_interface} to unset physical interface \${physical_interface}" >> /tmp/network_log
+    unset sorted_unset_physical_interfaces[0]
+    unset sorted_unset_logical_interfaces[0]
+    unset unset_physical_interfaces[\${physical_interface}]
+    unset unset_logical_interfaces[\${logical_interface}]
+    logical_interface_mapping[\${logical_interface}]=\${physical_interface}
+    physical_interface_mapping[\${physical_interface}]=\${logical_interface}
+done
+
+echo "finish mapping unmapped logical interfaces in network config to unmapped physical interfaces" >> /tmp/network_log
+for key in \${!logical_interface_mapping[@]}; do
+    echo "map logical interface to physical interface: \$key => \${logical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+for key in \${!physical_interface_mapping[@]}; do
+    echo "map physical interface to logical interface: \$key => \${physical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+echo "unset logical interfaces: \${unset_logical_interfaces[@]}" >> /tmp/network_log
+echo "unset physical interfaces: \${unset_physical_interfaces[@]}" >> /tmp/network_log
+
+# map any unmapped logical interfaces
+echo "map unmapped logical interfaces" >> /tmp/network_log
+if [ \${#sorted_unset_logical_interfaces[@]} -gt 0 ]; then
+    declare -A available_logical_interfaces
+    # get all available logical interfaces which the same name physical interface is not used
+    for logical_interface in \${logical_interfaces[@]}; do
+        mapped_logical_interface=\${physical_interface_mapping[\${logical_interface}]}
+    if [ -z "\${mapped_logical_interface}" ]; then
+        available_logical_interfaces[\${logical_interface}]=\${logical_interface}
+    else
+        echo "ignore logical interface \${logical_interface} since the same name physical interface mapped to logical interface \${mapped_logical_interface}" >> /tmp/network_log
+    fi
+    done
+
+    #first map logical interface to the same name physical interface if that physical interface name is not used
+    for logical_interface in \${sorted_unset_logical_interfaces[@]}; do
+        available_logical_interface=\${available_logical_interfaces[\${logical_interface}]}
+    if [ ! -z "\${available_logical_interface}" ]; then
+        unset unset_logical_interfaces[\${logical_interface}]
+        unset available_logical_interfaces[\${available_logical_interface}]
+        logical_interface_mapping[\${logical_interface}]=\${available_logical_interface}
+        physical_interface_mapping[\${available_logical_interface}]=\${logical_interface}
+    fi
+    done
+
+    echo "finish mapping ramaining unmapped logical interfaces to the same name physical interface" >> /tmp/network_log
+    for key in \${!logical_interface_mapping[@]}; do
+        echo "map logical interface to physical interface: \$key => \${logical_interface_mapping[\$key]}" >> /tmp/network_log
+    done
+
+    for key in \${!physical_interface_mapping[@]}; do
+        echo "map physical interface to logical interface: \$key => \${physical_interface_mapping[\$key]}" >> /tmp/network_log
+    done
+
+    echo "unset logical interfaces: \${unset_logical_interfaces[@]}" >> /tmp/network_log
+    echo "unset physical interfaces: \${unset_physical_interfaces[@]}" >> /tmp/network_log
+
+    # map remain unset logical interfaces to available logical interface names
+    sorted_unset_logical_interfaces=(\$(printf '%s\n' \${unset_logical_interfaces[@]} | sort))
+    echo "sorted unset logical interfaces: \${sorted_unset_logical_interfaces[@]}" >> /tmp/network_log
+    sorted_available_logical_interfaces=(\$(printf '%s\n' \${available_logical_interfaces[@]} | sort))
+    echo "sorted available logical interfaces: \${sorted_available_logical_interfaces[@]}" >> /tmp/network_log
+    while [ \${#sorted_unset_logical_interfaces[@]} -gt 0 -a \${#sorted_available_logical_interfaces[@]} -gt 0 ]; do
+        logical_interface=\${sorted_unset_logical_interfaces[0]}
+    available_logical_interface=\${sorted_available_logical_interfaces[0]}
+    echo "map logical interface \${logical_interface} to unused physical interface \${available_logical_interface}" >> /tmp/network_log
+        unset sorted_unset_logical_interfaces[0]
+    unset unset_logical_interfaces[\${logical_interface}]
+    unset sorted_available_logical_interfaces[0]
+    unset available_logical_interfaces[\${available_logical_interface}]
+    logical_interface_mapping[\${logical_interface}]=\${available_logical_interface}
+    physical_interface_mapping[\${available_logical_interface}]=\${logical_interface}
+    done
+fi
+
+echo "finish mapping ramaining unmapped logical interfaces" >> /tmp/network_log
+for key in \${!logical_interface_mapping[@]}; do
+    echo "map logical interface to physical interface: \$key => \${logical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+for key in \${!physical_interface_mapping[@]}; do
+    echo "map physical interface to logical interface: \$key => \${physical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+echo "unset logical interfaces: \${unset_logical_interfaces[@]}" >> /tmp/network_log
+echo "unset physical interfaces: \${unset_physical_interfaces[@]}" >> /tmp/network_log
+
+# map any unmapped physical interfaces
+echo "map unmapped physical interfaces" >> /tmp/network_log
+if [ \${#sorted_unset_physical_interfaces[@]} -gt 0 ]; then
+    declare -A available_physical_interfaces
+    # get all available physical interfaces which the same name logical interface is not used
+    for physical_interface in \${physical_interfaces[@]}; do
+        mapped_physical_interface=\${logical_interface_mapping[\${physical_interface}]}
+    if [ -z "\${mapped_physical_interface}" ]; then
+        available_physical_interfaces[\${physical_interface}]=\${physical_interface}
+    else
+        echo "ignore physical interface \${physical_interface} since the same name logical interface mapped to physical interface \${mapped_physical_interface}" >> /tmp/network_log
+    fi
+    done
+
+    #first map physical interface to the same name logical interface if that logical interface name is not used
+    for physical_interface in \${sorted_unset_physical_interfaces[@]}; do
+        available_physical_interface=\${available_physical_interfaces[\${physical_interface}]}
+    if [ ! -z "\${available_physical_interface}" ]; then
+        unset unset_physical_interfaces[\${physical_interface}]
+        unset available_physical_interfaces[\${available_physical_interface}]
+        logical_interface_mapping[\${available_physical_interface}]=\${physical_interface}
+        physical_interface_mapping[\${physical_interface}]=\${available_physical_interface}
+    fi
+    done
+    echo "finish mapping ramaining unmapped physical interfaces to the same name logical interface" >> /tmp/network_log
+    for key in \${!logical_interface_mapping[@]}; do
+        echo "map logical interface to physical interface: \$key => \${logical_interface_mapping[\$key]}" >> /tmp/network_log
+    done
+
+    for key in \${!physical_interface_mapping[@]}; do
+        echo "map physical interface to logical interface: \$key => \${physical_interface_mapping[\$key]}" >> /tmp/network_log
+    done
+
+    echo "unset logical interfaces: \${unset_logical_interfaces[@]}" >> /tmp/network_log
+    echo "unset physical interfaces: \${unset_physical_interfaces[@]}" >> /tmp/network_log
+
+    # map remain unset physical interfaces to logical interface name as available physical interface names
+    sorted_unset_physical_interfaces=(\$(printf '%s\n' \${unset_physical_interfaces[@]} | sort))
+    echo "sorted unset physical interfaces: \${sorted_unset_physical_interfaces[@]}" >> /tmp/network_log
+    sorted_available_physical_interfaces=(\$(printf '%s\n' \${available_physical_interfaces[@]} | sort))
+    echo "sorted available physical interfaces: \${sorted_available_physical_interfaces[@]}" >> /tmp/network_log
+    while [ \${#sorted_unset_physical_interfaces[@]} -gt 0 -a \${#sorted_available_physical_interfaces[@]} -gt 0 ]; do
+        physical_interface=\${sorted_unset_physical_interfaces[0]}
+    available_physical_interface=\${sorted_available_physical_interfaces[0]}
+    echo "map physical interface \${physical_interface} to unused logical interface \${available_physical_interface}" >> /tmp/network_log
+        unset sorted_unset_physical_interfaces[0]
+    unset unset_physical_interfaces[\${physical_interface}]
+    unset sorted_available_physical_interfaces[0]
+    unset available_physical_interfaces[\${available_physical_interface}]
+    physical_interface_mapping[\${available_physical_interface}]=\${physical_interface}
+    logical_interface_mapping[\${physical_interface}]=\${available_physical_interface}
+    done
+fi
+
+echo "finish mapping ramaining unmapped physical interfaces" >> /tmp/network_log
+for key in \${!logical_interface_mapping[@]}; do
+    echo "map logical interface to physical interface: \$key => \${logical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+for key in \${!physical_interface_mapping[@]}; do
+    echo "map physical interface to logical interface: \$key => \${physical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+echo "unset logical interfaces: \${unset_logical_interfaces[@]}" >> /tmp/network_log
+echo "unset physical interfaces: \${unset_physical_interfaces[@]}" >> /tmp/network_log
+
+for key in \${!logical_interface_mapping[@]}; do
+    echo "map logical interface to physical interface: \$key => \${logical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+for key in \${!physical_interface_mapping[@]}; do
+    echo "map physical interface to logical interface: \$key => \${physical_interface_mapping[\$key]}" >> /tmp/network_log
+done
+
+# generate udev network rules
+#if $osversion == "rhel7"
+udev_network_rule_filename=80-net-name-slot.rules
+#else
+udev_network_rule_filename=70-persistent-net.rules
+#end if
+for key in \${!logical_interface_mapping[@]}; do
+    physical_interface=\${logical_interface_mapping[\$key]}
+    if [ ! -z "\${physical_interface}" ]; then
+        physical_mac=\${physical_interface_mac[\${physical_interface}]}
+    else
+        physical_mac=""
+    fi
+    if [ ! -z "\${physical_mac}" ]; then
+        physical_mac=\${physical_mac,,}
+        echo "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\"\${physical_mac}\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"\$key\"" >> /etc/udev/rules.d/\${udev_network_rule_filename}.new
+    echo "add network interface \$key mac \$physical_mac into udev rules" >> /tmp/network_log
+    else
+        echo "network interface \$key does not find mac address to add to udev rules" >> /tmp/network_log
+    fi
+done
+
+#if $numbondingdevs > 0
+# we have bonded interfaces, so set max_bonds
+if [ -f "/etc/modprobe.conf" ]; then
+    echo "options bonding max_bonds=$numbondingdevs" >> /etc/modprobe.conf
+fi
+#end if
+
+# create a working directory for interface scripts
+mkdir /etc/sysconfig/network-scripts/cobbler
+cp /etc/sysconfig/network-scripts/ifcfg-lo /etc/sysconfig/network-scripts/cobbler/
+
+declare -A used_logical_interfaces
+
+#set $nameserver_set = 0
+
+#for $iname in $ikeys
+# Start configuration for $iname
+    ## create lots of variables to use later
+    #set $idata                = $interfaces[$iname]
+    #set $mac                  = $idata.get("mac_address", "").upper()
+    #set $mtu                  = $idata.get("mtu", "")
+    #set $static               = $idata.get("static", "")
+    #set $ip                   = $idata.get("ip_address", "")
+    #set $netmask              = $idata.get("netmask", "")
+    #set $if_gateway           = $idata.get("if_gateway", "")
+    #set $static_routes        = $idata.get("static_routes", "")
+    #set $iface_type           = $idata.get("interface_type", "").lower()
+    #set $iface_master         = $idata.get("interface_master", "")
+    #set $bonding_opts         = $idata.get("bonding_opts", "")
+    #set $bridge_opts          = $idata.get("bridge_opts", "").split(" ")
+    #set $devfile              = "/etc/sysconfig/network-scripts/cobbler/ifcfg-" + $iname
+    #set $routesfile           = "/etc/sysconfig/network-scripts/cobbler/route-" + $iname
+
+used_logical_interfaces[$iname]=$iname
+
+    #if $iface_type in ("slave","bond_slave","bridge_slave","bonded_bridge_slave")
+        #set $static = 1
+    #end if
+echo "DEVICE=$iname" > $devfile
+echo "ONBOOT=yes" >> $devfile
+
+    #if $iface_type not in ("master","bond","bridge","bonded_bridge_slave")
+        #if $vlanpattern.match($iname)
+            #pass
+        #else
+            #set $interface_matched = $subinterfacepattern.match($iname)
+            #if $interface_matched
+                #set $interface_name = $interface_matched.group(1)
+logical_interface=$interface_name
+            #else
+logical_interface=$iname
+            #end if
+physical_interface=\${logical_interface_mapping[\$logical_interface]}
+if [ ! -z "\$physical_interface" ]; then
+    physical_mac=\${physical_interface_mac[\$physical_interface]}
+fi
+if [ ! -z "\$physical_mac" ]; then
+    echo "HWADDR=\$physical_mac" >> $devfile
+fi
+            #if not $subinterfacepattern.match($iname)
+if [ -f "/etc/modprobe.conf" ] && [ ! -z "\${physical_interface}" ]; then
+    grep \$physical_interface /etc/modprobe.conf | sed "s/\${physical_interface}/$iname/" >> /etc/modprobe.conf.cobbler
+    grep -v \$physical_interface /etc/modprobe.conf >> /etc/modprobe.conf.new
+    rm -f /etc/modprobe.conf
+    mv -f /etc/modprobe.conf.new /etc/modprobe.conf
+fi
+            #end if
+        #end if
+    #end if
+
+    #if $iface_type in ("master","bond","bonded_bridge_slave")
+        ## if this is a bonded interface, configure it in modprobe.conf
+if [ -f "/etc/modprobe.conf" ]; then
+        #if $osversion == "rhel4"
+    echo "install $iname /sbin/modprobe bonding -o $iname $bonding_opts" >> /etc/modprobe.conf.cobbler
+        #else
+    echo "alias $iname bonding" >> /etc/modprobe.conf.cobbler
+        #end if
+fi
+        #if $bonding_opts != ""
+cat >> $devfile << EOF
+BONDING_OPTS="$bonding_opts"
+EOF
+        #end if
+    #elif $iface_type in ("slave","bond_slave") and $iface_master != ""
+echo "SLAVE=yes" >> $devfile
+echo "MASTER=$iface_master" >> $devfile
+echo "HOTPLUG=no" >> $devfile
+    #end if
+
+    #if $iface_type == "bridge"
+echo "TYPE=Bridge" >> $devfile
+        #for $bridge_opt in $bridge_opts
+            #if $bridge_opt.strip() != ""
+echo "$bridge_opt" >> $devfile
+            #end if
+        #end for
+    #elif $iface_type in ["bridge_slave", "bonded_bridge_slave"] and $iface_master != ""
+echo "BRIDGE=$iface_master" >> $devfile
+echo "HOTPLUG=no" >> $devfile
+    #end if
+
+    #if $iface_type != "bridge"
+echo "TYPE=Ethernet" >> $devfile
+    #end if
+
+    #if $static
+echo "BOOTPROTO=static" >> $devfile
+        #if $iname in $promisc_interfaces
+echo "PROMISC=yes" >> $devfile
+        #elif $ip != ""
+echo "IPADDR=$ip" >> $devfile
+            #if $if_gateway != ""
+echo "GATEWAY=$if_gateway" >> $devfile
+            #end if
+
+            #if $netmask == ""
+            ## Default to 255.255.255.0?
+                #set $netmask = "255.255.255.0"
+            #end if
+echo "NETMASK=$netmask" >> $devfile
+        #end if
+    #else
+echo "BOOTPROTO=dhcp" >> $devfile
+        #if $len($name_servers) > 0
+echo "PEERDNS=no" >> $devfile
+        #end if
+    #end if
+
+    #if $vlanpattern.match($iname)
+echo "VLAN=yes" >> $devfile
+echo "ONPARENT=yes" >> $devfile
+    #elif $subinterfacepattern.match($iname)
+echo "ONPARENT=yes" >> $devfile
+    #end if
+
+    #if $mtu != ""
+echo "MTU=$mtu" >> $devfile
+    #end if
+
+    #if not $nameserver_set
+        #if $iface_type not in ("slave","bond_slave","bridge_slave","bonded_bridge_slave")
+            #set $nct = 0
+            #for $nameserver in $name_servers
+                #set $nct = $nct + 1
+echo "DNS$nct=$nameserver" >> $devfile
+            #end for
+        #set $nameserver_set = 1
+        #end if
+   #end if
+
+    #for $route in $static_routes
+        #set routepattern = $re.compile("[0-9/.]+:[0-9.]+")
+        #if $routepattern.match($route)
+            #set $routebits = $route.split(":")
+            #set [$network, $router] = $route.split(":")
+echo "$network via $router" >> $routesfile
+        #else
+# Warning: invalid route "$route"
+        #end if
+    #end for
+#end for
+
+for logical_interface in \${!logical_interface_mapping[@]}; do
+    if [ ! -z "\${used_logical_interfaces[\${logical_interface}]}" ]; then
+        # ignore logical interface that is already generated in above
+        continue
+    fi
+    physical_interface=\${logical_interface_mapping[\${logical_interface}]}
+    if [ ! -z "\${physical_interface}" ]; then
+        devfile="/etc/sysconfig/network-scripts/cobbler/ifcfg-"\${logical_interface}
+        mac=\${physical_interface_mac[\${physical_interface}]}
+        echo "DEVICE=\${logical_interface}" > \$devfile
+        echo "ONBOOT=yes" >> \$devfile
+        echo "BOOTPROTO=static" >> \$devfile
+        if [ ! -z "\$mac" ]; then
+            echo "HWADDR=\$mac" >> \$devfile
+        fi
+        echo "TYPE=Ethernet" >> \$devfile
+        if [ -f "/etc/modprobe.conf" ] && [ ! -z "\${physical_interface}" ]; then
+            grep \${physical_interface} /etc/modprobe.conf | sed "s/\${physical_interface}/\${logical_interface}/" >> /etc/modprobe.conf.cobbler
+            grep -v \${physical_interface} /etc/modprobe.conf >> /etc/modprobe.conf.new
+            rm -f /etc/modprobe.conf
+            mv -f /etc/modprobe.conf.new /etc/modprobe.conf
+        fi
+    fi
+done
+
+## Disable all eth interfaces by default before overwriting
+## the old files with the new ones in the working directory
+## This stops unneccesary (and time consuming) DHCP queries
+## during the network initialization
+sed -i 's/ONBOOT=yes/ONBOOT=no/g' /etc/sysconfig/network-scripts/ifcfg-*
+
+## Move all staged files to their final location
+rm -f /etc/sysconfig/network-scripts/ifcfg-*
+mv -f /etc/sysconfig/network-scripts/cobbler/* /etc/sysconfig/network-scripts/
+rm -r /etc/sysconfig/network-scripts/cobbler
+if [ -f "/etc/modprobe.conf" ]; then
+    cat /etc/modprobe.conf.cobbler >> /etc/modprobe.conf
+    rm -f /etc/modprobe.conf.cobbler
+fi
+if [ -f "/etc/udev/rules.d/\${udev_network_rule_filename}" ]; then
+    rm -f /etc/udev/rules.d/\${udev_network_rule_filename}
+fi
+
+if [ -f "/etc/udev/rules.d/\${udev_network_rule_filename}.new" ]; then
+    mv -f /etc/udev/rules.d/\${udev_network_rule_filename}.new /etc/udev/rules.d/\${udev_network_rule_filename}
+fi
+# End post_install_network_config generated code

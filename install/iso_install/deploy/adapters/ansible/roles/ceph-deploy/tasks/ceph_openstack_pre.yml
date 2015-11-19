@@ -1,0 +1,68 @@
+---
+
+- name: create pool
+  shell: ceph osd pool create {{ item }} 50
+  with_items:
+    - volumes
+    - images
+    - backups
+    - vms
+
+- name: create ceph users for openstack
+  shell: ceph auth get-or-create client.cinder mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=volumes, allow rwx pool=vms, allow rx pool=images' && ceph auth get-or-create client.glance mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=images'
+
+- name: send glance key to controller nodes
+  shell: ceph auth get-or-create client.glance | ssh {{ item }} tee /etc/ceph/ceph.client.glance.keyring && ssh {{ item }} chown glance:glance /etc/ceph/ceph.client.glance.keyring
+  with_items:
+    - "{{ groups['controller'] }}"
+
+- name: send cinder key to compute nodes
+  shell: ceph auth get-or-create client.cinder | ssh {{ item }} tee /etc/ceph/ceph.client.cinder.keyring && ssh {{ item }} chown cinder:cinder /etc/ceph/ceph.client.cinder.keyring
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - ceph_send_key
+
+- name: copy cinder key to compute node
+  shell: ceph auth get-key client.cinder | ssh {{ item }} tee client.cinder.key
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - ceph_copy_secret
+
+- name: gen ceph uuid
+  shell: uuidgen
+  register: ceph_uuid
+  tags:
+    - ceph_copy_secret
+
+- name: gen template secret.xml
+  template: src=secret.j2 dest=~/secret.xml mode=0777
+  tags:
+    - ceph_copy_secret
+
+- name: copy secret.xml to compute nodes
+  shell: scp -o StrictHostKeyChecking=no ~/secret.xml {{ item }}:~/secret.xml
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - ceph_copy_secret
+
+- name: undefine libvirt secret in case of repeatedly execute ceph_deploy
+  shell: ssh -o StrictHostKeyChecking=no -t {{ item }}  "virsh secret-list | awk '\$1 ~ /[0-9]+/ {print \$1}' | xargs virsh secret-undefine"
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - ceph_copy_secret
+  ignore_errors: True
+
+
+- name: create key for libvirt on compute nodes
+  shell: ssh -o StrictHostKeyChecking=no -t {{ item }} "virsh secret-define --file secret.xml && virsh secret-set-value --secret {{ ceph_uuid.stdout_lines[0] }} --base64 \$(cat client.cinder.key)"
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - ceph_copy_secret
+  ignore_errors: True
+
+

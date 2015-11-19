@@ -1,0 +1,9 @@
+---
+- name: upload cinder conf
+  template: src=cinder.conf dest=/etc/cinder/cinder.conf
+
+- name: sync cinder db
+  #cinder_manage: action=dbsync
+  shell: su -s /bin/sh -c 'cinder-manage db sync' cinder
+  notify:
+    - restart cinder control serveice

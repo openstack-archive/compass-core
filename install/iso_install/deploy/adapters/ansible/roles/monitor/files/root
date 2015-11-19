@@ -1,0 +1,1 @@
+* * * * * /usr/local/bin/check_service.sh >> /var/log/check_service.log  2>&1

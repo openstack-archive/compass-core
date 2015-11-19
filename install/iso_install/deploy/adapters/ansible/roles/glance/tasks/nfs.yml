@@ -1,0 +1,46 @@
+---
+- name: install packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: nfs_packages
+
+- name: install nfs
+  local_action: yum  name=nfs-utils state=present
+  run_once: True
+
+- name: create image directory
+  local_action: file path=/opt/images state=directory mode=0777
+  run_once: True
+
+- name: update nfs config
+  local_action: lineinfile dest=/etc/exports state=present
+              regexp="/opt/images *(rw,insecure,sync,all_squash)"
+              line="/opt/images *(rw,insecure,sync,all_squash)"
+  run_once: True
+
+- name: restart compass nfs service
+  local_action: service name={{ item }} state=restarted enabled=yes
+  with_items:
+      - rpcbind
+      - nfs
+  run_once: True
+
+- name: get mount info
+  command: mount
+  register: mount_info
+
+- name: get nfs server
+  shell: awk -F'=' '/compass_server/ {print $2}' /etc/compass.conf
+  register: ip_info
+
+- name: restart host nfs service
+  service: name={{ item }} state=restarted enabled=yes
+  with_items: '{{ nfs_services }}'
+
+- name: mount image directory
+  shell: |
+    mount -t nfs  -onfsvers=3 {{ ip_info.stdout_lines[0] }}:/opt/images /var/lib/glance/images
+    sed -i '/\/var\/lib\/glance\/images/d' /etc/fstab
+    echo {{ ip_info.stdout_lines[0] }}:/opt/images /var/lib/glance/images/ nfs nfsvers=3 >> /etc/fstab
+  when: mount_info.stdout.find('images') == -1
+  retries: 5
+  delay: 3

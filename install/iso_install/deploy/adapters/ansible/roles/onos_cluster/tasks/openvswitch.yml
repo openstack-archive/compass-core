@@ -1,0 +1,33 @@
+---
+- name: remove neutron-plugin-openvswitch-agent auto start
+  shell: >
+    update-rc.d neutron-plugin-openvswitch-agent remove;
+    sed -i /neutron-plugin-openvswitch-agent/d /opt/service
+
+- name: shut down and disable Neutron's agent services
+  service: name=neutron-plugin-openvswitch-agent state=stopped
+
+- name: Stop the Open vSwitch service and clear existing OVSDB
+  shell: >
+    ovs-vsctl del-br br-int ;
+    ovs-vsctl del-br br-tun ;
+    ovs-vsctl del-manager ;
+
+#- name: get image http server
+#  shell: awk -F'=' '/compass_server/ {print $2}' /etc/compass.conf
+#  register: http_server
+#
+#- name: download ovs
+#  get_url: url="http://{{ http_server.stdout_lines[0] }}/packages/onos/openvswitch.tar"  dest=/opt/openvswitch.tar
+#
+#- name: extract ovs
+#  command: su -s /bin/sh -c "tar xvf  /opt/openvswitch.tar -C /opt/"
+#
+#- name: update ovs
+#  shell: >
+#    cd /opt/openvswitch;
+#    dpkg -i openvswitch-common_2.3.0-1_amd64.deb;
+#    dpkg -i openvswitch-switch_2.3.0-1_amd64.deb;
+- name: Set ONOS as the manager
+  command: su -s /bin/sh -c "ovs-vsctl set-manager tcp:{{ ip_settings[groups['onos'][0]]['mgmt']['ip'] }}:6640;"
+

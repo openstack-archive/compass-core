@@ -1,0 +1,63 @@
+{
+    "nodes": [
+{% for host in groups['onos'] %}
+    {% if loop.last %}
+	    {
+            "ip": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "id": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "tcpPort": 9876
+        }
+    {% else %}
+        {
+            "ip": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "id": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "tcpPort": 9876
+        },
+    {% endif %}
+{% endfor %}
+    ],
+	"partitions": {
+	{% set key = 1 %}
+	{% for host in groups['onos'] %}
+	{% if loop.last %}
+	    "p{{ key }}":[
+		{% for host in groups['onos'] %}
+		    {% if loop.last %}
+	    {
+            "ip": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "id": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "tcpPort": 9876
+        }
+            {% else %}
+        {
+            "ip": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "id": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "tcpPort": 9876
+        },
+            {% endif %}
+		{% endfor %}
+		]
+	{% set key = key + 1 %}
+	{% else %}
+	"p{{ key }}":[
+		{% for host in groups['onos'] %}
+		    {% if loop.last %}
+	    {
+            "ip": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "id": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "tcpPort": 9876
+        }
+            {% else %}
+        {
+            "ip": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "id": "{{ ip_settings[host]['mgmt']['ip'] }}",
+            "tcpPort": 9876
+        },
+            {% endif %}
+		{% endfor %}
+		],
+	{% set key = key + 1 %}
+	{% endif %}
+	{% endfor %}
+}
+}

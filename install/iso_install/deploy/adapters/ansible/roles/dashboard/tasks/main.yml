@@ -1,0 +1,33 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install http packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: http_packages
+
+- name: set http config
+  lineinfile: dest={{ http_config_file }} regexp='^Listen 80' line='Listen {{ internal_ip }}:80'
+
+- name: restart http services
+  service: name={{ http_service }} state=restarted enabled=yes
+
+- name: install dashboard packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: remove ubuntu theme
+  action: "{{ ansible_pkg_mgr }} name=openstack-dashboard-ubuntu-theme state=absent"
+
+- name: update horizon settings
+  template: src=local_settings.py
+            dest=/etc/openstack-dashboard/local_settings.py
+            backup=yes
+
+- name: update memcached conf
+  lineinfile: dest=/etc/memcached.conf state=present
+              regexp="-l *"
+              line="-l {{ internal_vip.ip }}"
+
+- name: restart dashboard services
+  service: name={{ item }} state=restarted enabled=yes
+  with_items: services | union(services_noarch)

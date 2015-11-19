@@ -1,0 +1,31 @@
+#!/bin/bash
+# chkconfig: 345 98 2
+# description: ODL controller
+# OpenDaylight service controller script
+export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+USER=odl
+
+cd /opt/opendaylight-0.3.0
+case "$1" in
+    start)
+        /bin/su -m $USER -s /bin/bash -c ./bin/start
+        ;;
+    stop)
+        /bin/su -m $USER -s /bin/bash -c ./bin/stop
+        ;;
+    status)
+        PID=`ps aux | grep java | grep karaf | awk '{print $2}'`
+        if test -z $PID
+        then
+          echo "ODL is down..."
+          exit 1
+        else
+          echo "ODL is running... PID $PID"
+          exit 0
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status}"
+        exit 1
+        ;;
+esac

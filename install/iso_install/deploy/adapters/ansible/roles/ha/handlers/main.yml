@@ -1,0 +1,9 @@
+---
+- name: restart haproxy
+  service: name=haproxy state=restarted enabled=yes
+
+- name: restart xinetd
+  service: name=xinetd state=restarted enabled=yes
+
+- name: restart keepalived
+  service: name=keepalived state=restarted enabled=yes

@@ -1,0 +1,45 @@
+---
+- name: create rabbitmq directory
+  file: path=/etc/rabbitmq state=directory mode=0755
+
+- name: copy rabbitmq config file
+  template: src=rabbitmq-env.conf dest=/etc/rabbitmq/rabbitmq-env.conf mode=0755
+
+- name: install rabbitmq-server
+  action: "{{ ansible_pkg_mgr }} name=rabbitmq-server state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: stop rabbitmq-server
+  service: name=rabbitmq-server
+           state=stopped
+
+- name: update .erlang.cookie
+  template: src=.erlang.cookie dest=/var/lib/rabbitmq/.erlang.cookie
+        group=rabbitmq
+        owner=rabbitmq
+        mode=0400
+  when: ERLANG_TOKEN is defined
+
+- name: start and enable rabbitmq-server
+  service: name=rabbitmq-server
+           state=started
+           enabled=yes
+
+- name: generate mq service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services_noarch
+
+- name: modify rabbitmq password
+  command: rabbitmqctl change_password guest {{ RABBIT_PASS }}
+  when: "RABBIT_USER is defined and RABBIT_USER == 'guest'"
+  ignore_errors: True
+
+- name: add rabbitmq user
+  command: rabbitmqctl add_user {{ RABBIT_USER }} {{ RABBIT_PASS }}
+  when: "RABBIT_USER is defined and RABBIT_USER != 'guest'"
+  ignore_errors: True
+
+- name: set rabbitmq user permission
+  command: rabbitmqctl set_permissions -p / {{ RABBIT_USER }} ".*" ".*" ".*"
+  when: "RABBIT_USER is defined and RABBIT_USER != 'guest'"
+

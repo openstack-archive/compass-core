@@ -1,0 +1,6 @@
+---
+packages:
+  - openstack-neutron
+  - openstack-neutron-ml2
+
+services: []

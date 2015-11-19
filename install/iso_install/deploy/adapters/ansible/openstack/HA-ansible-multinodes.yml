@@ -1,0 +1,75 @@
+---
+- hosts: all
+  remote_user: root
+  sudo: True
+  roles:
+    - common
+    - setup-network
+
+- hosts: ha
+  remote_user: root
+  sudo: True
+  roles:
+    - ha
+
+- hosts: controller
+  remote_user: root
+  sudo: True
+  roles:
+    - database
+    - mq
+    - keystone
+    - nova-controller
+    - neutron-controller
+    - cinder-controller
+    - glance
+    - neutron-common
+    - neutron-network
+    - ceilometer_controller
+#    - ext-network
+    - dashboard
+
+- hosts: compute
+  remote_user: root
+  sudo: True
+  roles:
+    - nova-compute
+    - neutron-compute
+    - cinder-volume
+    - ceilometer_compute
+
+- hosts: all
+  remote_user: root
+  sudo: True
+  roles:
+    - odl_cluster
+
+- hosts: all
+  remote_user: root
+  sudo: True
+  roles:
+    - onos_cluster
+
+- hosts: controller
+  remote_user: root
+  sudo: True
+  roles:
+    - ext-network
+
+- hosts: ceph
+  remote_user: root
+  sudo: True
+  roles:
+    - ceph-deploy
+
+- hosts: all
+  remote_user: root
+  sudo: True
+  roles:
+    - monitor
+
+- hosts: all
+  remote_user: root
+  sudo: True
+  roles:
+    - secgroup

@@ -1,0 +1,26 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install vpn packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: vpn_packages
+
+- name: update vpn related conf
+  shell: crudini --set  /etc/neutron/l3_agent.ini vpnagent vpn_device_driver neutron_vpnaas.services.vpn.device_drivers.strongswan_ipsec.StrongSwanDriver;
+         crudini --set --list /etc/neutron/neutron.conf DEFAULT service_plugins vpnaas
+         crudini --set /etc/neutron/neutron_vpnaas.conf service_providers service_provider 'VPN:strongswan:neutron_vpnaas.services.vpn.service_drivers.ipsec.IPsecVPNDriver:default'
+
+- name: make sure rootwrap.d dir exist
+  file: path=/etc/neutron/rootwrap.d state=directory mode=0755
+
+- name: update rootwrap
+  copy: src=vpnaas.filters dest=/etc/neutron/rootwrap.d/vpnaas.filters
+
+- name: enable vpn service
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - neutron-vpn-agent
+    - strongswan
+  notify:
+    - restart vpn agent service
+

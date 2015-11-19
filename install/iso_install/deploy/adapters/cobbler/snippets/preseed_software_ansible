@@ -1,0 +1,1 @@
+d-i pkgsel/include string ntp ssh openssh-server wget vim

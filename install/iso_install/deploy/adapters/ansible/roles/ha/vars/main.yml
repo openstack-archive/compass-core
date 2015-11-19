@@ -1,0 +1,10 @@
+---
+packages_noarch:
+  - keepalived
+  - xinetd
+  - haproxy
+
+services_noarch:
+  - keepalived
+  - xinetd
+  - haproxy

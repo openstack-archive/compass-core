@@ -1,0 +1,5 @@
+---
+packages_noarch:
+  - python-glanceclient
+
+services_noarch: []

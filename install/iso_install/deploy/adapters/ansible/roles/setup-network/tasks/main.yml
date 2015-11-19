@@ -1,0 +1,44 @@
+---
+- name: add ovs bridge
+  openvswitch_bridge: bridge={{ item["name"] }} state=present
+  with_items: "{{ network_cfg['provider_net_mappings'] }}"
+  when: 'item["type"] == "ovs"'
+
+- name: add ovs uplink
+  openvswitch_port: bridge={{ item["name"] }} port={{ item["interface"] }} state=present
+  with_items: "{{ network_cfg['provider_net_mappings'] }}"
+  when: 'item["type"] == "ovs"'
+
+- name: add ovs uplink
+  shell: ip link set {{ item["interface"] }} up
+  with_items: "{{ network_cfg['provider_net_mappings'] }}"
+  when: 'item["type"] == "ovs"'
+
+- name: ensure script dir exist
+  shell: mkdir -p /opt/setup_networks
+
+- name: copy scripts
+  copy:  src={{ item }} dest=/opt/setup_networks
+  with_items:
+    - setup_networks/log.py
+    - setup_networks/setup_networks.py
+
+- name: copy boot scripts
+  copy:  src={{ item }} dest=/etc/init.d/ mode=0755
+  with_items:
+    - setup_networks/net_init
+
+- name: copy config files
+  template: src=network.cfg dest=/opt/setup_networks
+
+- name: make sure python lib exist
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items:
+    - python-yaml
+    - python-netaddr
+
+- name: run scripts
+  shell: python /opt/setup_networks/setup_networks.py
+
+- name: add to boot scripts
+  service: name=net_init enabled=yes

@@ -1,0 +1,13 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: copy service check file
+  copy: src=check_{{ ansible_os_family }}_service.sh dest=/usr/local/bin/check_service.sh mode=0777
+
+- name: copy cron file
+  copy: src=root dest={{ cron_path }}/root mode=0600
+
+- name: restart cron
+  service: name={{ cron }} state=restarted
+
+

@@ -1,0 +1,13 @@
+---
+http_packages:
+  - httpd
+
+http_service: httpd
+
+packages:
+  - mod_wsgi
+  - python-memcached
+
+services: []
+
+http_config_file: "/etc/httpd/conf/httpd.conf"

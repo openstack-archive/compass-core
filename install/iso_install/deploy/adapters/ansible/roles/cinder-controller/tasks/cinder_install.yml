@@ -1,0 +1,13 @@
+---
+- name: install cinder packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: generate common cinder service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services | union(services_noarch)
+
+- name: upload cinder conf
+  template: src=cinder.conf dest=/etc/cinder/cinder.conf
+  notify:
+    - restart cinder control serveice

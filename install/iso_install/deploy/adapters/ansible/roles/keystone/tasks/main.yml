@@ -1,0 +1,13 @@
+---
+- include: keystone_install.yml
+  tags:
+    - install
+    - keystone_install
+    - keystone
+
+- include: keystone_config.yml
+  when: inventory_hostname == groups['controller'][0]
+  tags:
+    - config
+    - keystone_config
+    - keystone

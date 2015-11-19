@@ -1,0 +1,36 @@
+---
+- name: install mongodb packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: mongodb_packages | union(packages_noarch)
+
+- name: install pymongod packages
+  pip: name={{ item }} state=present extra_args='--pre'
+  with_items: pip_packages
+
+- name: copy ceilometer configs
+  template: src=mongodb.conf dest=/opt/os_templates backup=yes
+
+- name: update mongodb config file
+  shell: crudini --merge /etc/mongodb.conf < /opt/os_templates/mongodb.conf
+
+- name: rm prealloc files
+  file:
+    dest: "{{ item }}"
+    state: absent
+  with_fileglob:
+    - /var/lib/mongodb/journal/*
+
+- name: manually restart mongodb server
+  service: name={{ mongodb_serveice }} state=restarted
+
+- wait_for: port=27017 delay=3 timeout=60 host={{ internal_vip.ip }}
+
+- name: create mongodb user
+  run_once: True
+  mongodb_user:
+    login_host: "{{ internal_vip.ip }}"
+    database: ceilometer
+    name: ceilometer
+    password: "{{ CEILOMETER_DBPASS }}"
+    roles: 'readWrite,dbAdmin'
+    state: present

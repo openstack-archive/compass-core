@@ -1,0 +1,29 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install nova-compute related packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: update nova-compute conf
+  template: src=templates/{{ item }} dest=/etc/nova/{{ item }}
+  with_items:
+    - nova.conf
+  notify:
+    - restart nova-compute services
+
+- name: update nova-compute conf
+  template: src={{ item }} dest=/etc/nova/{{ item }}
+  with_items:
+    - nova-compute.conf
+  notify:
+    - restart nova-compute services
+
+- name: generate neutron control service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services | union(services_noarch)
+
+- meta: flush_handlers
+
+- name: remove nova sqlite db
+  shell: rm /var/lib/nova/nova.sqlite || touch nova.sqlite.removed

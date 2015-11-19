@@ -1,0 +1,29 @@
+TYPE: virtual
+FLAVOR: five
+
+hosts:
+  - name: host1
+    roles:
+      - controller
+      - network
+
+  - name: host2
+    roles:
+      - compute
+      - storage
+
+  - name: host3
+    roles:
+      - compute
+      - storage
+
+  - name: host4
+    roles:
+      - compute
+      - storage
+
+  - name: host5
+    roles:
+      - compute
+      - storage
+

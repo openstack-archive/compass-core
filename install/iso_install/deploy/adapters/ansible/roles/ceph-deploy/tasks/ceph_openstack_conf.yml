@@ -1,0 +1,37 @@
+---
+- name: chown of glance/api.log
+  shell: ssh -o StrictHostKeyChecking=no {{ item }} -t "chown -R glance:glance /var/log/glance"
+  with_items:
+    - "{{ groups['controller'] }}"
+  tags:
+    - ceph_conf_glance
+  ignore_errors: True
+
+- name: modify glance-api.conf for ceph
+  shell: ssh -o StrictHostKeyChecking=no {{ item }} -t "sed -i 's/^\(default_store\).*/\1 = rbd/g' /etc/glance/glance-api.conf && sed -i '/^\[glance_store/a stores = rbd\nrbd_store_pool = images\nrbd_store_user = glance\nrbd_store_ceph_conf = /etc/ceph/ceph.conf\nrbd_store_chunk_size = 8\nshow_image_direct_url=True' /etc/glance/glance-api.conf"
+  with_items:
+    - "{{ groups['controller'] }}"
+  tags:
+    - ceph_conf_glance
+
+- name: restart glance
+  shell: ssh -o StrictHostKeyChecking=no {{ item }} -t "rm -f /var/log/glance/api.log && chown -R glance:glance /var/log/glance && service {{ glance_service }} restart"
+  with_items:
+    - "{{ groups['controller'] }}"
+  tags:
+    - ceph_conf_glance
+  ignore_errors: True
+
+- name: modify cinder.conf for ceph
+  shell: ssh -o StrictHostKeyChecking=no {{ item }} -t "sed -i 's/^\(volume_driver\).*/\1 = cinder.volume.drivers.rbd.RBDDriver/g' /etc/cinder/cinder.conf && sed -i 's/^\(rbd_secret_uuid\).*/\1 = {{ ceph_uuid.stdout_lines[0] }}/g' /etc/cinder/cinder.conf && sed -i '/^\[DEFAULT/a rbd_pool = volumes\nrbd_ceph_conf = /etc/ceph/ceph.conf\nrbd_flatten_volume_from_snapshot = false\nrbd_max_clone_depth = 5\nrbd_store_chunk_size = 4\nrados_connect_timeout = -1\nglance_api_version = 2\nrbd_user = cinder\nrbd_secret_uuid = {{ ceph_uuid.stdout_lines[0] }}' /etc/cinder/cinder.conf && service {{ cinder_service }} restart"
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - ceph_conf_cinder
+
+- name: modify nova.conf for ceph
+  shell: ssh -o StrictHostKeyChecking=no {{ item }} -t "sed -i 's/^\(images_type\).*/\1 = rbd/g' /etc/nova/nova-compute.conf && sed -i 's/^\(rbd_secret_uuid\).*/\1 = {{ ceph_uuid.stdout_lines[0] }}/g' /etc/nova/nova-compute.conf  && sed -i '/^\[libvirt/a images_rbd_pool = vms\nimages_rbd_ceph_conf = /etc/ceph/ceph.conf\nrbd_user = cinder\nrbd_secret_uuid = {{ ceph_uuid.stdout_lines[0] }}\ndisk_cachemodes=\"network=writeback\"\nlive_migration_flag=\"VIR_MIGRATE_UNDEFINE_SOURCE,VIR_MIGRATE_PEER2PEER,VIR_MIGRATE_LIVE,VIR_MIGRATE_PERSIST_DEST,VIR_MIGRATE_TUNNELLED\"' /etc/nova/nova-compute.conf && service  {{ nova_service }} restart"
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - ceph_conf_nova

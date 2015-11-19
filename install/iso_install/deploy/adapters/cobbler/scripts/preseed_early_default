@@ -1,0 +1,7 @@
+# Start preseed_early_default
+# This script is not run in the chroot /target by default
+$SNIPPET('kickstart_start')
+$SNIPPET('preseed_pre_anamon')
+echo "processed preseed_pre_anamon" >> /tmp/preseed.log
+$SNIPPET('preseed_pre_install_network_config')
+# End preseed_early_default

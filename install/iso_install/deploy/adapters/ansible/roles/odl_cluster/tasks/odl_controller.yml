@@ -1,0 +1,189 @@
+---
+
+- name: install controller  packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: controller_packages | union(controller_packages_noarch)
+
+- name: get image http server
+  shell: awk -F'=' '/compass_server/ {print $2}' /etc/compass.conf
+  register: http_server
+
+- name: download oracle-jdk8 package file
+  get_url: url="http://{{ http_server.stdout_lines[0] }}/packages/onos/{{ jdk8_pkg_name }}"  dest=/opt/{{ jdk8_pkg_name }}
+
+- name: upload install_jdk8 scripts
+  unarchive: src=install_jdk8.tar dest=/opt/
+
+- name: install install_jdk8 package
+  command: su -s /bin/sh -c "/opt/install_jdk8/install_jdk8.sh"
+
+#- name: install opendaylight packages
+#  apt: name={{ item }} state=present
+#  with_items:
+#    - openjdk-8-jdk
+
+#- name: create odl directories
+#  file:
+#    path: /opt/opendaylight-0.2.2
+#    state: "directory"
+#    group: root
+#    owner: root
+#    mode: 0755
+
+- name: create odl group
+  group: name=odl system=yes state=present
+
+- name: create odl user
+  user:
+    name: odl
+    group: odl
+    home: "{{ odl_home }}"
+    createhome: "yes"
+    system: "yes"
+    shell: "/bin/false"
+
+#- name: get image http server
+#  shell: awk -F'=' '/compass_server/ {print $2}' /etc/compass.conf
+#  register: http_server
+
+- name: download odl package
+  get_url: url="http://{{ http_server.stdout_lines[0] }}/packages/odl/{{ odl_pkg_url }}"  dest=/opt/{{ odl_pkg_name }}
+
+#- name: download odl package
+#  get_url: url={{ odl_pkg_url }} dest=/opt/{{ odl_pkg_name }}
+
+# TODO: unarchive doesn't support strip-component at the moment
+# TODO: switch to use untar after support is added.
+- name: extract odl package
+#  unarchive: src=/opt/{{ odl_pkg_name }} dest={{ odl_home }} group=odl owner=odl mode=0775 copy=no
+  command: su -s /bin/sh -c "tar xzf /opt/{{ odl_pkg_name }} -C {{ odl_home }} --strip-components 1 --no-overwrite-dir -k --skip-old-files" odl
+  notify:
+    - restart odl service
+
+- name: opendaylight system file
+  template:
+    src: "{{ service_file.src }}"
+    dest: "{{ service_file.dst }}"
+    mode: 0644
+
+#- name: create karaf config
+#  template:
+#    src: org.apache.karaf.features.cfg
+#    dest: "{{ odl_home }}/etc/org.apache.karaf.features.cfg"
+#    owner: odl
+#    group: odl
+#    mode: 0775
+#  notify:
+#    - restart odl service
+
+- name: create tomcat config
+  template:
+    src: tomcat-server.xml
+    dest: "{{ odl_home }}/configuration/tomcat-server.xml"
+  notify:
+    - restart odl service
+
+#- name: restart odl service
+#  service: name=opendaylight state=started pattern="opendaylight"
+
+##########################################################################################################
+#################################   OpenDayLight Cluster Configuration   #################################
+##########################################################################################################
+- name: create initial directory
+  shell: >
+    mkdir -p {{ odl_home }}/configuration/initial;
+
+- name: create akka config
+  template:
+    src: akka.conf
+    dest: "{{ odl_home }}/configuration/initial/akka.conf"
+  notify:
+    - restart odl service
+
+
+- name: create module-shards config
+  template:
+    src: module-shards.conf
+    dest: "{{ odl_home }}/configuration/initial/module-shards.conf"
+  notify:
+    - restart odl service
+
+#- name: copy Jolokia-OSGi config
+#  shell: >
+#    cp -r jolokia {{ odl_home }}system/org/;
+
+#- name: copy Jolokia-OSGi config
+#  template:
+#    src: jolokia
+#    dest: "{{ odl_home }}/system/org/"
+#  notify:
+#    - restart odl service
+
+
+#- name: mkdir Jolokia-OSGi directory
+#  shell: >
+#     mkdir -p {{ odl_home }}system/org/jolokia;
+#     mkdir -p {{ odl_home }}system/org/jolokia/jolokia-osgi;
+#     mkdir -p {{ odl_home }}system/org/jolokia/jolokia-osgi/1.1.5;
+
+
+#- name: copy Jolokia-OSGi config
+#  template: src={{ item.src }} dest={{ item.dest }}
+#  with_items:
+#      - src: "jolokia-osgi-1.1.5-features.xml"
+#        dest: "{{ odl_home }}/system/org/jolokia/jolokia-osgi/1.1.5/jolokia-osgi-1.1.5-features.xml"
+#      - src: "jolokia-osgi-1.1.5.jar.sha1"
+#        dest: "{{ odl_home }}/system/org/jolokia/jolokia-osgi/1.1.5/jolokia-osgi-1.1.5.jar.sha1"
+#      - src: "jolokia-osgi-1.1.5.jar"
+#        dest: "{{ odl_home }}/system/org/jolokia/jolokia-osgi/1.1.5/jolokia-osgi-1.1.5.jar"
+
+#- name: copy Jolokia-OSGi jar config
+#  copy: src=roles/odl_cluster/templates/jolokia-osgi-1.1.5.jar  dest="{{ odl_home }}/system/org/jolokia/jolokia-osgi/1.1.5/"
+
+- name: remove KARAF Data Directory
+  shell: >
+    rm -rf {{ odl_home }}/data/*;
+
+- name: chown OpenDaylight Directory and Files
+  shell: >
+    chown -R odl:odl "{{ odl_home }}";
+    chown odl:odl "{{ service_file.dst }}";
+
+
+##########################################################################################################
+################################    OpenDayLight connect with OpenStack   ################################
+##########################################################################################################
+- name: Turn off neutron-server on control node
+  service: name=neutron-server state=stopped
+
+#- name: Install Crudini
+#  apt: name={{ item }} state=present
+#  with_items:
+#    - crudini
+
+- name: Run OpenVSwitch Script
+  include: openvswitch.yml
+
+#- name: Configure Neutron1
+#  shell: >
+#    crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 mechanism_drivers opendaylight;
+#    crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 tenant_network_types vxlan;
+
+#- name: Create ML2 Configuration File
+#  template:
+#    src: ml2_conf.sh
+#    dest: "/opt/ml2_conf.sh"
+#    mode: 0777
+
+#- name: Execute ML2 Configuration File
+#  command: su -s /bin/sh -c "/opt/ml2_conf.sh;"
+
+- name: Configure Neutron2
+  shell: >
+    mysql -e "drop database if exists neutron_ml2;";
+    mysql -e "create database neutron_ml2 character set utf8;";
+    mysql -e "grant all on neutron_ml2.* to 'neutron'@'%';";
+    su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron;
+
+- name: Restart neutron-server
+  service: name=neutron-server state=started

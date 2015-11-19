@@ -1,0 +1,17 @@
+# Repository Config
+#set $repo_data = $getVar("repo_data",[])
+#for $repo in $repo_data
+<listentry>
+    #if $repo.mirror_locally
+  <media_url>http://$http_server/cobbler/repo_mirror/${repo.name}</media_url>
+    #else
+  <media_url>${repo.mirror}</media_url>
+    #end if
+  <product>${repo.name}</product>
+  <product_dir>/</product_dir>
+  <ask_on_error config:type="boolean">false</ask_on_error>
+  <name>${repo.name}</name>
+</listentry>
+#end for
+
+

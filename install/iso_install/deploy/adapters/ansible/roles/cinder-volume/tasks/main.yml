@@ -1,0 +1,28 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install cinder-volume and lvm2 packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: generate cinder volume service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services | union(services_noarch)
+
+- name: check if physical device exists
+  stat: path={{ physical_device }}
+  register: status
+
+- name: load loop.yml
+  include: loop.yml
+  when: status.stat.exists == False or status.stat.isblk == False 
+
+- name: load real.yml
+  include: real.yml
+  when: status.stat.exists == True and status.stat.isblk == True
+
+- name: upload cinder-volume configuration
+  template: src=cinder.conf dest=/etc/cinder/cinder.conf
+            backup=yes
+  notify:
+     - restart cinder-volume services

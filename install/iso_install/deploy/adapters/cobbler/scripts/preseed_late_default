@@ -1,0 +1,18 @@
+# Start preseed_late_default
+# This script runs in the chroot /target by default
+$SNIPPET('preseed_post_install_kernel_options')
+$SNIPPET('preseed_post_install_network_config')
+$SNIPPET('preseed_post_partition_disks')
+$SNIPPET('preseed_ssh')
+$SNIPPET('preseed_ntp')
+$SNIPPET('preseed_post_apt_repo_config')
+#if $getVar('tool', '') != ''
+    #set $preseed_tool = "preseed_%s" % $tool
+$SNIPPET($preseed_tool)
+#end if
+$SNIPPET('preseed_limits.conf')
+$SNIPPET('preseed_sysctl.conf')
+$SNIPPET('preseed_rsyslog.conf')
+$SNIPPET('preseed_post_anamon')
+$SNIPPET('kickstart_done')
+# End preseed_late_default

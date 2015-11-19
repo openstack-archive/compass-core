@@ -1,0 +1,13 @@
+mkdir -p /etc/chef
+mkdir -p /var/log/chef
+
+## Generate validation.pem
+$SNIPPET('kickstart_chef-validator.pem')
+## Generate admin.pem
+$SNIPPET('kickstart_chef-admin.pem')
+## Generate client.rb
+$SNIPPET('kickstart_client.rb')
+$SNIPPET('kickstart_knife.rb')
+$SNIPPET('kickstart_gem_local_repo')
+$SNIPPET('kickstart_chef_run.sh')
+$SNIPPET('kickstart_chef_init')

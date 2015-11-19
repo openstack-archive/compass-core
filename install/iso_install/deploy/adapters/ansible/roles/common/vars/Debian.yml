@@ -1,0 +1,15 @@
+---
+packages:
+  - ubuntu-cloud-keyring
+  - python-dev
+  - openvswitch-datapath-dkms
+  - openvswitch-switch
+  - crudini
+
+pip_packages: []
+
+pip_conf: pip.conf
+
+services: []
+
+ntp_service: ntp

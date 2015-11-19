@@ -1,0 +1,10 @@
+{ "ipPrefix": "{{ ip_settings[groups['onos'][0]]['mgmt']['cidr'] }}",
+  "nodes":[
+{% for host in groups['onos'] %}
+    {% if loop.last %}
+	        { "id": "{{ ip_settings[host]['mgmt']['ip'] }}", "ip": "{{ ip_settings[host]['mgmt']['ip'] }}", "tcpPort": 9876 }
+    {% else %}
+                { "id": "{{ ip_settings[host]['mgmt']['ip'] }}", "ip": "{{ ip_settings[host]['mgmt']['ip'] }}", "tcpPort": 9876 },
+    {% endif %}
+{% endfor %}
+]}

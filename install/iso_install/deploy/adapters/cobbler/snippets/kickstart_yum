@@ -1,0 +1,91 @@
+cat << EOF > /etc/yum.conf
+[main]
+cachedir=/var/cache/yum/\\$basearch/\\$releasever
+#if $getVar('proxy', '') != ""
+proxy=$proxy
+#end if
+keepcache=1
+debuglevel=2
+logfile=/var/log/yum.log
+exactarch=1
+obsoletes=1
+gpgcheck=1
+plugins=1
+installonly_limit=5
+bugtracker_url=http://bugs.centos.org/set_project.php?project_id=16&ref=http://bugs.centos.org/bug_report_page.php?category=yum
+distroverpkg=centos-release
+
+#  This is the default, if you make this bigger yum won't see if the metadata
+# is newer on the remote and so you'll "gain" the bandwidth of not having to
+# download the new metadata and "pay" for it by yum not having correct
+# information.
+#  It is esp. important, to have correct metadata, for distributions like
+# Fedora which don't keep old packages around. If you don't like this checking
+# interupting your command line usage, it's much better to have something
+# manually check the metadata once an hour (yum-updatesd will do this).
+# metadata_expire=90m
+
+# PUT YOUR REPOS HERE OR IN separate files named file.repo
+# in /etc/yum.repos.d
+EOF
+
+mkdir -p /root/repo_backup
+mv -f /etc/yum.repos.d/* /root/repo_backup/
+
+#set profile_name = $getVar('profile_name','')
+#set os_info = $profile_name.split('-')
+#set osname = $os_info[0].lower()
+#set osversion = $os_info[1]
+#set osversion_flat = $osversion.replace('.', '_')
+
+cat << EOF > /etc/yum.repos.d/${osname}_${osversion_flat}_os_repo.repo
+[${osname}_${osversion_flat}_os_repo]
+name=${osname} - ${osname}_${osversion_flat}_os_repo
+proxy=_none_
+baseurl=$tree
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+
+#set $repo_data = $getVar("repo_data",[])
+#for $repo in $repo_data
+cat << EOF > /etc/yum.repos.d/${repo.name}.repo
+[$repo.name]
+name=${osname} - $repo.name
+    #if $repo.mirror_locally
+baseurl=http://$http_server/cblr/repo_mirror/${repo.name}
+proxy=_none_
+    #else
+baseurl=${repo.mirror}
+    #end if
+enabled=1
+gpgcheck=0
+priority=${repo.priority}
+skip_if_unavailable=1
+EOF
+#end for
+
+#if $getVar("local_repo", "") == "" or $getVar("local_repo_only","1") == "0"
+    #set repos_snippet = 'yum.repos.d/%s/%s/kickstart_repos' % ($osname, $osversion)
+$SNIPPET($repos_snippet)
+#end if
+
+#if $getVar("local_repo","") != ""
+    #set repo = 'yum.repos.d/%s/%s/centos_repo' % ($osname, $osversion)
+cat << EOF > /etc/yum.repos.d/Compass.repo
+[compass_repo]
+name=Compass yum repo
+baseurl=$local_repo/$repo
+enabled=1
+gpgcheck=0
+priority=1
+proxy=_none_
+skip_if_unavailable=1
+EOF
+
+    #if $getVar("local_repo_only","1") != "0"
+yum -y update
+rm -rf /etc/yum.repos.d/CentOS-*.repo
+    #end if
+#end if

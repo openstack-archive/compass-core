@@ -1,0 +1,16 @@
+---
+packages:
+  - openstack-nova-api
+  - openstack-nova-cert
+  - openstack-nova-conductor
+  - openstack-nova-console
+  - openstack-nova-novncproxy
+  - openstack-nova-scheduler
+
+services:
+  - openstack-nova-api
+  - openstack-nova-cert
+  - openstack-nova-conductor
+  - openstack-nova-consoleauth
+  - openstack-nova-novncproxy
+  - openstack-nova-scheduler

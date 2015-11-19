@@ -1,0 +1,6 @@
+[DEFAULT]
+notification_driver = messagingv2
+rpc_backend = rabbit
+rabbit_host = {{ internal_vip.ip }}
+rabbit_userid = {{ RABBIT_USER }}
+rabbit_password = {{ RABBIT_PASS }}

@@ -1,0 +1,8 @@
+if [ -d "{{ ceph_cluster_dir[0] }}" ]; then
+cd {{ ceph_cluster_dir[0] }}
+ceph-deploy purge {{ ceph_cluster_hosts.stdout_lines[0] }}
+ceph-deploy purgedata {{ ceph_cluster_hosts.stdout_lines[0] }}
+ceph-deploy forgetkeys
+cd ..
+rm -r {{ ceph_cluster_dir[0] }}
+fi

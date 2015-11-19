@@ -1,0 +1,18 @@
+---
+odl_username: admin
+odl_password: admin
+odl_api_port: 8080
+
+#odl_pkg_url: https://nexus.opendaylight.org/content/groups/public/org/opendaylight/integration/distribution-karaf/0.3.0-Lithium/distribution-karaf-0.3.0-Lithium.tar.gz
+odl_pkg_url: karaf.tar.gz
+odl_pkg_name: karaf.tar.gz
+odl_home: "/opt/opendaylight-0.3.0/"
+odl_base_features: ['config', 'standard', 'region', 'package', 'kar', 'ssh', 'management', 'odl-restconf','odl-l2switch-switch','odl-openflowplugin-all','odl-mdsal-apidocs','odl-dlux-all','odl-adsal-northbound','odl-nsf-all','odl-ovsdb-openstack','odl-ovsdb-northbound','odl-dlux-core']
+odl_extra_features: ['odl-restconf-all','odl-mdsal-clustering','odl-openflowplugin-flow-services','http','jolokia-osgi']
+odl_features: "{{ odl_base_features + odl_extra_features }}"
+odl_api_port: 8080
+
+jdk8_pkg_name: jdk-8u51-linux-x64.tar.gz
+
+controller_packages_noarch: []
+compute_packages_noarch: []

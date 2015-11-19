@@ -1,0 +1,27 @@
+---
+mongodb_packages:
+    - mongodb-server
+    - mongodb-clients
+    - python-pymongo
+
+mysql_packages:
+  - python-mysqldb
+  - mysql-server
+
+maridb_packages:
+  - libaio1
+  - libssl0.9.8
+  - python-mysqldb
+  - mysql-wsrep-server-5.5
+  - galera-3
+
+pip_packages: []
+
+services: []
+
+mongodb_serveice: mongodb
+
+mysql_config_file_path: "/etc/mysql"
+mysql_config_file_name: ["my.cnf"]
+wsrep_config_file_path: "/etc/mysql/conf.d"
+wsrep_provider_file: "/usr/lib/galera/libgalera_smm.so"

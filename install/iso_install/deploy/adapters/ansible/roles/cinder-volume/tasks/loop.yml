@@ -1,0 +1,20 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: get available /var partition size
+  script: get_var_size.sh
+  register: part_size
+
+- name: create cinder file if not exitst
+  script: create_img.sh {{ part_size.stdout }}
+
+- name: do a losetup on /mnt/cinder-volumes
+  script: losetup.sh
+  register: loop_device
+
+- name: debug loop device
+  debug: msg={{ loop_device.stdout }}
+
+- name: create physical and group volumes
+  lvg: vg=cinder-volumes pvs={{ loop_device.stdout }}
+       vg_options=--force

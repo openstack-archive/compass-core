@@ -1,0 +1,14 @@
+---
+- hosts: controller
+  remote_user: root
+  sudo: True
+  roles:
+      - common
+      - database
+      - mq
+      - keystone
+      - nova-controller
+      - neutron-controller
+      - dashboard
+      - cinder-controller
+      - glance

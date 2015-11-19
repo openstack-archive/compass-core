@@ -1,0 +1,99 @@
+#if $getVar("system_name","") != ""
+# Start pre_install_network_config generated code
+    #if $getVar('management_nic', '') == ""
+        #set $management_nic=''
+    #end if
+#raw
+# generic functions to be used later for discovering NICs
+mac_exists() {
+  if which ip 2>/dev/null >/dev/null; then
+    ip -o link | grep -i "$1" 2>/dev/null >/dev/null
+    return $?
+  elif which esxcfg-nics 2>/dev/null >/dev/null; then
+    esxcfg-nics -l | grep -i "$1" 2>/dev/null >/dev/null
+    return $?
+  else
+    ifconfig -a | grep -i "$1" 2>/dev/null >/dev/null
+    return $?
+  fi
+}
+get_ifname() {
+  if which ip 2>/dev/null >/dev/null; then
+    IFNAME=$(ip -o link | grep -i "$1" | sed -e 's/^[0-9]*: //' -e 's/:.*//')
+  elif which esxcfg-nics 2>/dev/null >/dev/null; then
+    IFNAME=$(esxcfg-nics -l | grep -i "$1" | cut -d " " -f 1)
+  else
+    IFNAME=$(ifconfig -a | grep -i "$1" | cut -d " " -f 1)
+    if [ -z "$IFNAME" ]; then
+      IFNAME=$(ifconfig -a | grep -i -B 2 "$1" | sed -n '/flags/s/:.*$//p')
+    fi
+  fi
+}
+#end raw
+    #set ikeys = $interfaces.keys()
+    #for $iname in $ikeys
+        #set $idata         = $interfaces[$iname]
+    #set $management    = $idata["management"]
+        #if $management
+            #set $management_nic = $iname
+        #end if
+    #end for
+    #for $iname in $ikeys
+        #set $idata         = $interfaces[$iname]
+        #set $mac           = $idata["mac_address"]
+        #set $static        = $idata["static"]
+        #set $management    = $idata["management"]
+        #set $ip            = $idata["ip_address"]
+        #set $netmask       = $idata["netmask"]
+        #set $iface_type    = $idata["interface_type"]
+        #set $iface_master  = $idata["interface_master"]
+        #set $static_routes = $idata["static_routes"]
+        #if $management_nic != ''
+            #if $iname != $management_nic
+                #continue
+            #end if
+        #end if
+        #if $mac == ""
+            #continue
+        #end if
+# Configuring $iname ($mac)
+if mac_exists $mac
+then
+  get_ifname $mac
+        #if $static and $ip != ""
+            #if $netmask == ""
+                ## Netmask not provided, default to /24.
+                #set $netmask = "255.255.255.0"
+            #end if
+            #set $netinfo = "--bootproto=static --ip=%s --netmask=%s" % ($ip, $netmask)
+            #if $gateway != ""
+            #set $netinfo = "%s --gateway=%s" % ($netinfo, $gateway)
+            #end if
+            #if $len($name_servers) > 0
+                #set $netinfo = "%s --nameserver=%s" % ($netinfo, $name_servers[0])
+            #end if
+        #else if not $static
+            #set $netinfo = "--bootproto=dhcp"
+        #else
+            ## Skip this interface, it's set as static, but without
+            ## networking info.
+#  Skipping (no configuration)...
+            #continue
+        #end if
+        #if $hostname != ""
+            #set $netinfo = "%s --hostname=%s" % ($netinfo, $hostname)
+        #end if
+  echo "network --device=\$IFNAME $netinfo" >> /tmp/pre_install_network_config
+        #for $route in $static_routes
+            #if $routepattern.match($route)
+                #set $routebits = $route.split(":")
+                #set [$network, $router] = $route.split(":")
+  ip route add $network via $router dev \$IFNAME
+            #else
+  # Warning: invalid route "$route"
+            #end if
+        #end for
+fi
+   #end for
+# End pre_install_network_config generated code
+#end if

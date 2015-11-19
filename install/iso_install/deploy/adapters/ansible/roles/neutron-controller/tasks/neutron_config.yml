@@ -1,0 +1,18 @@
+---
+- name: neutron-db-manage upgrade to Juno
+  shell: neutron-db-manage --config-file=/etc/neutron/neutron.conf --config-file=/etc/neutron/plugins/ml2/ml2_conf.ini upgrade head
+  register: result
+  run_once: True
+  until: result.rc == 0
+  retries: 5
+  delay: 3
+  notify:
+    - restart neutron control services
+
+- name: restart first neutron-server
+  service: name=neutron-server state=restarted enabled=yes
+
+- name: restart other neutron-server
+  service: name=neutron-server state=restarted enabled=yes
+
+- meta: flush_handlers

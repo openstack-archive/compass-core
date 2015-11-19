@@ -1,0 +1,63 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: speed up ansible by purging landscape-common
+  apt: pkg=landscape-common state=absent purge=yes
+  when: ansible_os_family == "Debian"
+
+- name: update hosts files to all hosts
+  template: src=hosts dest=/etc/hosts backup=yes
+
+- name: get compass-core hostname
+  local_action: shell hostname
+  register: name
+
+- name: get compass-core addr
+  shell: awk -F'=' '/compass_server/ {print $2}' /etc/compass.conf
+  register: COMPASS_SERVER
+
+- name: update compass-core name and ip to hosts files
+  shell: |
+    echo "# compass" >> /etc/hosts
+    echo {{ COMPASS_SERVER.stdout_lines[0] }} {{ name.stdout_lines[0] }} >> /etc/hosts
+
+- name: first update pkgs
+  shell: "{{ ansible_pkg_mgr }}  update"
+
+- name: install packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=latest"
+  with_items: packages | union(packages_noarch)
+
+- name: make config template dir exist
+  file: path=/opt/os_templates state=directory mode=0755
+
+- name: create pip config directory
+  file: path=~/.pip state=directory
+
+- name: update pip.conf
+  template: src=pip.conf dest=~/.pip/{{ pip_conf }}
+
+- name: install pip packages
+  pip: name={{ item }} state=present extra_args='--pre'
+  with_items: pip_packages
+
+- name: update ntp conf
+  template: src=ntp.conf dest=/etc/ntp.conf backup=yes
+
+- name: stop ntp
+  service: name={{ ntp_service }} state=stopped enabled=yes
+
+- name: use ntpdate once for initial sync time
+  shell: ntpdate {{ ntp_server }}
+  ignore_errors: True
+
+- name: sync sys clock to hard clock
+  shell: hwclock --systohc
+  ignore_errors: True
+
+- name: restart ntp
+  service: name={{ ntp_service }} state=restarted enabled=yes
+
+- name: restart openvswitch
+  service: name={{ item }} state=restarted enabled=yes
+  with_items: services

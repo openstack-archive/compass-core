@@ -1,0 +1,91 @@
+#if $str($getVar('anamon_enabled','')) == "1"
+
+## install anamon script
+#if $getVar("compass_server","") != ""
+wget -O /usr/local/sbin/anamon "http://$compass_server:$http_port/cobbler/aux/anamon"
+#else
+wget -O /usr/local/sbin/anamon "http://$server:$http_port/cobbler/aux/anamon"
+#end if
+## install anamon system service
+cat << EOF > /etc/init.d/anamon.init
+#raw
+#!/bin/bash
+## BEGIN INIT INFO
+# Provides: anamon.init
+# Default-Start: 3 5
+# Default-Stop: 0 1 2 4 6
+# Required-Start: $network
+# Short-Description: Starts the cobbler anamon boot notification program
+# Description: anamon runs the first time a machine is booted after
+#              installation.
+## END INIT INFO
+
+#
+# anamon.init: Starts the cobbler post-install boot notification program
+#
+# chkconfig: 35 95 95
+#
+# description: anamon runs the first time a machine is booted after
+#              installation.
+#
+#end raw
+#if $getVar("compass_server","") != ""
+/usr/local/sbin/anamon --watchfile "/var/log/anaconda.log" --name $name --server $compass_server --port $http_port --exit
+#else
+/usr/local/sbin/anamon --watchfile "/var/log/anaconda.log" --name $name --server $server --port $http_port --exit
+#end if
+chkconfig anamon.init off
+mv /etc/init.d/anamon.init /tmp/anamon.init
+EOF
+
+## adjust permissions
+chmod 755 /etc/init.d/anamon.init /usr/local/sbin/anamon
+test -d /selinux && restorecon /etc/init.d/anamon.init /usr/local/sbin/anamon
+
+## enable the script
+chkconfig anamon.init on
+
+#end if
+
+## place start-up script for updating os state
+#if $getVar('compass_server', '') != ""
+    #set srv = $getVar('compass_server','')
+#else
+    #set srv = $getVar('server','')
+#end if
+cat << EOF > /etc/init.d/set_state
+#raw
+#!/bin/bash
+## BEGIN INIT INFO
+# chkconfig: 2345 99 15
+# Provides: set_state
+# Default-Start: 3 5
+# Default-Stop: 0 1 2 4 6
+# Required-Start: $network $sshd
+# Short-Description: Notifies the os installation is finished
+# Description: set_state runs the first time a machine is booted after
+#              installation.
+## END INIT INFO
+#
+# set_state: Notify compass server the os installation is finished
+#
+# chkconfig: 35 99 99
+#
+# description: set_state runs the first time a machine is booted after
+#              installation.
+#
+#end raw
+
+wget -O /tmp/os_state --post-data='{"ready": true}' --header=Content-Type:application/json "http://$srv/api/hosts/${hostname}/state_internal"
+chkconfig set_state off
+mv /etc/init.d/set_state /tmp/set_state
+EOF
+
+## adjust permissions
+chmod 755 /etc/init.d/set_state
+test -d /selinux && restorecon /etc/init.d/set_state
+
+## enable the script
+chkconfig set_state on
+
+echo "compass_server=$server" >> /etc/compass.conf

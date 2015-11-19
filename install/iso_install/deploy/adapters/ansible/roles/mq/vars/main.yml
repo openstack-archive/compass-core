@@ -1,0 +1,6 @@
+---
+packages_noarch:
+  - rabbitmq-server
+
+services_noarch:
+  - rabbitmq-server

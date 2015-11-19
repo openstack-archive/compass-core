@@ -1,0 +1,5 @@
+$SNIPPET('yum.repos.d/centos/6.5/kickstart_centos_base_repo')
+$SNIPPET('yum.repos.d/centos/6.5/kickstart_centos_debuginfo_repo')
+$SNIPPET('yum.repos.d/centos/6.5/kickstart_centos_vault_repo')
+$SNIPPET('yum.repos.d/centos/6.5/kickstart_centos_epel_repo')
+$SNIPPET('yum.repos.d/centos/6.5/kickstart_centos_epel_testing_repo')

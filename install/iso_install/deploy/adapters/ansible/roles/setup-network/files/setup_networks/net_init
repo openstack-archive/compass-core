@@ -1,0 +1,20 @@
+#!/bin/bash
+## BEGIN INIT INFO
+# Provides: anamon.init
+# Default-Start: 3 5
+# Default-Stop: 0 1 2 4 6
+# Required-Start: $network
+# Short-Description: Starts the cobbler anamon boot notification program
+# Description: anamon runs the first time a machine is booted after
+#              installation.
+## END INIT INFO
+
+#
+# anamon.init: Starts the cobbler post-install boot notification program
+#
+# chkconfig: 35 0 6
+#
+# description: anamon runs the first time a machine is booted after
+#              installation.
+#
+python /opt/setup_networks/setup_networks.py

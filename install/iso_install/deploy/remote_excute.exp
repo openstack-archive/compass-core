@@ -1,0 +1,35 @@
+#!/usr/bin/expect
+
+set addr [lindex $argv 0]
+set user [lindex $argv 1]
+set passwd [lindex $argv 2]
+set command [lindex $argv 3]
+set cmd_prompt "]#|~]?"
+
+eval spawn ssh $user@$addr
+set timeout 60
+
+expect {
+    -re ".*es.*o.*"
+    {
+        exp_send "yes\r"
+        exp_continue
+    }
+
+    -re ".*sword:" {
+        exp_send "$passwd\r"
+        exp_continue
+    }
+    -re $cmd_prompt {
+        exp_send "$command\r"
+    }
+}
+
+exec sleep 1
+
+expect {
+    -re $cmd_prompt {
+        send "exit\r"
+    }
+}
+send "exit 1\r"

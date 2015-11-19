@@ -1,0 +1,39 @@
+#!/bin/sh
+mysql -uroot -Dmysql <<EOF
+drop database if exists keystone;
+drop database if exists glance;
+drop database if exists neutron;
+drop database if exists nova;
+drop database if exists cinder;
+
+CREATE DATABASE keystone;
+{% for host in ['%', 'localhost', inventory_hostname] %}
+GRANT ALL ON keystone.* TO 'keystone'@'{{ host }}' IDENTIFIED BY '{{ KEYSTONE_DBPASS }}';
+{% endfor %}
+
+CREATE DATABASE glance;
+{% for host in ['%', 'localhost', inventory_hostname] %}
+GRANT ALL ON glance.* TO 'glance'@'{{ host }}' IDENTIFIED BY '{{ GLANCE_DBPASS }}';
+{% endfor %}
+
+CREATE DATABASE neutron;
+{% for host in ['%', 'localhost', inventory_hostname] %}
+GRANT ALL ON neutron.* TO 'neutron'@'{{ host }}' IDENTIFIED BY '{{ NEUTRON_DBPASS }}';
+{% endfor %}
+
+CREATE DATABASE nova;
+{% for host in ['%', 'localhost', inventory_hostname] %}
+GRANT ALL ON nova.* TO 'nova'@'{{ host }}' IDENTIFIED BY '{{ NOVA_DBPASS }}';
+{% endfor %}
+
+CREATE DATABASE cinder;
+{% for host in ['%', 'localhost', inventory_hostname] %}
+GRANT ALL ON cinder.* TO 'cinder'@'{{ host }}' IDENTIFIED BY '{{ CINDER_DBPASS }}';
+{% endfor %}
+
+{% if WSREP_SST_USER is defined %}
+{% for host in ['%', 'localhost', inventory_hostname] %}
+GRANT ALL ON *.* TO '{{ WSREP_SST_USER }}'@'{{ host }}' IDENTIFIED BY '{{ WSREP_SST_PASS }}';
+{% endfor %}
+{% endif %}
+EOF

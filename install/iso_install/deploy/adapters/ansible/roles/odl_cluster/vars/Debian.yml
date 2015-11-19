@@ -1,0 +1,12 @@
+---
+
+controller_packages:
+#  - openjdk-7-jdk
+  - crudini
+
+compute_packages:
+  - crudini
+
+service_file:
+   src: opendaylight.conf
+   dst: /etc/init/opendaylight.conf

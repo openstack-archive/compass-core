@@ -1,0 +1,49 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: activate ipv4 forwarding
+  sysctl: name=net.ipv4.ip_forward value=1
+          state=present reload=yes
+
+- name: deactivate ipv4 rp filter
+  sysctl: name=net.ipv4.conf.all.rp_filter value=0
+          state=present reload=yes
+
+- name: deactivate ipv4 default rp filter
+  sysctl: name=net.ipv4.conf.default.rp_filter
+          value=0 state=present reload=yes
+
+- name: install compute-related neutron packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: fix openstack neutron plugin config file
+  shell: |
+    sed -i 's,plugins/openvswitch/ovs_neutron_plugin.ini,plugin.ini,g' /usr/lib/systemd/system/neutron-openvswitch-agent.service
+    systemctl daemon-reload
+  when: ansible_os_family == 'RedHat'
+
+- name: generate neutron compute service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services | union(services_noarch)
+
+- name: config ml2 plugin
+  template: src=templates/ml2_conf.ini
+            dest=/etc/neutron/plugins/ml2/ml2_conf.ini
+            backup=yes
+
+- name: ln plugin.ini
+  file: src=/etc/neutron/plugins/ml2/ml2_conf.ini dest=/etc/neutron/plugin.ini state=link
+
+- name: config neutron
+  template: src=templates/neutron.conf
+            dest=/etc/neutron/neutron.conf backup=yes
+  notify:
+    - restart neutron compute service
+    - restart nova-compute services
+
+- meta: flush_handlers
+
+- include: ../../neutron-network/tasks/odl.yml
+  when: "'opendaylight' in {{ NEUTRON_MECHANISM_DRIVERS }}"
+

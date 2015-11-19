@@ -1,0 +1,10 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+  tags: secgroup
+
+- debug: msg={{ enable_secgroup }}
+  tags: secgroup
+
+- include: secgroup.yml
+  when: '{{ enable_secgroup }} == False'
+  tags: secgroup

@@ -1,0 +1,4 @@
+---
+- name: restart odl service
+  service: name=opendaylight state=restarted
+  #command: su -s /bin/sh -c "{{ odl_home }}/bin/stop;{{ odl_home }}/bin/start;"

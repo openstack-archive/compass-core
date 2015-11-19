@@ -1,0 +1,36 @@
+sed -i 's/PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
+#set ssh_keys = $getVar("push_ssh_keys", "/root/.ssh/id_rsa.pub")
+#if $ssh_keys != ""
+    #set user_name = $getVar("username", "root")
+    #if $user_name == "root"
+        #set home = "/root"
+    #else
+        #set home = "/home/%s" % $user_name
+    #end if
+mkdir -p $home/.ssh
+
+chmod 700 -R $home/.ssh
+    #set $firstline = True
+    #for $ssh_key in $ssh_keys.split(',')
+        #if not $ssh_key
+            #continue
+        #end if
+        #try
+            #set $f = $open($ssh_key)
+            #if firstline
+cat << EOF > $home/.ssh/authorized_keys
+                #echo $f.read()
+EOF
+            #else
+cat << EOF >> $home/.ssh/authorized_keys
+                #echo $f.read()
+EOF
+            #end if
+            #set $firstline = False
+            #silent $f.close()
+        #except
+# failed to read from $ssh_key
+        #end try
+    #end for
+chmod 600 $home/.ssh/authorized_keys
+#end if

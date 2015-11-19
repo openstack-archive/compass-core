@@ -1,0 +1,6 @@
+---
+packages_noarch:
+  - python-pip
+  - ntp
+
+services_noarch: []

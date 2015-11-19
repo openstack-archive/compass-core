@@ -1,0 +1,13 @@
+---
+- include: nova_install.yml
+  tags:
+    - install
+    - nova_install
+    - nova
+
+- include: nova_config.yml
+  when: inventory_hostname == groups['controller'][0]
+  tags:
+    - config
+    - nova_config
+    - nova

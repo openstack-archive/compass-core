@@ -1,0 +1,25 @@
+cat << EOF > /etc/yum.repos.d/epel-testing.repo
+[epel-testing]
+name=Extra Packages for Enterprise Linux 7.0 - Testing - \\$basearch
+baseurl=http://download.fedoraproject.org/pub/epel/testing/7/\\$basearch
+mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=testing-epel7&arch=\\$basearch
+failovermethod=priority
+enabled=0
+gpgcheck=0
+
+[epel-testing-debuginfo]
+name=Extra Packages for Enterprise Linux 7.0 - Testing - \\$basearch - Debug
+baseurl=http://download.fedoraproject.org/pub/epel/testing/7/\\$basearch/debug
+mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=testing-debug-epel7&arch=\\$basearch
+failovermethod=priority
+enabled=0
+gpgcheck=0
+
+[epel-testing-source]
+name=Extra Packages for Enterprise Linux 7 - Testing - \\$basearch - Source
+baseurl=http://download.fedoraproject.org/pub/epel/testing/7/SRPMS
+mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=testing-source-epel7&arch=\\$basearch
+failovermethod=priority
+enabled=0
+gpgcheck=0
+EOF

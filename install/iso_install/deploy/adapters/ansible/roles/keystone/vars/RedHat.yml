@@ -1,0 +1,8 @@
+---
+cron_path: "/var/spool/cron"
+
+packages:
+  - openstack-keystone
+
+services:
+  - openstack-keystone

@@ -1,0 +1,11 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Install ONOS Cluster on Controller
+  include: onos_controller.yml
+  when: inventory_hostname in groups['onos']
+
+- name: Install ONOS Cluster on Compute
+  include: openvswitch.yml
+  when: groups['onos']|length !=0 and inventory_hostname not in groups['onos']
+

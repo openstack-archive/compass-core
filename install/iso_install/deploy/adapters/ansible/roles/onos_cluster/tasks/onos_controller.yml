@@ -1,0 +1,145 @@
+---
+- name: upload onos driver package
+  unarchive: src=networking-onos.tar dest=/opt/
+
+- name: install onos driver
+  command: su -s /bin/sh -c "/opt/networking-onos/install_driver.sh"
+
+- name: install onos required packages
+  action: "{{ ansible_pkg_mgr }}  name={{ item }} state=present"
+  with_items: packages
+  
+- name: get image http server
+  shell: awk -F'=' '/compass_server/ {print $2}' /etc/compass.conf
+  register: http_server
+
+- name: download oracle-jdk8 package file
+  get_url: url="http://{{ http_server.stdout_lines[0] }}/packages/onos/{{ jdk8_pkg_name }}"  dest=/opt/{{ jdk8_pkg_name }}
+  
+- name: upload install_jdk8 scripts
+  unarchive: src=install_jdk8.tar dest=/opt/
+  
+- name: install install_jdk8 package
+  command: su -s /bin/sh -c "/opt/install_jdk8/install_jdk8.sh" 
+  
+- name: create JAVA_HOME environment variable
+  shell: >
+    export J2SDKDIR=/usr/lib/jvm/java-8-oracle;
+    export J2REDIR=/usr/lib/jvm/java-8-oracle/jre;
+    export PATH=$PATH:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin;
+    export JAVA_HOME=/usr/lib/jvm/java-8-oracle;
+    export DERBY_HOME=/usr/lib/jvm/java-8-oracle/db;
+
+- name: create onos group
+  group: name=onos system=yes state=present
+
+- name: create onos user
+  user:
+    name: onos
+    group: onos
+    home: "{{ onos_home }}"
+    createhome: "yes"
+    system: "yes"
+    shell: "/bin/false"
+
+- name: download onos package
+  get_url: url="http://{{ http_server.stdout_lines[0] }}/packages/onos/{{ onos_pkg_name }}"  dest=/opt/{{ onos_pkg_name }}
+
+- name: create new jar repository
+  command: su -s /bin/sh -c "mkdir ~/.m2"
+
+- name: download jar repository
+  get_url: url="http://{{ http_server.stdout_lines[0] }}/packages/onos/repository.tar"  dest=~/.m2/
+
+- name: extract jar repository
+  command: su -s /bin/sh -c "tar xvf  ~/.m2/repository.tar -C ~/.m2/"
+
+- name: extract onos package
+  command: su -s /bin/sh -c "tar xzf /opt/{{ onos_pkg_name }} -C {{ onos_home }} --strip-components 1 --no-overwrite-dir -k --skip-old-files" onos
+
+- name: configure onos service
+  shell: >
+    echo 'export ONOS_OPTS=debug' > {{ onos_home }}/options;
+    echo 'export ONOS_USER=root' >> {{ onos_home }}/options;
+    mkdir {{ onos_home }}/var;
+    mkdir {{ onos_home }}/config;
+    sed -i '/pre-stop/i\env JAVA_HOME=/usr/lib/jvm/java-8-oracle' {{ onos_home }}/debian/onos.conf;
+    cp -rf {{ onos_home }}/debian/onos.conf /etc/init/;
+    cp -rf {{ onos_home }}/debian/onos.conf /etc/init.d/;
+#  notify:
+#    - restart onos service
+  
+- name: configure onos boot feature
+  shell: >
+    sed -i '/^featuresBoot=/c\featuresBoot={{ onos_boot_features }}' {{ onos_home }}/{{ karaf_dist }}/etc/org.apache.karaf.features.cfg;
+
+- name: create cluster json
+  template:
+    src: cluster.json
+    dest: "{{ onos_home }}/config/cluster.json"
+#  notify:
+#    - restart onos service
+
+- name: create tablets json
+  template:
+    src: tablets.json
+    dest: "{{ onos_home }}/config/tablets.json"
+#  notify:
+#    - restart onos service
+
+- name: wait for config time
+  shell: "sleep 10"
+
+- name: start onos service
+  service: name=onos state=started enabled=yes
+
+- name: wait for restart time
+  shell: "sleep 60"
+
+- name: start onos service
+  service: name=onos state=restarted enabled=yes
+
+- name: wait for onos start time
+  shell: "sleep 60"
+
+- name: start onos service
+  service: name=onos state=restarted enabled=yes
+
+- name: wait for onos start time
+  shell: "sleep 100"
+
+- name: add onos auto start
+  shell: >
+    echo "onos">>/opt/service
+
+##########################################################################################################
+################################    ONOS connect with OpenStack   ################################
+##########################################################################################################
+- name: Run OpenVSwitch Script
+  include: openvswitch.yml
+
+- name: Configure Neutron1
+  shell: >
+    crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 mechanism_drivers onos;
+    crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 tenant_network_types vxlan;
+    crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 type_drivers vxlan
+
+- name: Create ML2 Configuration File
+  template:
+    src: ml2_conf.sh
+    dest: "/opt/ml2_conf.sh"
+    mode: 0777
+
+- name: Configure Neutron2
+  command: su -s /bin/sh -c "/opt/ml2_conf.sh;"
+
+
+- name: Configure Neutron3
+  shell: >
+    mysql -e "drop database if exists neutron_ml2;";
+    mysql -e "create database neutron_ml2 character set utf8;";
+    mysql -e "grant all on neutron_ml2.* to 'neutron'@'%';";
+    su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron;
+
+- name: Restart neutron-server
+  service: name=neutron-server state=restarted

@@ -1,0 +1,21 @@
+# default: off
+# description: The tftp server serves files using the trivial file transfer \
+#       protocol.  The tftp protocol is often used to boot diskless \
+#       workstations, download configuration files to network-aware printers, \
+#       and to start the installation process for some operating systems.
+service tftp
+{
+        disable                 = no
+        log_type                = SYSLOG local5 info
+        socket_type             = dgram
+        protocol                = udp
+        wait                    = yes
+        user                    = $user
+        server                  = $binary
+        server_args             = -B 1380 -v -s $args
+        instances               = 1000
+        per_source              = 1000
+        cps                     = 1000 2
+        flags                   = IPv4
+}
+

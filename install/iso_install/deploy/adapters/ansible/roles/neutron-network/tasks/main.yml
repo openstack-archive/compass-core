@@ -1,0 +1,88 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: activate ipv4 forwarding
+  sysctl: name=net.ipv4.ip_forward value=1
+          state=present reload=yes
+
+- name: deactivate ipv4 rp filter
+  sysctl: name=net.ipv4.conf.all.rp_filter value=0
+          state=present reload=yes
+
+- name: deactivate ipv4 default rp filter
+  sysctl: name=net.ipv4.conf.default.rp_filter
+          value=0 state=present reload=yes
+
+- name: assert kernel support for vxlan
+  command: modinfo -F version vxlan
+  when: "'vxlan' in {{ NEUTRON_TUNNEL_TYPES }}"
+
+- name: assert iproute2 suppport for vxlan
+  command: ip link add type vxlan help
+  register: iproute_out
+  failed_when: iproute_out.rc == 255
+  when: "'vxlan' in {{ NEUTRON_TUNNEL_TYPES }}"
+
+- name: update epel-release
+  shell: yum install -y http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
+  ignore_errors: True
+
+- name: update rdo-release-kilo repo
+  shell: yum install -y http://rdo.fedorapeople.org/openstack-kilo/rdo-release-kilo.rpm
+  ignore_errors: True
+
+- name: install neutron network related packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: generate neutron network service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services | union(services_noarch)
+
+- name: fix openstack neutron plugin config file
+  shell: |
+    sed -i 's,plugins/openvswitch/ovs_neutron_plugin.ini,plugin.ini,g' /usr/lib/systemd/system/neutron-openvswitch-agent.service
+    systemctl daemon-reload
+  when: ansible_os_family == 'RedHat'
+
+- name: config l3 agent
+  template: src=l3_agent.ini dest=/etc/neutron/l3_agent.ini
+            backup=yes
+
+- name: config dhcp agent
+  template: src=dhcp_agent.ini dest=/etc/neutron/dhcp_agent.ini
+            backup=yes
+
+- name: update dnsmasq-neutron.conf
+  template: src=templates/dnsmasq-neutron.conf
+            dest=/etc/neutron/dnsmasq-neutron.conf
+
+- name: config metadata agent
+  template: src=metadata_agent.ini
+            dest=/etc/neutron/metadata_agent.ini backup=yes
+
+- name: config ml2 plugin
+  template: src=templates/ml2_conf.ini
+            dest=/etc/neutron/plugins/ml2/ml2_conf.ini
+            backup=yes
+
+- name: ln plugin.ini
+  file: src=/etc/neutron/plugins/ml2/ml2_conf.ini dest=/etc/neutron/plugin.ini state=link
+
+- name: config neutron
+  template: src=templates/neutron.conf
+            dest=/etc/neutron/neutron.conf backup=yes
+
+- include: firewall.yml
+  when: enable_fwaas == True
+
+- include: vpn.yml
+  when: enable_vpnaas == True
+
+- include: odl.yml
+  when: "'opendaylight' in {{ NEUTRON_MECHANISM_DRIVERS }}"
+
+- name: restart neutron services
+  debug: msg="restart neutron services"
+  notify:
+    - restart neutron network relation service

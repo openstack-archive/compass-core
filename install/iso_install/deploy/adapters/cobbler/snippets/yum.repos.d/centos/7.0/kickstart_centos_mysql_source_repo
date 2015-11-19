@@ -1,0 +1,31 @@
+cat << EOF > /etc/yum.repos.d/mysql-community-source.repo
+[mysql-connectors-community-source]
+name=MySQL Connectors Community - Source
+baseurl=http://repo.mysql.com/yum/mysql-connectors-community/el/7/SRPMS
+enabled=0
+gpgcheck=0
+
+[mysql-tools-community-source]
+name=MySQL Tools Community - Source
+baseurl=http://repo.mysql.com/yum/mysql-tools-community/el/7/SRPMS
+enabled=0
+gpgcheck=0
+
+[mysql55-community-source]
+name=MySQL 5.5 Community Server - Source
+baseurl=http://repo.mysql.com/yum/mysql-5.5-community/el/7/SRPMS
+enabled=0
+gpgcheck=0
+
+[mysql56-community-source]
+name=MySQL 5.6 Community Server - Source
+baseurl=http://repo.mysql.com/yum/mysql-5.6-community/el/7/SRPMS
+enabled=0
+gpgcheck=0
+
+[mysql57-community-dmr-source]
+name=MySQL 5.7 Community Server Development Milestone Release - Source
+baseurl=http://repo.mysql.com/yum/mysql-5.7-community/el/7/SRPMS
+enabled=0
+gpgcheck=0
+EOF

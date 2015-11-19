@@ -1,0 +1,10 @@
+#! /bin/sh
+
+code=`mysql -uroot -e "show status" | awk '/Threads_running/{print $2}'`
+
+if [ "$code"=="1" ]
+then
+    echo "HTTP/1.1 200 OK\r\n"
+else
+    echo "HTTP/1.1 503 Service Unavailable\r\n"
+fi

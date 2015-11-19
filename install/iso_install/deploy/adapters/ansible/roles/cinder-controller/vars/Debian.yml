@@ -1,0 +1,9 @@
+---
+
+packages:
+  - cinder-api
+  - cinder-scheduler
+
+services:
+  - cinder-api
+  - cinder-scheduler

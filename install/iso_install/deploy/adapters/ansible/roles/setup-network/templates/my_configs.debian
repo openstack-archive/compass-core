@@ -1,0 +1,14 @@
+{%- for alias, intf in host_ip_settings.items() %}
+
+auto {{ alias }}
+iface {{ alias }} inet static
+    address {{ intf["ip"] }}
+    netmask {{ intf["netmask"] }}
+{% if "gw" in intf %}
+    gateway {{ intf["gw"] }}
+{% endif %}
+{% if intf["name"] == alias %}
+    pre-up ip link set {{ sys_intf_mappings[alias]["interface"] }} up
+    pre-up ip link add link {{ sys_intf_mappings[alias]["interface"] }} name {{ alias }} type vlan id {{ sys_intf_mappings[alias]["vlan_tag"] }}
+{% endif %}
+{% endfor %}

@@ -1,0 +1,19 @@
+---
+- name: install mysql client and server packages
+  apt: name={{ item }} state=present
+  with_items: mysql_packages
+
+- name: create mysql log directy
+  file: path=/var/log/mysql state=directory owner=mysql group=mysql mode=0755
+
+- name: update mysql config file
+  copy: src={{ item }} dest={{ mysql_config_file_path }}/{{ item }} backup=yes
+  with_items: mysql_config_file_name
+
+- name: manually restart mysql server
+  shell: service mysql restart
+
+- name: create database/user
+  shell: /opt/data.sh
+  tags:
+    - mysql_user

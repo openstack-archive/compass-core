@@ -1,0 +1,10 @@
+---
+packages:
+  - openstack-neutron
+  - openstack-neutron-ml2
+  - openstack-neutron-openvswitch
+
+services:
+  - openvswitch
+  - neutron-openvswitch-agent
+  - libvirtd

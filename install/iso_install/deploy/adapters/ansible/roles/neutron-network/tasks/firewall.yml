@@ -1,0 +1,9 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install firewall packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: firewall_packages
+
+- name: update firewall related conf
+  shell: crudini --set --list /etc/neutron/neutron.conf DEFAULT service_plugins firewall

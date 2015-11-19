@@ -1,0 +1,22 @@
+---
+packages:
+  - ceph-deploy
+  - python-flask
+  - libgoogle-perftools4
+  - libleveldb1
+  - liblttng-ust0
+  - libsnappy1
+  - librbd1
+  - librados2
+  - python-ceph
+  - ceph
+  - ceph-mds
+  - ceph-common
+  - ceph-fs-common
+  - gdisk
+
+services: []
+
+cinder_service: cinder-volume
+nova_service: nova-compute
+glance_service: glance-api

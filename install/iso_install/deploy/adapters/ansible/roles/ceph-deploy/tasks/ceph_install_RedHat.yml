@@ -1,0 +1,56 @@
+---
+- name: create ceph cluster
+  shell: cd {{ ceph_cluster_dir[0] }} && ceph-deploy new {{ controller_nodes.stdout_lines[0] }}
+  tags:
+    - create_ceph_cluster
+
+- name: default config for ceph
+  shell: cd {{ ceph_cluster_dir[0] }} && echo "osd_journal_size = 1024" >> ceph.conf && echo "osd_pool_default_size = 2" >> ceph.conf
+
+- name: install ceph for every nodes includes jumpserver
+  shell: cd {{ ceph_cluster_dir[0] }} && ceph-deploy install --no-adjust-repos --repo-url http://10.1.0.12/cblr/repo_mirror/centos7-juno-ppa --gpg-url http://10.1.0.12/cblr/repo_mirror/centos7-juno-ppa/ceph_key_release.asc {{ ceph_cluster_hosts.stdout_lines[0]}}
+
+- name: create monitor node in controller group
+  shell: cd {{ ceph_cluster_dir[0] }} && ceph-deploy --overwrite-conf mon create-initial
+
+- name: gather keys
+  shell: sleep 5 && cd {{ ceph_cluster_dir[0] }} && ceph-deploy gatherkeys {{ inventory_hostname }}
+  ignore_errors: True
+
+- name: copy create_osd.sh to host1
+  copy: src=create_osd.sh dest=~/create_osd.sh mode=0777
+  tags:
+    - create_osd
+
+- name: copy create_osd.sh to other nodes
+  shell: scp -o StrictHostKeyChecking=no ~/create_osd.sh {{ item }}:~/
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - create_osd
+
+- name: create osd
+  shell: ssh -o StrictHostKeyChecking=no -t {{ item }} "~/create_osd.sh"
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - create_osd
+
+- name: prepare create osd
+  shell: cd {{ ceph_cluster_dir[0] }} && ceph-deploy osd prepare {{ item }}:/var/local/osd
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - create_osd
+
+
+- name: activate osd
+  shell: cd {{ ceph_cluster_dir[0] }} && ceph-deploy osd activate {{ item }}:/var/local/osd
+  with_items:
+    - "{{ groups['compute'] }}"
+  tags:
+    - create_osd
+    - activate_osd
+
+- name: create admin node
+  shell: cd {{ ceph_cluster_dir[0] }} && ceph-deploy admin {{ ceph_cluster_hosts.stdout_lines[0] }}

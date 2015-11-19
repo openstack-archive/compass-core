@@ -1,0 +1,6 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+- include: rabbitmq.yml
+
+#- include: rabbitmq_cluster.yml
+#  when: HA_CLUSTER is defined

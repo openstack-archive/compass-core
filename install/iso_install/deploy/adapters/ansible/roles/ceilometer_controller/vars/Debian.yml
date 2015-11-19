@@ -1,0 +1,29 @@
+---
+ceilometer_packages:
+  - ceilometer-api
+  - ceilometer-collector
+  - ceilometer-agent-central
+  - ceilometer-agent-notification
+  - ceilometer-alarm-evaluator
+  - ceilometer-alarm-notifier
+  - python-ceilometerclient
+
+ceilometer_services:
+  - ceilometer-agent-central
+  - ceilometer-agent-notification
+  - ceilometer-api
+  - ceilometer-collector
+  - ceilometer-alarm-evaluator
+  - ceilometer-alarm-notifier
+
+ceilometer_configs_templates:
+  - src: ceilometer.j2
+    dest:
+      - /etc/ceilometer/ceilometer.conf
+  - src: cinder.j2
+    dest:
+      - /etc/cinder/cinder.conf
+  - src: glance.j2
+    dest:
+      - /etc/glance/glance-api.conf
+      - /etc/glance/glance-registry.conf

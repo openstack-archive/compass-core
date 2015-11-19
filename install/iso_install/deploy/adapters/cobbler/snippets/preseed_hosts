@@ -1,0 +1,15 @@
+cat << EOL > /etc/hosts
+127.0.0.1   $system_name localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         $system_name localhost localhost.localdomain localhost6 localhost6.localdomain6
+#for $iname, $idata in $interfaces.items()
+    #if $hostname and $idata["management"] and $idata["static"] and $idata.get("ip_address", "") != ""
+$idata["ip_address"] $hostname
+    #end if
+#end for
+#import os
+#set $server_name = $os.uname[1]
+$server $server_name
+#if $getVar("chef_server_ip", "") != "" and $getVar("chef_server_dns", "") != ""
+$chef_server_ip $chef_server_dns
+#end if
+EOL

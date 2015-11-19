@@ -1,0 +1,7 @@
+## start of cobbler network_config generated code
+#if $getVar("system_name","") != ""
+# Using "new" style networking config, by matching networking information to the physical interface's
+# MAC-address
+%include /tmp/pre_install_network_config
+#end if
+## end of cobbler network_config generated code

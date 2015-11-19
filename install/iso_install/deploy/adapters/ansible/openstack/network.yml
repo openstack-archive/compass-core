@@ -1,0 +1,7 @@
+---
+- hosts: all
+  remote_user: vagrant
+  sudo: True
+  roles:
+    - common
+    - neutron-network

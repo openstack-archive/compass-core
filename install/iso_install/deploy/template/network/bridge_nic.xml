@@ -1,0 +1,6 @@
+<network>
+<name>REPLACE_NAME</name>
+<forward mode="bridge">
+  <interface dev="REPLACE_NIC"/>
+</forward>
+</network>

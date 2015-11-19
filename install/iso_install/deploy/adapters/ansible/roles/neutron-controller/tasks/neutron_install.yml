@@ -1,0 +1,23 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install controller-related neutron packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: generate neutron control service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services | union(services_noarch)
+
+- name: get tenant id to fill neutron.conf
+  shell: keystone --os-token={{ ADMIN_TOKEN }} --os-endpoint=http://{{ internal_vip.ip }}:35357/v2.0 tenant-get service | grep id | awk '{print $4}'
+  register: NOVA_ADMIN_TENANT_ID
+
+- name: update neutron conf
+  template: src=templates/neutron.conf dest=/etc/neutron/neutron.conf backup=yes
+
+- name: update ml2 plugin conf
+  template: src=templates/ml2_conf.ini dest=/etc/neutron/plugins/ml2/ml2_conf.ini backup=yes
+
+- name: ln plugin.ini
+  file: src=/etc/neutron/plugins/ml2/ml2_conf.ini dest=/etc/neutron/plugin.ini state=link

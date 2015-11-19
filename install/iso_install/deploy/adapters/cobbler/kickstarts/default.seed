@@ -1,0 +1,139 @@
+# Mostly based on the Ubuntu installation guide
+# https://help.ubuntu.com/12.04/installation-guide/
+
+## Figure out if we're kickstarting a system or a profile
+#if $getVar('system_name','') != ''
+#set $what = "system"
+#else
+#set $what = "profile"
+#end if
+
+# Preseeding only locale sets language, country and locale.
+d-i debian-installer/locale string en_US
+d-i debian-installer/country string US
+d-i debian-installer/language string en
+
+# Keyboard selection.
+# Disable automatic (interactive) keymap detection.
+d-i console-setup/ask_detect boolean false
+d-i console-setup/layoutcode string us
+d-i console-setup/modelcode string  SKIP
+d-i keyboard-configuration/variantcode string us
+d-i keyboard-configuration/layoutcode string us
+d-i keyboard-configuration/model    select  Generic 105-key (Intl) PC
+d-i console-keymaps-at/keymap   select  us
+d-i keyboard-configuration/xkb-keymap   select  us
+
+d-i preseed/early_command string \
+wget -O- \
+http://$http_server/cblr/svc/op/script/$what/$name/?script=preseed_early_default | /bin/sh -s; \
+debconf-set-selections /tmp/pre_install_network_config
+
+d-i partman/early_command string \
+wget -O- \
+http://$http_server/cblr/svc/op/script/$what/$name/?script=partman_early_default | /bin/sh -s; \
+debconf-set-selections /tmp/part-include
+
+$SNIPPET('preseed_network_config')
+$SNIPPET('preseed_partition_disks')
+
+# NTP/Time Setup
+#if $getVar('timezone', '') != ""
+d-i time/zone string $timezone
+#else
+d-i time/zone string US/Pacific
+#end if
+d-i clock-setup/utc boolean true
+d-i clock-setup/ntp boolean true
+#if $getVar('ntp_server', '') == ""
+d-i clock-setup/ntp-server  string 0.ubuntu.pool.ntp.org
+#else
+d-i clock-setup/ntp-server  string $ntp_server
+#end if
+
+# Setup the installation source
+d-i mirror/country string manual
+d-i mirror/http/hostname string $http_server
+d-i mirror/http/directory string $install_source_directory
+d-i mirror/http/proxy string
+d-i mirror/http/mirror select $http_server
+d-i mirror/protocol select http
+d-i mirror/udeb/components multiselect main, restricted
+
+#set $os_v = $getVar('os_version','')
+#if $os_v and $os_v.lower()[0] > 'p'
+# Required at least for 12.10+
+d-i live-installer/net-image string http://$http_server/cobbler/ks_mirror/$distro_name/install/filesystem.squashfs
+#end if
+
+# root account and password
+#if $getVar('username', 'root') != "root"
+d-i passwd/root-login boolean false
+d-i passwd/make-user boolean true
+d-i user-setup/allow-password-weak boolean true
+d-i passwd/root-password password root
+d-i passwd/root-password-again password root
+    #set username = $getVar('username', 'root')
+d-i passwd/user-fullname string $username
+d-i passwd/username string $username
+    #if $getVar('password', '') != ""
+d-i passwd/user-password-crypted password $password
+    #else
+d-i passwd/user-password password $username
+d-i passwd/user-password-again password $username
+    #end if
+#else
+d-i passwd/root-login boolean true
+d-i passwd/make-user boolean false
+d-i user-setup/allow-password-weak boolean true
+    #if $getVar('password', '') != ""
+d-i passwd/root-password-crypted password $password
+    #else
+d-i passwd/root-password password root
+d-i passwd/root-password-again password root
+    #end if
+#end if
+
+$SNIPPET('preseed_apt_repo_config')
+
+# Individual additional packages to install
+# wget is REQUIRED otherwise quite a few things won't work
+# later in the build (like late-command scripts)
+#if $getVar('tool', '') != ''
+    #set $preseed_software = "preseed_software_%s" % $tool
+$SNIPPET($preseed_software)
+#else
+d-i pkgsel/include string ntp ssh wget
+#end if
+
+# Whether to upgrade packages after debootstrap.
+# Allowed values: none, safe-upgrade, full-upgrade
+d-i pkgsel/upgrade select none
+d-i popularity-contest/participate boolean false
+d-i lilo-installer/skip boolean true
+d-i grub-installer/only_debian boolean true
+
+# Use the following option to add additional boot parameters for the
+# installed system (if supported by the bootloader installer).
+# Note: options passed to the installer will be added automatically.
+d-i debian-installer/add-kernel-opts string $kernel_options_post
+d-i debian-installer/allow_unauthenticated string true
+
+# Avoid that last message about the install being complete.
+d-i finish-install/reboot_in_progress note
+
+# This will prevent the installer from ejecting the CD during the reboot,
+# which is useful in some situations.
+d-i cdrom-detect/eject boolean false
+
+# This command is run just before the install finishes, but when there is
+# still a usable /target directory. You can chroot to /target and use it
+# directly, or use the apt-install and in-target commands to easily install
+# packages and run commands in the target system.
+# d-i preseed/late_command string [command]
+d-i preseed/late_command string \
+in-target sed -i '$a UseDNS no' /etc/ssh/sshd_config; \
+in-target sed -i 's/.*GSSAPIAuthentication.*/GSSAPIAuthentication no/g' /etc/ssh/sshd_config; \
+wget -O- \
+   http://$http_server/cblr/svc/op/script/$what/$name/?script=preseed_late_default | \
+   chroot /target /bin/sh -s; cp /target/etc/network/interfaces /etc/network/interfaces

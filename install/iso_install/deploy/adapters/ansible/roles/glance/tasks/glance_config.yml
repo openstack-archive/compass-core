@@ -1,0 +1,9 @@
+---
+- name: sync glance db
+  #glance_manage: action=dbsync
+  shell: su -s /bin/sh -c 'glance-manage db sync' glance
+  ignore_errors: True
+  notify:
+    - restart glance services
+
+- meta: flush_handlers

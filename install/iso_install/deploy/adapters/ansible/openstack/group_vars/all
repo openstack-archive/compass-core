@@ -1,0 +1,54 @@
+controller_host: 10.1.0.11
+network_host: 10.1.0.12
+compute_host: 10.1.0.13
+storage_host: 10.1.0.14
+odl_controller: 10.1.0.15
+
+DEBUG: False
+VERBOSE: False
+NTP_SERVER_LOCAL: controller
+DB_HOST: "{{ controller_host }}"
+MQ_BROKER: rabbitmq
+
+OPENSTACK_REPO: cloudarchive-juno.list
+ADMIN_TOKEN: admin
+CEILOMETER_TOKEN: c095d479023a0fd58a54
+RABBIT_PASS: guest
+KEYSTONE_DBPASS: keystone_db_secret
+DEMO_PASS: demo_secret
+ADMIN_PASS: admin_secret
+GLANCE_DBPASS: glance_db_secret
+GLANCE_PASS: glance_secret
+NOVA_DBPASS: nova_db_secret
+NOVA_PASS: nova_secret
+DASH_DBPASS: dash_db_secret
+CINDER_DBPASS: cinder_db_secret
+CINDER_PASS: cinder_secret
+NEUTRON_DBPASS: neutron_db_secret
+NEUTRON_PASS: netron_secret
+NEUTRON_TYPE_DRIVERS: ['flat', 'gre', 'vxlan']
+NEUTRON_TENANT_NETWORK_TYPES: ['vxlan']
+#NEUTRON_MECHANISM_DRIVERS: ['opendaylight']
+NEUTRON_MECHANISM_DRIVERS: ['openvswitch']
+NEUTRON_TUNNEL_TYPES: ['vxlan']
+METADATA_SECRET: metadata_secret
+INSTANCE_TUNNELS_INTERFACE_IP_ADDRESS: 10.1.1.21
+INTERFACE_NAME: eth2
+
+EXTERNAL_NETWORK_CIDR: 203.0.113.0/24
+EXTERNAL_NETWORK_GATEWAY: 203.0.113.1
+FLOATING_IP_START: 203.0.113.101
+FLOATING_IP_END: 203.0.113.200
+
+juno_cloud_archive: deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/juno main
+build_in_image: http://cdn.download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img
+build_in_image_name: cirros-0.3.3-x86_64-disk.img
+
+physical_device: /dev/sdb
+
+internal_interface: ansible_eth1
+internal_ip: "{{ hostvars[inventory_hostname][internal_interface]['ipv4']['address'] }}"
+
+odl_username: admin
+odl_password: admin
+odl_api_port: 8080

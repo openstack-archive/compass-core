@@ -1,0 +1,15 @@
+# default: off
+# description: An xinetd internal service which echo's characters back to
+# clients.
+# This is the tcp version.
+service mysqlchk
+{
+    disable     = no
+    flags       = REUSE
+    socket_type = stream
+    protocol    = tcp
+    user        = root
+    wait        = no
+    server      = /usr/local/bin/galera_chk
+    port        = 9200
+}

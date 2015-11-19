@@ -1,0 +1,21 @@
+---
+packages:
+  - openstack-neutron-ml2
+  - openstack-neutron-openvswitch
+
+vpn_packages:
+  - openstack-neutron-vpn-agent
+  - strongswan
+
+firewall_packages:
+  - openstack-neutron-fwaas
+
+services:
+  - openvswitch
+  - neutron-openvswitch-agent
+
+openvswitch_agent: neutron-openvswitch-agent
+
+xorp_packages:
+  - openssl098e
+  #- xorp

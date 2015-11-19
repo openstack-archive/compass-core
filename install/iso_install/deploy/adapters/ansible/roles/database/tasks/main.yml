@@ -1,0 +1,11 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- include: mysql.yml
+  when: haproxy_hosts is not defined
+
+- include: mariadb.yml
+  when: haproxy_hosts is defined
+
+- include: mongodb.yml
+

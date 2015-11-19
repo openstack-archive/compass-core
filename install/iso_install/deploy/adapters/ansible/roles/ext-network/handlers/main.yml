@@ -1,0 +1,21 @@
+---
+- name: restart neutron-plugin-openvswitch-agent
+  service: name=neutron-plugin-openvswitch-agent state=restarted enabled=yes
+  when: "'opendaylight' not in {{ NEUTRON_MECHANISM_DRIVERS }}"
+
+- name: restart neutron-l3-agent
+  service: name=neutron-l3-agent state=restarted enabled=yes
+
+- name: kill dnsmasq
+  command: killall dnsmasq
+  ignore_errors: True
+
+- name: restart neutron-dhcp-agent
+  service: name=neutron-dhcp-agent state=restarted enabled=yes
+
+- name: restart neutron-metadata-agent
+  service: name=neutron-metadata-agent state=restarted enabled=yes
+
+- name: restart xorp
+  service: name=xorp state=restarted enabled=yes sleep=10
+  ignore_errors: True

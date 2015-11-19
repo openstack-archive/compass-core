@@ -1,0 +1,8 @@
+---
+packages:
+  - openstack-nova-compute
+  - sysfsutils
+
+services:
+  - libvirtd
+  - openstack-nova-compute

@@ -1,0 +1,10 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: destroy GPT lable
+  shell: dd if=/dev/urandom of={{ physical_device }} bs=4M count=1
+  ignore_errors: True
+
+- name: create physical and group volumes
+  lvg: vg=cinder-volumes pvs={{ physical_device }}
+       vg_options=--force

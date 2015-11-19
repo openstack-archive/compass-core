@@ -1,0 +1,22 @@
+#set hosts=$getVar('hosts', [])
+#set fail_list=""
+#set location_list=""
+#for host in $hosts
+#set host_name=$host.get('name', '')
+#set location=$host.get('location', '')
+#if not $location
+#set fail_list=$fail_list + $host_name + " "
+#else
+#set location_list=$location_list + str($location)+ " "
+#end if
+#end for
+#if  fail_list
+echo $fail_list.strip() config is wrong
+exit 1
+#else
+cmd='for i in $location_list.strip(); do \
+     /dev/shm/smm/usr/bin/smmset -l blade\$i -d bootoption -v 1 0; \
+     echo Y | /dev/shm/smm/usr/bin/smmset -l blade\$i -d frucontrol -v 0; done'
+
+/usr/bin/expect \${COMPASS_DIR}/deploy/remote_excute.exp \${SWITCH_IPS} 'root' 'Admin@7*24' "\$cmd"
+#end if

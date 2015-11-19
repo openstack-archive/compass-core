@@ -1,0 +1,7 @@
+[Filters]
+ip: IpFilter, ip, root
+ip_exec: IpNetnsExecFilter, ip, root
+ipsec: CommandFilter, ipsec, root
+strongswan: CommandFilter, strongswan, root
+neutron_netns_wrapper: CommandFilter, neutron-vpn-netns-wrapper, root
+neutron_netns_wrapper_local: CommandFilter, /usr/local/bin/neutron-vpn-netns-wrapper, root

@@ -1,0 +1,67 @@
+#set profile_name = $getVar('profile_name','')
+#set os_info = $profile_name.split('-')
+#set osname = $os_info[0].lower()
+#set osversion = $os_info[1]
+#set osversion_flat = $osversion.replace('.', '_')
+
+cat << EOF > /etc/apt/apt.conf
+APT::Get::Assume-Yes "true";
+APT::Get::force-yes "true";
+#if $getVar('proxy', '') != ''
+Acquire::http::Proxy "$proxy";
+#end if
+Acquire::http::Proxy::$http_server DIRECT;
+#if $getVar("local_repo","") != ""
+    #import urlparse
+    #set $local_repo_url = $urlparse.urlparse($local_repo)
+    #set $local_repo_server = $local_repo_url.hostname
+    #if $http_server != $local_repo_server
+Acquire::http::Proxy::${local_repo_server} DIRECT;
+    #end if
+#end if
+EOF
+
+
+#if $getVar("local_repo", "") == "" or $getVar("local_repo_only","1") == "0"
+    #set repos_snippet = 'apt.repos.d/%s/%s/preseed_repos' % ($osname, $osversion)
+$SNIPPET($repos_snippet)
+#end if
+
+#if $arch == "x86_64"
+    #set $rarch = "[arch=amd64]"
+#else
+    #set $rarch = "[arch=%s]" % $arch
+#end if
+
+rm -f /etc/apt/sources.list
+cat << EOF >> /etc/apt/sources.list
+deb ${rarch} $tree $os_version main restricted
+EOF
+
+cat << EOF >> /etc/apt/sources.list
+    #set $repo_data = $getVar("repo_data",[])
+    #for $repo in $repo_data
+        #for $dist in $repo.apt_dists
+            #set $comps = " ".join($repo.apt_components)
+            #if $repo.comment != ""
+# ${repo.comment}
+            #end if
+            #if $repo.mirror_locally
+deb ${rarch} http://$http_server/cblr/repo_mirror/${repo.name} $dist $comps
+            #else
+deb ${rarch} ${repo.mirror} $dist $comps
+            #end if
+        #end for
+    #end for
+EOF
+
+#if $getVar("local_repo","") != ""
+cat << EOF >> /etc/apt/sources.list
+#set compass_repo = 'apt.repos.d/%s/%s/ubuntu_repo' % ($osname, $osversion)
+deb ${rarch} $local_repo/$compass_repo/ local_repo main
+EOF
+
+    #if $getVar("local_repo_only","1") != "0"
+apt-get -y update
+    #end if
+#end if

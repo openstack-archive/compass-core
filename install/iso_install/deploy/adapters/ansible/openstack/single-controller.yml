@@ -1,0 +1,38 @@
+---
+- hosts: controller
+  sudo: True
+  roles:
+    - common
+    - database
+    - mq
+    - keystone
+    - nova-controller
+    - neutron-controller
+    - dashboard
+    - cinder-controller
+    - glance
+
+- hosts: network
+  sudo: True
+  roles:
+    - common
+    - neutron-network
+
+- hosts: storage
+  sudo: True
+  roles:
+    - common
+    - cinder-volume
+
+- hosts: compute
+  sudo: True
+  roles:
+    - common
+    - nova-compute
+    - neutron-compute
+
+- hosts: odl
+  remote_user: root
+  sudo: True
+  roles:
+    - odl

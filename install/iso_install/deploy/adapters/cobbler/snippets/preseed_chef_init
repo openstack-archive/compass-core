@@ -1,0 +1,31 @@
+## A self-destruct service to boot chef client and register cron job
+#if $getVar('ntp_server', '') == ""
+    #set $ntp_server = '0.ubuntu.pool.ntp.org'
+#end if
+cat << EOF > /etc/init.d/chef
+#raw
+#!/bin/bash
+# chkconfig: 2345 99 20
+# description: Description of the script
+# processname: chef-agent
+#end raw
+echo "old date is: `date`" 2>&1 > /tmp/ntp.log
+service ntpd stop 2>&1 >> /tmp/ntp.log
+ntpdate $ntp_server 2>&1 >> /tmp/ntp.log
+service ntpd start 2>&1 >> /tmp/ntp.log
+echo "new date is: `date`" 2>&1 >> /tmp/ntp.log
+apt-get -y update 2>&1 >> /tmp/apt_update
+
+crontab -l  > /tmp/mycron
+echo "*/30 * * * *  /etc/chef/chef_client_run.sh" >> /tmp/mycron
+crontab /tmp/mycron
+rm /tmp/mycron
+
+/etc/chef/chef_client_run.sh &
+
+update-rc.d -f chef remove
+mv /etc/init.d/chef /tmp/chef
+EOF
+
+chmod +x /etc/init.d/chef
+update-rc.d chef defaults 99 20

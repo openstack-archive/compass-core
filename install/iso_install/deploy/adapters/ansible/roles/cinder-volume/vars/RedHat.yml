@@ -1,0 +1,11 @@
+---
+packages:
+  - openstack-cinder
+  - targetcli
+  - python-oslo-db
+  - MySQL-python
+  - lvm2
+
+services:
+  - openstack-cinder-volume
+  - lvm2-lvmetad

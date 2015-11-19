@@ -1,0 +1,86 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install keepalived xinet haproxy
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: generate ha service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services | union(services_noarch)
+
+- name: install pexpect
+  pip: name=pexpect state=present extra_args='--pre'
+
+- name: activate ip_nonlocal_bind
+  sysctl: name=net.ipv4.ip_nonlocal_bind value=1
+          state=present reload=yes
+
+- name: set net.ipv4.tcp_keepalive_intvl
+  sysctl: name=net.ipv4.tcp_keepalive_intvl value=1
+          state=present reload=yes
+
+- name: set net.ipv4.tcp_keepalive_probes
+  sysctl: name=net.ipv4.tcp_keepalive_probes value=5
+          state=present reload=yes
+
+- name: set net.ipv4.tcp_keepalive_time
+  sysctl: name=net.ipv4.tcp_keepalive_time value=5
+          state=present reload=yes
+
+- name: update haproxy cfg
+  template: src=haproxy.cfg dest=/etc/haproxy/haproxy.cfg
+  notify: restart haproxy
+
+- name: set haproxy enable flag
+  lineinfile: dest=/etc/default/haproxy state=present
+              regexp="ENABLED=*"
+              line="ENABLED=1"
+  notify: restart haproxy
+  when: ansible_os_family == "Debian"
+
+- name: set haproxy log
+  lineinfile: dest=/etc/rsyslog.conf state=present
+              regexp="local0.* /var/log/haproxy.log"
+              line="local0.* /var/log/haproxy.log"
+
+- name: set rsyslog udp module
+  lineinfile: dest=/etc/rsyslog.conf state=present
+              regexp="^#$ModLoad imudp"
+              line="$ModLoad imudp"
+
+- name: set rsyslog udp port
+  lineinfile: dest=/etc/rsyslog.conf state=present
+              regexp="^#$UDPServerRun 514"
+              line="$UDPServerRun 514"
+
+- name: copy galera_chk file
+  copy: src=galera_chk dest=/usr/local/bin/galera_chk mode=0777
+
+- name: add network service
+  lineinfile: dest=/etc/services state=present
+              line="mysqlchk          9200/tcp"
+              insertafter="Local services"
+  notify: restart xinetd
+
+- name: copy mysqlchk file
+  copy: src=mysqlchk dest=/etc/xinetd.d/mysqlchk mode=0777
+  notify: restart xinetd
+
+- name: set keepalived start param
+  lineinfile: dest=/etc/default/keepalived state=present
+              regexp="^DAEMON_ARGS=*"
+              line="DAEMON_ARGS=\"-D -d -S 1\""
+  when: ansible_os_family == "Debian"
+
+- name: set keepalived log
+  lineinfile: dest=/etc/rsyslog.conf state=present
+              regexp="local1.* /var/log/keepalived.log"
+              line="local1.* /var/log/keepalived.log"
+
+- name: update keepalived info
+  template: src=keepalived.conf dest=/etc/keepalived/keepalived.conf
+  notify: restart keepalived
+
+- name: restart rsyslog
+  shell: service rsyslog restart

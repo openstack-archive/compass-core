@@ -1,0 +1,17 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install ceilometer packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: ceilometer_packages | union(packages_noarch)
+
+- name: copy ceilometer configs
+  template: src={{ item.src}} dest=/opt/os_templates
+  with_items: "{{ ceilometer_configs_templates }}"
+
+- name: update ceilometer configs
+  shell: crudini --merge {{ item.1 }} < /opt/os_templates/{{ item.0.src }}
+  with_subelements:
+    - ceilometer_configs_templates
+    - dest
+  notify: restart ceilometer relation service

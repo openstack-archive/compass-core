@@ -1,0 +1,5 @@
+## start of cobbler network_config generated code
+#if $getVar("system_name","") != ""
+%include /tmp/part-include
+#end if
+## end of cobbler network_config generated code

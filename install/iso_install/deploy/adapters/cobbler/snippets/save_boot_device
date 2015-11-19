@@ -1,0 +1,5 @@
+if [ "$os_version" == "sles11" ]; then
+    nvram --print-config=boot-device > /root/boot-device.bak
+elif [ "$os_version" == "fedora17" ]; then
+    nvram --print-config=boot-device > /tmp/boot-device.bak
+fi

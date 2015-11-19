@@ -1,0 +1,5 @@
+---
+- name: restart cinder control serveice
+  service: name={{ item }} state=restarted enabled=yes
+  with_items: services | union(services_noarch)
+

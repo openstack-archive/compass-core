@@ -1,0 +1,53 @@
+---
+- name: keystone-manage db-sync
+  #keystone_manage: action=dbsync
+  shell: su -s /bin/sh -c 'keystone-manage db_sync' keystone
+
+- name: wait for keystone ready
+  wait_for: port=35357 delay=3 timeout=10 host={{ internal_vip.ip }}
+
+- name: cron job to purge expired tokens hourly
+  cron:
+    name: 'purge expired tokens'
+    special_time: hourly
+    job: '/usr/bin/keystone-manage token_flush > /var/log/keystone/keystone-tokenflush.log 2>&1'
+
+- name: add tenants
+  keystone_user:
+    token: "{{ ADMIN_TOKEN }}"
+    endpoint: "http://{{ internal_ip }}:35357/v2.0"
+    tenant: "{{ item.tenant }}"
+    tenant_description: "{{ item.tenant_description }}"
+  with_items: "{{ os_users }}"
+
+- name: add users
+  keystone_user:
+    token: "{{ ADMIN_TOKEN }}"
+    endpoint: "http://{{ internal_ip }}:35357/v2.0"
+    user: "{{ item.user }}"
+    tenant: "{{ item.tenant }}"
+    password: "{{ item.password }}"
+    email: "{{ item.email }}"
+  with_items: "{{ os_users }}"
+
+- name: grant roles
+  keystone_user:
+    token: "{{ ADMIN_TOKEN }}"
+    endpoint: "http://{{ internal_ip }}:35357/v2.0"
+    user: "{{ item.user }}"
+    role: "{{ item.role }}"
+    tenant: "{{ item.tenant }}"
+  with_items: "{{ os_users }}"
+
+- name: add endpoints
+  keystone_service:
+    token: "{{ ADMIN_TOKEN }}"
+    endpoint: "http://{{ internal_ip }}:35357/v2.0"
+    name: "{{ item.name }}"
+    type: "{{ item.type }}"
+    region: "{{ item.region}}"
+    description: "{{ item.description }}"
+    publicurl: "{{ item.publicurl }}"
+    internalurl: "{{ item.internalurl }}"
+    adminurl: "{{ item.adminurl }}"
+  with_items: "{{ os_services }}"

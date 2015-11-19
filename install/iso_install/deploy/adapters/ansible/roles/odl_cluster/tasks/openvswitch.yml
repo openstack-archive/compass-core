@@ -1,0 +1,60 @@
+---
+
+#- name: Install Crudini
+#  apt: name={{ item }} state=present
+#  with_items:
+#    - crudini
+
+- name: install compute  packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: compute_packages | union(compute_packages_noarch)
+
+- name: Adjust Service Daemon
+  shell: >
+    sed -i '/neutron-plugin-openvswitch-agent/d' /opt/service ;
+    echo opendaylight >> /opt/service ;
+
+- name: shut down and disable Neutron's openvswitch  agent services
+  service: name=neutron-plugin-openvswitch-agent state=stopped
+
+- name: Stop the Open vSwitch service and clear existing OVSDB
+  shell: >
+    ovs-vsctl del-br br-int ;
+    ovs-vsctl del-br br-tun ;
+    ovs-vsctl del-manager ;
+
+#- name: remove Neutron's openvswitch agent services
+#  shell: >
+#    update-rc.d neutron-plugin-openvswitch-agent remove
+
+#- name: Stop the Open vSwitch service and clear existing OVSDB
+#  shell: >
+#    service openvswitch-switch stop ;
+#    rm -rf /var/log/openvswitch/* ;
+#    rm -rf /etc/openvswitch/conf.db ;
+#    service openvswitch-switch start ;
+
+- name: Set OpenDaylight as the manager
+  command: su -s /bin/sh -c "ovs-vsctl set-manager tcp:{{ internal_vip.ip }}:6640;"
+
+#- name: start and disable Neutron's agent services
+#  service: name=neutron-plugin-openvswitch-agent state=started
+
+- name: Configure Neutron1
+  shell: >
+    crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 mechanism_drivers opendaylight;
+    crudini --set /etc/neutron/plugins/ml2/ml2_conf.ini ml2 tenant_network_types vlan;
+
+#- name: Adjust Service Daemon
+#  shell: >
+#    sed -i '/neutron-plugin-openvswitch-agent/d' /opt/service ;
+#    echo opendaylight >> /opt/service ;
+
+- name: Create ML2 Configuration File
+  template:
+    src: ml2_conf.sh
+    dest: "/opt/ml2_conf.sh"
+    mode: 0777
+
+- name: Execute ML2 Configuration File
+  command: su -s /bin/sh -c "/opt/ml2_conf.sh;"

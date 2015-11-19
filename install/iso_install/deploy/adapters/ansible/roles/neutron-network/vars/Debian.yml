@@ -1,0 +1,17 @@
+---
+packages:
+  - neutron-plugin-ml2
+  - openvswitch-datapath-dkms
+  - openvswitch-switch
+  - neutron-l3-agent
+  - neutron-dhcp-agent
+  - neutron-plugin-openvswitch-agent
+
+services:
+  - openvswitch-switch
+  - neutron-plugin-openvswitch-agent
+
+openvswitch_agent: neutron-plugin-openvswitch-agent
+
+xorp_packages:
+  - xorp

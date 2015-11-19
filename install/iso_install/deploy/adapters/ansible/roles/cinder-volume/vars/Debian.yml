@@ -1,0 +1,6 @@
+---
+packages:
+  - cinder-volume
+
+services:
+  - cinder-volume

@@ -1,0 +1,26 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: install keystone packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: generate keystone service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services | union(services_noarch)
+
+- name: update keystone conf
+  template: src=keystone.conf dest=/etc/keystone/keystone.conf backup=yes
+
+- name: delete sqlite database
+  shell: rm /var/lib/keystone/keystone.db || echo sqllite database already removed
+
+- name: keystone source files
+  template: src={{ item }} dest=/opt/{{ item }}
+  with_items:
+    - admin-openrc.sh
+    - demo-openrc.sh
+
+- name: restart keystone services
+  service: name={{ item }} state=restarted enabled=yes
+  with_items: services | union(services_noarch)

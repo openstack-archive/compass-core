@@ -1,0 +1,19 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- include: glance_install.yml
+  tags:
+    - install
+    - glance_install
+    - glance
+
+- include: nfs.yml
+  tags:
+    - nfs
+
+- include: glance_config.yml
+  when: inventory_hostname == groups['controller'][0]
+  tags:
+    - config
+    - glance_config
+    - glance

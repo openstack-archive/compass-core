@@ -1,0 +1,13 @@
+mkdir -p /etc/chef
+mkdir -p /var/log/chef
+
+## Generate validation.pem
+$SNIPPET('preseed_chef-validator.pem')
+## Generate admin.pem
+$SNIPPET('preseed_chef-admin.pem')
+## Generate client.rb
+$SNIPPET('preseed_client.rb')
+$SNIPPET('preseed_knife.rb')
+$SNIPPET('preseed_gem_local_repo')
+$SNIPPET('preseed_chef_run.sh')
+$SNIPPET('preseed_chef_init')

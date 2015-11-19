@@ -1,0 +1,73 @@
+---
+- hosts: database
+  sudo: True
+  roles:
+    - common
+    - database
+
+- hosts: messaging
+  sudo: True
+  roles:
+    - common
+    - mq
+
+- hosts: identity
+  sudo: True
+  roles:
+    - common
+    - keystone
+
+- hosts: compute-controller
+  sudo: True
+  roles:
+    - common
+    - nova-controller
+
+- hosts: network-server
+  sudo: True
+  roles:
+    - common
+    - neutron-controller
+
+- hosts: storage-controller
+  sudo: True
+  roles:
+    - common
+    - cinder-controller
+
+- hosts: image
+  sudo: True
+  roles:
+    - common
+    - glance
+
+- hosts: dashboard
+  sudo: True
+  roles:
+    - common
+    - dashboard
+
+- hosts: network-worker
+  sudo: True
+  roles:
+    - common
+    - neutron-network
+
+- hosts: storage-volume
+  sudo: True
+  roles:
+    - common
+    - cinder-volume
+
+- hosts: compute-worker
+  sudo: True
+  roles:
+    - common
+    - nova-compute
+    - neutron-compute
+
+- hosts: odl
+  remote_user: root
+  sudo: True
+  roles:
+    - odl

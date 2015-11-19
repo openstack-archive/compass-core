@@ -1,0 +1,23 @@
+---
+- name: restart neutron network relation service
+  service: name={{ item }} state=restarted enabled=yes
+  with_flattened:
+    - services_noarch
+    - services
+
+- name: restart openvswitch agent service
+  service: name=neutron-openvswitch-agent state=restarted enabled=yes
+
+- name: restart vpn agent service
+  service: name={{ item }} state=restarted enabled=yes
+  with_items:
+    - neutron-vpn-agent
+    - strongswan
+
+- name: kill dnsmasq
+  command: killall dnsmasq
+  ignore_errors: True
+
+- name: restart xorp
+  service: name=xorp state=restarted enabled=yes sleep=10
+  ignore_errors: True

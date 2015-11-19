@@ -1,0 +1,39 @@
+partitions=\$(pvs --noheadings --separator :| cut -d: -f1,2)
+vg_remove=0
+remove_partitions=''
+echo "partitions \$partitions" >> /tmp/post_partition.log
+
+for partition in \$partitions; do
+    set \$(echo \$partition | tr ':' ' ')
+    partition=\$1
+    vg=\$2
+    if [ "\$vg" = "reserved" ]; then
+        echo "prepare remove partition \$partition" >> /tmp/post_partition.log
+        remove_partitions="\${remove_partitions} \$partition"
+        vg_remove=1
+    else
+        echo "ignore \$vg since it is not reserved" >> /tmp/post_partition.log
+    fi
+done
+
+if [ "\${vg_remove}" != "0" ]; then
+    vgremove -f reserved
+fi
+
+for remove_partition in \${remove_partitions}; do
+    echo "remove pv \${remove_partition}" >> /tmp/post_partition.log
+    pvremove -ff -y \${remove_partition}
+    set \$(echo \${remove_partition}  | sed -e 's/^\(.*\)\([0-9]\+\)\$/\1 \2/g')
+    partition_disk=\$1
+    partition_number=\$2
+    if [ ! -z "\${partition_disk}" ]; then
+        if [ ! -z "\${partition_number}" ]; then
+            echo "remove partition \${remove_partition} on \${partition_disk} number \${partition_number}" >> /tmp/post_partition.log
+            parted \${partition_disk} --script -- rm \${partition_number}
+        else
+            echo "no partition number found for \${remove_partition}" >> /tmp/post_partition.log
+        fi
+    else
+        echo "no partition disk found for \${remove_partition}" >> /tmp/post_partition.log
+    fi
+done

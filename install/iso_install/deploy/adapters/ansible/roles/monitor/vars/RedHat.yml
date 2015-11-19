@@ -1,0 +1,3 @@
+---
+cron: crond
+cron_path: "/var/spool/cron"

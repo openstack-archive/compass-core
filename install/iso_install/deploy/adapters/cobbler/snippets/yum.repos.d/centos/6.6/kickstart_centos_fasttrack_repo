@@ -1,0 +1,10 @@
+cat << EOF > /etc/yum.repos.d/CentOS-Fasttrack.repo
+[fasttrack]
+name=CentOS-6.6 - fasttrack
+mirrorlist=http://mirrorlist.centos.org/?release=6&arch=\\$basearch&repo=fasttrack&infra=\\$infra
+baseurl=http://mirror.centos.org/centos/6/fasttrack/\\$basearch/
+gpgcheck=1
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+skip_if_unavailable=1
+EOF

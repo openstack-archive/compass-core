@@ -1,0 +1,30 @@
+---
+- include: ceph_setup_env.yml
+  tags:
+    - ceph_deploy
+    - ceph_setup_env
+    - ceph_install
+
+- include: ceph_install_Debian.yml
+  when: ansible_os_family == "Debian"
+  tags:
+    - ceph_deploy
+    - ceph_install
+
+- include: ceph_install_RedHat.yml
+  when: ansible_os_family == "RedHat"
+  tags:
+    - ceph_deploy
+    - ceph_install
+
+- include: ceph_openstack_pre.yml
+  tags:
+    - ceph_deploy
+    - ceph_openstack_pre
+    - ceph_openstack
+
+- include: ceph_openstack_conf.yml
+  tags:
+    - ceph_deploy
+    - ceph_openstack_conf
+    - ceph_openstack

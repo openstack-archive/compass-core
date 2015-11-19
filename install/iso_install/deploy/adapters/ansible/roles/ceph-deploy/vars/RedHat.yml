@@ -1,0 +1,12 @@
+---
+packages:
+  - ceph-radosgw
+  - fcgi
+  - ceph-deploy
+  - ceph
+
+services: []
+
+cinder_service: openstack-cinder-volume
+nova_service: openstack-nova-compute
+glance_service: openstack-glance-api

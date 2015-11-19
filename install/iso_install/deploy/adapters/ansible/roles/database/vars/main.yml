@@ -1,0 +1,23 @@
+---
+packages_noarch: []
+
+services_noarch:
+  - mysql
+
+credentials:
+  - user: keystone
+    db: keystone
+    password: "{{ KEYSTONE_DBPASS }}"
+  - user: neutron
+    db: neutron
+    password: "{{ NEUTRON_DBPASS }}"
+  - user: glance
+    db: glance
+    password: "{{ GLANCE_DBPASS }}"
+  - user: nova
+    db: nova
+    password: "{{ NOVA_DBPASS }}"
+  - user: cinder
+    db: cinder
+    password: "{{ CINDER_DBPASS }}"
+

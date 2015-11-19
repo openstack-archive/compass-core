@@ -1,0 +1,79 @@
+---
+#- name: delete default maridb-libs
+#  action: "{{ ansible_pkg_mgr }} name=mariadb-libs state=absent"
+#  when: ansible_os_family == "RedHat"
+#  ignore_errors: True
+
+- name: install python-mysqldb
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: maridb_packages | union(packages_noarch)
+
+- name: create mysql log directy
+  file: path=/var/log/mysql state=directory owner=mysql group=mysql mode=0755
+
+- name: update mariadb config file
+  template: src={{ item }} dest={{ mysql_config_file_path }}/{{ item }} backup=yes
+  with_items: mysql_config_file_name
+
+- name: update galera wsrep.cnf
+  template: src=wsrep.cnf dest={{ wsrep_config_file_path }}/wsrep.cnf backup=yes
+
+- name: update wsrep_sst_rsync uid
+  lineinfile: dest=/usr/bin/wsrep_sst_rsync state=absent regexp="\s*uid = \$MYUID$"  backup=yes
+
+- name: update wsrep_sst_rsync gid
+  lineinfile: dest=/usr/bin/wsrep_sst_rsync state=absent regexp="\s*gid = \$MYGID$"  backup=yes
+
+- stat: path=/opt/mysql_init_complete
+  register: mysql_init_complete
+
+- name: restart first mysql server
+  shell: service mysql restart --wsrep-cluster-address="gcomm://" && touch /opt/mysql_init_complete
+  when: inventory_hostname == haproxy_hosts.keys()[0] and mysql_init_complete.stat.exists == False
+  tags:
+    - mysql_restart
+  #register: result
+  #until: result|success
+  #retries: 5
+  #delay: 5
+
+- name: restart other mysql server
+  shell: service mysql restart && touch /opt/mysql_init_complete
+  tags:
+    - mysql_restart
+  when: inventory_hostname != haproxy_hosts.keys()[0] and mysql_init_complete.stat.exists == False
+  #register: result
+  #until: result|success
+  #retries: 5
+  #delay: 5
+
+- name: generate mysql service list
+  shell: echo {{ item }} >> /opt/service
+  with_items: services_noarch
+
+- name: create all needed db
+  run_once: yes
+  mysql_db: name={{ item.db }} state=present
+  with_items: "{{ credentials }}"
+
+- name: create service db user
+  run_once: yes
+  mysql_user:
+    name={{ item[0].user }}
+    password={{ item[0].password }}
+    priv=*.*:ALL,GRANT
+    host={{ item[1] }}
+    state=present
+  with_nested:
+    - "{{ credentials }}"
+    - ['%', 'localhost', inventory_hostname]
+
+- name: create wsrep db user
+  run_once: yes
+  mysql_user:
+    name={{ WSREP_SST_USER }}
+    password={{ WSREP_SST_PASS }}
+    priv=*.*:ALL,GRANT
+    host={{ item }}
+    state=present
+  with_items: ['%', 'localhost', inventory_hostname]

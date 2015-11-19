@@ -1,0 +1,15 @@
+---
+ceilometer_packages:
+  - ceilometer-agent-compute
+
+ceilometer_services:
+  - ceilometer-agent-compute
+  - nova-compute
+
+ceilometer_configs_templates:
+  - src: ceilometer.j2
+    dest:
+      - /etc/ceilometer/ceilometer.conf
+  - src: nova.j2
+    dest:
+      - /etc/nova/nova.conf

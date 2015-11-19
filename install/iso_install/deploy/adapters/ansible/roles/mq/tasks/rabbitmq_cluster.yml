@@ -1,0 +1,27 @@
+---
+- name: stop rabbitmq app
+  command: rabbitmqctl stop_app
+  run_once: True
+
+- name: rabbitmqctl reset
+  command: rabbitmqctl reset
+  run_once: True
+
+- name: stop  rabbitmq
+  shell:  rabbitmqctl stop
+
+- name: set detach
+  shell: rabbitmq-server -detached
+
+- name: join  cluster
+  command: rabbitmqctl join_cluster rabbit@{{ item }}
+  when: item  != inventory_hostname and HA_CLUSTER[item] == ''
+  with_items:
+    groups['controller']
+
+- name: start rabbitmq app
+  command: rabbitmqctl start_app
+
+- name: set the HA policy
+  rabbitmq_policy: name=ha-all pattern='^(?!amq\.).*' tags="ha-mode=all"
+

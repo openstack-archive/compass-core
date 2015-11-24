@@ -28,15 +28,19 @@ export SUPPORT_UBUNTU_14_04=${SUPPORT_UBUNTU_14_04:-"y"}
 export SUPPORT_SLES_11SP3=${SUPPORT_SLES_11SP3:-"n"}
 
 # DHCP config
-export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
-export NETMASK=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
+# export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+export IPADDR=`ip addr show $NIC | grep "inet " | sed 's/^[ \t]*//g' | cut -d' ' -f 2 | cut -d'/' -f 1`
+# export NETMASK=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
+export NETMASK=$(ipcalc `ip addr show $NIC | grep "inet " | sed 's/^[ \t]*//g' | cut -d' ' -f 2` -m | grep NETMASK | cut -d '=' -f 2)
 # DHCP option router  address(Default is your management interface IP address )"
-export OPTION_ROUTER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+# export OPTION_ROUTER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+export OPTION_ROUTER=$IPADDR
 # The IP range for DHCP clients (Default: local subnet start from 100 to 254)
 export IP_START=`echo $IPADDR |cut -d. -f'1 2 3'`.128
 export IP_END=`echo $IPADDR |cut -d. -f'1 2 3'`.254
 # TFTP server's IP address(Default: Management Interface/eth0 IP)
-export NEXTSERVER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+# export NEXTSERVER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+export NEXTSERVER=$IPADDR
 # the domains covered by nameserver
 export NAMESERVER_DOMAINS=ods.com
 export NAMESERVER_REVERSE_ZONES=unused

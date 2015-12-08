@@ -1,0 +1,9 @@
+Verified+2: Jenkins
+Code-Review+2: Xicheng Chang <xicheng.chang@huawei.com>
+Workflow+1: Xicheng Chang <xicheng.chang@huawei.com>
+Verified+1: Huawei Compass CI <compasscitest@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Tue, 08 Dec 2015 03:00:19 +0000
+Reviewed-on: https://review.openstack.org/254461
+Project: openstack/compass-core
+Branch: refs/heads/master

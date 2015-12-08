@@ -80,6 +80,11 @@ haproxy_hosts:
   $hostname: $ip_settings[$hostname]["mgmt"]["ip"]
 #end for
 
+host_index:
+#for $index, $item in enumerate($has)
+  $item["hostname"]: $index
+#end for
+
 ERLANG_TOKEN: YOWSJSJIGGAUFZTIBRAD
 #set credentials = $getVar('service_credentials', {})
 #set console_credentials = $getVar('console_credentials', {})
@@ -95,6 +100,8 @@ ERLANG_TOKEN: YOWSJSJIGGAUFZTIBRAD
 #set dash_dbpass = $credentials.dashboard.password
 #set cinder_dbpass = $credentials.volume.password
 #set cinder_pass = $console_credentials.volume.password
+#set heat_dbpass = $credentials.heat.password
+#set heat_pass = $console_credentials.heat.password
 #set admin_pass = $console_credentials.admin.password
 #set neutron_pass = $console_credentials.network.password
 
@@ -130,6 +137,8 @@ CINDER_DBPASS: $cinder_dbpass
 CINDER_PASS: $cinder_pass
 NEUTRON_DBPASS: $neutron_pass
 NEUTRON_PASS: $neutron_pass
+HEAT_DBPASS: $heat_dbpass
+HEAT_PASS: $heat_pass
 
 #set neutron_service_plugins=['router']
 

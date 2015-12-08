@@ -396,28 +396,14 @@ class TestUpdateCluster(ClusterTestCase):
         )
 
     def test_is_cluster_editable(self):
-        # state is INSTALLING
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.update_cluster,
-            self.cluster_id,
-            user=self.user_object,
-            name='cluster_editable'
-        )
-
-        # reinstall
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.update_cluster,
-            self.cluster_id,
-            user=self.user_object,
-            reinstall_distributed_system=True
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestDelCluster(ClusterTestCase):
@@ -443,18 +429,14 @@ class TestDelCluster(ClusterTestCase):
             self.assertNotEqual(1, del_cluster['id'])
 
     def test_is_cluster_editable(self):
-        # state is INSTALLING
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.del_cluster,
-            self.cluster_id,
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestGetClusterConfig(ClusterTestCase):
@@ -630,17 +612,14 @@ class TestDelClusterConfig(ClusterTestCase):
             self.assertEqual(config, {})
 
     def test_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.del_cluster_config,
-            self.cluster_id,
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestListClusterHosts(ClusterTestCase):
@@ -774,19 +753,14 @@ class TestAddClusterHost(ClusterTestCase):
         )
 
     def test_is_cluster_editable(self):
-        # installing
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.add_cluster_host,
-            self.cluster_id,
-            user=self.user_object,
-            machine_id=self.add_machine_id
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestUpdateClusterHost(ClusterTestCase):
@@ -836,19 +810,14 @@ class TestUpdateClusterHost(ClusterTestCase):
         )
 
     def test_is_cluster_editable(self):
-        # state is INSTALLING
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.update_cluster_host,
-            self.cluster_id,
-            self.host_id[0],
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestUpdateClusterhost(ClusterTestCase):
@@ -895,18 +864,14 @@ class TestUpdateClusterhost(ClusterTestCase):
         )
 
     def test_is_cluster_editable(self):
-        # state is INSTALLING
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.update_clusterhost,
-            self.clusterhost_id[0],
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestPatchClusterHost(ClusterTestCase):
@@ -935,18 +900,14 @@ class TestPatchClusterHost(ClusterTestCase):
         self.assertEqual(result, 'all in one compute')
 
     def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.patch_cluster_host,
-            self.cluster_id,
-            self.host_id[0],
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestPatchClusterhost(ClusterTestCase):
@@ -972,18 +933,15 @@ class TestPatchClusterhost(ClusterTestCase):
                 result = role['display_name']
         self.assertEqual(result, 'all in one compute')
 
-    def testi_is_cluster_editable(self):
+    def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.patch_clusterhost,
-            self.clusterhost_id[0],
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestDelClusterHost(ClusterTestCase):
@@ -1011,18 +969,14 @@ class TestDelClusterHost(ClusterTestCase):
             self.assertNotEqual(del_cluster_host['id'], 1)
 
     def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.del_cluster_host,
-            self.cluster_id,
-            self.host_id[0],
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestDelClusterhost(ClusterTestCase):
@@ -1048,17 +1002,14 @@ class TestDelClusterhost(ClusterTestCase):
             self.assertNotEqual(del_clusterhost['id'], 1)
 
     def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.del_clusterhost,
-            self.clusterhost_id[0],
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestGetClusterHostConfig(ClusterTestCase):
@@ -1234,20 +1185,14 @@ class TestUpdateClusterHostConfig(ClusterTestCase):
         self.assertItemsEqual(os_configs, self.os_configs)
 
     def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.update_cluster_host_config,
-            self.cluster_id,
-            self.host_id[0],
-            user=self.user_object,
-            os_config=self.os_configs,
-            package_config=self.package_configs
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestUpdateClusterHostDeployedConfig(ClusterTestCase):
@@ -1323,19 +1268,14 @@ class TestUpdateClusterhostConfig(ClusterTestCase):
         self.assertItemsEqual(os_config, self.os_configs)
 
     def test_id_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.update_clusterhost_config,
-            self.clusterhost_id[0],
-            user=self.user_object,
-            os_config=self.os_configs,
-            package_config=self.package_configs
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestUpdateClusterhostDeployedConfig(ClusterTestCase):
@@ -1411,20 +1351,14 @@ class TestPatchClusterHostConfig(ClusterTestCase):
         self.assertItemsEqual(os_config, self.os_configs)
 
     def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.patch_cluster_host_config,
-            self.cluster_id,
-            self.host_id[0],
-            user=self.user_object,
-            os_config=self.os_configs,
-            package_config=self.package_configs
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestPatchClusterhostConfig(ClusterTestCase):
@@ -1453,19 +1387,14 @@ class TestPatchClusterhostConfig(ClusterTestCase):
         self.assertItemsEqual(os_config, self.os_configs)
 
     def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.patch_clusterhost_config,
-            self.clusterhost_id[0],
-            user=self.user_object,
-            os_config=self.os_configs,
-            package_config=self.package_configs
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestDeleteClusterHostConfig(ClusterTestCase):
@@ -1503,18 +1432,14 @@ class TestDeleteClusterHostConfig(ClusterTestCase):
             self.assertEqual(config, {})
 
     def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.delete_cluster_host_config,
-            self.cluster_id,
-            self.host_id[0],
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestDeleteClusterhostConfig(ClusterTestCase):
@@ -1549,17 +1474,14 @@ class TestDeleteClusterhostConfig(ClusterTestCase):
             self.assertEqual(config, {})
 
     def test_is_cluster_editable(self):
+        # cluster should be editable for expansion purposes.
+        raised = False
         cluster.update_cluster_state(
             self.cluster_id,
             user=self.user_object,
             state='INSTALLING'
         )
-        self.assertRaises(
-            exception.Forbidden,
-            cluster.delete_clusterhost_config,
-            self.clusterhost_id[0],
-            user=self.user_object,
-        )
+        self.assertFalse(raised, exception.Forbidden)
 
 
 class TestUpdateClusterHosts(ClusterTestCase):

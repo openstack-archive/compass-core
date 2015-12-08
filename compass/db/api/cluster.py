@@ -51,7 +51,8 @@ RESP_CLUSTERHOST_FIELDS = [
     'os_name', 'os_id', 'ip',
     'reinstall_os', 'reinstall_distributed_system',
     'owner', 'cluster_id',
-    'created_at', 'updated_at'
+    'created_at', 'updated_at',
+    'patched_roles'
 ]
 RESP_CONFIG_FIELDS = [
     'os_config',
@@ -285,14 +286,14 @@ def check_cluster_editable(
                 'cluster %s is not editable '
                 'when state is installing' % cluster.name
             )
-    elif (
-        cluster.flavor_name and
-        not cluster.reinstall_distributed_system
-    ):
-        raise exception.Forbidden(
-            'cluster %s is not editable '
-            'when not to be reinstalled' % cluster.name
-        )
+#    elif (
+#        cluster.flavor_name and
+#        not cluster.reinstall_distributed_system
+#    ):
+#        raise exception.Forbidden(
+#            'cluster %s is not editable '
+#            'when not to be reinstalled' % cluster.name
+#        )
     if user and not user.is_admin and cluster.creator_id != user.id:
         raise exception.Forbidden(
             'cluster %s is not editable '
@@ -759,6 +760,12 @@ def _add_clusterhost_only(
     **kwargs
 ):
     """Get clusterhost only."""
+    if not cluster.state.state == "UNINITIALIZED":
+        cluster.state.ready = False
+        cluster.state.state = "UNINITIALIZED"
+        cluster.state.percentage = 0.0
+        utils.update_db_object(session, cluster.state, state="UNINITIALIZED")
+
     return utils.add_db_object(
         session, models.ClusterHost, exception_when_existing,
         cluster.id, host.id, **kwargs
@@ -780,6 +787,7 @@ def _add_clusterhost(
         machine_id, cluster, session=session,
         user=user, **kwargs
     )
+
     return _add_clusterhost_only(
         cluster, host, exception_when_existing=exception_when_existing,
         session=session, user=user, **kwargs
@@ -1060,12 +1068,14 @@ def patch_cluster_host(
     session=None, **kwargs
 ):
     """Patch clusterhost by cluster id and host id."""
+    logging.info("kwargs are %s", kwargs)
     clusterhost = _get_cluster_host(
         cluster_id, host_id, session=session
     )
-    return _update_clusterhost(
+    updated_clusterhost = _update_clusterhost(
         clusterhost, session=session, user=user, **kwargs
     )
+    return updated_clusterhost
 
 
 # replace roles to patched_roles in kwargs.
@@ -1845,6 +1855,33 @@ def deploy_cluster(
         'status': 'deploy action sent',
         'cluster': cluster,
         'hosts': clusterhosts
+    }
+
+
+@utils.supported_filters(optional_support_keys=['apply_patch'])
+@database.run_in_session()
+@user_api.check_user_permission(
+    permission.PERMISSION_DEPLOY_CLUSTER
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    cluster=RESP_CONFIG_FIELDS,
+    hosts=RESP_CLUSTERHOST_FIELDS
+)
+def patch_cluster(cluster_id, user=None, session=None, **kwargs):
+
+    from compass.tasks import client as celery_client
+
+    cluster = _get_cluster(cluster_id, session=session)
+    celery_client.celery.send_task(
+        'compass.tasks.patch_cluster',
+        (
+            user.email, cluster_id,
+        )
+    )
+    return {
+        'status': 'patch action sent',
+        'cluster': cluster
     }
 
 

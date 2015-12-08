@@ -138,6 +138,14 @@ class ClusterInfo(object):
 
         return dict(mapping)
 
+    def _get_cluster_patched_roles_mapping(self):
+        mapping = defaultdict(list)
+        for host in self.hosts:
+            for role, value in host.patched_roles_mapping.iteritems():
+                mapping[role].append(value)
+
+        return dict(mapping)
+
     @property
     def base_info(self):
         return {
@@ -160,6 +168,7 @@ class HostInfo(object):
 
         self.package_config = self.host_info.setdefault(const.PK_CONFIG, {})
         self.roles = self.host_info.setdefault(const.ROLES, [])
+        self.patched_roles = self.host_info.setdefault(const.PATCHED_ROLES, [])
         self.ipmi = deepcopy(self.host_info.setdefault(const.IPMI, {}))
         self.reinstall_os_flag = self.host_info.get(const.REINSTALL_OS_FLAG)
         self.deployed_os_config = self.host_info.setdefault(
@@ -196,6 +205,8 @@ class HostInfo(object):
         else:
             self.roles_mapping = \
                 self.deployed_package_config[const.ROLES_MAPPING]
+
+        self.patched_roles_mapping = self._get_host_patched_roles_mapping()
 
         self.cluster_info.add_host(self)
 
@@ -237,6 +248,25 @@ class HostInfo(object):
         mapping = {}
         for role in self.roles:
             role = role.replace("-", "_")
+            mapping[role] = net_info
+
+        return mapping
+
+    def _get_host_patched_roles_mapping(self):
+        if not self.network_mapping:
+            return {}
+
+        net_info = {const.HOSTNAME: self.hostname}
+        for k, v in self.network_mapping.items():
+            try:
+                net_info[k] = self.networks[v[const.NIC]]
+                net_info[k][const.NIC] = v[const.NIC]
+            except Exception:
+                pass
+
+        mapping = {}
+        for role in self.patched_roles:
+            role = role['name'].replace("-", "_")
             mapping[role] = net_info
 
         return mapping
@@ -331,6 +361,9 @@ class BaseConfigManager(object):
 
     def get_cluster_roles_mapping(self):
         return self.cluster_info.roles_mapping
+
+    def get_cluster_patched_roles_mapping(self):
+        return self.cluster_info._get_cluster_patched_roles_mapping()
 
     def validate_host(self, host_id):
         if host_id not in self.hosts_info:

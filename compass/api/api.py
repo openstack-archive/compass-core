@@ -2044,7 +2044,7 @@ def take_cluster_action(cluster_id):
 
     Supported actions: [
         'add_hosts', 'remove_hosts', 'set_hosts',
-        'review', 'deploy', 'check_health'
+        'review', 'deploy', 'check_health', 'apply_patch'
     ]
     """
     data = _get_request_data()
@@ -2068,6 +2068,12 @@ def take_cluster_action(cluster_id):
         ),
         202
     )
+    patch_cluster_func = _wrap_response(
+        functools.partial(
+            cluster_api.patch_cluster, cluster_id, user=current_user,
+        ),
+        202
+    )
     check_cluster_health_func = _wrap_response(
         functools.partial(
             health_report_api.start_check_cluster_health,
@@ -2084,6 +2090,7 @@ def take_cluster_action(cluster_id):
         remove_hosts=update_cluster_hosts_func,
         review=review_cluster_func,
         deploy=deploy_cluster_func,
+        apply_patch=patch_cluster_func,
         check_health=check_cluster_health_func
     )
 

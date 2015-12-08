@@ -319,6 +319,9 @@ def validate_host(host):
 def _update_host(host_id, session=None, user=None, **kwargs):
     """Update a host internal."""
     host = _get_host(host_id, session=session)
+    if host.state.state == "SUCCESSFUL" and not host.reinstall_os:
+        logging.info("ignoring successful host: %s", host_id)
+        return {}
     check_host_editable(
         host, user=user,
         check_in_installing=kwargs.get('reinstall_os', False)
@@ -752,6 +755,13 @@ def update_host_network(
     host_id, host_network_id, user=None, session=None, **kwargs
 ):
     """Update a host network by host id and host network id."""
+    host = _get_host(
+        host_id, session=session
+    )
+    if host.state.state == "SUCCESSFUL" and not host.reinstall_os:
+        logging.info("ignoring updating request for successful hosts")
+        return {}
+
     host_network = _get_host_network(
         host_id, host_network_id, session=session
     )

@@ -3,7 +3,12 @@
 #set has = $getVar('ha', [])
 #set odls = $getVar('odl', [])
 #set onoss = $getVar('onos', [])
-#set cephs = $getVar('ceph',[])
+#set ceph_adm_list = $getVar('ceph_adm',[])
+#set ceph_mon_list = $getVar('ceph_mon',[])
+#set ceph_osd_list = $getVar('ceph_osd',[])
+#set sec_patch_list = $getVar('sec_patch',[])
+#set ceph_osd_node_list = $getVar('ceph_osd_node',[])
+
 #if not $isinstance($controllers, list)
     #set controllers = [$controllers]
 #end if
@@ -19,9 +24,22 @@
 #if not $isinstance(onoss, list)
     #set onoss = [onoss]
 #end if
-#if not $isinstance(cephs, list)
-    #set cephs = [cephs]
+#if not $isinstance(ceph_adm_list, list)
+    #set ceph_adm_list = [ceph_adm_list]
 #end if
+#if not $isinstance(ceph_mon_list, list)
+    #set ceph_mon_list = [ceph_mon_list]
+#end if
+#if not $isinstance(ceph_osd_list, list)
+    #set ceph_osd_list = [ceph_osd_list]
+#end if
+#if not $isinstance(sec_patch_list, list)
+    #set sec_patch_list = [sec_patch_list]
+#end if
+#if not $isinstance(ceph_osd_node_list, list)
+    #set ceph_osd_node_list = [ceph_osd_node_list]
+#end if
+
 #set credentials = $getVar('server_credentials', {})
 #set username = $credentials.get('username', 'root')
 #set password = $credentials.get('password', 'root')
@@ -55,9 +73,33 @@ $odl_hostname ansible_ssh_host=$odl_ip ansible_ssh_user=$username ansible_ssh_pa
     #set onos_hostname = $onos.hostname
 $onos_hostname ansible_ssh_host=$onos_ip ansible_ssh_user=$username ansible_ssh_password=$password
 #end for
-[ceph]
-#for ceph in $cephs
-    #set ceph_ip = $ceph.install.ip
-    #set ceph_hostname = $ceph.hostname
-$ceph_hostname ansible_ssh_host=$ceph_ip ansible_ssh_user=$username ansible_ssh_password=$password
+[ceph_adm]
+#for ceph_adm in $ceph_adm_list
+    #set ceph_adm_ip = $ceph_adm.install.ip
+    #set ceph_adm_hostname = $ceph_adm.hostname
+$ceph_adm_hostname ansible_ssh_host=$ceph_adm_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[ceph_mon]
+#for ceph_mon in $ceph_mon_list
+    #set ceph_mon_ip = $ceph_mon.install.ip
+    #set ceph_mon_hostname = $ceph_mon.hostname
+$ceph_mon_hostname ansible_ssh_host=$ceph_mon_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[ceph_osd]
+#for ceph_osd in $ceph_osd_list
+    #set ceph_osd_ip = $ceph_osd.install.ip
+    #set ceph_osd_hostname = $ceph_osd.hostname
+$ceph_osd_hostname ansible_ssh_host=$ceph_osd_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[sec_patch]
+#for sec_patch in $sec_patch_list
+    #set sec_patch_ip = $sec_patch.install.ip
+    #set sec_patch_hostname = $sec_patch.hostname
+$sec_patch_hostname ansible_ssh_host=$sec_patch_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[ceph_osd_node]
+#for ceph_osd_node in $ceph_osd_node_list
+    #set ceph_osd_node_ip = $ceph_osd_node.install.ip
+    #set ceph_osd_node_hostname = $ceph_osd_node.hostname
+$ceph_osd_node_hostname ansible_ssh_host=$ceph_osd_node_ip ansible_ssh_user=$username ansible_ssh_password=$password
 #end for

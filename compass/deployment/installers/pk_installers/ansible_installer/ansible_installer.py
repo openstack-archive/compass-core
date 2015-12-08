@@ -48,6 +48,7 @@ def byteify(input):
 class AnsibleInstaller(PKInstaller):
     INVENTORY_TMPL_DIR = 'inventories'
     GROUPVARS_TMPL_DIR = 'vars'
+    INVENTORY_PATCH_TEMPALTE_DIR = 'inventories'
 
     # keywords in package installer settings
     ANSIBLE_DIR = 'ansible_dir'
@@ -256,8 +257,7 @@ class AnsibleInstaller(PKInstaller):
         tmpl = Template(file=tmpl_path, searchList=searchList)
         return tmpl.respond()
 
-    def _create_ansible_run_env(self, env_name):
-        ansible_run_destination = os.path.join(self.ansible_run_dir, env_name)
+    def _create_ansible_run_env(self, env_name, ansible_run_destination):
         os.mkdir(ansible_run_destination)
 
         # copy roles to run env
@@ -288,7 +288,9 @@ class AnsibleInstaller(PKInstaller):
 
     def prepare_ansible(self, env_name, global_vars_dict):
         ansible_run_destination = os.path.join(self.ansible_run_dir, env_name)
-        self._create_ansible_run_env(env_name)
+        if os.path.exists(ansible_run_destination):
+            ansible_run_destination += "-expansion"
+        self._create_ansible_run_env(env_name, ansible_run_destination)
         inv_config = self._generate_inventory_attributes(global_vars_dict)
         inventory_dir = os.path.join(ansible_run_destination, 'inventories')
 
@@ -353,11 +355,39 @@ class AnsibleInstaller(PKInstaller):
         # Create ansible related files
         self.prepare_ansible(env_name, global_vars_dict)
 
+    def patch(self, patched_role_mapping):
+        adapter_name = self.config_manager.get_adapter_name()
+        cluster_name = self.config_manager.get_clustername()
+        env_name = self.get_env_name(adapter_name, cluster_name)
+        ansible_run_destination = os.path.join(self.ansible_run_dir, env_name)
+        inventory_dir = os.path.join(ansible_run_destination, 'inventories')
+        patched_global_vars_dict = self._get_cluster_tmpl_vars()
+        mapping = self.config_manager.get_cluster_patched_roles_mapping()
+        patched_global_vars_dict['roles_mapping'] = mapping
+        patched_inv = self._generate_inventory_attributes(
+            patched_global_vars_dict)
+        inv_file = os.path.join(inventory_dir, 'patched_inventory.yml')
+        self.serialize_config(patched_inv, inv_file)
+        config_file = os.path.join(
+            ansible_run_destination, self.ansible_config
+        )
+        playbook_file = os.path.join(ansible_run_destination, self.playbook)
+        log_file = os.path.join(ansible_run_destination, 'patch.log')
+        cmd = "ANSIBLE_CONFIG=%s ansible-playbook -i %s %s" % (config_file,
+                                                               inv_file,
+                                                               playbook_file)
+        with open(log_file, 'w') as logfile:
+            subprocess.Popen(cmd, shell=True, stdout=logfile, stderr=logfile)
+        return patched_role_mapping
+
     def cluster_os_ready(self):
         adapter_name = self.config_manager.get_adapter_name()
         cluster_name = self.config_manager.get_clustername()
         env_name = self.get_env_name(adapter_name, cluster_name)
         ansible_run_destination = os.path.join(self.ansible_run_dir, env_name)
+        expansion_dir = ansible_run_destination + "-expansion"
+        if os.path.exists(expansion_dir):
+            ansible_run_destination = expansion_dir
         inventory_dir = os.path.join(ansible_run_destination, 'inventories')
         inventory_file = os.path.join(inventory_dir, self.inventory)
         playbook_file = os.path.join(ansible_run_destination, self.playbook)

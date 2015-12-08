@@ -174,6 +174,38 @@ class DeployManager(object):
             self.pk_installer.cluster_ready()
 
 
+class Patcher(DeployManager):
+    """Patcher Module."""
+    def __init__(self, adapter_info, cluster_info, hosts_info, cluster_hosts):
+        self.pk_installer = None
+        self.cluster_info = cluster_info
+        registered_roles = cluster_info['flavor']['roles']
+
+        pk_info = adapter_info.setdefault(const.PK_INSTALLER, {})
+        if pk_info:
+            pk_installer_name = pk_info[const.NAME]
+            self.pk_installer = Patcher._get_installer(PKInstaller,
+                                                       pk_installer_name,
+                                                       adapter_info,
+                                                       cluster_info,
+                                                       hosts_info)
+
+        patched_role_mapping = {}
+        for role in registered_roles:
+            patched_role_mapping[role] = []
+        for host in cluster_hosts:
+            if len(host['patched_roles']) == 0:
+                continue
+            for role in host['patched_roles']:
+                patched_role_mapping[role['name']].append(host)
+        self.patched_role_mapping = patched_role_mapping
+
+    def patch(self):
+        patched_config = self.pk_installer.patch(self.patched_role_mapping)
+
+        return patched_config
+
+
 class PowerManager(object):
     """Manage host to power on, power off, and reset."""
 

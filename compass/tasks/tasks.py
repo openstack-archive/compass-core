@@ -25,6 +25,7 @@ from compass.actions import clean
 from compass.actions import delete
 from compass.actions import deploy
 from compass.actions import install_callback
+from compass.actions import patch
 from compass.actions import poll_switch
 from compass.actions import update_progress
 from compass.db.api import adapter_holder as adapter_api
@@ -108,6 +109,19 @@ def deploy_cluster(deployer_email, cluster_id, clusterhost_ids):
     """
     try:
         deploy.deploy(cluster_id, clusterhost_ids, deployer_email)
+    except Exception as error:
+        logging.exception(error)
+
+
+@celery.task(name='compass.tasks.patch_cluster')
+def patch_cluster(patcher_email, cluster_id):
+    """Patch the existing cluster.
+
+    :param cluster_id: id of the cluster
+    :type cluster_id: int
+    """
+    try:
+        patch.patch(cluster_id, patcher_email)
     except Exception as error:
         logging.exception(error)
 

@@ -383,6 +383,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     )
     # the list of role names.
     _roles = Column('roles', JSONEncoded, default=[])
+    _patched_roles = Column('patched_roles', JSONEncoded, default=[])
     config_step = Column(String(80), default='')
     package_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
@@ -556,7 +557,17 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
 
     @property
     def patched_roles(self):
-        return self.roles
+        patched_role_names = list(self._patched_roles)
+        if not patched_role_names:
+            return []
+        cluster_roles = self.cluster.flavor['roles']
+        if not cluster_roles:
+            return []
+        roles = []
+        for cluster_role in cluster_roles:
+            if cluster_role['name'] in patched_role_names:
+                roles.append(cluster_role)
+        return roles
 
     @patched_roles.setter
     def patched_roles(self, value):
@@ -564,6 +575,9 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
         roles = list(self._roles)
         roles.extend(value)
         self._roles = roles
+        patched_roles = list(self._patched_roles)
+        patched_roles.extend(value)
+        self._patched_roles = patched_roles
         self.config_validated = False
 
     @hybrid_property
@@ -621,6 +635,7 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
             'state': state_dict['state']
         })
         dict_info['roles'] = self.roles
+        dict_info['patched_roles'] = self.patched_roles
         return dict_info
 
 

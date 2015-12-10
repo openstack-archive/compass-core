@@ -107,7 +107,7 @@ OPTIONAL_ADDED_FIELDS = ['flavor_id']
 UPDATED_FIELDS = ['name', 'reinstall_distributed_system']
 ADDED_HOST_FIELDS = ['machine_id']
 UPDATED_HOST_FIELDS = ['name', 'reinstall_os']
-UPDATED_CLUSTERHOST_FIELDS = ['roles']
+UPDATED_CLUSTERHOST_FIELDS = ['roles', 'patched_roles']
 PATCHED_CLUSTERHOST_FIELDS = ['patched_roles']
 UPDATED_CONFIG_FIELDS = [
     'put_os_config', 'put_package_config', 'config_step'
@@ -1021,6 +1021,7 @@ def update_cluster_host(
     session=None, **kwargs
 ):
     """Update clusterhost by cluster id and host id."""
+    logging.info('updating kwargs: %s', kwargs)
     clusterhost = _get_cluster_host(
         cluster_id, host_id, session=session
     )

@@ -15,6 +15,7 @@
 """Module to patch an existing cluster
 """
 import logging
+import simplejson as json
 
 from compass.actions import util
 from compass.db.api import cluster as cluster_db
@@ -56,4 +57,13 @@ def patch(cluster_id, username=None):
             patch_successful = False
 
         if patch_successful:
+            clean_payload = '{"roles": []}'
+            clean_payload = json.loads(clean_payload)
+            for cluster_host in cluster_hosts:
+                cluster_db.update_cluster_host(
+                    cluster_id, cluster_host['id'], user, **clean_payload)
+                logging.info(
+                    "cleaning up patched roles for host id: %s",
+                    cluster_host['id']
+                )
             logging.info("Patch successful: %s", patched_config)

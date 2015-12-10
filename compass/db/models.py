@@ -572,13 +572,18 @@ class ClusterHost(BASE, TimestampMixin, HelperMixin):
     @patched_roles.setter
     def patched_roles(self, value):
         """value should be a list of role name."""
-        roles = list(self._roles)
-        roles.extend(value)
-        self._roles = roles
-        patched_roles = list(self._patched_roles)
-        patched_roles.extend(value)
-        self._patched_roles = patched_roles
-        self.config_validated = False
+        # if value is an empty list, we empty the field
+        if value:
+            roles = list(self._roles)
+            roles.extend(value)
+            self._roles = roles
+            patched_roles = list(self._patched_roles)
+            patched_roles.extend(value)
+            self._patched_roles = patched_roles
+            self.config_validated = False
+        else:
+            self._patched_roles = list(value)
+            self.config_validated = False
 
     @hybrid_property
     def owner(self):

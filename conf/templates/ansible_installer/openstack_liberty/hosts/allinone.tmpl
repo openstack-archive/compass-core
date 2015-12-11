@@ -1,0 +1,10 @@
+#set controllers = $getVar('allinone_compute', [])
+#if not $isinstance($controllers, list)
+    #set controllers = [$controllers]
+#end if
+# allinone
+#for controller in $controllers
+    #set controller_ip = $controller.management.ip
+    #set controller_hostname = $controller.hostname
+$controller_ip $controller_hostname
+#end for

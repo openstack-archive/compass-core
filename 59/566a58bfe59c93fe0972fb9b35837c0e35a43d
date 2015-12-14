@@ -1,0 +1,9 @@
+Verified+2: Jenkins
+Code-Review+2: baigk <baiguoku@huawei.com>
+Workflow+1: baigk <baiguoku@huawei.com>
+Verified+1: Huawei Compass CI <compasscitest@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Mon, 14 Dec 2015 05:07:28 +0000
+Reviewed-on: https://review.openstack.org/256914
+Project: openstack/compass-core
+Branch: refs/heads/master

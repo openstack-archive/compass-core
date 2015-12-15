@@ -1,3 +1,12 @@
+#set ip_settings={}
+#for k,v in $getVar('ip_settings', {}).items()
+#set host_ip_settings={}
+#for intf in v
+#set $host_ip_settings[$intf["alias"]]=intf
+#end for
+#set $ip_settings[$k]=$host_ip_settings
+#end for
+
 # localhost
 127.0.0.1 localhost
 #set controllers = $getVar('controller', [])
@@ -10,13 +19,13 @@
 #end if
 # controller
 #for worker in $controllers
-    #set worker_ip = $worker.install.ip
     #set worker_hostname = $worker.hostname
+    #set worker_ip = $ip_settings[$worker_hostname].mgmt.ip
 $worker_ip $worker_hostname
 #end for
 # compute
 #for worker in $computes
-    #set worker_ip = $worker.install.ip
     #set worker_hostname = $worker.hostname
+    #set worker_ip = $ip_settings[$worker_hostname].mgmt.ip
 $worker_ip $worker_hostname
 #end for

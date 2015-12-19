@@ -158,7 +158,7 @@ else
     echo "redis has already started"
 fi
 
-sudo systemctl status mariadb.service |grep running
+sudo systemctl status mysql.service |grep running
 if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1

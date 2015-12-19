@@ -144,20 +144,13 @@ chmod 644 /etc/httpd/conf.d/cobbler.conf
 
 sudo cp -rn /etc/xinetd.d /root/backup/
 sudo cp  $COMPASSDIR/misc/rsync /etc/xinetd.d/
-exit 0
+
 #sudo sed -i 's/^@dists=/# @dists=/g' /etc/debmirror.conf
 #sudo sed -i 's/^@arches=/# @arches=/g' /etc/debmirror.conf
 
 sudo rm -rf /var/lib/cobbler/config/systems.d/*
 
-echo "disable iptables"
 sudo systemctl stop firewalld
-if [[ "$?" == "0" ]]; then
-    echo "iptables is running"
-    exit 1
-else
-    echo "iptables is already stopped"
-fi
 
 # echo "disable selinux temporarily"
 # echo 0 > /selinux/enforce

@@ -9,13 +9,13 @@ workon compass-core
 
 RET=1
 while [[ RET -ne 0 ]]; do
-    echo "waiting for mariadb to startup"
+    echo "waiting for mysql to startup"
     sleep 5
     mysql -uroot -e "status" > /dev/null 2>&1
     RET=$?
 done
 
-echo "mariadb started"
+echo "mysql started"
 
 # set mysql with default username and password
 mysqladmin -h127.0.0.1 --port=3306 -u root password root

@@ -16,8 +16,11 @@ source $DIR/install_func.sh
 mkdir -p /var/www/compass_web
 rm -rf /var/www/compass_web/*
 
-sudo cp -rf $WEB_HOME/public/* /var/www/compass_web/
-sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
+#sudo cp -rf $WEB_HOME/public/* /var/www/compass_web/
+#sudo cp -rf $WEB_HOME/v2 /var/www/compass_web/
+
+sudo mkdir -p /var/www/compass_web/v2.5
+sudo cp -rf $WEB_HOME/v2.5/target/* /var/www/compass_web/v2.5/
 
 if [[ $LOCAL_REPO = "y" ]]; then
     echo "setting up local repo"
@@ -49,11 +52,11 @@ if [[ $LOCAL_REPO = "y" ]]; then
     fi
 fi
 
-sudo service httpd restart
+sudo systemctl restart httpd.service
 sleep 10
 
 echo "Checking if httpd is running"
-sudo service httpd status
+sudo systemctl status httpd.service
 if [[ "$?" == "0" ]]; then
     echo "httpd is running"
 else

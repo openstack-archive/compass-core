@@ -10,7 +10,7 @@ if [ "$tempest" == "true" ]; then
         exit 1
     fi
 fi
-sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget syslinux amqp mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp net-snmp-python unzip openssl openssl098e ca-certificates  mysql mysql-server mysql-devel python-virtualenv python-setuptools python-pip bc libselinux-python
+sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget syslinux amqp rabbitmq-server mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp net-snmp-python unzip openssl openssl098e ca-certificates  mariadb mariadb-server mysql-devel python-virtualenv python-setuptools python-pip bc libselinux-python
 sudo yum --setopt=tsflags=noscripts -y remove redis
 sudo yum --enablerepo=remi,remi-test install -y redis
 
@@ -30,10 +30,10 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo pip install --upgrade setuptools
-sudo pip install --upgrade virtualenv
 sudo easy_install --upgrade pip
 sudo pip install --upgrade pip
+sudo pip install --upgrade setuptools
+sudo pip install --upgrade virtualenv
 if [[ "$?" != "0" ]]; then
     echo "failed to install easy install"
     exit 1
@@ -45,18 +45,14 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo chkconfig httpd on
-sudo chkconfig squid on
-sudo chkconfig xinetd on
-sudo chkconfig dhcpd on
-sudo chkconfig named on
-sudo chkconfig sshd on
-sudo chkconfig rsyslog on
-sudo chkconfig ntpd on
-sudo chkconfig redis on
-sudo chkconfig mysqld on
-sudo chkconfig iptables off
-sudo chkconfig ip6tables off
-if `sudo chkconfig --list dnsmasq`; then
-    sudo chkconfig dnsmasq off
-fi
+sudo systemctl enable httpd.service
+sudo systemctl enable squid.service
+sudo systemctl enable xinetd.service
+sudo systemctl enable dhcpd.service
+sudo systemctl enable named.service
+sudo systemctl enable sshd.service
+sudo systemctl enable rsyslog.service
+sudo systemctl enable ntpd.service
+sudo systemctl enable redis.service
+sudo systemctl enable mariadb.service
+sudo systemctl disable firewalld

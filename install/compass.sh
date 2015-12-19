@@ -71,6 +71,7 @@ if [ ! -f /usr/lib64/libcrypto.so ]; then
     sudo cp -rf /usr/lib64/libcrypto.so.6 /usr/lib64/libcrypto.so
 fi
 
+sudo mkdir -p /opt/compass/db
 sudo chmod -R 777 /opt/compass/db
 sudo chmod -R 777 /var/log/compass
 sudo chmod -R 777 /var/log/chef
@@ -99,8 +100,8 @@ domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")
 sudo sed -i "s/\$domains/$domains/g" /etc/compass/setting
 
 sudo sed -i "s/\$cobbler_ip/$IPADDR/g" /etc/compass/os_installer/cobbler.conf
-sudo sed -i "s/\$chef_ip/$IPADDR/g" /etc/compass/package_installer/chef-icehouse.conf
-sudo sed -i "s/\$chef_hostname/$HOSTNAME/g" /etc/compass/package_installer/chef-icehouse.conf
+#sudo sed -i "s/\$chef_ip/$IPADDR/g" /etc/compass/package_installer/chef-icehouse.conf
+#sudo sed -i "s/\$chef_hostname/$HOSTNAME/g" /etc/compass/package_installer/chef-icehouse.conf
 sudo sed -i "s|\$PythonHome|$VIRTUAL_ENV|g" /opt/compass/bin/switch_virtualenv.py
 sudo ln -s -f $VIRTUAL_ENV/bin/celery /opt/compass/bin/celery
 
@@ -116,12 +117,12 @@ sudo chown -R redis:root /var/run/redis
 sudo mkdir -p /var/lib/redis
 sudo chown -R redis:root /var/lib/redis
 sudo rm -rf /var/lib/redis/dump.rdb
-sudo killall -9 redis-server
+sudo systemctl kill redis-server
 sudo rm -rf /var/run/redis/redis.pid
-sudo service redis restart
+sudo systemctl restart redis.service
 sleep 10
 echo "Checking if redis is running"
-sudo service redis status
+sudo systemctl status redis.service
 if [[ "$?" == "0" ]]; then
     echo "redis is running"
 else
@@ -130,8 +131,8 @@ else
     exit 1
 fi
 
-sudo chkconfig compass-progress-updated on
-sudo chkconfig compass-celeryd on
+sudo systemctl enable compass-progress-updated.service
+sudo systemctl enable compass-celeryd.service
 
 /opt/compass/bin/refresh.sh
 if [[ "$?" != "0" ]]; then
@@ -141,7 +142,7 @@ else
     echo "compassed service is refreshed"
 fi
 
-sudo service httpd status
+sudo systemctl status httpd.service
 if [[ "$?" != "0" ]]; then
     echo "httpd is not started"
     exit 1
@@ -149,7 +150,7 @@ else
     echo "httpd has already started"
 fi
 
-sudo service redis status |grep running
+sudo systemctl status redis.service |grep running
 if [[ "$?" != "0" ]]; then
     echo "redis is not started"
     exit 1
@@ -157,13 +158,13 @@ else
     echo "redis has already started"
 fi
 
-sudo service mysqld status |grep running
+sudo systemctl status mariadb.service |grep running
 if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1
 fi
 
-sudo service compass-celeryd status |grep running
+sudo systemctl status compass-celeryd.service |grep running
 if [[ "$?" != "0" ]]; then
     echo "compass-celeryd is not started"
     exit 1
@@ -171,7 +172,7 @@ else
     echo "compass-celeryd has already started"
 fi
 
-service compass-progress-updated status |grep running
+sudo systemctl status compass-progress-updated.service |grep running
 if [[ "$?" != "0" ]]; then
     echo "compass-progress-updated is not started"
     exit 1
@@ -180,8 +181,8 @@ else
 fi
 
 sleep 10
-compass check
-if [[ "$?" != "0" ]]; then
-    echo "compass check failed"
-    exit 1
-fi
+#compass check
+#if [[ "$?" != "0" ]]; then
+#    echo "compass check failed"
+#    exit 1
+#fi

@@ -13,13 +13,14 @@ fi
 source $DIR/install_func.sh
 
 echo "Installing cobbler related packages"
-sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django cman debmirror pykickstart reprepro
+sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django corosync pykickstart
+sudo yum -y upgrade yum-utils
 if [[ "$?" != "0" ]]; then
     echo "failed to install cobbler related packages"
     exit 1
-else
+#else
     # patch cobbler code
-    find /usr/lib -name manage_bind.py |xargs  perl -pi.old -e 's/(\s+)(self\.logger\s+\= logger)/$1$2\n$1if self\.logger is None:\n$1    import clogger\n$1    self\.logger = clogger.Logger\(\)/'
+#    find /usr/lib -name manage_bind.py |xargs  perl -pi.old -e 's/(\s+)(self\.logger\s+\= logger)/$1$2\n$1if self\.logger is None:\n$1    import clogger\n$1    self\.logger = clogger.Logger\(\)/'
 fi
 
 # cobbler snippet uses netaddr to calc subnet and ip addr
@@ -29,7 +30,7 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo chkconfig cobblerd on
+sudo systemctl enable cobblerd.service
 
 # create backup dir
 sudo mkdir -p /root/backup/cobbler
@@ -142,16 +143,15 @@ sudo cp -rf $ADAPTERS_HOME/cobbler/conf/cobbler.conf /etc/httpd/conf.d/
 chmod 644 /etc/httpd/conf.d/cobbler.conf
 
 sudo cp -rn /etc/xinetd.d /root/backup/
-sudo sed -i 's/disable\([ \t]\+\)=\([ \t]\+\)yes/disable\1=\2no/g' /etc/xinetd.d/rsync
-sudo sed -i 's/^@dists=/# @dists=/g' /etc/debmirror.conf
-sudo sed -i 's/^@arches=/# @arches=/g' /etc/debmirror.conf
+sudo cp  $COMPASSDIR/misc/rsync /etc/xinetd.d/
+exit 0
+#sudo sed -i 's/^@dists=/# @dists=/g' /etc/debmirror.conf
+#sudo sed -i 's/^@arches=/# @arches=/g' /etc/debmirror.conf
 
 sudo rm -rf /var/lib/cobbler/config/systems.d/*
 
 echo "disable iptables"
-sudo service iptables stop
-sudo sleep 10
-sudo service iptables status
+sudo systemctl stop firewalld
 if [[ "$?" == "0" ]]; then
     echo "iptables is running"
     exit 1
@@ -159,8 +159,8 @@ else
     echo "iptables is already stopped"
 fi
 
-echo "disable selinux temporarily"
-echo 0 > /selinux/enforce
+# echo "disable selinux temporarily"
+# echo 0 > /selinux/enforce
 
 # make log dir
 sudo mkdir -p /var/log/cobbler
@@ -168,15 +168,9 @@ sudo mkdir -p /var/log/cobbler/tasks
 sudo mkdir -p /var/log/cobbler/anamon
 sudo chmod -R 777 /var/log/cobbler
 
-# kill dnsmasq service
-if `sudo chkconfig --list dnsmasq`; then
-    sudo chkconfig dnsmasq off
-    sudo service dnsmasq stop
-fi
-sudo killall -9 dnsmasq
-
-sudo service httpd restart
-sudo service cobblerd restart
+sudo systemctl restart httpd.service
+sudo systemctl restart cobblerd.service
+sudo systemctl restart named.service
 
 sudo cobbler get-loaders
 if [[ "$?" != "0" ]]; then
@@ -194,12 +188,12 @@ else
     echo "cobbler synced"
 fi
 
-sudo service xinetd restart
+sudo systemctl restart xinetd.service
 
 sudo sleep 10
 
 echo "Checking if httpd is running"
-sudo service httpd status
+sudo systemctl status httpd.service
 if [[ "$?" == "0" ]]; then
     echo "httpd is running."
 else
@@ -208,7 +202,7 @@ else
 fi
 
 echo "Checking if dhcpd is running"
-sudo service dhcpd status
+sudo systemctl status dhcpd.service
 if [[ "$?" == "0" ]]; then
     echo "dhcpd is running."
 else
@@ -217,7 +211,7 @@ else
 fi
 
 echo "Checking if named is running"
-sudo service named status
+sudo systemctl status named.service
 if [[ "$?" == "0" ]]; then
     echo "named is running."
 else
@@ -226,7 +220,7 @@ else
 fi
 
 echo "Checking if xinetd is running"
-sudo service xinetd status
+sudo systemctl status xinetd.service
 if [[ "$?" == "0" ]]; then
     echo "xinetd is running."
 else
@@ -235,7 +229,7 @@ else
 fi
 
 echo "Checking if cobblerd is running"
-sudo service cobblerd status
+sudo systemctl status cobblerd.service
 if [[ "$?" == "0" ]]; then
     echo "cobblerd is running."
 else
@@ -394,7 +388,6 @@ if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
     download -u "$SLES_11SP3_PPA_REPO_SOURCE" -u "$SLES_11SP3_PPA_REPO_SOURCE_ASIA" sles_11sp3_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
 fi
 
-sudo cobbler repo remove --name Ubuntu-14.04-x86_64
 sudo cobbler reposync
 if [[ "$?" != "0" ]]; then
     echo "cobbler reposync failed"

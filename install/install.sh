@@ -64,12 +64,13 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $DIR/install.conf
 
 ### Change selinux security policy
-echo 0 > /selinux/enforce
-
+sudo setenforce 0
+sudo sed -i 's/enforcing/disabled/g' /etc/selinux/config
 ### Add epel repo
 sudo rpm -q epel-release
 if [ "$?" != "0" ]; then
-    sudo rpm -Uvh http://download.fedoraproject.org/pub/epel/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/epel-release-6-8.noarch.rpm >& /dev/null
+    #sudo rpm -Uvh http://download.fedoraproject.org/pub/epel/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/epel-release-6-8.noarch.rpm >& /dev/null
+    sudo rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
     if [ "$?" != "0" ]; then
         echo "failed to install epel-release"
         exit 1
@@ -163,27 +164,29 @@ loadvars()
         done
     fi
 }
-
+yum -y install net-tools
 loadvars NIC "eth0"
 sudo ifconfig $NIC
 if [ $? -ne 0 ]; then
     echo "There is no nic '$NIC' yet"
     exit 1
 fi
-sudo ifconfig $NIC | grep 'inet addr:' >& /dev/null
+# sudo ifconfig $NIC | grep 'inet addr:' >& /dev/null
+sudo ifconfig $NIC |grep 'inet '| cut -d ' ' -f10 >& /dev/null
 if [ $? -ne 0 ]; then
     echo "There is not any IP address assigned to the NIC '$NIC' yet, please assign an IP address first."
     exit 1
 fi
 
-export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+# export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+export ipaddr=$(ifconfig $NIC | grep 'inet ' | cut -d' ' -f10)
 loadvars IPADDR ${ipaddr}
 ipcalc $IPADDR -c
 if [ $? -ne 0 ]; then
     echo "ip addr $IPADDR format should be x.x.x.x"
     exit 1
 fi
-export netmask=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
+export netmask=$(ifconfig $NIC | grep netmask | cut -d ' ' -f 13)
 loadvars NETMASK ${netmask}
 export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
 export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')

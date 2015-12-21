@@ -4,4 +4,4 @@ source = compass
 omit = compass/tests/*
 
 [report]
-ignore-errors = True
+ignore_errors = True

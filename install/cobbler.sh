@@ -83,6 +83,7 @@ sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $I
 sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_START $IP_END/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/local-address \$ipaddr/local-address $IPADDR/g" /etc/cobbler/dhcp.template
 sudo chmod 644 /etc/cobbler/dhcp.template
+sudo cp -f /etc/cobbler/dhcp.template /etc/dhcp/dhcpd.conf
 
 # update tftpd.template
 sudo cp -rn /etc/cobbler/tftpd.template /root/backup/cobbler/

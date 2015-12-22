@@ -108,9 +108,9 @@ echo "update mysqld"
 mkdir -p /var/log/mysql
 chmod -R 777 /var/log/mysql
 sleep 10
-systemctl restart mariadb.service
+systemctl restart mysql.service
 sudo sleep 10
-systemctl status mariadb.service
+systemctl status mysql.service
 if [[ "$?" != "0" ]]; then
     echo "failed to restart mysqld"
     exit 1
@@ -144,9 +144,9 @@ if [[ "$?" != "0" ]]; then
 else
     echo "mysql database set succeeded"
 fi
-sudo systemctl restart mariadb.service
+sudo systemctl restart mysql.service
 sudo sleep 10
-sudo systemctl status mariadb.service
+sudo systemctl status mysql.service
 if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
-systemctl restart mariadb.service
-systemctl status mariadb.service || exit $?
+systemctl restart mysql.service
+systemctl status mysql.service || exit $?
 /opt/compass/bin/manage_db.py createdb
 /opt/compass/bin/clean_installers.py --noasync
 /opt/compass/bin/clean_installation_logs.py

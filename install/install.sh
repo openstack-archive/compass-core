@@ -69,8 +69,7 @@ sudo sed -i 's/enforcing/disabled/g' /etc/selinux/config
 ### Add epel repo
 sudo rpm -q epel-release
 if [ "$?" != "0" ]; then
-    #sudo rpm -Uvh http://download.fedoraproject.org/pub/epel/${IMAGE_VERSION_MAJOR}/${IMAGE_ARCH}/epel-release-6-8.noarch.rpm >& /dev/null
-    sudo rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    sudo rpm -Uvh $EPEL
     if [ "$?" != "0" ]; then
         echo "failed to install epel-release"
         exit 1

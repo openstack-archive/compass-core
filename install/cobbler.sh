@@ -83,6 +83,7 @@ sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $I
 sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_START $IP_END/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/local-address \$ipaddr/local-address $IPADDR/g" /etc/cobbler/dhcp.template
 sudo chmod 644 /etc/cobbler/dhcp.template
+sudo cp -f /etc/cobbler/dhcp.template /etc/dhcp/dhcpd.conf
 
 # update tftpd.template
 sudo cp -rn /etc/cobbler/tftpd.template /root/backup/cobbler/
@@ -164,69 +165,54 @@ sudo chmod -R 777 /var/log/cobbler
 sudo systemctl restart httpd.service
 sudo systemctl restart cobblerd.service
 sudo systemctl restart named.service
-
-sudo cobbler get-loaders
-if [[ "$?" != "0" ]]; then
-    echo "failed to get loaders for cobbler"
-    exit 1
-else
-    echo "cobbler loaders updated"
-fi
-
-sudo cobbler sync
-if [[ "$?" != "0" ]]; then
-    echo "failed to sync cobbler"
-    exit 1
-else
-    echo "cobbler synced"
-fi
-
 sudo systemctl restart xinetd.service
 
 sudo sleep 10
 
 echo "Checking if httpd is running"
 sudo systemctl status httpd.service
-if [[ "$?" == "0" ]]; then
-    echo "httpd is running."
-else
+if [[ "$?" != "0" ]]; then
     echo "httpd is not running"
     exit 1
 fi
 
 echo "Checking if dhcpd is running"
 sudo systemctl status dhcpd.service
-if [[ "$?" == "0" ]]; then
-    echo "dhcpd is running."
-else
+if [[ "$?" != "0" ]]; then
     echo "dhcpd is not running"
     exit 1
 fi
 
 echo "Checking if named is running"
 sudo systemctl status named.service
-if [[ "$?" == "0" ]]; then
-    echo "named is running."
-else
+if [[ "$?" != "0" ]]; then
     echo "named is not running"
     exit 1
 fi
 
 echo "Checking if xinetd is running"
 sudo systemctl status xinetd.service
-if [[ "$?" == "0" ]]; then
-    echo "xinetd is running."
-else
+if [[ "$?" != "0" ]]; then
     echo "xinetd is not running"
     exit 1
 fi
 
 echo "Checking if cobblerd is running"
 sudo systemctl status cobblerd.service
-if [[ "$?" == "0" ]]; then
-    echo "cobblerd is running."
-else
+if [[ "$?" != "0" ]]; then
     echo "cobblerd is not running"
+    exit 1
+fi
+
+sudo cobbler get-loaders
+if [[ "$?" != "0" ]]; then
+    echo "failed to get loaders for cobbler"
+    exit 1
+fi
+
+sudo cobbler sync
+if [[ "$?" != "0" ]]; then
+    echo "failed to sync cobbler"
     exit 1
 fi
 

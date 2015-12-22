@@ -136,22 +136,26 @@ if [[ "$?" != "0" ]]; then
 else
     echo "mysql password set succeeded"
 fi
+
 sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "drop database ${MYSQL_DATABASE}"
 sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "create database ${MYSQL_DATABASE}"
 if [[ "$?" != "0" ]]; then
     echo "mysql database set failed"
     exit 1
-else
-    echo "mysql database set succeeded"
 fi
+
 sudo systemctl restart mysql.service
-sudo sleep 10
 sudo systemctl status mysql.service
 if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1
-else
-    echo "mysqld is started"
+fi
+
+sudo systemctl restart rabbitmq-server.service
+sudo systemctl status rabbitmq-server.service
+if [[ "$?" != "0" ]]; then
+    echo "rabbitmq-server is not started"
+    exit 1
 fi
 
 cd $SCRIPT_DIR

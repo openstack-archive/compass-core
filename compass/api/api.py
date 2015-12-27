@@ -2068,6 +2068,12 @@ def take_cluster_action(cluster_id):
         ),
         202
     )
+    redeploy_cluster_func = _wrap_response(
+        functools.partial(
+            cluster_api.redeploy_cluster, cluster_id, user=current_user,
+        ),
+        202
+    )
     patch_cluster_func = _wrap_response(
         functools.partial(
             cluster_api.patch_cluster, cluster_id, user=current_user,
@@ -2090,6 +2096,7 @@ def take_cluster_action(cluster_id):
         remove_hosts=update_cluster_hosts_func,
         review=review_cluster_func,
         deploy=deploy_cluster_func,
+        redeploy=redeploy_cluster_func,
         apply_patch=patch_cluster_func,
         check_health=check_cluster_health_func
     )

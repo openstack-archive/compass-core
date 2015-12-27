@@ -286,8 +286,8 @@ class HostInfo(object):
 class BaseConfigManager(object):
     def __init__(self, adapter_info={}, cluster_info={}, hosts_info={}):
         assert(adapter_info and isinstance(adapter_info, dict))
-        assert(cluster_info and isinstance(adapter_info, dict))
-        assert(hosts_info and isinstance(adapter_info, dict))
+        assert(cluster_info and isinstance(cluster_info, dict))
+        assert(hosts_info and isinstance(hosts_info, dict))
 
         self.adapter_info = AdapterInfo(adapter_info)
         self.cluster_info = ClusterInfo(cluster_info)

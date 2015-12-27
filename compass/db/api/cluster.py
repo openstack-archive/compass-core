@@ -1859,6 +1859,69 @@ def deploy_cluster(
     }
 
 
+@utils.supported_filters(optional_support_keys=['redeploy'])
+@database.run_in_session()
+@user_api.check_user_permission(
+    permission.PERMISSION_DEPLOY_CLUSTER
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    cluster=RESP_CONFIG_FIELDS,
+    hosts=RESP_CLUSTERHOST_FIELDS
+)
+def redeploy_cluster(
+    cluster_id, deploy={}, user=None, session=None, **kwargs
+):
+    """redeploy cluster.
+
+    Args:
+       cluster_id: cluster id.
+    """
+    from compass.db.api import host as host_api
+    from compass.tasks import client as celery_client
+    cluster = _get_cluster(cluster_id, session=session)
+
+    check_cluster_editable(cluster, user=user)
+    check_cluster_validated(cluster)
+    utils.update_db_object(
+        session, cluster.state,
+        state='INITIALIZED',
+        percentage=0,
+        ready=False
+    )
+    for clusterhost in cluster.clusterhosts:
+        host = clusterhost.host
+        # ignore checking if underlying host is validated if
+        # the host is not editable.
+        host_api.check_host_validated(host)
+        utils.update_db_object(
+            session, host.state,
+            state='INITIALIZED',
+            percentage=0,
+            ready=False
+        )
+        if cluster.flavor_name:
+            check_clusterhost_validated(clusterhost)
+            utils.update_db_object(
+                session,
+                clusterhost.state,
+                state='INITIALIZED',
+                percentage=0,
+                ready=False
+            )
+
+    celery_client.celery.send_task(
+        'compass.tasks.redeploy_cluster',
+        (
+            user.email, cluster_id
+        )
+    )
+    return {
+        'status': 'redeploy action sent',
+        'cluster': cluster
+    }
+
+
 @utils.supported_filters(optional_support_keys=['apply_patch'])
 @database.run_in_session()
 @user_api.check_user_permission(

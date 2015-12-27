@@ -258,6 +258,9 @@ class AnsibleInstaller(PKInstaller):
         return tmpl.respond()
 
     def _create_ansible_run_env(self, env_name, ansible_run_destination):
+        if os.path.exists(ansible_run_destination):
+            shutil.rmtree(ansible_run_destination, True)
+
         os.mkdir(ansible_run_destination)
 
         # copy roles to run env

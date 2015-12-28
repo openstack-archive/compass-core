@@ -113,6 +113,19 @@ def deploy_cluster(deployer_email, cluster_id, clusterhost_ids):
         logging.exception(error)
 
 
+@celery.task(name='compass.tasks.redeploy_cluster')
+def redeploy_cluster(deployer_email, cluster_id):
+    """Redeploy the given cluster.
+
+    :param cluster_id: id of the cluster
+    :type cluster_id: int
+    """
+    try:
+        deploy.redeploy(cluster_id, deployer_email)
+    except Exception as error:
+        logging.exception(error)
+
+
 @celery.task(name='compass.tasks.patch_cluster')
 def patch_cluster(patcher_email, cluster_id):
     """Patch the existing cluster.

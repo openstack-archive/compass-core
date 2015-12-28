@@ -17,6 +17,7 @@
 import logging
 
 from compass.actions import util
+from compass.db.api import cluster as cluster_db
 from compass.db.api import health_check_report as health_check_db
 from compass.db.api import user as user_db
 from compass.deployment.deploy_manager import DeployManager
@@ -70,7 +71,7 @@ def deploy(cluster_id, hosts_id_list, username=None):
             )
 
 
-def redeploy(cluster_id, hosts_id_list, username=None):
+def redeploy(cluster_id, username=None):
     """Deploy clusters.
 
     :param cluster_hosts: clusters and hosts in each cluster to deploy.
@@ -86,6 +87,10 @@ def redeploy(cluster_id, hosts_id_list, username=None):
 
         adapter_info = util.ActionHelper.get_adapter_info(
             adapter_id, cluster_id, user)
+
+        cluster_hosts = cluster_db.list_cluster_hosts(cluster_id, user)
+        hosts_id_list = [host['id'] for host in cluster_hosts]
+
         hosts_info = util.ActionHelper.get_hosts_info(
             cluster_id, hosts_id_list, user)
 

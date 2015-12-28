@@ -136,8 +136,9 @@ class DeployManager(object):
         """Redeploy target system for the cluster without changing config."""
         if not self.pk_installer:
             logging.info("Redeploy_target_system: No installer found!")
+            return
 
-        self.os_installer.redeploy()
+        self.pk_installer.deploy()
         logging.info("Start to redeploy target system.")
 
     def redeploy(self):

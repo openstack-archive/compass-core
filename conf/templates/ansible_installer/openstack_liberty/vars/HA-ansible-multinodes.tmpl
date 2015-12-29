@@ -95,9 +95,8 @@ ERLANG_TOKEN: YOWSJSJIGGAUFZTIBRAD
 #set console_credentials = $getVar('console_credentials', {})
 #set rabbit_username = $credentials.rabbitmq.username
 #set rabbit_password = $credentials.rabbitmq.password
-#set rabbit_username = $credentials.rabbitmq.username
-#set rabbit_password = $credentials.rabbitmq.password
 #set keystone_dbpass = $credentials.identity.password
+#set keystone_pass = $console_credentials.identity.password
 #set glance_dbpass = $credentials.image.password
 #set glance_pass = $console_credentials.image.password
 #set nova_dbpass = $credentials.compute.password
@@ -107,8 +106,12 @@ ERLANG_TOKEN: YOWSJSJIGGAUFZTIBRAD
 #set cinder_pass = $console_credentials.volume.password
 #set heat_dbpass = $credentials.heat.password
 #set heat_pass = $console_credentials.heat.password
-#set admin_pass = $console_credentials.admin.password
+#set neutron_dbpass = $credentials.network.password
 #set neutron_pass = $console_credentials.network.password
+#set ceilometer_dbpass = $credentials.metering.password
+#set ceilometer_pass = $console_credentials.metering.password
+#set admin_pass = $console_credentials.admin.password
+#set demo_pass = $console_credentials.demo.password
 
 cluster_name: $cluster_name
 
@@ -129,10 +132,8 @@ erlang.cookie: DJJVECFMCJPVYQTJTDWG
 RABBIT_USER: $rabbit_username
 RABBIT_PASS: $rabbit_password
 KEYSTONE_DBPASS: $keystone_dbpass
-CEILOMETER_DBPASS: service
-CEILOMETER_PASS: console
-DEMO_PASS: demo_secret
-ADMIN_PASS: $admin_pass
+CEILOMETER_DBPASS: $ceilometer_dbpass
+CEILOMETER_PASS: $ceilometer_pass
 GLANCE_DBPASS: $glance_dbpass
 GLANCE_PASS: $glance_pass
 NOVA_DBPASS: $nova_dbpass
@@ -140,10 +141,12 @@ NOVA_PASS: $nova_pass
 DASH_DBPASS: $dash_dbpass
 CINDER_DBPASS: $cinder_dbpass
 CINDER_PASS: $cinder_pass
-NEUTRON_DBPASS: $neutron_pass
+NEUTRON_DBPASS: $neutron_dbpass
 NEUTRON_PASS: $neutron_pass
 HEAT_DBPASS: $heat_dbpass
 HEAT_PASS: $heat_pass
+DEMO_PASS: $demo_pass
+ADMIN_PASS: $admin_pass
 
 #set neutron_service_plugins=['router']
 

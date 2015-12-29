@@ -161,7 +161,7 @@ download()
     action=${1:-""}
     downloaded=0
     if [[ "$force" == "0" || "$force" == "false" ]]; then
-        if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
+        if [[ -f /opt/${package} || -L /opt/${package} ]]; then
             echo "$package already exists"
 	    downloaded=1
         fi
@@ -178,28 +178,28 @@ download()
 	    fi
         fi
         if [[ "$url" =~ (http|https|ftp):// ]]; then
-	    echo "download $url to /tmp/${package}"
-	    if [[ -f /tmp/${package} || -L /tmp/${package} ]]; then
-                curl -f -L -z /tmp/${package} -o /tmp/${package}.tmp $url
+	    echo "download $url to /opt/${package}"
+	    if [[ -f /opt/${package} || -L /opt/${package} ]]; then
+                curl -f -L -z /opt/${package} -o /opt/${package}.opt $url
 	    else
-		curl -f -L -o /tmp/${package}.tmp $url
+		curl -f -L -o /opt/${package}.opt $url
 	    fi
             if [[ "$?" != "0" ]]; then
                 echo "failed to download $package"
                 exit 1
             else
                 echo "successfully download $package"
-		if [[ -f /tmp/${package}.tmp || -L /tmp/${package}.tmp ]]; then
-                    mv -f /tmp/${package}.tmp /tmp/${package}
+		if [[ -f /opt/${package}.opt || -L /opt/${package}.opt ]]; then
+                    mv -f /opt/${package}.opt /opt/${package}
 		fi
             fi
         else
-	    echo "copy $url to /tmp/${package}"
-            cp -rf $url /tmp/${package}
+	    echo "copy $url to /opt/${package}"
+            cp -rf $url /opt/${package}
         fi
     fi
-    if [[ ! -f /tmp/${package} && ! -L /tmp/${package} ]]; then
-        echo "/tmp/$package is not created"
+    if [[ ! -f /opt/${package} && ! -L /opt/${package} ]]; then
+        echo "/opt/$package is not created"
 	exit 1
     fi
     if [[ -z "$action" ]]; then
@@ -209,8 +209,8 @@ download()
 	echo "execute $action after downloading $package"
     fi
     if [[ "$action" == "install" ]]; then
-        echo "install /tmp/$package"
-        sudo rpm -Uvh /tmp/$package
+        echo "install /opt/$package"
+        sudo rpm -Uvh /opt/$package
         if [[ "$?" != "0" ]]; then
             echo "failed to install $package"
             exit 1
@@ -219,8 +219,8 @@ download()
         fi
     elif [[ "$action" == "copy" ]]; then
         destdir=$2
-	echo "copy /tmp/$package to $destdir"
-        sudo cp -rn /tmp/$package $destdir
+	echo "copy /opt/$package to $destdir"
+        sudo cp -rn /opt/$package $destdir
 	if [[ "$?" != "0" ]]; then
 	    echo "failed to copy $package to $destdir"
 	    exit 1
@@ -229,8 +229,8 @@ download()
 	fi
     elif [[ "$action" == "unzip" ]]; then
         destdir=$2
-	echo "unzip /tmp/$package to $destdir"
-	sudo tar -C $destdir -xzvf /tmp/$package
+	echo "unzip /opt/$package to $destdir"
+	sudo tar -C $destdir -xzvf /opt/$package
 	if [[ "$?" != "0" ]]; then
 	    echo "failed to unzip $package to $destdir"
 	    exit 1

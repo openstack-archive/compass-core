@@ -39,28 +39,12 @@ sudo ln -s -f /opt/compass/bin/compass_wsgi.py /var/www/compass/compass.wsgi
 sudo cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/cobbler/* /opt/compass/bin/
 
-if [[ $SUPPORT_CENTOS_6_5 != "y" ]]; then
-    sudo rm -f /etc/compass/os/centos6.5.conf
-fi
-
-if [[ $SUPPORT_CENTOS_6_6 != "y" ]]; then
-    sudo rm -f /etc/compass/os/centos6.6.conf
-fi
-
-if [[ $SUPPORT_CENTOS_7_0 != "y" ]]; then
+if [[ $SUPPORT_CENTOS_7_2 != "y" ]]; then
     sudo rm -f /etc/compass/os/centos7.0.conf
 fi
 
-if [[ $SUPPORT_UBUNTU_12_04 != "y" ]]; then
-    sudo rm -f /etc/compass/os/ubuntu12.04.conf
-fi
-
-if [[ $SUPPORT_UBUNTU_14_04 != "y" ]]; then
+if [[ $SUPPORT_UBUNTU_14_04_03 != "y" ]]; then
     sudo rm -f /etc/compass/os/ubuntu14.04.conf
-fi
-
-if [[ $SUPPORT_SLES_11SP3 != "y" ]]; then
-    sudo rm -f /etc/compass/os/sles11sp3.conf
 fi
 
 # add apache user to the group of virtualenv user

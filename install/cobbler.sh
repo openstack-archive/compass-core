@@ -213,606 +213,106 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-sudo cobbler sync
-if [[ "$?" != "0" ]]; then
-    echo "failed to sync cobbler"
-    exit 1
-fi
-
-sudo mkdir -p /var/lib/cobbler/repo_mirror
-# create centos repo
-if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo
-    found_centos_6_5_ppa_repo=0
-    for repo in $(cobbler repo list); do
-        if [ "$repo" == "centos_6_5_ppa_repo" ]; then
-            found_centos_6_5_ppa_repo=1
-        fi
-    done
-
-    if [ "$found_centos_6_5_ppa_repo" == "0" ]; then
-        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_6_5_ppa_repo --name=centos_6_5_ppa_repo --mirror-locally=Y --arch=x86_64
+for i in $UBUNTU_14_04_03_IMAGE_SOURCE; do
+    sudo mkdir -p /var/lib/cobbler/iso
+    download  -u "$i" `basename "$i"` copy /var/lib/cobbler/iso/ || exit $?
+    name=`basename "$i" | sed -e 's/.iso//g' -e 's/-amd64//g' -e 's/-x86_64//g'`-x86_64
+    if [[ `mount | grep "$name"` -eq 0 ]]; then
+        sudo mkdir -p /mnt/$name    
+        sudo mount -o loop /var/lib/cobbler/iso/`basename $i` /mnt/$name
         if [[ "$?" != "0" ]]; then
-            echo "failed to add centos_6_5_ppa_repo"
+            echo "failed to mount image /mnt/$name"
             exit 1
-        else
-            echo "centos_6_5_ppa_repo is added"
         fi
-    else
-        echo "repo centos_6_5_ppa_repo has already existed."
-    fi
 
-    # download packages
-    download -u "$CENTOS_6_5_PPA_REPO_SOURCE" -u "$CENTOS_6_5_PPA_REPO_SOURCE_ASIA" centos_6_5_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
-fi
-
-if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo
-    found_centos_6_6_ppa_repo=0
-    for repo in $(cobbler repo list); do
-        if [ "$repo" == "centos_6_6_ppa_repo" ]; then
-            found_centos_6_6_ppa_repo=1
-        fi
-    done
-
-    if [ "$found_centos_6_6_ppa_repo" == "0" ]; then
-        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_6_6_ppa_repo --name=centos_6_6_ppa_repo --mirror-locally=Y --arch=x86_64
+        cobbler import --path=/mnt/$name \
+                       --name $name \
+                       --arch=x86_64 \
+                       --kickstart=/var/lib/cobbler/kickstarts/default.seed \
+                       --breed=ubuntu
         if [[ "$?" != "0" ]]; then
-            echo "failed to add centos_6_6_ppa_repo"
+            echo "failed to import /mnt/$i"
             exit 1
-        else
-            echo "centos_6_6_ppa_repo is added"
         fi
-    else
-        echo "repo centos_6_6_ppa_repo has already existed."
     fi
+done
 
-    # download packages
-    download -u "$CENTOS_6_6_PPA_REPO_SOURCE" -u "$CENTOS_6_6_PPA_REPO_SOURCE_ASIA" centos_6_6_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
-fi
-
-if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    sudo mkdir -p /var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo
-    found_centos_7_0_ppa_repo=0
-    for repo in $(cobbler repo list); do
-        if [ "$repo" == "centos_7_0_ppa_repo" ]; then
-            found_centos_7_0_ppa_repo=1
-        fi
-    done
-
-    if [ "$found_centos_7_0_ppa_repo" == "0" ]; then
-        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/centos_7_0_ppa_repo --name=centos_7_0_ppa_repo --mirror-locally=Y --arch=x86_64
+for i in $CENTOS_7_2_IMAGE_SOURCE; do
+    sudo mkdir -p /var/lib/cobbler/iso
+    download  -u "$i" `basename "$i"` copy /var/lib/cobbler/iso/ || exit $?
+    name=`basename "$i" | sed -e 's/.iso//g' -e 's/-amd64//g' -e 's/-x86_64//g'`-x86_64
+    if [[ `mount | grep "$name"` -eq 0 ]]; then
+        sudo mkdir -p /mnt/$name
+        sudo mount -o loop /var/lib/cobbler/iso/`basename $i` /mnt/$name
         if [[ "$?" != "0" ]]; then
-            echo "failed to add centos_7_0_ppa_repo"
+            echo "failed to mount image /mnt/$name"
             exit 1
-        else
-            echo "centos_7_0_ppa_repo is added"
         fi
-    else
-        echo "repo centos_7_0_ppa_repo has already existed."
-    fi
 
-    # download packages
-    download -u "$CENTOS_7_0_PPA_REPO_SOURCE" -u "$CENTOS_7_0_PPA_REPO_SOURCE_ASIA" centos_7_0_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
-fi
-
-
-# create ubuntu repo
-if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo
-    found_ubuntu_12_04_ppa_repo=0
-    for repo in $(cobbler repo list); do
-        if [ "$repo" == "ubuntu_12_04_ppa_repo" ]; then
-            found_ubuntu_12_04_ppa_repo=1
-        fi
-    done
-
-    if [ "$found_ubuntu_12_04_ppa_repo" == "0" ]; then
-        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/ubuntu_12_04_ppa_repo --name=ubuntu_12_04_ppa_repo --mirror-locally=Y --arch=x86_64 --apt-dists=ppa --apt-components=main
+        cobbler import --path=/mnt/$name \
+                       --name $name \
+                       --arch=x86_64 \
+                       --kickstart=/var/lib/cobbler/kickstarts/default.ks \
+                       --breed=redhat
         if [[ "$?" != "0" ]]; then
-            echo "failed to add ubuntu_12_04_ppa_repo"
+            echo "failed to import /mnt/$i"
             exit 1
-        else
-            echo "ubuntu_12_04_ppa_repo is added"
         fi
-    else
-        echo "repo ubuntu_12_04_ppa_repo has already existed."
     fi
+    
+done
 
-    download -u "$UBUNTU_12_04_PPA_REPO_SOURCE" -u "$UBUNTU_12_04_PPA_REPO_SOURCE_ASIA" ubuntu_12_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
-fi
+cobbler repo list | xargs -n 1 cobbler repo remove --name
 
-if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    sudo mkdir -p /var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo
-    found_ubuntu_14_04_ppa_repo=0
-    for repo in $(cobbler repo list); do
-        if [ "$repo" == "ubuntu_14_04_ppa_repo" ]; then
-            found_ubuntu_14_04_ppa_repo=1
-        fi
-    done
+for i in $UBUNTU_14_04_03_PPA_REPO_SOURCE; do
+     download -u "$i" `basename "$i"` unzip /var/lib/cobbler/repo_mirror || exit $?
+     filename=`basename $i | sed 's/.tar.gz//g'`
+     cobbler repo add --name $filename --mirror=/var/lib/cobbler/repo_mirror/$filename \
+                      --mirror-locally=Y --arch=x86_64 --apt-dists=trusty --apt-components=main
 
-    if [ "$found_ubuntu_14_04_ppa_repo" == "0" ]; then
-        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/ubuntu_14_04_ppa_repo --name=ubuntu_14_04_ppa_repo --mirror-locally=Y --arch=x86_64 --apt-dists=ppa --apt-components=main
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add ubuntu_14_04_ppa_repo"
-            exit 1
-        else
-            echo "ubuntu_14_04_ppa_repo is added"
-        fi
-    else
-        echo "repo ubuntu_14_04_ppa_repo has already existed."
-    fi
+     if [[ "$?" != "0" ]]; then
+         echo "failed to add repo $i"
+         exit 1
+     fi
+done
 
-    download -u "$UBUNTU_14_04_PPA_REPO_SOURCE" -u "$UBUNTU_14_04_PPA_REPO_SOURCE_ASIA" ubuntu_14_04_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
-fi
+for i in $CENTOS_7_2_PPA_REPO_SOURCE; do
+     download -u "$i" `basename "$i"` unzip /var/lib/cobbler/repo_mirror || exit $?
+     filename=`basename $i | sed 's/.tar.gz//g'`
+     cobbler repo add --name $filename --mirror=/var/lib/cobbler/repo_mirror/$filename \
+                      --mirror-locally=Y --arch=x86_64
+     if [[ "$?" != "0" ]]; then
+         echo "failed to add repo $i"
+         exit 1
+     fi
+done
 
-if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
-    sudo mkdir -p /var/lib/cobbler/repo_mirror/sles_11sp3_ppa_repo
-    found_sles_11sp3_ppa_repo=0
-    for repo in $(cobbler repo list); do
-        if [ "$repo" == "sles_11sp3_ppa_repo" ]; then
-            found_sles_11sp3_ppa_repo=1
-        fi
-    done
+for i in $UBUNTU_14_04_03_IMAGE_SOURCE; do
+    name=`basename "$i" | sed -e 's/.iso//g' -e 's/-amd64//g' -e 's/-x86_64//g'`-x86_64
+    cobbler profile edit --name=$name \
+            --distro=$name --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/$name" \
+            --kickstart=/var/lib/cobbler/kickstarts/default.seed \
+            --kopts="netcfg/choose_interface=auto console='ttyS0,115200n8' console=tty0 biosdevname=0" \
+            --kopts-post="console='ttyS0,115200n8' console=tty0 biosdevname=0"
+done
 
-    if [ "$found_sles_11sp3_ppa_repo" == "0" ]; then
-        sudo cobbler repo add --mirror=/var/lib/cobbler/repo_mirror/sles_11sp3_ppa_repo --name=sles_11sp3_ppa_repo --mirror-locally=Y --arch=x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add sles_11sp3_ppa_repo"
-            exit 1
-        else
-            echo "sles_11sp3_ppa_repo is added"
-        fi
-    else
-        echo "repo sles_11sp3_ppa_repo has already existed."
-    fi
-
-    download -u "$SLES_11SP3_PPA_REPO_SOURCE" -u "$SLES_11SP3_PPA_REPO_SOURCE_ASIA" sles_11sp3_ppa_repo.tar.gz unzip /var/lib/cobbler/repo_mirror || exit $?
-fi
+for i in $CENTOS_7_2_IMAGE_SOURCE; do
+    name=`basename "$i" | sed -e 's/.iso//g' -e 's/-amd64//g' -e 's/-x86_64//g'`-x86_64
+    cobbler profile edit --name=$name \
+            --distro=$name --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/$name" \
+            --kickstart=/var/lib/cobbler/kickstarts/default.ks
+done
 
 sudo cobbler reposync
 if [[ "$?" != "0" ]]; then
     echo "cobbler reposync failed"
     exit 1
-else
-    echo "cobbler repos are synced"
-fi
-
-# import cobbler distro
-sudo mkdir -p /var/lib/cobbler/iso
-if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    download -u "$CENTOS_6_5_IMAGE_SOURCE_ASIA" -u "$CENTOS_6_5_IMAGE_SOURCE" CentOS-6.5-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
-    sudo mkdir -p /mnt/CentOS-6.5-x86_64
-    if [ $(mount | grep -c "/mnt/CentOS-6.5-x86_64") -eq 0 ]; then
-        sudo mount -o loop /var/lib/cobbler/iso/CentOS-6.5-x86_64.iso /mnt/CentOS-6.5-x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to mount image /mnt/CentOS-6.5-x86_64"
-            exit 1
-        else
-            echo "/mnt/CentOS-6.5-x86_64 is mounted"
-        fi
-    else
-        echo "/mnt/CentOS-6.5-x86_64 has already mounted"
-    fi
-fi
-
-if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    download -u "$CENTOS_6_6_IMAGE_SOURCE_ASIA" -u "$CENTOS_6_6_IMAGE_SOURCE" CentOS-6.6-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
-    sudo mkdir -p /mnt/CentOS-6.6-x86_64
-    if [ $(mount | grep -c "/mnt/CentOS-6.6-x86_64") -eq 0 ]; then
-        sudo mount -o loop /var/lib/cobbler/iso/CentOS-6.6-x86_64.iso /mnt/CentOS-6.6-x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to mount image /mnt/CentOS-6.6-x86_64"
-            exit 1
-        else
-            echo "/mnt/CentOS-6.6-x86_64 is mounted"
-        fi
-    else
-        echo "/mnt/CentOS-6.6-x86_64 has already mounted"
-    fi
-fi
-
-if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    download -u "$CENTOS_7_0_IMAGE_SOURCE_ASIA" -u "$CENTOS_7_0_IMAGE_SOURCE" CentOS-7.0-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
-    sudo mkdir -p /mnt/CentOS-7.0-x86_64
-    if [ $(mount | grep -c "/mnt/CentOS-7.0-x86_64") -eq 0 ]; then
-        sudo mount -o loop /var/lib/cobbler/iso/CentOS-7.0-x86_64.iso /mnt/CentOS-7.0-x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to mount image /mnt/CentOS-7.0-x86_64"
-            exit 1
-        else
-            echo "/mnt/CentOS-7.0-x86_64 is mounted"
-        fi
-    else
-        echo "/mnt/CentOS-7.0-x86_64 has already mounted"
-    fi
-fi
-
-
-if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    download -u "$UBUNTU_12_04_IMAGE_SOURCE_ASIA" -u "$UBUNTU_12_04_IMAGE_SOURCE" Ubuntu-12.04-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
-    sudo mkdir -p /mnt/Ubuntu-12.04-x86_64
-    if [ $(mount | grep -c "/mnt/Ubuntu-12.04-x86_64") -eq 0 ]; then
-        sudo mount -o loop /var/lib/cobbler/iso/Ubuntu-12.04-x86_64.iso /mnt/Ubuntu-12.04-x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to mount image /mnt/Ubuntu-12.04-x86_64"
-            exit 1
-        else
-            echo "/mnt/Ubuntu-12.04-x86_64 is mounted"
-        fi
-    else
-        echo "/mnt/Ubuntu-12.04-x86_64 has already mounted"
-    fi
-fi
-
-if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    download -u "$UBUNTU_14_04_IMAGE_SOURCE_ASIA" -u "$UBUNTU_14_04_IMAGE_SOURCE" Ubuntu-14.04-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
-    sudo mkdir -p /mnt/Ubuntu-14.04-x86_64
-    if [ $(mount | grep -c "/mnt/Ubuntu-14.04-x86_64") -eq 0 ]; then
-        sudo mount -o loop /var/lib/cobbler/iso/Ubuntu-14.04-x86_64.iso /mnt/Ubuntu-14.04-x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to mount image /mnt/Ubuntu-12.04-x86_64"
-            exit 1
-        else
-            echo "/mnt/Ubuntu-14.04-x86_64 is mounted"
-        fi
-    else
-        echo "/mnt/Ubuntu-14.04-x86_64 has already mounted"
-    fi
-fi
-
-if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
-    download -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" -u "$SLES_11SP3_IMAGE_SOURCE" sles-11sp3-x86_64.iso copy /var/lib/cobbler/iso/ || exit $?
-    sudo mkdir -p /mnt/sles-11sp3-x86_64
-    if [ $(mount | grep -c "/mnt/sles-11sp3-x86_64") -eq 0 ]; then
-        sudo mount -o loop /var/lib/cobbler/iso/sles-11sp3-x86_64.iso /mnt/sles-11sp3-x86_64
-        if [[ "$?" != "0" ]]; then
-            echo "failed to mount image /mnt/sles-11sp3-x86_64"
-            exit 1
-        else
-            echo "/mnt/sles-11sp3-x86_64 is mounted"
-        fi
-    else
-        echo "/mnt/sles-11sp3-x86_64 has already mounted"
-    fi
-fi
-
-# add distro
-if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    found_centos_6_5_distro=0
-    distro=$(cobbler distro find --name=CentOS-6.5-x86_64)
-    if [ "$distro" == "CentOS-6.5-x86_64" ]; then
-        found_centos_6_5_distro=1
-    fi
-
-    if [ "$found_centos_6_5_distro" == "0" ]; then
-        sudo cobbler import --path=/mnt/CentOS-6.5-x86_64 --name=CentOS-6.5 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
-        if [[ "$?" != "0" ]]; then
-            echo "failed to import /mnt/CentOS-6.5-x_86_64"
-            exit 1
-        else
-            echo "/mnt/CentOS-6.5-x86_64 is imported" 
-        fi
-    else
-        echo "distro CentOS-6.5-x86_64 has already existed"
-        sudo cobbler distro edit --name=CentOS-6.5-x86_64 --arch=x86_64 --breed=redhat
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit distro CentOS-6.5-x86_64"
-            exit 1
-        else
-            echo "distro CentOS-6.5-x86_64 is updated"
-        fi
-    fi
-
-    centos_6_5_found_profile=0
-    profile=$(cobbler profile find --name=CentOS-6.5-x86_64)
-    if [ "$profile" == "CentOS-6.5-x86_64" ]; then
-        centos_6_5_found_profile=1
-    fi
-
-    if [ "$centos_6_5_found_profile" == "0" ]; then
-        sudo cobbler profile add --name="CentOS-6.5-x86_64" --repo=centos_6_5_ppa_repo --distro=CentOS-6.5-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.5-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add profile CentOS-6.5-x86_64"
-            exit 1
-        else
-            echo "profile CentOS-6.5-x86_64 is added"
-        fi
-    else
-        echo "profile CentOS-6.5-x86_64 has already existed."
-        sudo cobbler profile edit --name=CentOS-6.5-x86_64 --repo=centos_6_5_ppa_repo --distro=CentOS-6.5-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.5-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit profile CentOS-6.5-x86_64"
-            exit 1
-        else
-            echo "profile CentOS-6.5-x86_64 is updated"
-        fi
-    fi
-fi
-
-if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    found_centos_6_6_distro=0
-    distro=$(cobbler distro find --name=CentOS-6.6-x86_64)
-    if [ "$distro" == "CentOS-6.6-x86_64" ]; then
-        found_centos_6_6_distro=1
-    fi
-
-    if [ "$found_centos_6_6_distro" == "0" ]; then
-        sudo cobbler import --path=/mnt/CentOS-6.6-x86_64 --name=CentOS-6.6 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
-        if [[ "$?" != "0" ]]; then
-            echo "failed to import /mnt/CentOS-6.6-x_86_64"
-            exit 1
-        else
-            echo "/mnt/CentOS-6.6-x86_64 is imported" 
-        fi
-    else
-        echo "distro CentOS-6.6-x86_64 has already existed"
-        sudo cobbler distro edit --name=CentOS-6.6-x86_64 --arch=x86_64 --breed=redhat
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit distro CentOS-6.6-x86_64"
-            exit 1
-        else
-            echo "distro CentOS-6.6-x86_64 is updated"
-        fi
-    fi
-
-    centos_6_6_found_profile=0
-    profile=$(cobbler profile find --name=CentOS-6.6-x86_64)
-    if [ "$profile" == "CentOS-6.6-x86_64" ]; then
-        centos_6_6_found_profile=1
-    fi
-
-    if [ "$centos_6_6_found_profile" == "0" ]; then
-        sudo cobbler profile add --name="CentOS-6.6-x86_64" --repo=centos_6_6_ppa_repo --distro=CentOS-6.6-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.6-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add profile CentOS-6.6-x86_64"
-            exit 1
-        else
-            echo "profile CentOS-6.6-x86_64 is added"
-        fi
-    else
-        echo "profile CentOS-6.6-x86_64 has already existed."
-        sudo cobbler profile edit --name=CentOS-6.6-x86_64 --repo=centos_6_6_ppa_repo --distro=CentOS-6.6-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-6.6-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit profile CentOS-6.6-x86_64"
-            exit 1
-        else
-            echo "profile CentOS-6.6-x86_64 is updated"
-        fi
-    fi
-fi
-
-if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    found_centos_7_0_distro=0
-    distro=$(cobbler distro find --name=CentOS-7.0-x86_64)
-    if [ "$distro" == "CentOS-7.0-x86_64" ]; then
-        found_centos_7_0_distro=1
-    fi
-
-    if [ "$found_centos_7_0_distro" == "0" ]; then
-        sudo cobbler import --path=/mnt/CentOS-7.0-x86_64 --name=CentOS-7.0 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.ks --breed=redhat
-        if [[ "$?" != "0" ]]; then
-            echo "failed to import /mnt/CentOS-7.0-x_86_64"
-            exit 1
-        else
-            echo "/mnt/CentOS-7.0-x86_64 is imported" 
-        fi
-    else
-        echo "distro CentOS-7.0-x86_64 has already existed"
-        sudo cobbler distro edit --name=CentOS-7.0-x86_64 --arch=x86_64 --breed=redhat
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit distro CentOS-7.0-x86_64"
-            exit 1
-        else
-            echo "distro CentOS-7.0-x86_64 is updated"
-        fi
-    fi
-
-    centos_7_0_found_profile=0
-    for profile in $(cobbler profile list); do
-        if [ "$profile" == "CentOS-7.0-x86_64" ]; then
-            centos_7_0_found_profile=1
-        fi
-    done
-
-    if [ "$centos_7_0_found_profile" == "0" ]; then
-        sudo cobbler profile add --name="CentOS-7.0-x86_64" --repo=centos_7_0_ppa_repo --distro=CentOS-7.0-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-7.0-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add profile CentOS-7.0-x86_64"
-            exit 1
-        else
-            echo "profile CentOS-7.0-x86_64 is added"
-        fi
-    else
-        echo "profile CentOS-7.0-x86_64 has already existed."
-        sudo cobbler profile edit --name=CentOS-7.0-x86_64 --repo=centos_7_0_ppa_repo --distro=CentOS-7.0-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/CentOS-7.0-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.ks
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit profile CentOS-7.0-x86_64"
-            exit 1
-        else
-            echo "profile CentOS-7.0-x86_64 is updated"
-        fi
-    fi
-fi
-
-if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    found_ubuntu_12_04_distro=0
-    distro=$(cobbler distro find --name=Ubuntu-12.04-x86_64)
-    if [ "$distro" == "Ubuntu-12.04-x86_64" ]; then
-        found_ubuntu_12_04_distro=1
-    fi
-
-    if [ "$found_ubuntu_12_04_distro" == "0" ]; then
-        sudo cobbler import --path=/mnt/Ubuntu-12.04-x86_64 --name=Ubuntu-12.04 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
-        if [[ "$?" != "0" ]]; then
-            echo "failed to import /mnt/Ubuntu-12.04-x86_64"
-            exit 1
-        else
-            echo "/mnt/Ubuntu-12.04-x86_64 is imported" 
-        fi
-    else
-        echo "distro Ubuntu-12.04-x86_64 has already existed"
-        sudo cobbler distro edit --name=Ubuntu-12.04-x86_64 --arch=x86_64 --breed=ubuntu
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit distro Ubuntu-12.04-x86_64"
-            exit 1
-        else
-            echo "distro Ubuntu-12.04-x86_64 is updated"
-        fi
-    fi
-
-    ubuntu_12_04_found_profile=0
-    profile=$(cobbler profile find --name=Ubuntu-12.04-x86_64)
-    if [ "$profile" == "Ubuntu-12.04-x86_64" ]; then
-        ubuntu_12_04_found_profile=1
-    fi
-
-    if [ "$ubuntu_12_04_found_profile" == "0" ]; then
-        sudo cobbler profile add --name=Ubuntu-12.04-x86_64 --repo=ubuntu_12_04_ppa_repo --distro=Ubuntu-12.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-12.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add profile Ubuntu-12.04-x86_64"
-            exit 1
-        else
-            echo "profile Ubuntu-12.04-x86_64 is added"
-        fi
-    else
-        echo "profile Ubuntu-12.04-x86_64 has already existed."
-        sudo cobbler profile edit --name=Ubuntu-12.04-x86_64 --repo=ubuntu_12_04_ppa_repo --distro=Ubuntu-12.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-12.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit profile Ubuntu-12.04-x86_64"
-            exit 1
-        else
-            echo "profile Ubuntu-12.04-x86_64 is updated"
-        fi
-    fi
-    remove_repo=$(cobbler repo find --name=Ubuntu-12.04-x86_64)
-    if [ "$remove_repo" == "Ubuntu-12.04-x86_64" ]; then
-        sudo cobbler repo remove --name=Ubuntu-12.04-x86_64
-    fi
-fi
-
-if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    found_ubuntu_14_04_distro=0
-    distro=$(cobbler distro find --name=Ubuntu-14.04-x86_64)
-    if [ "$distro" == "Ubuntu-14.04-x86_64" ]; then
-        found_ubuntu_14_04_distro=1
-    fi
-
-    if [ "$found_ubuntu_14_04_distro" == "0" ]; then
-        sudo cobbler import --path=/mnt/Ubuntu-14.04-x86_64 --name=Ubuntu-14.04 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.seed --breed=ubuntu
-        if [[ "$?" != "0" ]]; then
-            echo "failed to import /mnt/Ubuntu-14.04-x86_64"
-            exit 1
-        else
-            echo "/mnt/Ubuntu-14.04-x86_64 is imported" 
-        fi
-    else
-        echo "distro Ubuntu-14.04-x86_64 has already existed"
-        sudo cobbler distro edit --name=Ubuntu-14.04-x86_64 --arch=x86_64 --breed=ubuntu
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit distro Ubuntu-14.04-x86_64"
-            exit 1
-        else
-            echo "distro Ubuntu-14.04-x86_64 is updated"
-        fi
-    fi
-
-    ubuntu_14_04_found_profile=0
-    profile=$(cobbler profile find --name=Ubuntu-14.04-x86_64)
-    if [ "$profile" == "Ubuntu-14.04-x86_64" ]; then
-        ubuntu_14_04_found_profile=1
-    fi
-
-    if [ "$ubuntu_14_04_found_profile" == "0" ]; then
-        sudo cobbler profile add --name=Ubuntu-14.04-x86_64 --repo=ubuntu_14_04_ppa_repo --distro=Ubuntu-14.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-14.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add profile Ubuntu-14.04-x86_64"
-            exit 1
-        else
-            echo "profile Ubuntu-14.04-x86_64 is added"
-        fi
-    else
-        echo "profile Ubuntu-14.04-x86_64 has already existed."
-        sudo cobbler profile edit --name=Ubuntu-14.04-x86_64 --repo=ubuntu_14_04_ppa_repo --distro=Ubuntu-14.04-x86_64 --ksmeta="tree=http://$IPADDR/cobbler/ks_mirror/Ubuntu-14.04-x86_64" --kickstart=/var/lib/cobbler/kickstarts/default.seed --kopts="netcfg/choose_interface=auto"
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit profile Ubuntu-14.04-x86_64"
-            exit 1
-        else
-            echo "profile Ubuntu-14.04-x86_64 is updated"
-        fi
-    fi
-    remove_repo=$(cobbler repo find --name=Ubuntu-14.04-x86_64)
-    if [ "$remove_repo" == "Ubuntu-14.04-x86_64" ]; then
-        sudo cobbler repo remove --name=Ubuntu-14.04-x86_64
-    fi
-fi
-
-if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
-    found_sles_11sp3_distro=0
-    distro=$(cobbler distro find --name=sles-11sp3-x86_64)
-    if [ "$distro" == "sles-11sp3-x86_64" ]; then
-        found_sles_11sp3_distro=1
-    fi
-
-    if [ "$found_sles_11sp3_distro" == "0" ]; then
-        sudo cobbler import --path=/mnt/sles-11sp3-x86_64 --name=sles-11sp3 --arch=x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --breed=suse --os-version=sles11sp3
-        if [[ "$?" != "0" ]]; then
-            echo "failed to import /mnt/sles-11sp3-x86_64"
-            exit 1
-        else
-            echo "/mnt/sles-11sp3-x86_64 is imported" 
-        fi
-    else
-        echo "distro sles-11sp3-x86_64 has already existed"
-        sudo cobbler distro edit --name=sles-11sp3-x86_64 --arch=x86_64 --breed=suse --os-version=sles11sp3
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit distro sles-11sp3-x86_64"
-            exit 1
-        else
-            echo "distro sles-11sp3-x86_64 is updated"
-        fi
-    fi
-
-    sles_11sp3_found_profile=0
-    profile=$(cobbler profile find --name=sles-11sp3-x86_64)
-    if [ "$profile" == "sles-11sp3-x86_64" ]; then
-        sles_11sp3_found_profile=1
-    fi
-
-    if [ "$sles_11sp3_found_profile" == "0" ]; then
-        sudo cobbler profile add --name=sles-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=sles-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64"
-        if [[ "$?" != "0" ]]; then
-            echo "failed to add profile sles-11sp3-x86_64"
-            exit 1
-        else
-            echo "profile sles-11sp3-x86_64 is added"
-        fi
-    else
-        echo "profile sles-11sp3-x86_64 has already existed."
-        sudo cobbler profile edit --name=sles-11sp3-x86_64 --repo=sles_11sp3_ppa_repo --distro=sles-11sp3-x86_64 --kickstart=/var/lib/cobbler/kickstarts/default.xml --kopts="textmode=1 install=http://$IPADDR/cobbler/ks_mirror/sles-11sp3-x86_64"
-        if [[ "$?" != "0" ]]; then
-            echo "failed to edit profile sles-11sp3-x86_64"
-            exit 1
-        else
-            echo "profile sles-11sp3-x86_64 is updated"
-        fi
-    fi
-fi
-
-sudo cobbler reposync
-if [[ "$?" != "0" ]]; then
-    echo "cobbler reposync failed"
-    exit 1
-else
-    echo "cobbler repos are synced"
 fi
 
 sudo cobbler sync
 if [[ "$?" != "0" ]]; then
     echo "cobbler sync failed"
     exit 1
-else
-    echo "cobbler are synced"
 fi
 
 echo "Checking cobbler is OK"
@@ -820,8 +320,6 @@ sudo cobbler check
 if [[ "$?" != "0" ]]; then
     echo "cobbler check failed"
     exit 1
-else
-    echo "cobbler check passed"
 fi
 
 echo "Cobbler configuration complete!"

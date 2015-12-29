@@ -20,12 +20,8 @@ export NIC=installation
 # default local repo config is "n"
 export LOCAL_REPO=${LOCAL_REPO:-"y"}
 
-export SUPPORT_CENTOS_6_5=${SUPPORT_CENTOS_6_5:-"y"}
-export SUPPORT_CENTOS_6_6=${SUPPORT_CENTOS_6_6:-"y"}
-export SUPPORT_CENTOS_7_0=${SUPPORT_CENTOS_7_0:-"y"}
-export SUPPORT_UBUNTU_12_04=${SUPPORT_UBUNTU_12_04:-"y"}
-export SUPPORT_UBUNTU_14_04=${SUPPORT_UBUNTU_14_04:-"y"}
-export SUPPORT_SLES_11SP3=${SUPPORT_SLES_11SP3:-"n"}
+export SUPPORT_CENTOS_7_2=${SUPPORT_CENTOS_7_2:-"y"}
+export SUPPORT_UBUNTU_14_04_03=${SUPPORT_UBUNTU_14_04_03:-"y"}
 
 # DHCP config
 # export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`

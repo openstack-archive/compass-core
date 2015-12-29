@@ -249,28 +249,12 @@ fi
 
 
 # download cobbler related packages
-if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    download -u $CENTOS_6_5_PPA_REPO_SOURCE -u $CENTOS_6_5_PPA_REPO_SOURCE_ASIA || exit $?
+if [[ $SUPPORT_CENTOS_7_2 == "y" ]]; then
+    download -u $CENTOS_7_2_PPA_REPO_SOURCE || exit $?
 fi
 
-if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    download -u $CENTOS_6_6_PPA_REPO_SOURCE -u $CENTOS_6_6_PPA_REPO_SOURCE_ASIA|| exit $?
-fi
-
-if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    download -u $CENTOS_7_0_PPA_REPO_SOURCE -u $CENTOS_7_0_PPA_REPO_SOURCE_ASIA || exit $?
-fi
-
-if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    download -u $UBUNTU_12_04_PPA_REPO_SOURCE -u $UBUNTU_12_04_PPA_REPO_SOURCE_ASIA || exit $?
-fi
-
-if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    download -u $UBUNTU_14_04_PPA_REPO_SOURCE -u $UBUNTU_14_04_PPA_REPO_SOURCE_ASIA || exit $?
-fi
-
-if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
-    download -u $SLES_11SP3_PPA_REPO_SOURCE -u $SLES_11SP3_PPA_REPO_SOURCE_ASIA || exit $?
+if [[ $SUPPORT_UBUNTU_14_04_03 == "y" ]]; then
+    download -u $UBUNTU_14_04_03_PPA_REPO_SOURCE || exit $?
 fi
 
 # download chef related packages
@@ -278,66 +262,12 @@ fi
 # download -u "$CHEF_CLIENT" -u "$CHEF_CLIENT_HUAWEI" || exit $?
 
 # download os images
-if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-    echo "download centos6.5 image"
-    download -u "$CENTOS_6_5_IMAGE_SOURCE" -u "$CENTOS_6_5_IMAGE_SOURCE_ASIA" CentOS-6.5-x86_64.iso || exit $?
+if [[ $SUPPORT_CENTOS_7_2 == "y" ]]; then
+    download -u "$CENTOS_7_2_IMAGE_SOURCE" || exit $?
 fi
 
-if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-    echo "download centos6.6 image"
-    download -u "$CENTOS_6_6_IMAGE_SOURCE" -u "$CENTOS_6_6_IMAGE_SOURCE_ASIA" CentOS-6.6-x86_64.iso || exit $?
-fi
-
-if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-    echo "download centos7.0 image"
-    download -u "$CENTOS_7_0_IMAGE_SOURCE" -u "$CENTOS_7_0_IMAGE_SOURCE_ASIA" CentOS-7.0-x86_64.iso || exit $?
-fi
-
-if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-    echo "download ubuntu12.04 image"
-    download -u "$UBUNTU_12_04_IMAGE_SOURCE" -u "$UBUNTU_12_04_IMAGE_SOURCE_ASIA" Ubuntu-12.04-x86_64.iso || exit $?
-fi
-
-if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-    echo "download ubuntu14.04 image"
-    download -u "$UBUNTU_14_04_IMAGE_SOURCE" -u "$UBUNTU_14_04_IMAGE_SOURCE_ASIA" Ubuntu-14.04-x86_64.iso || exit $?
-fi
-
-if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
-    echo "download sles11sp3 image"
-    download -u "$SLES_11SP3_IMAGE_SOURCE" -u "$SLES_11SP3_IMAGE_SOURCE_ASIA" sles-11sp3-x86_64.iso || exit $?
-fi
-
-# download local repo
-if [[ $LOCAL_REPO == "y" ]]; then
-    echo "download gem local repo"
-    download -u "${LOCAL_REPO_US}/gem_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/gem_repo.tar.gz" || exit $?
-    echo "download openstack os image local repo"
-    download -u "${LOCAL_REPO_US}/cirros-0.3.2-x86_64-disk.img" -u "${LOCAL_REPO_HUAWEI}/cirros-0.3.2-x86_64-disk.img" || exit $?
-    if [[ $SUPPORT_CENTOS_6_5 == "y" ]]; then
-	echo "download centos6.5 local repo"
-	download -u "${LOCAL_REPO_US}/centos/6.5/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/6.5/centos_repo.tar.gz" CentOS-6.5-x86_64.tar.gz || exit $?
-    fi
-    if [[ $SUPPORT_CENTOS_6_6 == "y" ]]; then
-	echo "download centos6.6 local repo"
-	download -u "${LOCAL_REPO_US}/centos/6.6/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/6.6/centos_repo.tar.gz" CentOS-6.6-x86_64.tar.gz || exit $?
-    fi
-    if [[ $SUPPORT_CENTOS_7_0 == "y" ]]; then
-	echo "download centos7.0 local repo"
-	download -u "${LOCAL_REPO_US}/centos/7.0/centos_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/centos/7.0/centos_repo.tar.gz" CentOS-7.0-x86_64.tar.gz || exit $?
-    fi
-    if [[ $SUPPORT_UBUNTU_12_04 == "y" ]]; then
-	echo "download ubuntu12.04 local repo"
-	download -u "${LOCAL_REPO_US}/ubuntu/12.04/ubuntu_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/ubuntu/12.04/ubuntu_repo.tar.gz" Ubuntu-12.04-x86_64.tar.gz || exit $?
-    fi
-    if [[ $SUPPORT_UBUNTU_14_04 == "y" ]]; then
-	echo "download ubuntu14.04 local repo"
-	download -u "${LOCAL_REPO_US}/ubuntu/14.04/ubuntu_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/ubuntu/14.04/ubuntu_repo.tar.gz" Ubuntu-14.04-x86_64.tar.gz || exit $?
-    fi
-    if [[ $SUPPORT_SLES_11SP3 == "y" ]]; then
-	echo "download sles11sp3 local repo"
-	download -u "${LOCAL_REPO_US}/sles/11sp3/sles_repo.tar.gz" -u "${LOCAL_REPO_HUAWEI}/sles/11sp3/sles_repo.tar.gz" sles-11sp3-x86_64.tar.gz || exit $?
-    fi
+if [[ $SUPPORT_UBUNTU_14_04_03 == "y" ]]; then
+    download -u "$UBUNTU_14_04_03_IMAGE_SOURCE" || exit $?
 fi
 
 # Install net-snmp

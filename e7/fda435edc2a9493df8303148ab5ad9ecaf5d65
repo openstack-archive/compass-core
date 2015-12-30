@@ -1,0 +1,8 @@
+Code-Review+2: Weidong Shao <weidong.shao@huawei.com>
+Workflow+1: Weidong Shao <weidong.shao@huawei.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 30 Dec 2015 03:10:17 +0000
+Reviewed-on: https://review.openstack.org/262362
+Project: openstack/compass-core
+Branch: refs/heads/master

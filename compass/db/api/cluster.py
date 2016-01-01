@@ -2165,7 +2165,7 @@ def update_clusterhost_state_internal(
     clusterhost = _get_clusterhost(clusterhost_id, session=session)
     return _update_clusterhost_state(
         clusterhost, from_database_only=from_database_only,
-        session=None, **kwargs
+        session=session, **kwargs
     )
 
 

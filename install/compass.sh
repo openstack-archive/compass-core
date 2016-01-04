@@ -27,6 +27,7 @@ sudo mkdir -p /var/www/compass
 sudo rm -rf /var/www/compass/*
 
 sudo cp -rf $COMPASSDIR/misc/apache/ods-server.conf /etc/httpd/conf.d/ods-server.conf
+sudo cp -rf $COMPASSDIR/misc/apache/http_pip.conf /etc/httpd/conf.d/http_pip.conf
 sudo cp -rf $COMPASSDIR/conf/* /etc/compass/
 sudo cp -rf $COMPASSDIR/service/* /etc/init.d/
 sudo cp -rf $COMPASSDIR/bin/*.py /opt/compass/bin/
@@ -54,6 +55,8 @@ sudo usermod -a -G `groups $USER|awk '{print$3}'` apache
 if [ ! -f /usr/lib64/libcrypto.so ]; then
     sudo cp -rf /usr/lib64/libcrypto.so.6 /usr/lib64/libcrypto.so
 fi
+
+download -u "$PIP_PACKAGES"  `basename $PIP_PACKAGES` unzip /var/www/ || exit $?
 
 sudo mkdir -p /opt/compass/db
 sudo chmod -R 777 /opt/compass/db

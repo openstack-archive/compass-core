@@ -26,8 +26,8 @@ export SUPPORT_UBUNTU_14_04_03=${SUPPORT_UBUNTU_14_04_03:-"y"}
 # DHCP config
 export IPADDR=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 # export IPADDR=`ip addr show $NIC | grep "inet " | sed 's/^[ \t]*//g' | cut -d' ' -f 2 | cut -d'/' -f 1`
-# export NETMASK=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
-export NETMASK=$(ipcalc `ip addr show $NIC | grep "inet " | sed 's/^[ \t]*//g' | cut -d' ' -f 2` -m | grep NETMASK | cut -d '=' -f 2)
+export NETMASK=$(ifconfig $NIC |grep Mask | cut -f 4 -d ':')
+# export NETMASK=$(ipcalc `ip addr show $NIC | grep "inet " | sed 's/^[ \t]*//g' | cut -d' ' -f 2` -m | grep NETMASK | cut -d '=' -f 2)
 # DHCP option router  address(Default is your management interface IP address )"
 # export OPTION_ROUTER=`ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
 export OPTION_ROUTER=$IPADDR

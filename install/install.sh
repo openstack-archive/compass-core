@@ -177,15 +177,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
-export ipaddr=$(ifconfig $NIC | grep 'inet ' | cut -d' ' -f10)
+export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+# export ipaddr=$(ifconfig $NIC | grep 'inet ' | cut -d' ' -f10)
 loadvars IPADDR ${ipaddr}
 ipcalc $IPADDR -c
 if [ $? -ne 0 ]; then
     echo "ip addr $IPADDR format should be x.x.x.x"
     exit 1
 fi
-export netmask=$(ifconfig $NIC | grep netmask | cut -d ' ' -f 13)
+export netmask=$(ifconfig $NIC | grep Mask | cut -d: -f4)
 loadvars NETMASK ${netmask}
 export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
 export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')

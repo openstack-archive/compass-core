@@ -310,7 +310,7 @@ class TestGetDbObject(unittest2.TestCase):
                 False,
                 name='dummy'
             )
-            self.assertEqual(None, dummy)
+            self.assertIsNone(dummy)
 
     def test_get_none_with_flag_on(self):
         with self.assertRaises(exception.RecordNotExists):

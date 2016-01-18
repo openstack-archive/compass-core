@@ -38,6 +38,14 @@ source ${REGTEST_DIR}/${REGTEST_CONF}
 source `which virtualenvwrapper.sh`
 workon compass-core
 
+virt_install_version=$(virt-install --version 2>&1)
+echo "virt_install_version $virt_install_version"
+if [[ "$virt_install_version" > "1.0" ]]; then
+    export VIRT_INSTALL_MEMORY_FLAG_NAME=memory
+else
+    export VIRT_INSTALL_MEMORY_FLAG_NAME=ram
+fi
+
 machines=''
 
 tear_down_machines
@@ -68,7 +76,7 @@ for i in `seq $VIRT_NUM`; do
         --network=bridge:installation \
         --network=bridge:installation \
         --network=bridge:installation \
-        --name pxe${i} --ram=${VIRT_MEM} \
+        --name pxe${i} --${VIRT_INSTALL_MEMORY_FLAG_NAME}=${VIRT_MEM} \
         --disk /home/pxe${i}.raw,format=raw \
         --vcpus=${VIRT_CPUS} \
         --graphics vnc,listen=0.0.0.0 \
@@ -129,9 +137,6 @@ fi
 if [[ ! -L compass_logs ]]; then
     ln -s /var/log/compass compass_logs
 fi
-if [[ ! -L chef_logs ]]; then
-    ln -s /var/log/chef chef_logs
-fi
 CLIENT_SCRIPT=/opt/compass/bin/client.py
 if [[ "$CLEAN_OLD_DATA" == "0" || "$CLEAN_OLD_DATA" == "false" ]]; then
     echo "keep old deployment data"
@@ -142,9 +147,6 @@ else
         echo "failed to refresh"
         exit 1
     fi
-    /opt/compass/bin/clean_nodes.sh
-    /opt/compass/bin/clean_clients.sh
-    /opt/compass/bin/clean_environments.sh
     /opt/compass/bin/remove_systems.sh
 fi
 

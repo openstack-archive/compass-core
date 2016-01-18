@@ -103,3 +103,7 @@ $sec_patch_hostname ansible_ssh_host=$sec_patch_ip ansible_ssh_user=$username an
     #set ceph_osd_node_hostname = $ceph_osd_node.hostname
 $ceph_osd_node_hostname ansible_ssh_host=$ceph_osd_node_ip ansible_ssh_user=$username ansible_ssh_password=$password
 #end for
+[ceph:children]
+ceph_adm
+ceph_mon
+ceph_osd

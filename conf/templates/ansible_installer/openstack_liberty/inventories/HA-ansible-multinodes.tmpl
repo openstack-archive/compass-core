@@ -83,4 +83,8 @@ $ceph_mon_hostname ansible_ssh_host=$ceph_mon_ip ansible_ssh_user=$username ansi
     #set ceph_osd_hostname = $ceph_osd.hostname
 $ceph_osd_hostname ansible_ssh_host=$ceph_osd_ip ansible_ssh_user=$username ansible_ssh_password=$password
 #end for
+[ceph:children]
+ceph_adm
+ceph_mon
+ceph_osd
 

@@ -18,23 +18,23 @@
 from collections import defaultdict
 import itertools
 import json
+import log as logging
 import netaddr
 import os
+from oslo_config import cfg
 import re
 import requests
-from restful import Client
 import socket
 import sys
 import time
 import yaml
 
+from compass.apiclient.restful import Client
+
+
 ROLE_UNASSIGNED = True
 ROLE_ASSIGNED = False
-
-import log as logging
 LOG = logging.getLogger(__name__)
-
-from oslo_config import cfg
 CONF = cfg.CONF
 
 
@@ -48,6 +48,7 @@ def byteify(input):
         return input.encode('utf-8')
     else:
         return input
+
 
 opts = [
     cfg.StrOpt(

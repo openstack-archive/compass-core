@@ -104,12 +104,24 @@ sudo chown -R redis:root /var/run/redis
 sudo mkdir -p /var/lib/redis
 sudo chown -R redis:root /var/lib/redis
 sudo rm -rf /var/lib/redis/dump.rdb
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo kill -9 redis-server
+else
 sudo systemctl kill redis-server
+fi
 sudo rm -rf /var/run/redis/redis.pid
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service redis restart
+else
 sudo systemctl restart redis.service
+fi
 sleep 10
 echo "Checking if redis is running"
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service redis status
+else
 sudo systemctl status redis.service
+fi
 if [[ "$?" == "0" ]]; then
     echo "redis is running"
 else
@@ -118,8 +130,13 @@ else
     exit 1
 fi
 
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service chkconfig compass-progress-updated on
+sudo service compass-celeryd on
+else
 sudo systemctl enable compass-progress-updated.service
 sudo systemctl enable compass-celeryd.service
+fi
 
 /opt/compass/bin/refresh.sh
 if [[ "$?" != "0" ]]; then
@@ -129,7 +146,12 @@ else
     echo "compassed service is refreshed"
 fi
 
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service httpd status
+else
 sudo systemctl status httpd.service
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "httpd is not started"
     exit 1
@@ -137,7 +159,12 @@ else
     echo "httpd has already started"
 fi
 
-sudo systemctl status redis.service |grep running
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service redis status | grep running
+else
+sudo systemctl status redis.service | grep running
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "redis is not started"
     exit 1
@@ -145,13 +172,23 @@ else
     echo "redis has already started"
 fi
 
-sudo systemctl status mysql.service |grep running
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service mysqld status | grep running
+else
+sudo systemctl status mysql.service | grep running
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1
 fi
 
-sudo systemctl status compass-celeryd.service |grep running
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service compass-celeryd status | grep running
+else
+sudo systemctl status compass-celeryd.service | grep running
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "compass-celeryd is not started"
     exit 1
@@ -159,7 +196,12 @@ else
     echo "compass-celeryd has already started"
 fi
 
-sudo systemctl status compass-progress-updated.service |grep running
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service compass-progress-updated status | grep running
+else
+sudo systemctl status compass-progress-updated.service | grep running
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "compass-progress-updated is not started"
     exit 1

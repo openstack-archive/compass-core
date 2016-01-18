@@ -16,7 +16,3 @@ ifconfig eth1 up
 killall dnsmasq
 source compass-core/install/install.conf.template
 /bin/bash -x compass-core/install/install.sh || exit $?
-echo "cache_peer 10.145.81.137       parent    3128  3130  default" >> /etc/squid/squid.conf
-service squid restart
-service squid status |grep running || exit $?
-sleep 5

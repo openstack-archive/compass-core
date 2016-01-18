@@ -22,11 +22,19 @@ rm -rf /var/www/compass_web/*
 sudo mkdir -p /var/www/compass_web/v2.5
 sudo cp -rf $WEB_HOME/v2.5/target/* /var/www/compass_web/v2.5/
 
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service httpd restart
+else
 sudo systemctl restart httpd.service
+fi
 sleep 10
 
 echo "Checking if httpd is running"
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service httpd status
+else
 sudo systemctl status httpd.service
+fi
 if [[ "$?" == "0" ]]; then
     echo "httpd is running"
 else

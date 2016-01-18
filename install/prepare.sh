@@ -53,11 +53,23 @@ sudo cp -rn /etc/ntp.conf /root/backup/
 sudo rm -f /etc/ntp.conf
 sudo cp -rf $COMPASSDIR/misc/ntp/ntp.conf /etc/ntp.conf
 sudo chmod 644 /etc/ntp.conf
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service ntpd stop
+else
 sudo systemctl stop ntpd.service
+fi
 sudo ntpdate 0.centos.pool.ntp.org
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service ntpd start
+else
 sudo systemctl start ntpd.service
+fi
 sudo sleep 10
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service ntpd status
+else
 sudo systemctl status ntpd.service
+fi
 if [[ "$?" != "0" ]]; then
     echo "ntp is not started"
     exit 1
@@ -65,37 +77,52 @@ else
     echo "ntp conf is updated"
 fi
 
-# commenting out squid as we are not using it now
-#echo "update squid config"
-#sudo cp -rn /etc/squid/squid.conf /root/backup/
-#sudo rm -f /etc/squid/squid.conf 
-#sudo cp $COMPASSDIR/misc/squid/squid.conf /etc/squid/
-#export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
-#export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')
-#subnet=${netaddr}/${netprefix}
-#subnet_escaped=$(echo $subnet | sed -e 's/[\/&]/\\&/g')
-#sudo sed -i "s/acl localnet src \$subnet/acl localnet src $subnet_escaped/g" /etc/squid/squid.conf
-#sudo chmod 644 /etc/squid/squid.conf
-#sudo mkdir -p /var/squid/cache
-#sudo chown -R squid:squid /var/squid
-#sudo mkdir -p /var/log/squid
-#sudo chmod -R 777 /var/log/squid
-#sudo systemctl restart squid.service
-#sudo sleep 10
-#sudo ser
-#if [[ "$?" != "0" ]]; then
-#    echo "squid is not started"
-#    exit 1
-#else
-#    echo "squid conf is updated"
+# echo "update squid config"
+# sudo cp -rn /etc/squid/squid.conf /root/backup/
+# sudo rm -f /etc/squid/squid.conf 
+# sudo cp $COMPASSDIR/misc/squid/squid.conf /etc/squid/
+# export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
+# export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')
+# subnet=${netaddr}/${netprefix}
+# subnet_escaped=$(echo $subnet | sed -e 's/[\/&]/\\&/g')
+# sudo sed -i "s/acl localnet src \$subnet/acl localnet src $subnet_escaped/g" /etc/squid/squid.conf
+# sudo sed -i "s/\$additional_squid_config/$ADDITIONAL_SQUID_CONFIG/g" /etc/squid/squid.conf
+# sudo chmod 644 /etc/squid/squid.conf
+# sudo mkdir -p /var/squid/cache
+# sudo chown -R squid:squid /var/squid
+# sudo mkdir -p /var/log/squid
+# sudo chmod -R 777 /var/log/squid
+# if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+#     sudo service squid restart
+#     sudo sleep 10
+#     sudo service squid status
+# else
+#     sudo systemctl restart squid.service
+#     sudo sleep 10
+#     sudo systemctl status squid.service
+# fi
+# if [[ "$?" != "0" ]]; then
+#     echo "squid is not started"
+#     exit 1
+# else
+#     echo "squid conf is updated"
 # fi
 
-mkdir -p /var/log/httpd
-chmod -R 777 /var/log/httpd
+sudo mkdir -p /var/log/httpd
+sudo chmod -R 777 /var/log/httpd
 
-systemctl restart httpd.service
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service httpd restart
+else
+sudo systemctl restart httpd.service
+fi
 sudo sleep 10
-systemctl status httpd.service
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service httpd status
+sudo 
+else
+sudo systemctl status httpd.service
+fi
 if [[ "$?" != "0" ]]; then
     echo "httpd is not started"
     exit 1
@@ -105,12 +132,20 @@ fi
 
 #update mysqld
 echo "update mysqld"
-mkdir -p /var/log/mysql
-chmod -R 777 /var/log/mysql
+sudo mkdir -p /var/log/mysql
+sudo chmod -R 777 /var/log/mysql
 sleep 10
-systemctl restart mysql.service
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service mysqld restart
+else
+sudo systemctl restart mysql.service
+fi
 sudo sleep 10
-systemctl status mysql.service
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service mysqld status
+else
+sudo systemctl status mysql.service
+fi
 if [[ "$?" != "0" ]]; then
     echo "failed to restart mysqld"
     exit 1
@@ -144,15 +179,25 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service mysqld restart
+sudo service mysqld status
+else
 sudo systemctl restart mysql.service
 sudo systemctl status mysql.service
+fi
 if [[ "$?" != "0" ]]; then
     echo "mysqld is not started"
     exit 1
 fi
 
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service rabbitmq-server restart
+sudo service rabbitmq-server status
+else
 sudo systemctl restart rabbitmq-server.service
 sudo systemctl status rabbitmq-server.service
+fi
 if [[ "$?" != "0" ]]; then
     echo "rabbitmq-server is not started"
     exit 1

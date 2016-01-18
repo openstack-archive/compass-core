@@ -30,7 +30,11 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo chkconfig cobblerd on
+else
 sudo systemctl enable cobblerd.service
+fi
 
 # create backup dir
 sudo mkdir -p /root/backup/cobbler
@@ -153,7 +157,11 @@ sudo cp  $COMPASSDIR/misc/rsync /etc/xinetd.d/
 
 sudo rm -rf /var/lib/cobbler/config/systems.d/*
 
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service firewalld stop
+else
 sudo systemctl stop firewalld
+fi
 
 # echo "disable selinux temporarily"
 # echo 0 > /selinux/enforce
@@ -164,44 +172,77 @@ sudo mkdir -p /var/log/cobbler/tasks
 sudo mkdir -p /var/log/cobbler/anamon
 sudo chmod -R 777 /var/log/cobbler
 
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service httpd restart
+sudo service cobblerd restart
+sudo service named restart
+sudo service xinetd restart
+sudo service dhcpd restart
+else
 sudo systemctl restart httpd.service
 sudo systemctl restart cobblerd.service
 sudo systemctl restart named.service
 sudo systemctl restart xinetd.service
 sudo systemctl restart dhcpd.service
+fi
 
 sudo sleep 10
 
 echo "Checking if httpd is running"
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service httpd status
+else
 sudo systemctl status httpd.service
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "httpd is not running"
     exit 1
 fi
 
 echo "Checking if dhcpd is running"
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service dhcpd status
+else
 sudo systemctl status dhcpd.service
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "dhcpd is not running"
     exit 1
 fi
 
 echo "Checking if named is running"
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service named status
+else
 sudo systemctl status named.service
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "named is not running"
     exit 1
 fi
 
 echo "Checking if xinetd is running"
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service xinetd status
+else
 sudo systemctl status xinetd.service
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "xinetd is not running"
     exit 1
 fi
 
 echo "Checking if cobblerd is running"
+if [[ "$USE_SYSTEMCTL" == "0" ]]; then
+sudo service cobblerd status
+else
 sudo systemctl status cobblerd.service
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "cobblerd is not running"
     exit 1

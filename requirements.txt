@@ -1,5 +1,4 @@
 amqplib
-argparse
 celery
 Markdown<2.5
 Cheetah<=2.4.1

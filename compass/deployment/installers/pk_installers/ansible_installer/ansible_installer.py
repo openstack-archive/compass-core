@@ -271,13 +271,11 @@ class AnsibleInstaller(PKInstaller):
             src, dst = items[0], items[-1]
             if not os.path.exists(os.path.join(self.ansible_dir, src)):
                 continue
-
-            shutil.copytree(
-                os.path.join(self.ansible_dir, src),
-                os.path.join(
-                    ansible_run_destination,
-                    dst
-                )
+            os.system(
+                "cp -rf %s %s" % (
+                     os.path.join(self.ansible_dir, src),
+                     ansible_run_destination,
+                 )
             )
         for file in files:
             logging.info('file is %s', file)

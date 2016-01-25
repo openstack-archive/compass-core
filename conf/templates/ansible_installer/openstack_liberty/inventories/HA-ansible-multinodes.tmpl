@@ -22,6 +22,9 @@
 #if not $isinstance(onoss, list)
     #set onoss = [onoss]
 #end if
+#if not $isinstance(opencontrails, list)
+    #set opencontrails = [opencontrails]
+#end if
 #if not $isinstance(ceph_adm_list, list)
     #set ceph_adm_list = [ceph_adm_list]
 #end if
@@ -64,6 +67,12 @@ $odl_hostname ansible_ssh_host=$odl_ip ansible_ssh_user=$username ansible_ssh_pa
     #set onos_ip = $onos.install.ip
     #set onos_hostname = $onos.hostname
 $onos_hostname ansible_ssh_host=$onos_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[opencontrail]
+#for opencontrail in $opencontrails
+    #set opencontrail_ip = $opencontrail.install.ip
+    #set opencontrail_hostname = $opencontrail.hostname
+$opencontrail_hostname ansible_ssh_host=$opencontrail_ip ansible_ssh_user=$username ansible_ssh_password=$password
 #end for
 [ceph_adm]
 #for ceph_adm in $ceph_adm_list

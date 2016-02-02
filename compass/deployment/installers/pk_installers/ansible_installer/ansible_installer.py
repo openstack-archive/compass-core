@@ -254,7 +254,7 @@ class AnsibleInstaller(PKInstaller):
         searchList.append(copy_vars_dict)
 
         # Load specific template for current adapter
-        tmpl = Template(file=tmpl_path, searchList=searchList)
+        tmpl = Template(file=open(tmpl_path, "r"), searchList=searchList)
         return tmpl.respond()
 
     def _create_ansible_run_env(self, env_name, ansible_run_destination):

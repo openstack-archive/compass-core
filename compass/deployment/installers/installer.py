@@ -158,7 +158,7 @@ class BaseInstaller(object):
             base_config = json.loads(json.dumps(base_config), encoding='utf-8')
 
         # Load specific template for current adapter
-        tmpl = Template(file=tmpl_path, searchList=searchList)
+        tmpl = Template(file=open(tmpl_path, "r"), searchList=searchList)
         config = json.loads(tmpl.respond(), encoding='utf-8')
         config = json.loads(json.dumps(config), encoding='utf-8')
 

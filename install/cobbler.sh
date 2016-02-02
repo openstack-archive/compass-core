@@ -77,15 +77,15 @@ sudo cp -rf $DIR/dhcp.template /etc/cobbler/dhcp.template
 export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
 export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')
 export subnet=${netaddr}/${netprefix}
+sudo sed -i "s/local-address \$server/local-address $IPADDR/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/subnet \$subnet netmask \$netmask/subnet $netaddr netmask $NETMASK/g" /etc/cobbler/dhcp.template
-sudo sed -i "s/option routers \$gateway/option routers $OPTION_ROUTER/g" /etc/cobbler/dhcp.template
+sudo sed -i "s/option routers \$gateway/option routers $IPADDR/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option subnet-mask \$netmask/option subnet-mask $NETMASK/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/option domain-name-servers \$ipaddr/option domain-name-servers $IPADDR/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/range dynamic-bootp \$ip_range/range dynamic-bootp $IP_START $IP_END/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/local-address \$ipaddr/local-address $IPADDR/g" /etc/cobbler/dhcp.template
 sudo sed -i "s/next-server \$next_server/next-server $NEXTSERVER/g" /etc/cobbler/dhcp.template
 sudo chmod 644 /etc/cobbler/dhcp.template
-sudo cp -f /etc/cobbler/dhcp.template /etc/dhcp/dhcpd.conf
 
 # update tftpd.template
 sudo cp -rn /etc/cobbler/tftpd.template /root/backup/cobbler/

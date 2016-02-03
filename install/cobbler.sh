@@ -167,7 +167,6 @@ sudo chmod -R 777 /var/log/cobbler
 sudo systemctl restart httpd.service
 sudo systemctl restart cobblerd.service
 sudo systemctl restart named.service
-sudo systemctl restart xinetd.service
 
 sudo sleep 10
 sudo cobbler sync
@@ -194,6 +193,7 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
+sudo systemctl restart xinetd.service
 echo "Checking if xinetd is running"
 sudo systemctl status xinetd.service
 if [[ "$?" != "0" ]]; then

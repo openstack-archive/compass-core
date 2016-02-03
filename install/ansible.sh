@@ -30,3 +30,5 @@ for i in `ls $ADAPTERS_HOME/ansible/ | grep "openstack_"`; do
 done
 
 cp -rf $ADAPTERS_HOME/ansible/roles /var/ansible/
+
+git clone $OPENSTACK_ANSIBLE_MODULE /opt/`basename $OPENSTACK_ANSIBLE_MODULE | sed 's/\.git//g'`

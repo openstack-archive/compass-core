@@ -1,0 +1,37 @@
+TYPE: virtual
+FLAVOR: cluster
+
+hosts:
+  - name: host1
+    roles:
+      - controller
+      - ha
+      - ceph-adm
+      - ceph-mon
+      - open-contrail
+
+  - name: host2
+    roles:
+      - controller
+      - ha
+      - ceph-mon
+      - open-contrail
+
+  - name: host3
+    roles:
+      - controller
+      - ha
+      - ceph-mon
+      - open-contrail
+
+  - name: host4
+    roles:
+      - compute
+      - ceph-osd
+      - open-contrail
+
+  - name: host5
+    roles:
+      - compute
+      - ceph-osd
+      - open-contrail

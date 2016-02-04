@@ -1,0 +1,90 @@
+nic_mappings: []
+bond_mappings: []
+
+provider_net_mappings:
+  - name: br-prv
+    network: physnet
+    interface: eth1
+    type: ovs
+    role:
+      - controller
+      - compute
+
+sys_intf_mappings:
+  - name: mgmt
+    interface: eth1
+    vlan_tag: 101
+    type: vlan
+    role:
+      - controller
+      - compute
+
+  - name: storage
+    interface: eth1
+    vlan_tag: 102
+    type: vlan
+    role:
+      - controller
+      - compute
+
+  - name: external
+    interface: br-prv
+    type: ovs
+    role:
+      - controller
+      - compute
+
+ip_settings:
+  - name: mgmt
+    ip_ranges:
+    - - "172.16.1.1"
+      - "172.16.1.254"
+    cidr: "172.16.1.0/24"
+    role:
+      - controller
+      - compute
+
+  - name: storage
+    ip_ranges:
+    - - "172.16.2.1"
+      - "172.16.2.254"
+    cidr: "172.16.2.0/24"
+    role:
+      - controller
+      - compute
+
+  - name: external
+    ip_ranges:
+    - - "192.168.103.210"
+      - "192.168.103.220"
+    cidr: "192.168.103.0/24"
+    gw: "192.168.103.1"
+    role:
+      - controller
+      - compute
+
+internal_vip:
+  ip: 172.16.1.222
+  netmask: "24"
+  interface: mgmt
+
+public_vip:
+  ip: 192.168.103.222
+  netmask: "24"
+  interface: external
+
+onos_nic: eth2
+public_net_info:
+  enable: True
+  network: ext-net
+  type: flat
+  segment_id: 1000
+  subnet: ext-subnet
+  provider_network: physnet
+  router: router-ext
+  enable_dhcp: False
+  no_gateway: False
+  external_gw: "192.168.103.1"
+  floating_ip_cidr: "192.168.103.0/24"
+  floating_ip_start: "192.168.103.101"
+  floating_ip_end: "192.168.103.199"

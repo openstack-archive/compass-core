@@ -1,0 +1,52 @@
+
+TYPE: baremetal
+FLAVOR: cluster
+POWER_TOOL: ipmitool
+
+ipmiUser: root
+ipmiVer: '2.0'
+
+hosts:
+  - name: host1
+    mac: 'F8:4A:BF:55:A2:8D'
+    ipmiIp: 172.16.130.26
+    ipmiPass: Huawei@123
+    roles:
+      - controller
+      - ha
+      - open-contrail
+
+  - name: host2
+    mac: 'D8:49:0B:DA:5A:B7'
+    ipmiIp: 172.16.130.27
+    ipmiPass: huawei@123
+    roles:
+      - controller
+      - ha
+      - open-contrail
+
+  - name: host3
+    mac: 'D8:49:0B:DA:2A:28'
+    ipmiIp: 172.16.130.29
+    ipmiPass: Huawei@123
+    roles:
+      - controller
+      - ha
+      - open-contrail
+
+  - name: host4
+    mac: 'D8:49:0B:DA:5B:5D'
+    ipmiIp: 172.16.130.30
+    ipmiPass: Huawei@123
+    roles:
+      - compute
+      - open-contrail
+
+  - name: host5
+    mac: 'D8:49:0B:DA:56:85'
+    ipmiIp: 172.16.130.31
+    ipmiPass: Huawei@123
+    roles:
+      - compute
+      - open-contrail
+

@@ -1,0 +1,59 @@
+source \${COMPASS_DIR}/util/log.sh
+#set default_ipmiUser=$getVar('ipmiUser', '')
+#set default_ipmiPass=$getVar('ipmiPass', '')
+#set default_ipmiVer=$getVar('ipmiVer', '2.0')
+#set hosts=$getVar('hosts', [])
+#set fail_list=""
+#for host in $hosts
+#set host_name=$host.get('name', '')
+#set ipmiIp=$host.get('ipmiIp', '')
+#set ipmiUser=$host.get('ipmiUser', $default_ipmiUser)
+#set ipmiPass=$host.get('ipmiPass', $default_ipmiPass)
+#if not ($ipmiIp and $ipmiUser and $ipmiPass)
+#set fail_list=$fail_list + $host_name + " "
+#end if
+#end for
+#if  fail_list
+echo $fail_list.strip() ipmi config is not right
+exit 1
+#else
+#for host in $hosts
+#set ipmiIp=$host.get('ipmiIp', '')
+#set ipmiUser=$host.get('ipmiUser', $default_ipmiUser)
+#set ipmiPass=$host.get('ipmiPass', $default_ipmiPass)
+#set ipmiVer=$host.get('ipmiVer', $default_ipmiVer)
+#if $ipmiVer == '2.0'
+    #set interface='lanplus'
+#else
+    #set interface='lan'
+#end if
+
+for i in {1..5}; do
+    if ipmitool -I $interface -H $ipmiIp -U $ipmiUser -P $ipmiPass chassis bootdev pxe >/dev/null 2>&1
+    then
+        break
+    elif [[ i -lt 5 ]]
+    then
+        sleep 1
+    else
+        log_error "set $ipmiIp pxe fail"
+        exit 1
+    fi
+done
+sleep 1
+for i in {1..5}; do
+    if ipmitool -I $interface -H $ipmiIp -U $ipmiUser -P $ipmiPass chassis power reset >/dev/null 2>&1
+    then
+        break
+    elif [[ i -lt 5 ]]
+    then
+        sleep 1
+    else
+        log_error "reset $ipmiIp fail"
+        exit 1
+    fi
+done
+log_info "set pxe and reset $ipmiIp successsully"
+sleep 1
+#end for
+#end if

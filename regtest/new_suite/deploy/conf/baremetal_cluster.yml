@@ -1,0 +1,37 @@
+TYPE: baremetal
+FLAVOR: cluster
+POWER_TOOL: smmset
+
+hosts:
+  - name: host1
+    mac: '64:3e:8c:4c:6d:a3'
+    location: 14
+    roles:
+      - controller
+      - ha
+
+  - name: host2
+    mac: '64:3e:8c:4c:6d:37'
+    location: 15
+    roles:
+      - controller
+      - ha
+
+  - name: host3
+    mac: '64:3e:8c:4c:6c:d7'
+    location: 16
+    roles:
+      - controller
+      - ha
+
+  - name: host4
+    mac: '64:3e:8c:4c:6b:7b'
+    location: 17
+    roles:
+      - compute
+
+  - name: host5
+    location: 18
+    mac: '64:3e:8c:4c:68:2b'
+    roles:
+      - compute

@@ -1,0 +1,5 @@
+<network ipv6='no'>
+  <name>REPLACE_NAME</name>
+  <forward mode='bridge'>
+  </forward>
+</network>

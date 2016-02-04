@@ -1,0 +1,29 @@
+TYPE: virtual
+FLAVOR: cluster
+
+hosts:
+  - name: host1
+    roles:
+      - controller
+      - ha
+      - onos
+
+  - name: host2
+    roles:
+      - controller
+      - ha
+      - onos
+
+  - name: host3
+    roles:
+      - controller
+      - ha
+      - onos
+
+  - name: host4
+    roles:
+      - compute
+
+  - name: host5
+    roles:
+      - compute

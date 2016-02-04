@@ -1,0 +1,44 @@
+
+TYPE: baremetal
+FLAVOR: cluster
+POWER_TOOL: ipmitool
+
+ipmiUser: root
+ipmiPass: Huawei@123
+ipmiVer: '1.0'
+
+hosts:
+  - name: host1
+    mac: 'D8:49:0B:DA:2A:28'
+    ipmiUser: root
+    ipmiPass: Huawei@123
+    ipmiIp: 192.168.2.145
+    roles:
+      - controller
+      - ha
+
+  - name: host2
+    mac: 'D8:49:0B:DA:5B:5D'
+    ipmiIp: 192.168.2.155
+    roles:
+      - controller
+      - ha
+
+  - name: host3
+    mac: 'D8:49:0B:DA:5A:B7'
+    ipmiIp: 192.168.2.165
+    roles:
+      - controller
+      - ha
+
+  - name: host4
+    mac: 'D8:49:0B:DA:58:99'
+    ipmiIp: 192.168.2.175
+    roles:
+      - compute
+
+  - name: host5
+    mac: 'D8:49:0B:DA:56:85'
+    ipmiIp: 192.168.2.185
+    roles:
+      - compute

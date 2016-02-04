@@ -1,0 +1,6 @@
+ <network ipv6='no'>
+   <name>REPLACE_NAME</name>
+   <bridge name='REPLACE_OVS'/>
+   <forward mode='bridge'/>
+   <virtualport type='openvswitch'/>
+ </network>

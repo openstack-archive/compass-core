@@ -1,0 +1,45 @@
+
+TYPE: baremetal
+FLAVOR: five
+POWER_TOOL: ipmitool
+
+ipmiUser: root
+ipmiPass: Huawei@123
+
+hosts:
+  - name: host1
+    mac: '11:22:33:44:55'
+    ipmiUser: root
+    ipmiPass: Huawei@123
+    ipmiIp: 192.168.2.100
+    roles:
+      - controller
+      - network
+
+  - name: host2
+    mac: '11:22:33:44:55'
+    ipmiIp: 192.168.2.100
+    roles:
+      - compute
+      - storage
+
+  - name: host3
+    mac: '11:22:33:44:55'
+    ipmiIp: 192.168.2.100
+    roles:
+      - compute
+      - storage
+
+  - name: host4
+    mac: '11:22:33:44:55'
+    ipmiIp: 192.168.2.100
+    roles:
+      - compute
+      - storage
+
+  - name: host5
+    mac: '11:22:33:44:55'
+    ipmiIp: 192.168.2.100
+    roles:
+      - compute
+      - storage

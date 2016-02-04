@@ -1,0 +1,25 @@
+TYPE: virtual
+FLAVOR: cluster
+
+hosts:
+  - name: host1
+    roles:
+      - controller
+      - ha
+      - opencontrail
+
+  - name: host2
+    roles:
+      - compute
+
+  - name: host3
+    roles:
+      - compute
+
+  - name: host4
+    roles:
+      - compute
+
+  - name: host5
+    roles:
+      - compute

@@ -1,0 +1,10 @@
+<network ipv6='yes'>
+  <name>REPLACE_NAME</name>
+  <forward mode='nat'/>
+  <bridge name='REPLACE_BRIDGE'/>
+  <ip address='REPLACE_GATEWAY' netmask='REPLACE_MASK'>
+    <!--dhcp>
+      <range start='REPLACE_START' end='REPLACE_END'/>
+    </dhcp-->
+  </ip>
+</network>

@@ -1,0 +1,6 @@
+openvswitch:
+  tenant_network_type: vxlan
+  network_vlan_ranges:
+    - 'physnet:1:4094'
+  bridge_mappings:
+    - 'physnet:br-prv'

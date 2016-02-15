@@ -249,7 +249,7 @@ class PKInstaller(BaseInstaller):
     def get_roles(self, target_system):
         """virtual method to get all roles of given target system.
 
-        :param target_system: target distributed system such as openstack.
+        :param target_system: target distributed system such as OpenStack.
         :type target_system: str
 
         :returns: dict of role to role description as str.
@@ -277,7 +277,7 @@ class PKInstaller(BaseInstaller):
             path = os.path.join(os.path.join(os.path.join(
                 compass_setting.PLUGINS_DIR, name), "implementation"), name)
         if not os.path.exists(path):
-            logging.info("Installer '%s' is not existed!" % name)
+            logging.info("Installer '%s' does not exist!" % name)
             return None
         installer = super(PKInstaller, cls).get_installer(name, path,
                                                           adapter_info,

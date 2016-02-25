@@ -177,8 +177,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+export ipaddr=$(ifconfig $NIC | grep 'inet ' | cut -d: -f2 | awk '{ print $2}')
 # export ipaddr=$(ifconfig $NIC | grep 'inet ' | cut -d' ' -f10)
+echo $ipaddr
 loadvars IPADDR ${ipaddr}
 ipcalc $IPADDR -c
 if [ $? -ne 0 ]; then

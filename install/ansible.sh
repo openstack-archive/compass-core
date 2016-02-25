@@ -25,10 +25,11 @@ sudo cp -rn /var/ansible/* /root/backup/ansible/
 
 for i in `ls $ADAPTERS_HOME/ansible/ | grep "openstack_"`; do
     mkdir -p /var/ansible/$i
-    cp -rf $ADAPTERS_HOME/ansible/openstack/* /var/ansible/$i
+#    cp -rf $ADAPTERS_HOME/ansible/openstack/* /var/ansible/$i
     cp -rf $ADAPTERS_HOME/ansible/$i /var/ansible/
 done
 
 cp -rf $ADAPTERS_HOME/ansible/roles /var/ansible/
 
+rm -rf /opt/openstack-ansible-modules
 git clone $OPENSTACK_ANSIBLE_MODULE /opt/`basename $OPENSTACK_ANSIBLE_MODULE | sed 's/\.git//g'`

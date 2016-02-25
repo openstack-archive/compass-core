@@ -25,7 +25,7 @@ sudo cp -rn /var/ansible/* /root/backup/ansible/
 
 for i in `ls $ADAPTERS_HOME/ansible/ | grep "openstack_"`; do
     mkdir -p /var/ansible/$i
-    cp -rf $ADAPTERS_HOME/ansible/openstack/* /var/ansible/$i
+#    cp -rf $ADAPTERS_HOME/ansible/openstack/* /var/ansible/$i
     cp -rf $ADAPTERS_HOME/ansible/$i /var/ansible/
 done
 

@@ -178,7 +178,10 @@ if [ $? -ne 0 ]; then
 fi
 
 export ipaddr=$(ifconfig $NIC | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
-# export ipaddr=$(ifconfig $NIC | grep 'inet ' | cut -d' ' -f10)
+echo " this line "
+if [ -z "$ipaddr" ]; then
+     export ipaddr=$(ifconfig $NIC | grep 'inet ' | sed 's/^[ \t]*//g' | sed 's/[ \t]\+/ /g' | cut -d' ' -f2)
+fi
 loadvars IPADDR ${ipaddr}
 ipcalc $IPADDR -c
 if [ $? -ne 0 ]; then
@@ -186,6 +189,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 export netmask=$(ifconfig $NIC | grep Mask | cut -d: -f4)
+if [ -z "$netmask" ]; then
+    export netmask=$(ifconfig $NIC | grep netmask | sed 's/^[ \t]*//g' | sed 's/[ \t]\+/ /g' | cut -d' ' -f4)
+fi
 loadvars NETMASK ${netmask}
 export netaddr=$(ipcalc $IPADDR $NETMASK -n |cut -f 2 -d '=')
 export netprefix=$(ipcalc $IPADDR $NETMASK -p |cut -f 2 -d '=')

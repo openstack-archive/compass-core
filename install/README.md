@@ -8,6 +8,7 @@ You can install Compass to a CentOS-6.5/6.6 system by running install scripts.
 i. run ```./install.sh```
 
 ii. install.sh will pop up questions to understand your configurations. It will provide default values based on calculated results. For a more detailed explanation of these questions please [visit Compass user doc on Compass official site](http://www.syscompass.org/install.html#step-one). In most cases, using the default values will do the trick
+(Please note that docs on `syscompass.org` may not be up-to-date and installation NIC of compass should have a private subnet IP instead of management IP which is suggested by the docs).
 
 iii. After answering all the questions, install.sh will take over the installation. The whole process may take 30-45 minutes depending on your network latency and the choices you made.
 
@@ -19,7 +20,7 @@ iii. After answering all the questions, install.sh will take over the installati
     * compass.sh - script to install and configure compass and its components, called by install.sh
     * compass_web.sh - script to setup compass front-end UI and http server for local repositories, called by install.sh
     * dependency.sh - script to install all the dependency packages for compass, called by install.sh
-    * install.conf - conf file that contains all the variables used by all sh files. You can give default values to 
+    * install.conf - conf file that contains all the variables used by all sh files. You can give default values to
       variables so that install script will not ask questions. Examples will be given in next section.
     * install.conf.template - a template/example for install.conf, this file is used by compass regtest to install compass.
     * install_func.sh - contains the common functions for all scripts.
@@ -42,7 +43,7 @@ Now *eth0* will be used by install.sh to answer the question of `Please enter th
 Adding this line to `install.sh` will result in a new question being asked as:
 "```Please enter the foo```" and the default value for `foo` is `bar`.
 
-You would also need to add 
+You would also need to add
 
     foo=\${foo:-$foo}
 into `setup_env.sh` to make sure the user input value gets persisted into `env.conf`.

@@ -1,0 +1,203 @@
+#from random import randint
+#set cluster_name = $getVar('name', '')
+#set network_cfg = $getVar('network_cfg', {})
+#set ntp_server = $getVar('ntp_server', "")
+#set ceph_disk = $getVar('ceph_disk',"")
+#set $sys_intf_mappings= {}
+#for $intf_info in $network_cfg.sys_intf_mappings
+#set $sys_intf_mappings[$intf_info["name"]] = $intf_info
+#end for  
+
+#set ip_settings={}
+#for k,v in $getVar('ip_settings', {}).items() 
+#set host_ip_settings={}
+#for intf in v
+#set $host_ip_settings[$intf["alias"]]=intf
+#end for
+#set $ip_settings[$k]=$host_ip_settings
+#end for
+ 
+#set neutron_cfg = $getVar('neutron_config', {})
+#set ovs_config = $neutron_cfg.openvswitch
+
+#set has = $getVar('ha', [])
+#set ha_vip = $getVar('ha_vip', [])
+
+#set controllers = $getVar('controller', [])
+#set computers = $getVar('compute', [])
+
+enable_secgroup: $getVar('enable_secgroup', True)
+enable_fwaas: $getVar('enable_fwaas', True)
+enable_vpnaas: $getVar('enable_vpnaas', True)
+odl_l3_agent: $getVar('odl_l3_agent', 'Disable')
+onos_nic: $getVar('onos_nic', 'eth2')
+ip_settings: $ip_settings
+network_cfg: $network_cfg
+sys_intf_mappings: $sys_intf_mappings
+deploy_type: $getVar('deploy_type', 'virtual')
+
+public_cidr: $computers[0]['install']['subnet']
+storage_cidr: "{{ ip_settings[inventory_hostname]['storage']['cidr'] }}"
+mgmt_cidr: "{{ ip_settings[inventory_hostname]['mgmt']['cidr'] }}"
+
+public_net_info: "{{ network_cfg.public_net_info }}"
+host_ip_settings: "{{ ip_settings[inventory_hostname] }}"
+
+ntp_server: $ntp_server
+internal_vip:
+  ip: $network_cfg["internal_vip"]["ip"]
+  netmask: $network_cfg["internal_vip"]["netmask"]
+#if "vlan_tag" in $sys_intf_mappings[$network_cfg["internal_vip"]["interface"]]
+  interface: $sys_intf_mappings[$network_cfg["internal_vip"]["interface"]]["name"]
+#else
+  interface: $sys_intf_mappings[$network_cfg["internal_vip"]["interface"]]["interface"]
+#end if
+
+public_vip:
+  ip: $network_cfg["public_vip"]["ip"]
+  netmask: $network_cfg["public_vip"]["netmask"]
+#if "vlan_tag" in $sys_intf_mappings[$network_cfg["public_vip"]["interface"]]
+  interface: $sys_intf_mappings[$network_cfg["public_vip"]["interface"]]["name"]
+#else
+  interface: $sys_intf_mappings[$network_cfg["public_vip"]["interface"]]["interface"]
+#end if
+
+db_host: "{{ internal_vip.ip }}"
+rabbit_host: "{{ internal_vip.ip }}"
+
+internal_ip: "{{ ip_settings[inventory_hostname]['mgmt']['ip'] }}"
+internal_nic: mgmt
+
+#set random_id = randint(1, 255)
+vrouter_id_internal: $random_id
+vrouter_id_public: $random_id
+
+identity_host: "{{ internal_ip }}"
+controllers_host: "{{ internal_ip }}"
+storage_controller_host: "{{ internal_ip }}"
+compute_controller_host: "{{ internal_ip }}"
+image_host: "{{ internal_ip }}"
+network_server_host: "{{ internal_ip }}"
+dashboard_host: "{{ internal_ip }}"
+
+haproxy_hosts:
+#for $item in $has
+#set $hostname=$item["hostname"]
+  $hostname: $ip_settings[$hostname]["mgmt"]["ip"]
+#end for
+
+host_index:
+#for $index, $item in enumerate($has)
+  $item["hostname"]: $index
+#end for
+
+ERLANG_TOKEN: YOWSJSJIGGAUFZTIBRAD
+#set credentials = $getVar('service_credentials', {})
+#set console_credentials = $getVar('console_credentials', {})
+#set rabbit_username = $credentials.rabbitmq.username
+#set rabbit_password = $credentials.rabbitmq.password
+#set keystone_dbpass = $credentials.identity.password
+#set keystone_pass = $console_credentials.identity.password
+#set glance_dbpass = $credentials.image.password
+#set glance_pass = $console_credentials.image.password
+#set nova_dbpass = $credentials.compute.password
+#set nova_pass = $console_credentials.compute.password
+#set dash_dbpass = $credentials.dashboard.password
+#set cinder_dbpass = $credentials.volume.password
+#set cinder_pass = $console_credentials.volume.password
+#set heat_dbpass = $credentials.heat.password
+#set heat_pass = $console_credentials.heat.password
+#set neutron_dbpass = $credentials.network.password
+#set neutron_pass = $console_credentials.network.password
+#set ceilometer_dbpass = $credentials.metering.password
+#set ceilometer_pass = $console_credentials.metering.password
+#set admin_pass = $console_credentials.admin.password
+#set demo_pass = $console_credentials.demo.password
+
+cluster_name: $cluster_name
+
+odl_controller: 10.1.0.15
+
+DEBUG: true
+VERBOSE: true
+NTP_SERVER_LOCAL: "{{ controllers_host }}"
+DB_HOST: "{{ db_host }}"
+MQ_BROKER: rabbitmq
+
+OPENSTACK_REPO: cloudarchive-juno.list
+juno_cloud_archive: deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/juno main
+ADMIN_TOKEN: admin
+CEILOMETER_TOKEN: c095d479023a0fd58a54
+erlang.cookie: DJJVECFMCJPVYQTJTDWG
+
+RABBIT_USER: $rabbit_username
+RABBIT_PASS: $rabbit_password
+KEYSTONE_DBPASS: $keystone_dbpass
+KEYSTONE_PASS: $keystone_pass
+CEILOMETER_DBPASS: $ceilometer_dbpass
+CEILOMETER_PASS: $ceilometer_pass
+GLANCE_DBPASS: $glance_dbpass
+GLANCE_PASS: $glance_pass
+NOVA_DBPASS: $nova_dbpass
+NOVA_PASS: $nova_pass
+DASH_DBPASS: $dash_dbpass
+CINDER_DBPASS: $cinder_dbpass
+CINDER_PASS: $cinder_pass
+NEUTRON_DBPASS: $neutron_dbpass
+NEUTRON_PASS: $neutron_pass
+HEAT_DBPASS: $heat_dbpass
+HEAT_PASS: $heat_pass
+DEMO_PASS: $demo_pass
+ADMIN_PASS: $admin_pass
+
+#set neutron_service_plugins=['router']
+
+#if $getVar('enable_fwaas', True)
+#neutron_service_plugins.append('firewall')
+#end if
+
+#if $getVar('enable_vpnaas', True)
+#neutron_service_plugins.append('vpnaas')
+#end if
+
+NEUTRON_SERVICE_PLUGINS: $neutron_service_plugins
+NEUTRON_TYPE_DRIVERS: ['flat', 'gre', 'vxlan', 'vlan']
+NEUTRON_TENANT_NETWORK_TYPES: ['$ovs_config["tenant_network_type"]']
+NEUTRON_OVS_BRIDGE_MAPPINGS: $ovs_config['bridge_mappings']
+#if 'vlan_ranges' in $ovs_config
+NEUTRON_VLAN_RANGES: $ovs_config['vlan_ranges']
+#else
+NEUTRON_VLAN_RANGES: []
+#end if
+#if 'tunnel_id_ranges' in $ovs_config
+NEUTRON_TUNNEL_ID_RANGES: $ovs_config['tunnel_id_ranges']
+#else
+NEUTRON_TUNNEL_ID_RANGES: []
+#end if
+
+#NEUTRON_MECHANISM_DRIVERS: ['opendaylight']
+NEUTRON_MECHANISM_DRIVERS: ['openvswitch']
+NEUTRON_TUNNEL_TYPES: ['vxlan']
+METADATA_SECRET: metadata_secret
+WSREP_SST_USER: wsrep_sst
+WSREP_SST_PASS: wsrep_sst_sercet
+
+INSTANCE_TUNNELS_INTERFACE_IP_ADDRESS: "{{ internal_ip }}"
+
+#build_in_image: http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img
+build_in_image: http://192.168.121.12:9999/img/cirros-0.3.3-x86_64-disk.img
+build_in_image_name: cirros-0.3.3-x86_64-disk.img
+
+physical_device: /dev/sdb
+
+odl_username: admin
+odl_password: admin
+odl_api_port: 8080
+
+odl_pkg_url: https://nexus.opendaylight.org/content/groups/public/org/opendaylight/integration/distribution-karaf/0.2.2-Helium-SR2/distribution-karaf-0.2.2-Helium-SR2.tar.gz
+odl_pkg_name: karaf.tar.gz
+odl_home: "/opt/opendaylight-0.2.2/"
+odl_base_features: ['config', 'standard', 'region', 'package', 'kar', 'ssh', 'management', 'http', 'odl-base-all','odl-aaa-authn','odl-restconf','odl-nsf-all','odl-adsal-northbound','odl-mdsal-apidocs', 'odl-openflowplugin-all']
+odl_extra_features: ['odl-l2switch-switch', 'odl-ovsdb-plugin', 'odl-ovsdb-openstack', 'odl-ovsdb-northbound','odl-dlux-core', 'odl-restconf-all', 'odl-mdsal-clustering', 'odl-openflowplugin-flow-services', 'odl-netconf-connector', 'odl-netconf-connector-ssh', 'jolokia-osgi']
+odl_features: "{{ odl_base_features + odl_extra_features }}"
+odl_api_port: 8080

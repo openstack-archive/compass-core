@@ -111,6 +111,8 @@ ERLANG_TOKEN: YOWSJSJIGGAUFZTIBRAD
 #set neutron_pass = $console_credentials.network.password
 #set ceilometer_dbpass = $credentials.metering.password
 #set ceilometer_pass = $console_credentials.metering.password
+#set aodh_dbpass = $credentials.alarming.password
+#set aodh_pass = $console_credentials.alarming.password
 #set admin_pass = $console_credentials.admin.password
 #set demo_pass = $console_credentials.demo.password
 
@@ -136,6 +138,8 @@ KEYSTONE_DBPASS: $keystone_dbpass
 KEYSTONE_PASS: $keystone_pass
 CEILOMETER_DBPASS: $ceilometer_dbpass
 CEILOMETER_PASS: $ceilometer_pass
+AODH_DBPASS: $aodh_dbpass
+AODH_PASS: $aodh_pass
 GLANCE_DBPASS: $glance_dbpass
 GLANCE_PASS: $glance_pass
 NOVA_DBPASS: $nova_dbpass

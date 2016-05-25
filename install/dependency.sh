@@ -12,7 +12,7 @@ if [ "$tempest" == "true" ]; then
 fi
 
 sudo yum install -y $MYSQL
-sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget syslinux amqp rabbitmq-server mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp net-snmp-python unzip openssl openssl098e ca-certificates mysql-devel mysql-server mysql MySQL-python python-virtualenv python-setuptools python-pip bc libselinux-python
+sudo yum install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget syslinux amqp rabbitmq-server mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp net-snmp-python unzip openssl openssl098e ca-certificates mysql-devel mysql-server mysql MySQL-python python-virtualenv python-setuptools python-pip bc libselinux-python libffi-devel openssl-devel
 sudo yum --setopt=tsflags=noscripts -y remove redis
 sudo yum --enablerepo=remi,remi-test install -y redis
 
@@ -56,5 +56,5 @@ sudo systemctl enable sshd.service
 sudo systemctl enable rsyslog.service
 sudo systemctl enable ntpd.service
 sudo systemctl enable redis.service
-sudo systemctl enable mysql.service
+sudo systemctl enable mysqld.service
 sudo systemctl enable rabbitmq-server.service

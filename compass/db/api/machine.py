@@ -27,7 +27,7 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-SUPPORTED_FIELDS = ['mac', 'tag', 'location']
+SUPPORTED_FIELDS = ['mac', 'tag', 'location', 'cpu', 'ram', 'disk', 'nic']
 IGNORE_FIELDS = ['id', 'created_at', 'updated_at']
 UPDATED_FIELDS = ['ipmi_credentials', 'tag', 'location']
 PATCHED_FIELDS = [
@@ -37,6 +37,7 @@ PATCHED_FIELDS = [
 RESP_FIELDS = [
     'id', 'mac', 'ipmi_credentials', 'switches', 'switch_ip',
     'port', 'vlans',
+    'cpu', 'ram', 'disk', 'nic',
     'tag', 'location', 'created_at', 'updated_at'
 ]
 RESP_DEPLOY_FIELDS = [
@@ -245,5 +246,59 @@ def reset_machine(
     )
     return {
         'status': 'reset %s action sent' % machine.mac,
+        'machine': machine
+    }
+
+
+@utils.supported_filters(optional_support_keys=['enable_pxe'])
+@database.run_in_session()
+@user_api.check_user_permission(
+    permission.PERMISSION_DEPLOY_HOST
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    machine=RESP_FIELDS
+)
+def enable_pxe(
+    machine_id, enable_pxe={}, user=None, session=None, **kwargs
+):
+    """enable pxe."""
+    from compass.tasks import client as celery_client
+    machine = _get_machine(
+        machine_id, session=session
+    )
+    celery_client.celery.send_task(
+        'compass.tasks.enable_pxe',
+        (machine_id,)
+    )
+    return {
+        'status': 'enable pxe on %s action sent' % machine.mac,
+        'machine': machine
+    }
+
+
+@utils.supported_filters(optional_support_keys=['disable_pxe'])
+@database.run_in_session()
+@user_api.check_user_permission(
+    permission.PERMISSION_DEPLOY_HOST
+)
+@utils.wrap_to_dict(
+    RESP_DEPLOY_FIELDS,
+    machine=RESP_FIELDS
+)
+def disable_pxe(
+    machine_id, disable_pxe={}, user=None, session=None, **kwargs
+):
+    """disable pxe."""
+    from compass.tasks import client as celery_client
+    machine = _get_machine(
+        machine_id, session=session
+    )
+    celery_client.celery.send_task(
+        'compass.tasks.disable_pxe',
+        (machine_id,)
+    )
+    return {
+        'status': 'disable pxe on %s action sent' % machine.mac,
         'machine': machine
     }

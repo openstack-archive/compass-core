@@ -275,6 +275,18 @@ def reset_machine(machine_id):
     pass
 
 
+@celery.task(name='compass.tasks.enable_pxe')
+def enable_pxe(machine_id):
+    """Enable PXE boot."""
+    pass
+
+
+@celery.task(name='compass.tasks.disable_pxe')
+def disable_pxe(machine_id):
+    """disable PXE boot."""
+    pass
+
+
 @celery.task(name='compass.tasks.os_installed')
 def os_installed(
     host_id, clusterhosts_ready,

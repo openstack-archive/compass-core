@@ -30,18 +30,21 @@ from compass.utils import util
 SUPPORTED_FIELDS = ['ip_int', 'vendor', 'state']
 SUPPORTED_FILTER_FIELDS = ['ip_int', 'vendor', 'state']
 SUPPORTED_SWITCH_MACHINES_FIELDS = [
-    'switch_ip_int', 'port', 'vlans', 'mac', 'tag', 'location'
+    'switch_ip_int', 'port', 'vlans', 'mac', 'tag', 'location',
+    'cpu', 'ram', 'disk', 'nic'
 ]
 SUPPORTED_MACHINES_FIELDS = [
-    'port', 'vlans', 'mac', 'tag', 'location'
+    'port', 'vlans', 'mac', 'tag', 'location',
+    'cpu', 'ram', 'disk', 'nic'
 ]
 SUPPORTED_SWITCH_MACHINES_HOSTS_FIELDS = [
     'switch_ip_int', 'port', 'vlans', 'mac',
-    'tag', 'location', 'os_name'
+    'tag', 'location', 'os_name', 'cpu',
+    'ram', 'disk', 'nic'
 ]
 SUPPORTED_MACHINES_HOSTS_FIELDS = [
     'port', 'vlans', 'mac', 'tag', 'location',
-    'os_name'
+    'os_name', 'cpu', 'ram', 'nic', 'disk'
 ]
 IGNORE_FIELDS = ['id', 'created_at', 'updated_at']
 ADDED_FIELDS = ['ip']
@@ -55,7 +58,7 @@ UPDATED_FIELDS = [
 PATCHED_FIELDS = ['patched_credentials', 'patched_machine_filters']
 UPDATED_FILTERS_FIELDS = ['put_machine_filters']
 PATCHED_FILTERS_FIELDS = ['patched_machine_filters']
-ADDED_MACHINES_FIELDS = ['mac']
+ADDED_MACHINES_FIELDS = ['mac', 'cpu', 'ram', 'nic', 'disk']
 OPTIONAL_ADDED_MACHINES_FIELDS = [
     'ipmi_credentials', 'tag', 'location'
 ]
@@ -85,7 +88,8 @@ RESP_MACHINES_FIELDS = [
     'id', 'switch_id', 'switch_ip', 'machine_id', 'switch_machine_id',
     'port', 'vlans', 'mac',
     'ipmi_credentials', 'tag', 'location',
-    'created_at', 'updated_at'
+    'created_at', 'updated_at',
+    'cpu', 'ram', 'nic', 'disk'
 ]
 RESP_MACHINES_HOSTS_FIELDS = [
     'id', 'switch_id', 'switch_ip', 'machine_id', 'switch_machine_id',
@@ -93,7 +97,8 @@ RESP_MACHINES_HOSTS_FIELDS = [
     'ipmi_credentials', 'tag', 'location', 'ip',
     'name', 'hostname', 'os_name', 'owner',
     'os_installer', 'reinstall_os', 'os_installed',
-    'clusters', 'created_at', 'updated_at'
+    'clusters', 'created_at', 'updated_at',
+    'cpu', 'ram', 'nic', 'disk'
 ]
 RESP_CLUSTER_FIELDS = [
     'name', 'id'

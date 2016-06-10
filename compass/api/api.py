@@ -1582,6 +1582,22 @@ def list_machines():
     )
 
 
+@app.route("/machines", methods=['POST'])
+def add_machine():
+    """add machine by tinycore.
+
+    supported fileds: [
+        'tag', 'location', 'ipmi_credentials',
+        'machine_attributes'
+    ]
+    """
+    data = _get_request_data()
+    return utils.make_json_response(
+        200,
+        machine_api.add_machine(**data)
+    )
+
+
 @app.route("/machines/<int:machine_id>", methods=['GET'])
 @log_user_action
 @login_required
@@ -1605,7 +1621,8 @@ def update_machine(machine_id):
     """update machine.
 
     Supported fields: [
-        'tag', 'location', 'ipmi_credentials'
+        'tag', 'location', 'ipmi_credentials',
+        'machine_attributes'
     ]
     """
     data = _get_request_data()
@@ -1625,7 +1642,8 @@ def patch_machine(machine_id):
     """patch machine.
 
     Supported fields: [
-        'tag', 'location', 'ipmi_credentials'
+        'tag', 'location', 'ipmi_credentials',
+        'machine_attributes'
     ]
     """
     data = _get_request_data()

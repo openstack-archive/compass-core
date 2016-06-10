@@ -1523,6 +1523,8 @@ class Machine(BASE, HelperMixin, TimestampMixin):
     ipmi_credentials = Column(JSONEncoded, default={})
     tag = Column(JSONEncoded, default={})
     location = Column(JSONEncoded, default={})
+    owner_id = Column(Integer, ForeignKey('user.id'))
+    machine_attributes = Column(JSONEncoded, default={})
 
     switch_machines = relationship(
         SwitchMachine,

@@ -27,16 +27,21 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-SUPPORTED_FIELDS = ['mac', 'tag', 'location']
+MACHINE_PRIMARY_FILEDS = ['mac', 'owner_id']
+SUPPORTED_FIELDS = [
+    'mac', 'tag', 'location',
+    'machine_attributes', 'owner_id']
 IGNORE_FIELDS = ['id', 'created_at', 'updated_at']
-UPDATED_FIELDS = ['ipmi_credentials', 'tag', 'location']
+UPDATED_FIELDS = [
+    'ipmi_credentials', 'machine_attributes',
+    'tag', 'location']
 PATCHED_FIELDS = [
     'patched_ipmi_credentials', 'patched_tag',
     'patched_location'
 ]
 RESP_FIELDS = [
     'id', 'mac', 'ipmi_credentials', 'switches', 'switch_ip',
-    'port', 'vlans',
+    'port', 'vlans', 'machine_attributes', 'owner_id',
     'tag', 'location', 'created_at', 'updated_at'
 ]
 RESP_DEPLOY_FIELDS = [
@@ -53,6 +58,39 @@ def _get_machine(machine_id, session=None, **kwargs):
         )
     raise exception.InvalidParameter(
         'machine id %s type is not int compatible' % machine_id
+    )
+
+
+@utils.supported_filters(
+    MACHINE_PRIMARY_FILEDS,
+    optional_support_keys=SUPPORTED_FIELDS
+)
+@utils.input_validates(mac=utils.check_mac)
+def _add_machine(mac, owner_id=None, session=None, **kwargs):
+    """Add a machine."""
+    if isinstance(owner_id, (int, long)):
+        return utils.add_db_object(
+            session, models.Machine,
+            True,
+            mac,
+            owner_id=owner_id,
+            **kwargs
+        )
+    raise exception.InvalidParameter(
+        'owner id %s type is not int compatible' % owner_id
+    )
+
+
+@database.run_in_session()
+@utils.wrap_to_dict(RESP_FIELDS)
+def add_machine(
+    mac, owner_id=None, session=None, user=None, **kwargs
+):
+    """Add a machine."""
+    return _add_machine(
+        mac,
+        owner_id=owner_id,
+        session=session, **kwargs
     )
 
 

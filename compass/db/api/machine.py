@@ -27,7 +27,7 @@ from compass.utils import setting_wrapper as setting
 from compass.utils import util
 
 
-MACHINE_PRIMARY_FILEDS = ['mac', 'owner_id']
+MACHINE_PRIMARY_FIELDS = ['mac', 'owner_id']
 SUPPORTED_FIELDS = [
     'mac', 'tag', 'location',
     'machine_attributes', 'owner_id']
@@ -62,7 +62,7 @@ def _get_machine(machine_id, session=None, **kwargs):
 
 
 @utils.supported_filters(
-    MACHINE_PRIMARY_FILEDS,
+    MACHINE_PRIMARY_FIELDS,
     optional_support_keys=SUPPORTED_FIELDS
 )
 @utils.input_validates(mac=utils.check_mac)
@@ -130,9 +130,13 @@ def get_machine(
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_machines(user=None, session=None, **filters):
     """List machines."""
-    return utils.list_db_objects(
+    result = utils.list_db_objects(
         session, models.Machine, **filters
     )
+    for machine in result:
+        if not (machine.owner_id == user.id):
+            result.remove(machine)
+    return result
 
 
 @utils.wrap_to_dict(RESP_FIELDS)

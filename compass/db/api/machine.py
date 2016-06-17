@@ -130,9 +130,12 @@ def get_machine(
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_machines(user=None, session=None, **filters):
     """List machines."""
-    return utils.list_db_objects(
+    machines = utils.list_db_objects(
         session, models.Machine, **filters
     )
+    if not user.is_admin and len(machines):
+        machines = [m for m in machines if m.owner_id == user.id]
+    return machines
 
 
 @utils.wrap_to_dict(RESP_FIELDS)

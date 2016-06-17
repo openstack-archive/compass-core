@@ -162,9 +162,13 @@ UPDATED_CLUSTERHOST_LOG_FIELDS = [
 @utils.wrap_to_dict(RESP_FIELDS)
 def list_clusters(user=None, session=None, **filters):
     """List clusters."""
-    return utils.list_db_objects(
+    clusters = utils.list_db_objects(
         session, models.Cluster, **filters
     )
+    logging.info('user is %s', user.email)
+    if not user.is_admin and len(clusters):
+        clusters = [c for c in clusters if c.owner == user.email]
+    return clusters
 
 
 def _get_cluster(cluster_id, session=None, **kwargs):

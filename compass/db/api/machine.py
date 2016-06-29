@@ -228,7 +228,10 @@ def poweron_machine(
     )
     celery_client.celery.send_task(
         'compass.tasks.poweron_machine',
-        (machine_id,)
+        (machine_id,),
+        queue=user.email,
+        exchange=user.email,
+        routing_key=user.email
     )
     return {
         'status': 'poweron %s action sent' % machine.mac,
@@ -255,7 +258,10 @@ def poweroff_machine(
     )
     celery_client.celery.send_task(
         'compass.tasks.poweroff_machine',
-        (machine_id,)
+        (machine_id,),
+        queue=user.email,
+        exchange=user.email,
+        routing_key=user.email
     )
     return {
         'status': 'poweroff %s action sent' % machine.mac,
@@ -282,7 +288,10 @@ def reset_machine(
     )
     celery_client.celery.send_task(
         'compass.tasks.reset_machine',
-        (machine_id,)
+        (machine_id,),
+        queue=user.email,
+        exchange=user.email,
+        routing_key=user.email
     )
     return {
         'status': 'reset %s action sent' % machine.mac,

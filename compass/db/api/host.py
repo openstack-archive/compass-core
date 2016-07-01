@@ -419,10 +419,7 @@ def del_host(
             'compass.tasks.delete_host',
             (
                 user.email, host.id, cluster_ids
-            ),
-            queue=user.email,
-            exchange=user.email,
-            routing_key=user.email
+            )
         )
         return {
             'status': 'delete action sent',
@@ -921,10 +918,7 @@ def update_host_state_internal(
             (
                 host.id, clusterhosts_ready,
                 clusters_os_ready
-            ),
-            queue=user.email,
-            exchange=user.email,
-            routing_key=user.email
+            )
         )
         status = '%s: clusterhosts ready %s clusters os ready %s' % (
             host.name, clusterhosts_ready, clusters_os_ready
@@ -1019,10 +1013,7 @@ def poweron_host(
     check_host_validated(host)
     celery_client.celery.send_task(
         'compass.tasks.poweron_host',
-        (host.id,),
-        queue=user.email,
-        exchange=user.email,
-        routing_key=user.email
+        (host.id,)
     )
     return {
         'status': 'poweron %s action sent' % host.name,
@@ -1048,10 +1039,7 @@ def poweroff_host(
     check_host_validated(host)
     celery_client.celery.send_task(
         'compass.tasks.poweroff_host',
-        (host.id,),
-        queue=user.email,
-        exchange=user.email,
-        routing_key=user.email
+        (host.id,)
     )
     return {
         'status': 'poweroff %s action sent' % host.name,
@@ -1077,10 +1065,7 @@ def reset_host(
     check_host_validated(host)
     celery_client.celery.send_task(
         'compass.tasks.reset_host',
-        (host.id,),
-        queue=user.email,
-        exchange=user.email,
-        routing_key=user.email
+        (host.id,)
     )
     return {
         'status': 'reset %s action sent' % host.name,

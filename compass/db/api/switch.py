@@ -838,10 +838,7 @@ def poll_switch(switch_id, user=None, session=None, **kwargs):
     switch = _get_switch(switch_id, session=session)
     celery_client.celery.send_task(
         'compass.tasks.pollswitch',
-        (user.email, switch.ip, switch.credentials),
-        queue=user.email,
-        exchange=user.email,
-        routing_key=user.email
+        (user.email, switch.ip, switch.credentials)
     )
     return {
         'status': 'action %s sent' % kwargs,

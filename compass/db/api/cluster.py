@@ -480,10 +480,7 @@ def del_cluster(
                     for clusterhost in cluster.clusterhosts
                 ],
                 delete_underlying_host
-            ),
-            queue=user.email,
-            exchange=user.email,
-            routing_key=user.email
+            )
         )
         return {
             'status': 'delete action is sent',
@@ -1186,10 +1183,7 @@ def _del_cluster_host(
             (
                 user.email, clusterhost.cluster_id, clusterhost.host_id,
                 delete_underlying_host
-            ),
-            queue=user.email,
-            exchange=user.email,
-            routing_key=user.email
+            )
         )
         return {
             'status': 'delete action sent',
@@ -1860,10 +1854,7 @@ def deploy_cluster(
         (
             user.email, cluster_id,
             [clusterhost.host_id for clusterhost in clusterhosts]
-        ),
-        queue=user.email,
-        exchange=user.email,
-        routing_key=user.email
+        )
     )
     return {
         'status': 'deploy action sent',
@@ -1927,10 +1918,7 @@ def redeploy_cluster(
         'compass.tasks.redeploy_cluster',
         (
             user.email, cluster_id
-        ),
-        queue=user.email,
-        exchange=user.email,
-        routing_key=user.email
+        )
     )
     return {
         'status': 'redeploy action sent',
@@ -1957,10 +1945,7 @@ def patch_cluster(cluster_id, user=None, session=None, **kwargs):
         'compass.tasks.patch_cluster',
         (
             user.email, cluster_id,
-        ),
-        queue=user.email,
-        exchange=user.email,
-        routing_key=user.email
+        )
     )
     return {
         'status': 'patch action sent',
@@ -2061,7 +2046,7 @@ def update_cluster_host_state(
 
 def _update_clusterhost_state(
     clusterhost, from_database_only=False,
-    session=None, user=None, **kwargs
+    session=None, **kwargs
 ):
     """Update clusterhost state.
 
@@ -2108,10 +2093,7 @@ def _update_clusterhost_state(
             (
                 clusterhost.cluster_id, clusterhost.host_id,
                 cluster_ready, host_ready
-            ),
-            queue=user.email,
-            exchange=user.email,
-            routing_key=user.email
+            )
         )
         status = '%s: cluster ready %s host ready %s' % (
             clusterhost.name, cluster_ready, host_ready
@@ -2144,7 +2126,7 @@ def update_cluster_host_state_internal(
     )
     return _update_clusterhost_state(
         clusterhost, from_database_only=from_database_only,
-        session=session, users=user, **kwargs
+        session=session, **kwargs
     )
 
 
@@ -2187,7 +2169,7 @@ def update_clusterhost_state_internal(
     clusterhost = _get_clusterhost(clusterhost_id, session=session)
     return _update_clusterhost_state(
         clusterhost, from_database_only=from_database_only,
-        session=session, user=user, **kwargs
+        session=session, **kwargs
     )
 
 
@@ -2261,10 +2243,7 @@ def update_cluster_state_internal(
         from compass.tasks import client as celery_client
         celery_client.celery.send_task(
             'compass.tasks.cluster_installed',
-            (clusterhost.cluster_id, clusterhost_ready),
-            queue=user.email,
-            exchange=user.email,
-            routing_key=user.email
+            (clusterhost.cluster_id, clusterhost_ready)
         )
         status = '%s installed action set clusterhost ready %s' % (
             cluster.name, clusterhost_ready

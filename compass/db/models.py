@@ -1357,6 +1357,7 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
         Integer,
         ForeignKey('machine.id', onupdate='CASCADE', ondelete='CASCADE')
     )
+    owner_id = Column(Integer, ForeignKey('user.id'))
     port = Column(String(80), nullable=True)
     vlans = Column(JSONEncoded, default=[])
     __table_args__ = (

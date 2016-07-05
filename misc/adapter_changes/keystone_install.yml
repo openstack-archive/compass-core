@@ -1,0 +1,74 @@
+##############################################################################
+# Copyright (c) 2016 HUAWEI TECHNOLOGIES CO.,LTD and others.
+#
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Apache License, Version 2.0
+# which accompanies this distribution, and is available at
+# http://www.apache.org/licenses/LICENSE-2.0
+##############################################################################
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: disable auto start
+  copy:
+    content: "#!/bin/sh\nexit 101"
+    dest: "/usr/sbin/policy-rc.d"
+    mode: 0755
+  when: ansible_os_family == "Debian"
+
+- name: install keystone packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items: packages | union(packages_noarch)
+
+- name: enable auto start
+  file:
+    path=/usr/sbin/policy-rc.d
+    state=absent
+  when: ansible_os_family == "Debian"
+
+- name: generate keystone service list
+  lineinfile: dest=/opt/service create=yes line='{{ item }}'
+  with_items: services | union(services_noarch)
+
+- name: delete sqlite database
+  file:
+    path: /var/lib/keystone/keystone.db
+    state: absent
+
+- name: update keystone conf
+  template: src=keystone.conf dest=/etc/keystone/keystone.conf backup=yes
+  notify:
+    - restart keystone services
+
+- name: update apache2 configs
+  template:
+    src: wsgi-keystone.conf.j2
+    dest: '{{ apache_config_dir }}/sites-available/wsgi-keystone.conf'
+  when: ansible_os_family == 'Debian'
+  notify:
+    - restart keystone services
+
+- name: update apache2 configs
+  template:
+    src: wsgi-keystone.conf.j2
+    dest: '{{ apache_config_dir }}/wsgi-keystone.conf'
+  when: ansible_os_family == 'RedHat'
+  notify:
+    - restart keystone services
+
+- name: enable keystone server
+  file:
+    src: "{{ apache_config_dir }}/sites-available/wsgi-keystone.conf"
+    dest: "{{ apache_config_dir }}/sites-enabled/wsgi-keystone.conf"
+    state: "link"
+  when: ansible_os_family == 'Debian'
+  notify:
+    - restart keystone services
+
+- name: keystone source files
+  template: src={{ item }} dest=/opt/{{ item }}
+  with_items:
+    - admin-openrc.sh
+    - demo-openrc.sh
+
+- meta: flush_handlers

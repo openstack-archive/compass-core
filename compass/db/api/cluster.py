@@ -2087,13 +2087,22 @@ def _update_clusterhost_state(
             utils.update_db_object(session, cluster.state, ready=False)
         status = '%s state is updated' % clusterhost.name
     else:
+        if not user:
+            user_id = cluster.creator_id
+            user_dict = user_api.get_user(user_id, session=session)
+            user_email = user_dict['email']
+        else:
+            user_email = user.email
         from compass.tasks import client as celery_client
         celery_client.celery.send_task(
             'compass.tasks.package_installed',
             (
                 clusterhost.cluster_id, clusterhost.host_id,
                 cluster_ready, host_ready
-            )
+            ),
+            queue=user_email,
+            exchange=user_email,
+            routing_key=user_email
         )
         status = '%s: cluster ready %s host ready %s' % (
             clusterhost.name, cluster_ready, host_ready
@@ -2240,6 +2249,12 @@ def update_cluster_state_internal(
                 )
         status = '%s state is updated' % cluster.name
     else:
+        if not user:
+            user_id = cluster.creator_id
+            user_dict = user_api.get_user(user_id, session=session)
+            user_email = user_dict['email']
+        else:
+            user_email = user.email
         from compass.tasks import client as celery_client
         celery_client.celery.send_task(
             'compass.tasks.cluster_installed',

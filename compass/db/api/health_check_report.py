@@ -179,7 +179,10 @@ def start_check_cluster_health(cluster_id, send_report_url,
     from compass.tasks import client as celery_client
     celery_client.celery.send_task(
         'compass.tasks.cluster_health',
-        (cluster.id, send_report_url, user.email)
+        (cluster.id, send_report_url, user.email),
+        queue=user.email,
+        exchange=user.email,
+        routing_key=user.email
     )
     return {
         "cluster_id": cluster.id,

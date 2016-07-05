@@ -13,7 +13,7 @@ fi
 source $DIR/install_func.sh
 
 echo "Installing cobbler related packages"
-sudo yum -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django corosync pykickstart
+sudo yum --enablerepo=compass_install --nogpgcheck -y install cobbler cobbler-web createrepo mkisofs python-cheetah python-simplejson python-urlgrabber PyYAML Django corosync pykickstart
 sudo yum -y upgrade yum-utils
 if [[ "$?" != "0" ]]; then
     echo "failed to install cobbler related packages"

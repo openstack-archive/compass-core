@@ -226,9 +226,18 @@ def poweron_machine(
     machine = _get_machine(
         machine_id, session=session
     )
+    if not user:
+        user_id = machine.owner_id
+        user_dict = user_api.get_user(user_id, session=session)
+        user_email = user_dict['email']
+    else:
+        user_email = user.email
     celery_client.celery.send_task(
         'compass.tasks.poweron_machine',
-        (machine_id,)
+        (machine_id,),
+        queue=user_email,
+        exchange=user_email,
+        routing_key=user_email
     )
     return {
         'status': 'poweron %s action sent' % machine.mac,
@@ -253,9 +262,18 @@ def poweroff_machine(
     machine = _get_machine(
         machine_id, session=session
     )
+    if not user:
+        user_id = machine.owner_id
+        user_dict = user_api.get_user(user_id, session=session)
+        user_email = user_dict['email']
+    else:
+        user_email = user.email
     celery_client.celery.send_task(
         'compass.tasks.poweroff_machine',
-        (machine_id,)
+        (machine_id,),
+        queue=user_email,
+        exchange=user_email,
+        routing_key=user_email
     )
     return {
         'status': 'poweroff %s action sent' % machine.mac,
@@ -280,9 +298,18 @@ def reset_machine(
     machine = _get_machine(
         machine_id, session=session
     )
+    if not user:
+        user_id = machine.owner_id
+        user_dict = user_api.get_user(user_id, session=session)
+        user_email = user_dict['email']
+    else:
+        user_email = user.email
     celery_client.celery.send_task(
         'compass.tasks.reset_machine',
-        (machine_id,)
+        (machine_id,),
+        queue=user_email,
+        exchange=user_email,
+        routing_key=user_email
     )
     return {
         'status': 'reset %s action sent' % machine.mac,

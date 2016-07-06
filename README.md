@@ -166,4 +166,4 @@ Quick Guide to Users
 
 
   * Where are the utility scripts for compass?
-   They are at `/opt/compass/bin/`
+   They will be at `/opt/compass/bin/`

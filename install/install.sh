@@ -88,7 +88,7 @@ set_iptables()
 
   sudo rpm -qa | grep iptables-services
   if [ $? -ne 0  ]; then
-    sudo yum --enablerepo=compass_install --nogpgcheck -y install iptables-services
+    sudo yum -y install iptables-services
   fi
 
   sudo /bin/systemctl status iptables.service
@@ -220,7 +220,7 @@ done
 yum update -y
 sudo rpm -qa | grep net-tools
 if [ $? -ne 0 ];then
-  yum --enablerepo=compass_install --nogpgcheck -y install net-tools
+  yum -y install net-tools
 fi
 
 # check the correct format of ip variables

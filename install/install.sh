@@ -220,7 +220,7 @@ done
 yum update -y
 sudo rpm -qa | grep net-tools
 if [ $? -ne 0 ];then
-  yum -y install net-tools
+  yum -y install net-tools python-keyczar
 fi
 
 # check the correct format of ip variables
@@ -366,3 +366,5 @@ rm -rf /var/ansible/roles/keystone/vars/Debian.yml 2>/dev/null
 cp ${COMPASSDIR}/misc/adapter_changes/Debian.yml /var/ansible/roles/keystone/vars/
 rm -rf /var/ansible/roles/keystone/tasks/keystone_install.yml 2>/dev/null
 cp ${COMPASSDIR}/misc/adapter_changes/keystone_install.yml /var/ansible/roles/keystone/tasks/
+rm -rf /var/ansible/openstack_mitaka/HA-ansible-multinodes.yml 2>/dev/null
+cp ${COMPASSDIR}/misc/adapter_changes/HA-ansible-multinodes.yml /var/ansible/openstack_mitaka/

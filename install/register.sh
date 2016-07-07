@@ -16,6 +16,8 @@ exit 1
 fi
 
 echo "Register suceeded, your password is $password, please remember your password at all times."
-sed -i 's/^CELERY_DEFAULT_QUEUE.*/CELERY_DEFAULT_QUEUE = '"${USER_EMAIL}"'/g' /etc/compass/celeryconfig
-sed -i 's/^CELERY_DEFAULT_EXCHANGE.*/CELERY_DEFAULT_EXCHANGE = '"${USER_EMAIL}"'/g' /etc/compass/celeryconfig
-sed -i 's/^CELERY_DEFAULT_ROUTING_KEY.*/CELERY_DEFAULT_ROUTING_KEY = '"${USER_EMAIL}"'/g' /etc/compass/celeryconfig
+sed -i 's/^CELERY_DEFAULT_QUEUE.*/CELERY_DEFAULT_QUEUE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
+sed -i 's/^CELERY_DEFAULT_EXCHANGE.*/CELERY_DEFAULT_EXCHANGE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
+sed -i 's/^CELERY_DEFAULT_ROUTING_KEY.*/CELERY_DEFAULT_ROUTING_KEY = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
+
+systemctl restart compass-celeryd.service

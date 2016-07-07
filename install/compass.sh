@@ -129,13 +129,13 @@ else
     echo "compassed service is refreshed"
 fi
 
-sudo systemctl status httpd.service
-if [[ "$?" != "0" ]]; then
-    echo "httpd is not started"
-    exit 1
-else
-    echo "httpd has already started"
-fi
+# sudo systemctl status httpd.service
+# if [[ "$?" != "0" ]]; then
+#     echo "httpd is not started"
+#     exit 1
+# else
+#     echo "httpd has already started"
+# fi
 
 sudo systemctl status redis.service |grep running
 if [[ "$?" != "0" ]]; then
@@ -145,11 +145,11 @@ else
     echo "redis has already started"
 fi
 
-sudo systemctl status mysql.service |grep running
-if [[ "$?" != "0" ]]; then
-    echo "mysqld is not started"
-    exit 1
-fi
+# sudo systemctl status mysql.service |grep running
+# if [[ "$?" != "0" ]]; then
+#     echo "mysqld is not started"
+#     exit 1
+# fi
 
 sudo systemctl status compass-celeryd.service |grep running
 if [[ "$?" != "0" ]]; then
@@ -159,13 +159,13 @@ else
     echo "compass-celeryd has already started"
 fi
 
-sudo systemctl status compass-progress-updated.service |grep running
-if [[ "$?" != "0" ]]; then
-    echo "compass-progress-updated is not started"
-    exit 1
-else
-    echo "compass-progress-updated has already started"
-fi
+# sudo systemctl status compass-progress-updated.service |grep running
+# if [[ "$?" != "0" ]]; then
+#    echo "compass-progress-updated is not started"
+#    exit 1
+#else
+#    echo "compass-progress-updated has already started"
+#fi
 
 sleep 10
 #compass check

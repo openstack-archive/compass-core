@@ -1,0 +1,239 @@
+---
+- hosts: all
+  remote_user: root
+  pre_tasks:
+    - name: make sure ssh dir exist
+      file:
+        path: '{{ item.path }}'
+        owner: '{{ item.owner }}'
+        group: '{{ item.group }}'
+        state: directory
+        mode: 0755
+      with_items:
+        - path: /root/.ssh
+          owner: root
+          group: root
+
+    - name: write ssh config
+      copy:
+        content: "UserKnownHostsFile /dev/null\nStrictHostKeyChecking no"
+        dest: '{{ item.dest }}'
+        owner: '{{ item.owner }}'
+        group: '{{ item.group }}'
+        mode: 0600
+      with_items:
+        - dest: /root/.ssh/config
+          owner: root
+          group: root
+
+    - name: generate ssh keys
+      shell: if [ ! -f ~/.ssh/id_rsa.pub ]; then ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -N ""; else echo "already gen ssh key!"; fi;
+
+    - name: fetch ssh keys
+      fetch: src=/root/.ssh/id_rsa.pub dest=/tmp/ssh-keys-{{ ansible_hostname }} flat=yes
+
+    - authorized_key:
+        user: root
+        key:  "{{ lookup('file', 'item') }}"
+      with_fileglob:
+        - /tmp/ssh-keys-*
+  max_fail_percentage: 0
+  roles:
+    - common
+
+- hosts: all
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - setup-network
+
+- hosts: ha
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - ha
+
+- hosts: controller
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - memcached
+    - apache
+    - database
+    - mq
+    - keystone
+    - nova-controller
+    - neutron-controller
+    - cinder-controller
+    - glance
+    - neutron-common
+    - neutron-network
+    - ceilometer_controller
+#    - ext-network
+    - dashboard
+    - heat
+    - aodh
+
+- hosts: all
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - storage
+
+- hosts: compute
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - nova-compute
+    - neutron-compute
+    - cinder-volume
+    - ceilometer_compute
+
+- hosts: all
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - secgroup
+
+- hosts: ceph_adm
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles: []
+  #  - ceph-deploy
+
+- hosts: ceph
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - ceph-purge
+    - ceph-config
+
+- hosts: ceph_mon
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - ceph-mon
+
+- hosts: ceph_osd
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - ceph-osd
+
+- hosts: ceph
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - ceph-openstack
+
+- hosts: all
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - monitor
+
+
+- hosts: all
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  tasks:
+    - name: set bash to nova
+      user:
+         name: nova
+         shell: /bin/bash
+
+    - name: make sure ssh dir exist
+      file:
+        path: '{{ item.path }}'
+        owner: '{{ item.owner }}'
+        group: '{{ item.group }}'
+        state: directory
+        mode: 0755
+      with_items:
+        - path: /var/lib/nova/.ssh
+          owner: nova
+          group: nova
+
+    - name: copy ssh keys for nova
+      shell: cp -rf /root/.ssh/id_rsa /var/lib/nova/.ssh;
+
+    - name: write ssh config
+      copy:
+        content: "UserKnownHostsFile /dev/null\nStrictHostKeyChecking no"
+        dest: '{{ item.dest }}'
+        owner: '{{ item.owner }}'
+        group: '{{ item.group }}'
+        mode: 0600
+      with_items:
+        - dest: /var/lib/nova/.ssh/config
+          owner: nova
+          group: nova
+
+    - authorized_key:
+        user: nova
+        key:  "{{ lookup('file', 'item') }}"
+      with_fileglob:
+        - /tmp/ssh-keys-*
+
+    - name: chown ssh file
+      shell: chown -R nova:nova /var/lib/nova/.ssh;
+
+
+- hosts: all
+  remote_user: root
+  max_fail_percentage: 0
+  roles:
+    - odl_cluster
+
+- hosts: all
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - onos_cluster
+
+- hosts: all
+  remote_user: root
+  sudo: True
+  max_fail_percentage: 0
+  roles:
+    - open-contrail
+
+- hosts: all
+  remote_user: root
+  serial: 1
+  max_fail_percentage: 0
+  roles:
+    - odl_cluster_neutron
+
+- hosts: all
+  remote_user: root
+  max_fail_percentage: 0
+  roles:
+    - odl_cluster_post
+
+- hosts: controller
+  remote_user: root
+  max_fail_percentage: 0
+  roles:
+    - ext-network
+
+- hosts: controller
+  remote_user: root
+  accelerate: false
+  max_fail_percentage: 0
+  roles:
+    - tacker

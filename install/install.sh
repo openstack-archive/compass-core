@@ -366,3 +366,5 @@ rm -rf /var/ansible/roles/keystone/vars/Debian.yml 2>/dev/null
 cp ${COMPASSDIR}/misc/adapter_changes/Debian.yml /var/ansible/roles/keystone/vars/
 rm -rf /var/ansible/roles/keystone/tasks/keystone_install.yml 2>/dev/null
 cp ${COMPASSDIR}/misc/adapter_changes/keystone_install.yml /var/ansible/roles/keystone/tasks/
+rm -rf /var/ansible/openstack_mitaka/HA-ansible-multinodes.yml 2>/dev/null
+cp ${COMPASSDIR}/misc/adapter_changes/HA-ansible-multinodes.yml /var/ansible/openstack_mitaka/

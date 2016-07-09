@@ -343,8 +343,10 @@ echo "Install the Package Installer Tool"
 # source ${COMPASSDIR}/install/chef.sh || exit $?
 source ${COMPASSDIR}/install/ansible.sh || exit $?
 
-echo "Download and install Compass Web"
-source ${COMPASSDIR}/install/compass_web.sh || exit $?
+if [ "$FULL_COMAPSS_SERVER" == "true"]; then
+    echo "Download and install Compass Web"
+    source ${COMPASSDIR}/install/compass_web.sh || exit $?
+fi
 
 echo "Download and Setup Compass and related services"
 source ${COMPASSDIR}/install/compass.sh || exit $?
@@ -352,19 +354,21 @@ source ${COMPASSDIR}/install/compass.sh || exit $?
 figlet -ctf slant Installation Complete!
 echo -e "It takes\x1b[32m $SECONDS \x1b[0mseconds during the installation."
 
-machine_list_conf="MACHINE_LIST = [ { '${switch_IP}': [ "
-for host in ${PXE_MACs[@]}; do
-  port=$(echo ${host} | awk -F , '{print $1}' | awk -F = '{print $2}')
-  mac=$(echo ${host} | awk -F , '{print $2}' | awk -F = '{print $2}')
-  machine_list_conf="${machine_list_conf}${comma}\n{'port': '${port}', 'mac': '${mac}', 'vlan': '0'}"
-  comma=","
-done
-machine_list_conf="${machine_list_conf}\n ] } ]"
-sudo echo -e ${machine_list_conf} > /etc/compass/machine_list/machine_list.conf
+if [ "$FULL_COMPASS_SERVER" == "false" ]; then
+    machine_list_conf="MACHINE_LIST = [ { '${switch_IP}': [ "
+    for host in ${PXE_MACs[@]}; do
+        port=$(echo ${host} | awk -F , '{print $1}' | awk -F = '{print $2}')
+        mac=$(echo ${host} | awk -F , '{print $2}' | awk -F = '{print $2}')
+        machine_list_conf="${machine_list_conf}${comma}\n{'port': '${port}', 'mac': '${mac}', 'vlan': '0'}"
+        comma=","
+    done
+    machine_list_conf="${machine_list_conf}\n ] } ]"
+    sudo echo -e ${machine_list_conf} > /etc/compass/machine_list/machine_list.conf
 
-rm -rf /var/ansible/roles/keystone/vars/Debian.yml 2>/dev/null
-cp ${COMPASSDIR}/misc/adapter_changes/Debian.yml /var/ansible/roles/keystone/vars/
-rm -rf /var/ansible/roles/keystone/tasks/keystone_install.yml 2>/dev/null
-cp ${COMPASSDIR}/misc/adapter_changes/keystone_install.yml /var/ansible/roles/keystone/tasks/
-rm -rf /var/ansible/openstack_mitaka/HA-ansible-multinodes.yml 2>/dev/null
-cp ${COMPASSDIR}/misc/adapter_changes/HA-ansible-multinodes.yml /var/ansible/openstack_mitaka/
+    rm -rf /var/ansible/roles/keystone/vars/Debian.yml 2>/dev/null
+    cp ${COMPASSDIR}/misc/adapter_changes/Debian.yml /var/ansible/roles/keystone/vars/
+    rm -rf /var/ansible/roles/keystone/tasks/keystone_install.yml 2>/dev/null
+    cp ${COMPASSDIR}/misc/adapter_changes/keystone_install.yml /var/ansible/roles/keystone/tasks/
+    rm -rf /var/ansible/openstack_mitaka/HA-ansible-multinodes.yml 2>/dev/null
+    cp ${COMPASSDIR}/misc/adapter_changes/HA-ansible-multinodes.yml /var/ansible/openstack_mitaka/
+fi

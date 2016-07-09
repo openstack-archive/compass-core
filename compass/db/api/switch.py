@@ -653,6 +653,8 @@ def list_switchmachines_hosts(user=None, session=None, **filters):
     switch_machines = utils.list_db_objects(
         session, models.SwitchMachine, **filters
     )
+    if not user.is_admin and len(switch_machines):
+        switch_machines = [m for m in switch_machines if m.machine.owner_id == user.id]
     return _filter_switch_machines_hosts(
         switch_machines
     )

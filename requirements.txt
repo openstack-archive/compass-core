@@ -14,8 +14,8 @@ itsdangerous
 importlib
 lazypy
 lockfile
-MySQL-python
 netaddr
+MySQL-python
 paramiko
 PyChef
 python-daemon!=2.0,!=2.0.1,!=2.0.2,!=2.0.3

@@ -13,6 +13,6 @@ cron_path: "/var/spool/cron/crontabs"
 packages:
   - keystone
 
-  services:
-    - apache2
-    - keystone
+services:
+  - apache2
+  - keystone

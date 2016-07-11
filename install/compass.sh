@@ -28,6 +28,8 @@ sudo rm -rf /var/www/compass/*
 
 sudo cp -rf $COMPASSDIR/misc/apache/ods-server.conf /etc/httpd/conf.d/ods-server.conf
 sudo cp -rf $COMPASSDIR/misc/apache/http_pip.conf /etc/httpd/conf.d/http_pip.conf
+sudo cp -rf $COMPASSDIR/misc/apache/images.conf /etc/httpd/conf.d/images.conf
+sudo cp -rf $COMPASSDIR/misc/apache/packages.conf /etc/httpd/conf.d/packages.conf
 sudo cp -rf $COMPASSDIR/conf/* /etc/compass/
 sudo cp -rf $COMPASSDIR/service/* /etc/init.d/
 sudo cp -rf $COMPASSDIR/bin/*.py /opt/compass/bin/
@@ -129,13 +131,13 @@ else
     echo "compassed service is refreshed"
 fi
 
-# sudo systemctl status httpd.service
-# if [[ "$?" != "0" ]]; then
-#     echo "httpd is not started"
-#     exit 1
-# else
-#     echo "httpd has already started"
-# fi
+sudo systemctl status httpd.service
+if [[ "$?" != "0" ]]; then
+    echo "httpd is not started"
+    exit 1
+else
+    echo "httpd has already started"
+fi
 
 sudo systemctl status redis.service |grep running
 if [[ "$?" != "0" ]]; then

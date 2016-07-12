@@ -11,7 +11,7 @@ if [ "$tempest" == "true" ]; then
     fi
 fi
 
-if [ "$FULL_COMAPSS_SERVER" == "true" ]; then
+if [ "$FULL_COMPASS_SERVER" == "true" ]; then
     sudo yum --enablerepo=compass_install install -y $MYSQL
     sudo yum --enablerepo=compass_install --nogpgcheck install -y rsyslog logrotate ntp iproute openssh-clients python python-devel git wget syslinux amqp rabbitmq-server mod_wsgi httpd squid dhcp bind rsync yum-utils xinetd tftp-server gcc net-snmp-utils net-snmp net-snmp-python unzip openssl openssl098e ca-certificates mysql-devel mysql-server mysql MySQL-python python-virtualenv python-setuptools python-pip bc libselinux-python libffi-devel openssl-devel
 else
@@ -61,7 +61,7 @@ sudo systemctl enable sshd.service
 sudo systemctl enable rsyslog.service
 sudo systemctl enable ntpd.service
 sudo systemctl enable redis.service
-if [ "$FULL_COMAPSS_SERVER" == "true" ]; then
+if [ "$FULL_COMPASS_SERVER" == "true" ]; then
     sudo systemctl enable mysqld.service
     sudo systemctl enable rabbitmq-server.service
 fi

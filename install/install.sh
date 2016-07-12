@@ -371,6 +371,8 @@ if [ "$FULL_COMPASS_SERVER" == "false" ]; then
     cp ${COMPASSDIR}/misc/adapter_changes/keystone_install.yml /var/ansible/roles/keystone/tasks/
     rm -rf /var/ansible/openstack_mitaka/HA-ansible-multinodes.yml 2>/dev/null
     cp ${COMPASSDIR}/misc/adapter_changes/HA-ansible-multinodes.yml /var/ansible/openstack_mitaka/
+    rm -rf /var/lib/cobbler/snippets/preseed_post_anamon 2>/dev/null
+    cp ${COMPASSDIR}/misc/adapter_changes/preseed_post_anamon /var/lib/cobbler/snippets/
 
     sed -i 's/^CELERY_DEFAULT_QUEUE.*/CELERY_DEFAULT_QUEUE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
     sed -i 's/^CELERY_DEFAULT_EXCHANGE.*/CELERY_DEFAULT_EXCHANGE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig

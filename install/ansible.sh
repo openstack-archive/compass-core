@@ -15,6 +15,7 @@ source $DIR/install_func.sh
 echo "INstalling ansible related packages"
 # sudo yum -y install ansible
 pip install ansible==1.9.2
+pip install python-keyczar
 if [[ "$?" != "0" ]]; then
     echo "Failed to install ansible"
     exit 1

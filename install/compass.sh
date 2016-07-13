@@ -59,6 +59,7 @@ if [ ! -f /usr/lib64/libcrypto.so ]; then
 fi
 
 download -u "$PIP_PACKAGES"  `basename $PIP_PACKAGES` unzip /var/www/ || exit $?
+download -u "$EXTRA_PACKAGES" `basename $EXTRA_PACKAGES` unzip /var/www/ || exit $?
 
 sudo mkdir -p /opt/compass/db
 sudo chmod -R 777 /opt/compass/db

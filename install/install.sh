@@ -377,4 +377,26 @@ if [ "$FULL_COMPASS_SERVER" == "false" ]; then
     sed -i 's/^CELERY_DEFAULT_QUEUE.*/CELERY_DEFAULT_QUEUE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
     sed -i 's/^CELERY_DEFAULT_EXCHANGE.*/CELERY_DEFAULT_EXCHANGE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
     sed -i 's/^CELERY_DEFAULT_ROUTING_KEY.*/CELERY_DEFAULT_ROUTING_KEY = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
+
+    # Restart services
+    systemctl restart httpd.service
+    sleep 10
+    echo "Checking if httpd is running"
+    sudo systemctl status httpd.service
+    if [[ "$?" == "0" ]]; then
+        echo "httpd is running"
+    else
+        echo "httpd is not running"
+        exit 1
+    fi
+
+    systemctl restart compass-celeryd.service
+    echo "Checking if httpd is running"
+    sudo systemctl status compass-celeryd.service
+    if [[ "$?" == "0" ]]; then
+        echo "celeryd is running"
+    else
+        echo "celeryd is not running"
+        exit 1
+    fi
 fi

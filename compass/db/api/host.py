@@ -658,10 +658,11 @@ def _add_host_network(
     """Add hostnetwork to a host."""
     host = _get_host(host_id, session=session)
     check_host_editable(host, user=user)
+    user_id = user.id
     return utils.add_db_object(
         session, models.HostNetwork,
         exception_when_existing,
-        host.id, interface, ip=ip, **kwargs
+        host.id, interface, user_id, ip=ip, **kwargs
     )
 
 

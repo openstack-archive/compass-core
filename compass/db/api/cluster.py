@@ -359,7 +359,7 @@ def add_cluster(
 
     cluster = utils.add_db_object(
         session, models.Cluster, exception_when_existing,
-        name, creator_id=user.id, adapter_id=adapter_id,
+        name, user.id, adapter_id=adapter_id,
         flavor_id=flavor_id, flavor=flavor, **kwargs
     )
     return cluster

@@ -210,8 +210,8 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
     is_promiscuous = Column(Boolean, default=False)
 
     __table_args__ = (
-        UniqueConstraint('host_id', 'interface', name='constraint'),
-        UniqueConstraint('ip_int', 'user_id', name='constraint')
+        UniqueConstraint('host_id', 'interface', name='interface_constraint'),
+        UniqueConstraint('ip_int', 'user_id', name='ip_constraint')
     )
 
     def __init__(self, host_id, interface, user_id, **kwargs):

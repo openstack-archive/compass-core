@@ -1,5 +1,5 @@
 [compass_install]
 name=compass_repo
-baseurl=http://www.stack360.io/centos7/
+baseurl=http://205.177.226.237:9999/compass_install/centos7/
 gpgcheck=0
 enabled=1

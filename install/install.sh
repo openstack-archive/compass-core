@@ -343,6 +343,9 @@ echo "Install the Package Installer Tool"
 # source ${COMPASSDIR}/install/chef.sh || exit $?
 source ${COMPASSDIR}/install/ansible.sh || exit $?
 
+echo "Install log agent."
+source ${COMPASSDIR}/install/logstash-forwarder.sh || exit $?
+
 if [ "$FULL_COMPASS_SERVER" == "true"]; then
     echo "Download and install Compass Web"
     source ${COMPASSDIR}/install/compass_web.sh || exit $?

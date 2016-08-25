@@ -23,9 +23,9 @@ import urllib
 from compass.utils import setting_wrapper as setting
 
 
-CELERY_RESULT_BACKEND = 'amqp://'
+# CELERY_RESULT_BACKEND = 'amqp://'
 
-BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+# BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 
 
 CELERY_IMPORTS = ('compass.tasks.tasks',)

@@ -18,6 +18,7 @@
 """
 import logging
 import os.path
+import urllib
 
 from compass.utils import setting_wrapper as setting
 
@@ -25,6 +26,9 @@ from compass.utils import setting_wrapper as setting
 CELERY_RESULT_BACKEND = 'amqp://'
 
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+#BROKER_URL = 'sqs://%s:%s@' % (urllib.quote('AKIAIZ7W3ON4Z7P6AAYQ', safe=''),
+#                               urllib.quote('z770s8TN8iFvkYZkc+rW2eTltHaoSbEnmPn/MSCI', safe=''))
+
 
 CELERY_IMPORTS = ('compass.tasks.tasks',)
 

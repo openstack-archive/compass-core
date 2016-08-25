@@ -200,12 +200,12 @@ fi
 
 # Install figlet
 sudo yum -y install figlet >& /dev/null
-if [[ "$?" != "0" ]]; then
-    echo "failed to install figlet"
-    exit 1
-else
-    echo "figlet is installed"
-fi
+# if [[ "$?" != "0" ]]; then
+#    echo "failed to install figlet"
+#    exit 1
+# else
+#    echo "figlet is installed"
+# fi
 figlet -ctf slant Compass Installer
 
 while [ $1 ]; do
@@ -270,7 +270,7 @@ fi
 export NIC=${NIC:-"eth1"}
 export IPADDR=${IPADDR:-$(sudo ifconfig ${NIC} | awk '($1=="inet"){print $2}')}
 export IPADDR=${IPADDR:-"10.1.0.15"}
-export NETMASK=${NETMASK:-$(sudo ifconfig ${NIC} | awk '($3="netmask"){print $4}')}
+export NETMASK=${NETMASK:-$(sudo ifconfig ${NIC} | awk '($3=="netmask"){print $4}')}
 export NETMASK=${NETMASK:-"255.255.255.0"}
 
 sudo ifconfig ${NIC} ${IPADDR} netmask ${NETMASK} up

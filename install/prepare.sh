@@ -241,6 +241,7 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 pip install -U -r test-requirements.txt
+pip install -U boto
 if [[ "$?" != "0" ]]; then
     echo "failed to install compass test requiremnts"
     deactivate

@@ -121,6 +121,12 @@ else
     exit 1
 fi
 
+wget -O /tmp/aws_credentials "http://www.stack360.io/aws_credentials"
+filename='/tmp/aws_credentials'
+id=$(sed -n '1p' < $filename)
+key=$(sed -n '2p' < $filename)
+sudo sed -i "s~ACCESS_ID~$id~g" /etc/compass/celeryconfig
+sudo sed -i "s~ACCESS_KEY~$key~g" /etc/compass/celeryconfig
 sudo systemctl enable compass-progress-updated.service
 sudo systemctl enable compass-celeryd.service
 

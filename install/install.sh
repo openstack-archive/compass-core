@@ -357,7 +357,7 @@ source ${COMPASSDIR}/install/compass.sh || exit $?
 figlet -ctf slant Installation Complete!
 echo -e "It takes\x1b[32m $SECONDS \x1b[0mseconds during the installation."
 
-if [ "$FULL_COMPASS_SERVER" == "false" ]; then
+if [[ "${FULL_COMPASS_SERVER}" == "false" ]]; then
     machine_list_conf="MACHINE_LIST = [ { '${switch_IP}': [ "
     for host in ${PXE_MACs[@]}; do
         port=$(echo ${host} | awk -F , '{print $1}' | awk -F = '{print $2}')

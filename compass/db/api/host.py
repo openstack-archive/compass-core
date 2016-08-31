@@ -28,7 +28,7 @@ from compass.db import models
 from compass.utils import util
 
 
-SUPPORTED_FIELDS = ['name', 'os_name', 'owner', 'mac']
+SUPPORTED_FIELDS = ['name', 'os_name', 'owner', 'mac', 'id']
 SUPPORTED_MACHINE_HOST_FIELDS = [
     'mac', 'tag', 'location', 'os_name', 'os_id'
 ]
@@ -884,6 +884,7 @@ def update_host_state_internal(
     """
     # TODO(xicheng): should be merged into update_host_state
     host = _get_host(host_id, session=session)
+    logging.info("======host state: %s", host.state)
     if 'ready' in kwargs and kwargs['ready'] and not host.state.ready:
         ready_triggered = True
     else:

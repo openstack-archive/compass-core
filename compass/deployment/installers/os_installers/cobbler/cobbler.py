@@ -232,7 +232,7 @@ class CobblerInstaller(OSInstaller):
             err_msg = "Template '%s' does not exists!" % tmpl_path
             logging.error(err_msg)
             raise Exception(err_msg)
-
+        host_vars_dict[const.BASEINFO]['host_id'] = host_id
         system_config = self.get_config_from_template(tmpl_path,
                                                       host_vars_dict)
 

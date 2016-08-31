@@ -3164,19 +3164,19 @@ def update_host_state(host_id):
 
 
 @util.deprecated
-@app.route("/hosts/<hostname>/state_internal", methods=['PUT', 'POST'])
-def update_host_state_internal(hostname):
+@app.route("/hosts/<host_id>/state_internal", methods=['PUT', 'POST'])
+def update_host_state_internal(host_id):
     """update host state.
 
     Supported fields: ['ready']
     """
     data = _get_request_data()
-    hosts = host_api.list_hosts(name=hostname)
+    host_id = int(host_id)
+    hosts = host_api.list_hosts(id=host_id)
     if not hosts:
         raise exception_handler.ItemNotFound(
-            'no hosts found for hostname %s' % hostname
+            'no hosts found for host_id %s' % host_id
         )
-    host_id = hosts[0]['id']
     return utils.make_json_response(
         200,
         host_api.update_host_state_internal(

@@ -42,6 +42,11 @@ sudo ln -s -f /opt/compass/bin/compass_wsgi.py /var/www/compass/compass.wsgi
 sudo cp -rf $COMPASSDIR/bin/chef/* /opt/compass/bin/
 sudo cp -rf $COMPASSDIR/bin/cobbler/* /opt/compass/bin/
 
+if [ "$FULL_COMPASS_SERVER" == "false" ]; then
+    sudo rm -rf /opt/compass/bin/refresh.sh
+    sudo rm -rf /opt/compass/bin/refresh_server.sh
+fi
+
 if [[ $SUPPORT_CENTOS_7_2 != "y" ]]; then
     sudo rm -f /etc/compass/os/centos7.0.conf
 fi
@@ -88,6 +93,9 @@ sudo sed -i "s/\$hostname/$HOSTNAME/g" /etc/compass/setting
 sudo sed -i "s/\$gateway/$OPTION_ROUTER/g" /etc/compass/setting
 domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")
 sudo sed -i "s/\$domains/$domains/g" /etc/compass/setting
+if [ "$FULL_COMPASS_SERVER" == "true" ]; then
+    sudo sed -i "/DATABASE_SERVER =/c\DATABASE_SERVER = '127.0.0.1:3306'" /etc/compass/setting
+fi 
 
 sudo sed -i "s/\$cobbler_ip/$IPADDR/g" /etc/compass/os_installer/cobbler.conf
 #sudo sed -i "s/\$chef_ip/$IPADDR/g" /etc/compass/package_installer/chef-icehouse.conf
@@ -120,17 +128,26 @@ else
     echo "redis is not running"
     exit 1
 fi
-
-wget -O /tmp/aws_credentials "http://www.stack360.io/aws_credentials"
-filename='/tmp/aws_credentials'
-id=$(sed -n '1p' < $filename)
-key=$(sed -n '2p' < $filename)
-sudo sed -i "s~ACCESS_ID~$id~g" /etc/compass/celeryconfig
-sudo sed -i "s~ACCESS_KEY~$key~g" /etc/compass/celeryconfig
+if [ "$FULL_COMPASS_SERVER" == "true" ]; then
+    sudo mv /etc/compass/celeryconfig_local /etc/compass/celeryconfig
+else
+    sudo mv /etc/compass/celeryconfig_remote /etc/compass/celeryconfig
+    wget -O /tmp/aws_credentials "http://www.stack360.io/aws_credentials"
+    filename='/tmp/aws_credentials'
+    id=$(sed -n '1p' < $filename)
+    key=$(sed -n '2p' < $filename)
+    sudo sed -i "s~ACCESS_ID~$id~g" /etc/compass/celeryconfig
+    sudo sed -i "s~ACCESS_KEY~$key~g" /etc/compass/celeryconfig
+fi
 sudo systemctl enable compass-progress-updated.service
 sudo systemctl enable compass-celeryd.service
 
-/opt/compass/bin/refresh.sh
+if [ "$FULL_COMPASS_SERVER" == "true" ]; then
+    /opt/compass/bin/refresh.sh
+else
+    /opt/compass/bin/refresh_agent.sh
+fi
+
 if [[ "$?" != "0" ]]; then
     echo "failed to refresh compassd service"
     exit 1
@@ -154,11 +171,22 @@ else
     echo "redis has already started"
 fi
 
-# sudo systemctl status mysql.service |grep running
-# if [[ "$?" != "0" ]]; then
-#     echo "mysqld is not started"
-#     exit 1
-# fi
+if [ "$FULL_COMPASS_SERVER" == "true" ]; then
+sudo systemctl status mysql.service |grep running
+if [[ "$?" != "0" ]]; then
+    echo "mysqld is not started"
+    exit 1
+fi
+
+#sudo systemctl status compass-progress-updated.service |grep running
+#if [[ "$?" != "0" ]]; then
+#    echo "compass-progress-updated is not started"
+#    exit 1
+#else
+#    echo "compass-progress-updated has already started"
+#fi
+fi
+
 
 sudo systemctl status compass-celeryd.service |grep running
 if [[ "$?" != "0" ]]; then
@@ -167,14 +195,6 @@ if [[ "$?" != "0" ]]; then
 else
     echo "compass-celeryd has already started"
 fi
-
-# sudo systemctl status compass-progress-updated.service |grep running
-# if [[ "$?" != "0" ]]; then
-#    echo "compass-progress-updated is not started"
-#    exit 1
-#else
-#    echo "compass-progress-updated has already started"
-#fi
 
 sleep 10
 #compass check

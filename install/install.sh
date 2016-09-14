@@ -346,7 +346,7 @@ source ${COMPASSDIR}/install/ansible.sh || exit $?
 echo "Install log agent."
 source ${COMPASSDIR}/install/logstash-forwarder.sh || exit $?
 
-if [ "$FULL_COMPASS_SERVER" == "true"]; then
+if [ "$FULL_COMPASS_SERVER" == "true" ]; then
     echo "Download and install Compass Web"
     source ${COMPASSDIR}/install/compass_web.sh || exit $?
 fi
@@ -357,7 +357,7 @@ source ${COMPASSDIR}/install/compass.sh || exit $?
 figlet -ctf slant Installation Complete!
 echo -e "It takes\x1b[32m $SECONDS \x1b[0mseconds during the installation."
 
-if [[ "${FULL_COMPASS_SERVER}" == "false" ]]; then
+if [ "$FULL_COMPASS_SERVER" == "false" ]; then
     machine_list_conf="MACHINE_LIST = [ { '${switch_IP}': [ "
     for host in ${PXE_MACs[@]}; do
         port=$(echo ${host} | awk -F , '{print $1}' | awk -F = '{print $2}')
@@ -375,31 +375,34 @@ if [[ "${FULL_COMPASS_SERVER}" == "false" ]]; then
 #    rm -rf /var/ansible/openstack_mitaka/HA-ansible-multinodes.yml 2>/dev/null
 #    cp ${COMPASSDIR}/misc/adapter_changes/HA-ansible-multinodes.yml /var/ansible/openstack_mitaka/
     rm -rf /var/lib/cobbler/snippets/preseed_post_anamon 2>/dev/null
-    cp ${COMPASSDIR}/misc/adapter_changes/preseed_post_anamon /var/lib/cobbler/snippets/
+    cp ${COMPASSDIR}/misc/adapter_changes/preseed_post_anamon_remote /var/lib/cobbler/snippets/preseed_post_anamon
+else
+    rm -rf /var/lib/cobbler/snippets/preseed_post_anamon 2>/dev/null
+    cp ${COMPASSDIR}/misc/adapter_changes/preseed_post_anamon_local /var/lib/cobbler/snippets/preseed_post_anamon
+fi
 
-    sed -i 's/^CELERY_DEFAULT_QUEUE.*/CELERY_DEFAULT_QUEUE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
-    sed -i 's/^CELERY_DEFAULT_EXCHANGE.*/CELERY_DEFAULT_EXCHANGE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
-    sed -i 's/^CELERY_DEFAULT_ROUTING_KEY.*/CELERY_DEFAULT_ROUTING_KEY = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
+# sudo sed -i 's/^CELERY_DEFAULT_QUEUE.*/CELERY_DEFAULT_QUEUE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
+# sudo sed -i 's/^CELERY_DEFAULT_EXCHANGE.*/CELERY_DEFAULT_EXCHANGE = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
+# sudo sed -i 's/^CELERY_DEFAULT_ROUTING_KEY.*/CELERY_DEFAULT_ROUTING_KEY = \"'"${USER_EMAIL}"'\"/g' /etc/compass/celeryconfig
 
-    # Restart services
-    systemctl restart httpd.service
-    sleep 10
-    echo "Checking if httpd is running"
-    sudo systemctl status httpd.service
-    if [[ "$?" == "0" ]]; then
-        echo "httpd is running"
-    else
-        echo "httpd is not running"
-        exit 1
-    fi
+# Restart services
+systemctl restart httpd.service
+sleep 10
+echo "Checking if httpd is running"
+sudo systemctl status httpd.service
+if [[ "$?" == "0" ]]; then
+    echo "httpd is running"
+else
+    echo "httpd is not running"
+    exit 1
+fi
 
-    systemctl restart compass-celeryd.service
-    echo "Checking if httpd is running"
-    sudo systemctl status compass-celeryd.service
-    if [[ "$?" == "0" ]]; then
-        echo "celeryd is running"
-    else
-        echo "celeryd is not running"
-        exit 1
-    fi
+systemctl restart compass-celeryd.service
+echo "Checking if httpd is running"
+sudo systemctl status compass-celeryd.service
+if [[ "$?" == "0" ]]; then
+    echo "celeryd is running"
+else
+    echo "celeryd is not running"
+    exit 1
 fi

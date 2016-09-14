@@ -104,7 +104,7 @@ else
 fi
 
 #update mysqld
-if [ "$FULL_COMPASS_SERVER" == "true"]; then
+if [ "$FULL_COMPASS_SERVER" == "true" ]; then
     echo "update mysqld"
     mkdir -p /var/log/mysql
     chmod -R 777 /var/log/mysql

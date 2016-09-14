@@ -1,0 +1,12 @@
+## Celery related setting: this is the default setting
+
+CELERY_RESULT_BACKEND ="amqp://"
+BROKER_URL = "amqp://guest:guest@localhost:5672//"
+
+
+CELERY_IMPORTS=("compass.tasks.tasks",)
+CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+C_FORCE_ROOT = 1
+CELERY_DEFAULT_QUEUE = 'admin@huawei.com'
+CELERY_DEFAULT_EXCHANGE = 'admin@huawei.com'
+CELERY_DEFAULT_ROUTING_KEY = 'admin@huawei.com'

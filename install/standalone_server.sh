@@ -151,6 +151,9 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
+# Disable firewalld
+sudo systemctl stop firewalld.service
+
 sudo easy_install --upgrade pip
 sudo pip install --upgrade pip
 sudo pip install --upgrade setuptools

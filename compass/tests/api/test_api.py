@@ -604,7 +604,7 @@ class TestSwitchAPI(ApiTestCase):
         return_value = self.get(url)
         self.assertEqual(return_value.status_code, 200)
 
-        # give a invalid ip_int
+        # give an invalid ip_int
         url = '/switches?ip_int=xxx'
         return_value = json.loads(self.get(url).get_data())
         self.assertEqual([], return_value)
@@ -652,7 +652,7 @@ class TestSwitchAPI(ApiTestCase):
         return_value = self.post(url, data)
         self.assertEqual(return_value.status_code, 409)
 
-        # add a invalid swtich
+        # add an invalid swtich
         data = {
             'ip': 'xxx',
             'vendor': 'huawei'
@@ -992,7 +992,7 @@ class TestSwitchMachines(ApiTestCase):
         return_value = self.post(url, data)
         self.assertEqual(return_value.status_code, 409)
 
-        # add a invalid switch machine
+        # add an invalid switch machine
         url = 's/witchedes'
         data = {
             'mac': 'xxx'

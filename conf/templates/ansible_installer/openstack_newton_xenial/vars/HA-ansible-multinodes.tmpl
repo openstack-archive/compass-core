@@ -30,9 +30,8 @@ enable_secgroup: $getVar('enable_secgroup', True)
 enable_fwaas: $getVar('enable_fwaas', True)
 enable_vpnaas: $getVar('enable_vpnaas', True)
 odl_l3_agent: $getVar('odl_l3_agent', 'Disable')
-onos_sfc: $getVar('onos_sfc', 'Disable')
+moon: $getVar('moon', 'Disable')
 onos_nic: $getVar('onos_nic', 'eth2')
-odl_sfc: $getVar('odl_sfc', 'Disable')
 ip_settings: $ip_settings
 network_cfg: $network_cfg
 sys_intf_mappings: $sys_intf_mappings
@@ -128,8 +127,8 @@ NTP_SERVER_LOCAL: "{{ controllers_host }}"
 DB_HOST: "{{ db_host }}"
 MQ_BROKER: rabbitmq
 
-OPENSTACK_REPO: cloudarchive-mitaka.list
-mitaka_cloud_archive: deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/mitaka main
+OPENSTACK_REPO: cloudarchive-newton.list
+newton_cloud_archive: deb http://ubuntu-cloud.archive.canonical.com/ubuntu xenial-updates/newton main
 ADMIN_TOKEN: admin
 CEILOMETER_TOKEN: c095d479023a0fd58a54
 erlang.cookie: DJJVECFMCJPVYQTJTDWG

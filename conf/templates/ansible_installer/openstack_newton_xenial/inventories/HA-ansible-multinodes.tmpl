@@ -1,0 +1,100 @@
+#set controllers = $getVar('controller', [])
+#set computes = $getVar('compute', [])
+#set has = $getVar('ha', [])
+#set odls = $getVar('odl', [])
+#set onoss = $getVar('onos', [])
+#set opencontrails = $getVar('opencontrail', [])
+#set ceph_adm_list = $getVar('ceph_adm',[])
+#set ceph_mon_list = $getVar('ceph_mon',[])
+#set ceph_osd_list = $getVar('ceph_osd',[])
+
+#if not $isinstance($controllers, list)
+    #set controllers = [$controllers]
+#end if
+#if not $isinstance($computes, list)
+    #set computes = [$computes]
+#end if
+#if not $isinstance(has, list)
+    #set has = [has]
+#end if
+#if not $isinstance(odls, list)
+    #set odls = [odls]
+#end if
+#if not $isinstance(onoss, list)
+    #set onoss = [onoss]
+#end if
+#if not $isinstance(opencontrails, list)
+    #set opencontrails = [opencontrails]
+#end if
+#if not $isinstance(ceph_adm_list, list)
+    #set ceph_adm_list = [ceph_adm_list]
+#end if
+#if not $isinstance(ceph_mon_list, list)
+    #set ceph_mon_list = [ceph_mon_list]
+#end if
+#if not $isinstance(ceph_osd_list, list)
+    #set ceph_osd_list = [ceph_osd_list]
+#end if
+
+#set credentials = $getVar('server_credentials', {})
+#set username = $credentials.get('username', 'root')
+#set password = $credentials.get('password', 'root')
+[controller]
+#for controller in $controllers
+    #set controller_ip = $controller.install.ip
+    #set controller_hostname = $controller.hostname
+$controller_hostname ansible_ssh_host=$controller_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[compute]
+#for compute in $computes
+    #set compute_ip = $compute.install.ip
+    #set compute_hostname = $compute.hostname
+$compute_hostname ansible_ssh_host=$compute_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[ha]
+#for ha in $has
+    #set ha_ip = $ha.install.ip
+    #set ha_hostname = $ha.hostname
+$ha_hostname ansible_ssh_host=$ha_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[odl]
+#for odl in $odls
+    #set odl_ip = $odl.install.ip
+    #set odl_hostname = $odl.hostname
+$odl_hostname ansible_ssh_host=$odl_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[onos]
+#for onos in $onoss
+    #set onos_ip = $onos.install.ip
+    #set onos_hostname = $onos.hostname
+$onos_hostname ansible_ssh_host=$onos_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[opencontrail]
+#for opencontrail in $opencontrails
+    #set opencontrail_ip = $opencontrail.install.ip
+    #set opencontrail_hostname = $opencontrail.hostname
+$opencontrail_hostname ansible_ssh_host=$opencontrail_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[ceph_adm]
+#for ceph_adm in $ceph_adm_list
+    #set ceph_adm_ip = $ceph_adm.install.ip
+    #set ceph_adm_hostname = $ceph_adm.hostname
+$ceph_adm_hostname ansible_ssh_host=$ceph_adm_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[ceph_mon]
+#for ceph_mon in $ceph_mon_list
+    #set ceph_mon_ip = $ceph_mon.install.ip
+    #set ceph_mon_hostname = $ceph_mon.hostname
+$ceph_mon_hostname ansible_ssh_host=$ceph_mon_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[ceph_osd]
+#for ceph_osd in $ceph_osd_list
+    #set ceph_osd_ip = $ceph_osd.install.ip
+    #set ceph_osd_hostname = $ceph_osd.hostname
+$ceph_osd_hostname ansible_ssh_host=$ceph_osd_ip ansible_ssh_user=$username ansible_ssh_password=$password
+#end for
+[ceph:children]
+ceph_adm
+ceph_mon
+ceph_osd
+

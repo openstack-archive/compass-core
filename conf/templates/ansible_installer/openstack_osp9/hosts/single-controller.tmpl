@@ -1,0 +1,40 @@
+#set controllers = $getVar('controller', [])
+#set computes = $getVar('compute', [])
+#set storages = $getVar('storage', [])
+#set networks = $getVar('network', [])
+#if not $isinstance($controllers, list)
+    #set controllers = [$controllers]
+#end if
+#if not $isinstance($computes, list)
+    #set computes = [$computes]
+#end if
+#if not $isinstance($storages, list)
+    #set storages = [$storages]
+#end if
+#if not $isinstance($networks, list)
+    #set networks = [$networks]
+#end if
+# controller
+#for controller in $controllers
+    #set controller_ip = $controller.management.ip
+    #set controller_hostname = $controller.hostname
+$controller_ip $controller_hostname
+#end for
+# compute
+#for worker in $computes
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# storage
+#for worker in $storages
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for
+# network
+#for worker in $networks
+    #set worker_ip = $worker.management.ip
+    #set worker_hostname = $worker.hostname
+$worker_ip $worker_hostname
+#end for

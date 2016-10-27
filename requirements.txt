@@ -4,7 +4,7 @@ Markdown<2.5
 Cheetah<=2.4.1
 daemon
 Flask
-Flask-Login==0.3.2
+Flask-Login<=0.3.2
 Flask-RESTful
 Flask-Script
 Flask-SQLAlchemy

@@ -1,0 +1,8 @@
+Code-Review+2: Xicheng Chang <xicheng.chang@huawei.com>
+Workflow+1: Xicheng Chang <xicheng.chang@huawei.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 03 Nov 2016 17:58:33 +0000
+Reviewed-on: https://review.openstack.org/393140
+Project: openstack/compass-core
+Branch: refs/heads/master

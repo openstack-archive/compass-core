@@ -8,7 +8,6 @@ echo "The email address you use to register is ${USER_EMAIL}"
 password=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c6`
 USER_PASSWORD="${USER_PASSWORD:-$password}"
 data=`echo "{\"email\":\"${USER_EMAIL}\",\"password\":\"${USER_PASSWORD}\"}"`
-COMPASS_API_SERVER="c.stack360.io"
 if [ "$FULL_COMPASS_SERVER" == "true" ]; then
     COMPASS_API_SERVER="127.0.0.1"
 fi

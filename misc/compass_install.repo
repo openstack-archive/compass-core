@@ -1,0 +1,5 @@
+[compass_install]
+name=compass_repo
+baseurl=http://205.177.226.237:9999/compass_install/centos7/
+gpgcheck=0
+enabled=1

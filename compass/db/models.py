@@ -204,17 +204,20 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         Integer,
         ForeignKey('subnet.id', onupdate='CASCADE', ondelete='CASCADE')
     )
-    ip_int = Column(BigInteger, unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    ip_int = Column(BigInteger, nullable=False)
     is_mgmt = Column(Boolean, default=False)
     is_promiscuous = Column(Boolean, default=False)
 
     __table_args__ = (
-        UniqueConstraint('host_id', 'interface', name='constraint'),
+        UniqueConstraint('host_id', 'interface', name='interface_constraint'),
+        UniqueConstraint('ip_int', 'user_id', name='ip_constraint')
     )
 
-    def __init__(self, host_id, interface, **kwargs):
+    def __init__(self, host_id, interface, user_id, **kwargs):
         self.host_id = host_id
         self.interface = interface
+        self.user_id = user_id
         super(HostNetwork, self).__init__(**kwargs)
 
     def __str__(self):
@@ -265,6 +268,7 @@ class HostNetwork(BASE, TimestampMixin, HelperMixin):
         dict_info['interface'] = self.interface
         dict_info['netmask'] = self.netmask
         dict_info['subnet'] = self.subnet.subnet
+        dict_info['user_id'] = self.user_id
         return dict_info
 
 
@@ -702,7 +706,7 @@ class Host(BASE, TimestampMixin, HelperMixin):
     """Host table."""
     __tablename__ = 'host'
 
-    name = Column(String(80), unique=True, nullable=True)
+    name = Column(String(80), nullable=True)
     config_step = Column(String(80), default='')
     os_config = Column(JSONEncoded, default={})
     config_validated = Column(Boolean, default=False)
@@ -711,6 +715,10 @@ class Host(BASE, TimestampMixin, HelperMixin):
     creator_id = Column(Integer, ForeignKey('user.id'))
     owner = Column(String(80))
     os_installer = Column(JSONEncoded, default={})
+
+    __table_args__ = (
+        UniqueConstraint('name', 'owner', name='constraint'),
+    )
 
     id = Column(
         Integer,
@@ -972,7 +980,7 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
     __tablename__ = 'cluster'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(80), unique=True, nullable=False)
+    name = Column(String(80), nullable=False)
     reinstall_distributed_system = Column(Boolean, default=True)
     config_step = Column(String(80), default='')
     os_name = Column(String(80))
@@ -1000,9 +1008,13 @@ class Cluster(BASE, TimestampMixin, HelperMixin):
         cascade='all, delete-orphan',
         backref=backref('cluster')
     )
+    __table_args__ = (
+        UniqueConstraint('name', 'creator_id', name='constraint'),
+    )
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, creator_id, **kwargs):
         self.name = name
+        self.creator_id = creator_id
         self.state = ClusterState()
         super(Cluster, self).__init__(**kwargs)
 
@@ -1357,6 +1369,7 @@ class SwitchMachine(BASE, HelperMixin, TimestampMixin):
         Integer,
         ForeignKey('machine.id', onupdate='CASCADE', ondelete='CASCADE')
     )
+    owner_id = Column(Integer, ForeignKey('user.id'))
     port = Column(String(80), nullable=True)
     vlans = Column(JSONEncoded, default=[])
     __table_args__ = (

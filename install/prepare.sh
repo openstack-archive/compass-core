@@ -178,7 +178,15 @@ if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"
     exit 1
 fi
-copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" || exit $?
+# copy2dir "$ADAPTERS_SOURCE" "$ADAPTERS_HOME" || exit $?
+
+if [ -z $RELEASE_TAG ]; then
+    echo "using HEAD for adapters"
+    git clone "$ADAPTERS_SOURCE" "$ADAPTERS_HOME"
+else
+    echo "using tag instead of HEAD as refspec"
+    git clone -b $RELEASE_TAG $ADAPTERS_SOURCE $ADAPTERS_HOME 
+fi
 
 if [ "$tempest" == "true" ]; then
     echo "download tempest packages"

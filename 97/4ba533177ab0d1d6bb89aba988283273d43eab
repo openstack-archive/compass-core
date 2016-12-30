@@ -1,0 +1,9 @@
+Code-Review+1: wanghongtaozz <wanghongtaozz@inspur.com>
+Code-Review+2: Xicheng Chang <xicheng.chang@huawei.com>
+Workflow+1: Xicheng Chang <xicheng.chang@huawei.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 30 Dec 2016 09:22:24 +0000
+Reviewed-on: https://review.openstack.org/415772
+Project: openstack/compass-core
+Branch: refs/heads/dev/remote-deploy

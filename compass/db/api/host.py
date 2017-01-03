@@ -28,7 +28,7 @@ from compass.db import models
 from compass.utils import util
 
 
-SUPPORTED_FIELDS = ['name', 'os_name', 'owner', 'mac', 'id']
+SUPPORTED_FIELDS = ['name', 'os_name', 'owner', 'mac']
 SUPPORTED_MACHINE_HOST_FIELDS = [
     'mac', 'tag', 'location', 'os_name', 'os_id'
 ]
@@ -414,21 +414,12 @@ def del_host(
         logging.info(
             'send del host %s task to celery', host_id
         )
-        if not user:
-            user_id = host.creator_id
-            user_dict = user_api.get_user(user_id, session=session)
-            user_email = user_dict['email']
-        else:
-            user_email = user.email
         from compass.tasks import client as celery_client
         celery_client.celery.send_task(
             'compass.tasks.delete_host',
             (
                 user.email, host.id, cluster_ids
-            ),
-            queue=user_email,
-            exchange=user_email,
-            routing_key=user_email
+            )
         )
         return {
             'status': 'delete action sent',
@@ -658,11 +649,10 @@ def _add_host_network(
     """Add hostnetwork to a host."""
     host = _get_host(host_id, session=session)
     check_host_editable(host, user=user)
-    user_id = user.id
     return utils.add_db_object(
         session, models.HostNetwork,
         exception_when_existing,
-        host.id, interface, user_id, ip=ip, **kwargs
+        host.id, interface, ip=ip, **kwargs
     )
 
 
@@ -884,7 +874,6 @@ def update_host_state_internal(
     """
     # TODO(xicheng): should be merged into update_host_state
     host = _get_host(host_id, session=session)
-    logging.info("======host state: %s", host.state)
     if 'ready' in kwargs and kwargs['ready'] and not host.state.ready:
         ready_triggered = True
     else:
@@ -923,22 +912,13 @@ def update_host_state_internal(
                 )
         status = '%s state is updated' % host.name
     else:
-        if not user:
-            user_id = host.creator_id
-            user_dict = user_api.get_user(user_id, session=session)
-            user_email = user_dict['email']
-        else:
-            user_email = user.email
         from compass.tasks import client as celery_client
         celery_client.celery.send_task(
             'compass.tasks.os_installed',
             (
                 host.id, clusterhosts_ready,
                 clusters_os_ready
-            ),
-            queue=user_email,
-            exchange=user_email,
-            routing_key=user_email
+            )
         )
         status = '%s: clusterhosts ready %s clusters os ready %s' % (
             host.name, clusterhosts_ready, clusters_os_ready
@@ -1031,18 +1011,9 @@ def poweron_host(
     from compass.tasks import client as celery_client
     host = _get_host(host_id, session=session)
     check_host_validated(host)
-    if not user:
-        user_id = host.creator_id
-        user_dict = user_api.get_user(user_id, session=session)
-        user_email = user_dict['email']
-    else:
-        user_email = user.email
     celery_client.celery.send_task(
         'compass.tasks.poweron_host',
-        (host.id,),
-        queue=user_email,
-        exchange=user_email,
-        routing_key=user_email
+        (host.id,)
     )
     return {
         'status': 'poweron %s action sent' % host.name,
@@ -1066,18 +1037,9 @@ def poweroff_host(
     from compass.tasks import client as celery_client
     host = _get_host(host_id, session=session)
     check_host_validated(host)
-    if not user:
-        user_id = host.creator_id
-        user_dict = user_api.get_user(user_id, session=session)
-        user_email = user_dict['email']
-    else:
-        user_email = user.email
     celery_client.celery.send_task(
         'compass.tasks.poweroff_host',
-        (host.id,),
-        queue=user_email,
-        exchange=user_email,
-        routing_key=user_email
+        (host.id,)
     )
     return {
         'status': 'poweroff %s action sent' % host.name,
@@ -1101,18 +1063,9 @@ def reset_host(
     from compass.tasks import client as celery_client
     host = _get_host(host_id, session=session)
     check_host_validated(host)
-    if not user:
-        user_id = host.creator_id
-        user_dict = user_api.get_user(user_id, session=session)
-        user_email = user_dict['email']
-    else:
-        user_email = user.email
     celery_client.celery.send_task(
         'compass.tasks.reset_host',
-        (host.id,),
-        queue=user_email,
-        exchange=user_email,
-        routing_key=user_email
+        (host.id,)
     )
     return {
         'status': 'reset %s action sent' % host.name,

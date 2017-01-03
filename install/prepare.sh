@@ -104,61 +104,58 @@ else
 fi
 
 #update mysqld
-if [ "$FULL_COMPASS_SERVER" == "true" ]; then
-    echo "update mysqld"
-    mkdir -p /var/log/mysql
-    chmod -R 777 /var/log/mysql
-    sleep 10
-    systemctl restart mysql.service
-    sudo sleep 10
-    systemctl status mysql.service
-    if [[ "$?" != "0" ]]; then
-        echo "failed to restart mysqld"
-        exit 1
-    else
-        echo "mysqld restarted"
-    fi
+echo "update mysqld"
+mkdir -p /var/log/mysql
+chmod -R 777 /var/log/mysql
+sleep 10
+systemctl restart mysql.service
+sudo sleep 10
+systemctl status mysql.service
+if [[ "$?" != "0" ]]; then
+    echo "failed to restart mysqld"
+    exit 1
+else
+    echo "mysqld restarted"
+fi
+MYSQL_USER=${MYSQL_USER:-root}
+MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-root}
+MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
+MYSQL_SERVER=${MYSQL_SERVER:-127.0.0.1}
+MYSQL_PORT=${MYSQL_PORT:-3306}
+MYSQL_DATABASE=${MYSQL_DATABASE:-compass}
+# first time set mysql password
+sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} -p"${MYSQL_OLD_PASSWORD}" password ${MYSQL_PASSWORD}
+if [[ "$?" != "0" ]]; then
+echo "setting up mysql initial password"
+sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} password ${MYSQL_PASSWORD}
+fi
+mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "show databases;"
+if [[ "$?" != "0" ]]; then
+    echo "mysql password set failed"
+    exit 1
+else
+    echo "mysql password set succeeded"
+fi
 
-    MYSQL_USER=${MYSQL_USER:-root}
-    MYSQL_OLD_PASSWORD=${MYSQL_OLD_PASSWORD:-root}
-    MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
-    MYSQL_SERVER=${MYSQL_SERVER:-127.0.0.1}
-    MYSQL_PORT=${MYSQL_PORT:-3306}
-    MYSQL_DATABASE=${MYSQL_DATABASE:-compass}
-    # first time set mysql password
-    sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} -p"${MYSQL_OLD_PASSWORD}" password ${MYSQL_PASSWORD}
-    if [[ "$?" != "0" ]]; then
-        echo "setting up mysql initial password"
-        sudo mysqladmin -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u ${MYSQL_USER} password ${MYSQL_PASSWORD}
-    fi
-    mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "show databases;"
-    if [[ "$?" != "0" ]]; then
-        echo "mysql password set failed"
-        exit 1
-    else
-        echo "mysql password set succeeded"
-    fi
+sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "drop database ${MYSQL_DATABASE}"
+sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "create database ${MYSQL_DATABASE}"
+if [[ "$?" != "0" ]]; then
+    echo "mysql database set failed"
+    exit 1
+fi
 
-    sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "drop database ${MYSQL_DATABASE}"
-    sudo mysql -h${MYSQL_SERVER} --port=${MYSQL_PORT} -u${MYSQL_USER} -p${MYSQL_PASSWORD} -e "create database ${MYSQL_DATABASE}"
-    if [[ "$?" != "0" ]]; then
-        echo "mysql database set failed"
-        exit 1
-    fi
+sudo systemctl restart mysql.service
+sudo systemctl status mysql.service
+if [[ "$?" != "0" ]]; then
+    echo "mysqld is not started"
+    exit 1
+fi
 
-    sudo systemctl restart mysql.service
-    sudo systemctl status mysql.service
-    if [[ "$?" != "0" ]]; then
-        echo "mysqld is not started"
-        exit 1
-    fi
-
-    sudo systemctl restart rabbitmq-server.service
-    sudo systemctl status rabbitmq-server.service
-    if [[ "$?" != "0" ]]; then
-        echo "rabbitmq-server is not started"
-        exit 1
-    fi
+sudo systemctl restart rabbitmq-server.service
+sudo systemctl status rabbitmq-server.service
+if [[ "$?" != "0" ]]; then
+    echo "rabbitmq-server is not started"
+    exit 1
 fi
 
 cd $SCRIPT_DIR
@@ -241,7 +238,6 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 pip install -U -r test-requirements.txt
-pip install -U boto
 if [[ "$?" != "0" ]]; then
     echo "failed to install compass test requiremnts"
     deactivate

@@ -13,8 +13,8 @@ itsdangerous
 importlib
 lazypy
 lockfile
-netaddr
 MySQL-python
+netaddr
 paramiko
 PyChef
 python-daemon!=2.0,!=2.0.1,!=2.0.2,!=2.0.3

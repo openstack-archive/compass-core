@@ -393,10 +393,6 @@ def _login(use_cookie):
     )
     data['expire_timestamp'] = expire_timestamp
     user = auth_handler.authenticate_user(**data)
-    if not user.active:
-        raise exception_handler.UserDisabled(
-            '%s is not activated' % user.email
-        )
     if not login_user(user, remember=data.get('remember', False)):
         raise exception_handler.UserDisabled('failed to login: %s' % user)
 
@@ -417,17 +413,6 @@ def get_token():
 def login():
     """User login."""
     return _login(True)
-
-
-@app.route("/users/register", methods=['POST'])
-def register():
-    """register new user."""
-    data = _get_request_data()
-    data['is_admin'] = False
-    data['active'] = False
-    return utils.make_json_response(
-        200, user_api.add_user(**data)
-    )
 
 
 @app.route('/users/logout', methods=['POST'])
@@ -3164,19 +3149,19 @@ def update_host_state(host_id):
 
 
 @util.deprecated
-@app.route("/hosts/<host_id>/state_internal", methods=['PUT', 'POST'])
-def update_host_state_internal(host_id):
+@app.route("/hosts/<hostname>/state_internal", methods=['PUT', 'POST'])
+def update_host_state_internal(hostname):
     """update host state.
 
     Supported fields: ['ready']
     """
     data = _get_request_data()
-    host_id = int(host_id)
-    hosts = host_api.list_hosts(id=host_id)
+    hosts = host_api.list_hosts(name=hostname)
     if not hosts:
         raise exception_handler.ItemNotFound(
-            'no hosts found for host_id %s' % host_id
+            'no hosts found for hostname %s' % hostname
         )
+    host_id = hosts[0]['id']
     return utils.make_json_response(
         200,
         host_api.update_host_state_internal(

@@ -30,11 +30,10 @@ from compass.utils import util
 SUPPORTED_FIELDS = ['ip_int', 'vendor', 'state']
 SUPPORTED_FILTER_FIELDS = ['ip_int', 'vendor', 'state']
 SUPPORTED_SWITCH_MACHINES_FIELDS = [
-    'switch_ip_int', 'port', 'vlans', 'mac', 'tag', 'location',
-    'owner_id'
+    'switch_ip_int', 'port', 'vlans', 'mac', 'tag', 'location'
 ]
 SUPPORTED_MACHINES_FIELDS = [
-    'port', 'vlans', 'mac', 'tag', 'location', 'owner_id'
+    'port', 'vlans', 'mac', 'tag', 'location'
 ]
 SUPPORTED_SWITCH_MACHINES_HOSTS_FIELDS = [
     'switch_ip_int', 'port', 'vlans', 'mac',
@@ -58,7 +57,7 @@ UPDATED_FILTERS_FIELDS = ['put_machine_filters']
 PATCHED_FILTERS_FIELDS = ['patched_machine_filters']
 ADDED_MACHINES_FIELDS = ['mac']
 OPTIONAL_ADDED_MACHINES_FIELDS = [
-    'ipmi_credentials', 'tag', 'location', 'owner_id'
+    'ipmi_credentials', 'tag', 'location'
 ]
 ADDED_SWITCH_MACHINES_FIELDS = ['port']
 OPTIONAL_ADDED_SWITCH_MACHINES_FIELDS = ['vlans']
@@ -66,7 +65,7 @@ UPDATED_MACHINES_FIELDS = [
     'ipmi_credentials',
     'tag', 'location'
 ]
-UPDATED_SWITCH_MACHINES_FIELDS = ['port', 'vlans', 'owner_id']
+UPDATED_SWITCH_MACHINES_FIELDS = ['port', 'vlans']
 PATCHED_MACHINES_FIELDS = [
     'patched_ipmi_credentials',
     'patched_tag', 'patched_location'
@@ -84,7 +83,7 @@ RESP_ACTION_FIELDS = [
 ]
 RESP_MACHINES_FIELDS = [
     'id', 'switch_id', 'switch_ip', 'machine_id', 'switch_machine_id',
-    'port', 'vlans', 'mac', 'owner_id',
+    'port', 'vlans', 'mac',
     'ipmi_credentials', 'tag', 'location',
     'created_at', 'updated_at'
 ]
@@ -591,8 +590,6 @@ def list_switch_machines(
     switch_machines = utils.list_db_objects(
         session, models.SwitchMachine, switch_id=switch.id, **filters
     )
-    if not user.is_admin and len(switch_machines):
-        switch_machines = [m for m in switch_machines if m.machine.owner_id == user.id]
     return _filter_switch_machines(switch_machines)
 
 
@@ -653,8 +650,6 @@ def list_switchmachines_hosts(user=None, session=None, **filters):
     switch_machines = utils.list_db_objects(
         session, models.SwitchMachine, **filters
     )
-    if not user.is_admin and len(switch_machines):
-        switch_machines = [m for m in switch_machines if m.machine.owner_id == user.id]
     return _filter_switch_machines_hosts(
         switch_machines
     )
@@ -681,14 +676,13 @@ def _add_machine_if_not_exist(mac=None, session=None, **kwargs):
 @utils.input_validates(vlans=_check_vlans)
 def _add_switch_machine_only(
     switch, machine, exception_when_existing=True,
-    session=None, owner_id=None, port=None, **kwargs
+    session=None, port=None, **kwargs
 ):
     """add a switch machine."""
     return utils.add_db_object(
         session, models.SwitchMachine,
         exception_when_existing,
         switch.id, machine.id, port=port,
-        owner_id=owner_id,
         **kwargs
     )
 
@@ -704,7 +698,7 @@ def _add_switch_machine_only(
 @utils.wrap_to_dict(RESP_MACHINES_FIELDS)
 def _add_switch_machine(
     switch_id, exception_when_existing=True,
-    mac=None, port=None, session=None, owner_id=None, **kwargs
+    mac=None, port=None, session=None, **kwargs
 ):
     """Add switch machine.
 
@@ -713,7 +707,7 @@ def _add_switch_machine(
     """
     switch = _get_switch(switch_id, session=session)
     machine = _add_machine_if_not_exist(
-        mac=mac, session=session, owner_id=owner_id, **kwargs
+        mac=mac, session=session, **kwargs
     )
     return _add_switch_machine_only(
         switch, machine,
@@ -728,14 +722,13 @@ def _add_switch_machine(
 )
 def add_switch_machine(
     switch_id, exception_when_existing=True,
-    mac=None, user=None, session=None,
-    owner_id=None, **kwargs
+    mac=None, user=None, session=None, **kwargs
 ):
     """Add switch machine to a switch."""
     return _add_switch_machine(
         switch_id,
         exception_when_existing=exception_when_existing,
-        mac=mac, session=session, owner_id=owner_id, **kwargs
+        mac=mac, session=session, **kwargs
     )
 
 
@@ -754,7 +747,7 @@ def add_switch_machine(
 )
 def add_switch_machines(
     exception_when_existing=False,
-    data=[], user=None, session=None, owner_id=None
+    data=[], user=None, session=None
 ):
     """Add switch machines."""
     switch_machines = []
@@ -824,7 +817,7 @@ def add_switch_machines(
                 switch_machines.append(_add_switch_machine_only(
                     switch_object, machine_object,
                     exception_when_existing,
-                    session=session, owner_id=owner_id, **machine
+                    session=session, **machine
                 ))
     return {
         'switches_machines': switch_machines,
@@ -845,10 +838,7 @@ def poll_switch(switch_id, user=None, session=None, **kwargs):
     switch = _get_switch(switch_id, session=session)
     celery_client.celery.send_task(
         'compass.tasks.pollswitch',
-        (user.email, switch.ip, switch.credentials),
-        queue=user.email,
-        exchange=user.email,
-        routing_key=user.email
+        (user.email, switch.ip, switch.credentials)
     )
     return {
         'status': 'action %s sent' % kwargs,
@@ -1126,8 +1116,7 @@ def _add_machine_to_switch(
         machine_id, session=session
     )
     _add_switch_machine_only(
-        switch, machine, False,
-        owner_id=machine.owner_id, **kwargs
+        switch, machine, False, **kwargs
     )
 
 

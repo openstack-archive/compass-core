@@ -134,7 +134,7 @@ if [ "$FULL_COMPASS_SERVER" == "true" ]; then
     sudo mv /etc/compass/celeryconfig_local /etc/compass/celeryconfig
 elif [ "$COMPASS_API_SERVER" != "c.stack360.io" ];then
     sudo mv /etc/compass/celeryconfig_local /etc/compass/celeryconfig
-    sudo sed -i "s/localhost/\$COMPASS_API_SERVER/g" /etc/compass/celeryconfig
+    sudo sed -i "s/localhost/$COMPASS_API_SERVER/g" /etc/compass/celeryconfig
 else
     sudo mv /etc/compass/celeryconfig_remote /etc/compass/celeryconfig
     wget -O /tmp/aws_credentials "http://www.stack360.io/aws_credentials"

@@ -182,10 +182,10 @@ fi
 
 if [ -z $RELEASE_TAG ]; then
     echo "using HEAD for adapters"
-    git clone "$ADAPTERS_SOURCE" "$ADAPTERS_HOME"
+    git clone "$ADAPTERS_SOURCE" "$ADAPTERS_DEST"
 else
     echo "using tag instead of HEAD as refspec"
-    git clone -b $RELEASE_TAG $ADAPTERS_SOURCE $ADAPTERS_HOME 
+    git clone -b $RELEASE_TAG $ADAPTERS_SOURCE $ADAPTERS_DEST 
 fi
 
 if [ "$tempest" == "true" ]; then

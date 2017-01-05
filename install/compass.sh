@@ -96,7 +96,7 @@ sudo sed -i "s/\$domains/$domains/g" /etc/compass/setting
 if [ "$FULL_COMPASS_SERVER" == "true" ]; then
     sudo sed -i "/DATABASE_SERVER =/c\DATABASE_SERVER = '127.0.0.1:3306'" /etc/compass/setting
 else
-    sudo sed -i "/DATABASE_SERVER =/c\DATABASE_SERVER = '\$COMPASS_API_SERVER:3306'" /etc/compass/setting
+    sudo sed -i "/DATABASE_SERVER =/c\DATABASE_SERVER = '$COMPASS_API_SERVER:3306'" /etc/compass/setting
 fi 
 
 sudo sed -i "s/\$cobbler_ip/$IPADDR/g" /etc/compass/os_installer/cobbler.conf

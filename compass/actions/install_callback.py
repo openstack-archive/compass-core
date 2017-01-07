@@ -59,7 +59,7 @@ def os_installed(
         for cluster_id, clusterhost_ready in clusterhosts_ready.items():
             if not clusterhost_ready and os_installed_triggered:
                 continue
-
+            cluster_id = int(cluster_id)
             cluster_info = util.ActionHelper.get_cluster_info(
                 cluster_id, user)
             adapter_id = cluster_info[const.ADAPTER_ID]

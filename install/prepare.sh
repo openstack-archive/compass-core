@@ -168,11 +168,13 @@ if [[ "$?" != "0" ]]; then
 fi
 local_branch=$(echo ${remote_branch} | sed -e 's/origin\///g')
 
-if [ -z $WEB_SOURCE ]; then
-    echo "web source $WEB_SOURCE is not set"
-    exit 1
+if [ "FULL_COMPASS_SERVER" == "true" ]; then
+    if [ -z $WEB_SOURCE ]; then
+       echo "web source $WEB_SOURCE is not set"
+       exit 1
+    fi
+    copy2dir "$WEB_SOURCE" "$WEB_HOME" || exit $?
 fi
-copy2dir "$WEB_SOURCE" "$WEB_HOME" || exit $?
 
 if [ -z $ADAPTERS_SOURCE ]; then
     echo "adpaters source $ADAPTERS_SOURCE is not set"

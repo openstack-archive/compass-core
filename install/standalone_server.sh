@@ -73,40 +73,46 @@ source $DIR/install_func.sh
 sudo setenforce 0
 sudo sed -i 's/enforcing/disabled/g' /etc/selinux/config
 
+###configure compass_install repo
+rm -rf /etc/yum.repos.d/compass_install.repo 2>/dev/null
+cp ${COMPASSDIR}/misc/compass_install.repo /etc/yum.repos.d/
+
+yum clean all
+
 ### Add epel repo
-sudo rpm -q epel-release
-if [ "$?" != "0" ]; then
-    sudo rpm -Uvh $EPEL
-    if [ "$?" != "0" ]; then
-        echo "failed to install epel-release"
-        exit 1
-    else
-        echo "sucessfaully installed epel-release"
-    fi
-else
-    echo "epel-release is already installed"
-fi
+#sudo rpm -q epel-release
+#if [ "$?" != "0" ]; then
+#    sudo rpm -Uvh $EPEL
+#    if [ "$?" != "0" ]; then
+#        echo "failed to install epel-release"
+#        exit 1
+#    else
+#        echo "sucessfaully installed epel-release"
+#    fi
+#else
+#    echo "epel-release is already installed"
+#fi
 
-sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
+#sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
 
-sudo rpm -q atomic-release
-if [ "$?" == "0" ]; then
-    sudo rpm -e atomic-release
-fi
+#sudo rpm -q atomic-release
+#if [ "$?" == "0" ]; then
+#    sudo rpm -e atomic-release
+#fi
 
 ### Add remi repo
-sudo rpm -q remi-release
-if [ "$?" != "0" ]; then
-    sudo rpm -Uvh $REMI >& /dev/null
-    if [ "$?" != "0" ]; then
-        echo "failed to install remi-release"
-        exit 1
-    else
-        echo "successfully installed remi-release"
-    fi
-else
-    echo "remi-release is already installed"
-fi
+#sudo rpm -q remi-release
+#if [ "$?" != "0" ]; then
+#    sudo rpm -Uvh $REMI >& /dev/null
+#    if [ "$?" != "0" ]; then
+#        echo "failed to install remi-release"
+#        exit 1
+#    else
+#        echo "successfully installed remi-release"
+#    fi
+#else
+#    echo "remi-release is already installed"
+#fi
 
 ### Trap any error code with related filename and line.
 errtrap()
@@ -127,11 +133,9 @@ sudo yum update -y
 # assign all necessary values.
 export WEB_SOURCE=${WEB_SOURCE:-"http://git.openstack.org/openstack/compass-web"}
 
-rm -rf /etc/yum.repos.d/compass_install.repo 2>/dev/nullcp 
-cp ${COMPASSDIR}/misc/compass_install.repo /etc/yum.repos.d/
 
 # Start: install required packages and dependencies
-sudo yum --enablerepo=compass_install install -y $MYSQL
+#sudo yum --enablerepo=compass_install install -y $MYSQL
 sudo yum --enablerepo=compass_install --nogpgcheck install -y rsyslog logrotate ntp python python-devel git wget syslinux amqp mod_wsgi httpd bind rsync yum-utils gcc unzip openssl openssl098e ca-certificates mysql-devel mysql-server mysql MySQL-python python-virtualenv python-setuptools python-pip bc libselinux-python libffi-devel openssl-devel rabbitmq-server
 sudo yum --setopt=tsflags=noscripts -y remove redis
 sudo yum --enablerepo=compass_install --nogpgcheck install -y redis
@@ -391,7 +395,7 @@ else
     echo "compass package is installed in virtualenv under current dir"
 fi
 
-udo sed -i "s/\$ipaddr/$IPADDR/g" /etc/compass/setting
+sudo sed -i "s/\$ipaddr/$IPADDR/g" /etc/compass/setting
 sudo sed -i "s/\$hostname/$HOSTNAME/g" /etc/compass/setting
 sudo sed -i "s/\$gateway/$OPTION_ROUTER/g" /etc/compass/setting
 domains=$(echo $NAMESERVER_DOMAINS | sed "s/,/','/g")

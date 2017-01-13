@@ -150,40 +150,47 @@ source $DIR/install.conf
 ### Change selinux security policy
 sudo setenforce 0
 sudo sed -i 's/enforcing/disabled/g' /etc/selinux/config
+
+###configure compass_install.repo
+rm -rf /etc/yum.repos.d/compass_install.repo 2>/dev/null
+cp ${COMPASSDIR}/misc/compass_install.repo /etc/yum.repos.d/
+yum clean all
+
+
 ### Add epel repo
-sudo rpm -q epel-release
-if [ "$?" != "0" ]; then
-    sudo rpm -Uvh $EPEL
-    if [ "$?" != "0" ]; then
-        echo "failed to install epel-release"
-        exit 1
-    else
-        echo "sucessfaully installed epel-release"
-    fi
-else
-    echo "epel-release is already installed"
-fi
+#sudo rpm -q epel-release
+#if [ "$?" != "0" ]; then
+#    sudo rpm -Uvh $EPEL
+#    if [ "$?" != "0" ]; then
+#        echo "failed to install epel-release"
+#        exit 1
+#    else
+#        echo "sucessfaully installed epel-release"
+#    fi
+#else
+#    echo "epel-release is already installed"
+#fi
 
-sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
+#sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
 
-sudo rpm -q atomic-release
-if [ "$?" == "0" ]; then
-    sudo rpm -e atomic-release
-fi
+#sudo rpm -q atomic-release
+#if [ "$?" == "0" ]; then
+#    sudo rpm -e atomic-release
+#fi
 
 ### Add remi repo
-sudo rpm -q remi-release
-if [ "$?" != "0" ]; then
-    sudo rpm -Uvh $REMI >& /dev/null
-    if [ "$?" != "0" ]; then
-        echo "failed to install remi-release"
-        exit 1
-    else
-        echo "successfully installed remi-release"
-    fi
-else
-    echo "remi-release is already installed"
-fi 
+#sudo rpm -q remi-release
+#if [ "$?" != "0" ]; then
+#    sudo rpm -Uvh $REMI >& /dev/null
+#    if [ "$?" != "0" ]; then
+#        echo "failed to install remi-release"
+#        exit 1
+#    else
+#        echo "successfully installed remi-release"
+#    fi
+#else
+#    echo "remi-release is already installed"
+#fi 
 
 # sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/atomic.repo
 
@@ -321,8 +328,8 @@ export ADAPTERS_SOURCE=${ADAPTERS_SOURCE:-"https://gerrit.opnfv.org/gerrit/compa
 echo "set the iptables' rules so that the openstack hosts installed can access remote compass through agent server"
 set_iptables ${PUBLIC_IP} ${IPADDR} ${NETMASK}
 
-rm -rf /etc/yum.repos.d/compass_install.repo 2>/dev/nullcp 
-cp ${COMPASSDIR}/misc/compass_install.repo /etc/yum.repos.d/
+#rm -rf /etc/yum.repos.d/compass_install.repo 2>/dev/nullcp 
+#cp ${COMPASSDIR}/misc/compass_install.repo /etc/yum.repos.d/
 
 echo "script dir: $SCRIPT_DIR"
 echo "compass dir is $COMPASSDIR"

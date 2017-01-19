@@ -5,7 +5,9 @@ echo "Installing logstash-forwarder"
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $DIR/install.conf
 
-sudo cp -rf $COMPASSDIR/misc/logstash-forwarder/logstash-forwarder.repo /etc/yum.repos.d/logstash-forwarder.repo
+if [ "LOCAL_REPO" == "false"], then
+	sudo cp -rf $COMPASSDIR/misc/logstash-forwarder/logstash-forwarder.repo /etc/yum.repos.d/logstash-forwarder.repo
+fi
 sudo yum -y install logstash-forwarder
 sudo rm -rf /etc/logstash-forwarder.conf
 sudo cp -rf $COMPASSDIR/misc/logstash-forwarder/logstash-forwarder.conf /etc/logstash-forwarder.conf

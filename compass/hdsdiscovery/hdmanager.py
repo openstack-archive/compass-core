@@ -99,7 +99,7 @@ class HDManager(object):
 
         :param host: switch ip:
         :param credential: credential to access switch
-        :return a tuple (vendor, switch_state, error)
+        :return: a tuple (vendor, switch_state, error)
         """
 
         switch_lists = util.load_configs(setting.MACHINE_LIST_DIR)

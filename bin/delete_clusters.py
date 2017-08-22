@@ -38,7 +38,7 @@ from compass.utils import setting_wrapper as setting
 
 
 flags.add('clusternames',
-          help='comma seperated cluster names',
+          help='comma separated cluster names',
           default='')
 flags.add_bool('delete_hosts',
                help='if all hosts related to the cluster will be deleted',

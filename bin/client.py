@@ -67,7 +67,7 @@ opts = [
     ),
     cfg.StrOpt(
         'switch_ips',
-        help='comma seperated switch ips',
+        help='comma separated switch ips',
         default=''
     ),
     cfg.StrOpt(
@@ -97,7 +97,7 @@ opts = [
     ),
     cfg.StrOpt(
         'subnets',
-        help='comma seperated subnets',
+        help='comma separated subnets',
         default=''
     ),
     cfg.StrOpt(
@@ -196,7 +196,7 @@ opts = [
     cfg.StrOpt(
         'service_credentials',
         help=(
-            'comma seperated service credentials formatted as '
+            'comma separated service credentials formatted as '
             '<servicename>:<username>=<password>,...'
         ),
         default=''
@@ -204,20 +204,20 @@ opts = [
     cfg.StrOpt(
         'console_credentials',
         help=(
-            'comma seperated console credential formated as '
+            'comma separated console credential formated as '
             '<consolename>:<username>=<password>'
         ),
         default=''
     ),
     cfg.StrOpt(
         'hostnames',
-        help='comma seperated hostname',
+        help='comma separated hostname',
         default=''
     ),
     cfg.StrOpt(
         'host_networks',
         help=(
-            'semicomma seperated host name and its networks '
+            'semicomma separated host name and its networks '
             '<hostname>:<interface_name>=<ip>|<is_mgmt>|<is_promiscuous>,...'
         ),
         default=''
@@ -225,7 +225,7 @@ opts = [
     cfg.StrOpt(
         'partitions',
         help=(
-            'comma seperated partitions '
+            'comma separated partitions '
             '<partition name>=<partition_value>'
         ),
         default='tmp:percentage=10%,var:percentage=30%,home:percentage=30%'
@@ -233,7 +233,7 @@ opts = [
     cfg.StrOpt(
         'network_mapping',
         help=(
-            'comma seperated network mapping '
+            'comma separated network mapping '
             '<network_type>=<interface_name>'
         ),
         default=''
@@ -254,7 +254,7 @@ opts = [
     cfg.StrOpt(
         'default_roles',
         help=(
-            'comma seperated default roles '
+            'comma separated default roles '
             '<rolename>'
         ),
         default=''

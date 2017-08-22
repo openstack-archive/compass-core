@@ -1187,7 +1187,7 @@
      hwDualStackAccountingType OBJECT-TYPE
             SYNTAX INTEGER
             {
-                seperate(1),
+                separate(1),
                 identical(2)
             }
             MAX-ACCESS read-create

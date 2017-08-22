@@ -43,7 +43,7 @@ from compass.utils import setting_wrapper as setting
 
 
 flags.add('switch_ips',
-          help='comma seperated switch ips',
+          help='comma separated switch ips',
           default='')
 flags.add_bool('async',
                help='ryn in async mode',

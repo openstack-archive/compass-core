@@ -42,7 +42,7 @@ flags.add_bool('async',
                default=True)
 
 flags.add('os_installers',
-          help='comma seperated os installers',
+          help='comma separated os installers',
           default='')
 flags.add('package_installers',
           help='comma separated package installers',

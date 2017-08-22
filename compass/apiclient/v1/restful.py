@@ -419,9 +419,9 @@ class Client(object):
 
         :param cluster_id: cluster id.
         :type cluster_id: int.
-        :param nameservers: comma seperated nameserver ip address.
+        :param nameservers: comma separated nameserver ip address.
         :type nameservers: str.
-        :param search_path: comma seperated dns name search path.
+        :param search_path: comma separated dns name search path.
         :type search_path: str.
         :param gateway: gateway ip address for routing to outside.
         :type gateway: str.
@@ -533,9 +533,9 @@ class Client(object):
         :type security_<security>_username: str.
         :param security_<security>_password: passowrd of the security name.
         :type security_<security>_password: str.
-        :param networking_nameservers: comma seperated nameserver ip address.
+        :param networking_nameservers: comma separated nameserver ip address.
         :type networking_nameservers: str.
-        :param networking_search_path: comma seperated dns name search path.
+        :param networking_search_path: comma separated dns name search path.
         :type networking_search_path: str.
         :param networking_gateway: gateway ip address for routing to outside.
         :type networking_gateway: str.

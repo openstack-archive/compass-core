@@ -381,7 +381,7 @@ class Client(object):
         :type cluster_id: int.
         :param <security_name>_username: username of the security name.
         :type <security_name>_username: str.
-        :param <security_name>_password: passowrd of the security name.
+        :param <security_name>_password: password of the security name.
         :type <security_name>_password: str.
 
         .. note::
@@ -531,7 +531,7 @@ class Client(object):
         :type hostname: str.
         :param security_<security>_username: username of the security name.
         :type security_<security>_username: str.
-        :param security_<security>_password: passowrd of the security name.
+        :param security_<security>_password: password of the security name.
         :type security_<security>_password: str.
         :param networking_nameservers: comma seperated nameserver ip address.
         :type networking_nameservers: str.

@@ -62,46 +62,121 @@ fi
 ### BEGIN OF SCRIPT ###
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $DIR/install.conf
+source $DIR/install_func.sh
 
 ### Change selinux security policy
 sudo setenforce 0
 sudo sed -i 's/enforcing/disabled/g' /etc/selinux/config
-### Add epel repo
-sudo rpm -q epel-release
-if [ "$?" != "0" ]; then
-    sudo rpm -Uvh $EPEL
-    if [ "$?" != "0" ]; then
-        echo "failed to install epel-release"
-        exit 1
-    else
-        echo "sucessfaully installed epel-release"
-    fi
-else
-    echo "epel-release is already installed"
+
+rpm_repo()
+{
+  ### Add epel repo
+  sudo rpm -q epel-release
+  if [ "$?" != "0" ]; then
+      sudo rpm -Uvh $EPEL
+      if [ "$?" != "0" ]; then
+          echo "failed to install epel-release"
+          exit 1
+      else
+          echo "sucessfaully installed epel-release"
+      fi
+  else
+      echo "epel-release is already installed"
+  fi
+
+  sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
+
+  sudo rpm -q atomic-release
+  if [ "$?" == "0" ]; then
+      sudo rpm -e atomic-release
+  fi
+
+  ### Add remi repo
+  sudo rpm -q remi-release
+  if [ "$?" != "0" ]; then
+      sudo rpm -Uvh $REMI >& /dev/null
+      if [ "$?" != "0" ]; then
+          echo "failed to install remi-release"
+          exit 1
+      else
+          echo "successfully installed remi-release"
+      fi
+  else
+      echo "remi-release is already installed"
+  fi
+
+  ### Add mysql repo
+  sudo rpm -q mysql-community-release
+  if [ "$?" != "0" ]; then
+      sudo rpm -Uvh $MYSQL >& /dev/null
+      if [ "$?" != "0" ]; then
+          echo "failed to install mysql-release"
+          exit 1
+      else
+          echo "successfully installed mysql-release"
+      fi
+  else
+      echo "mysql-release is already installed"
+  fi
+}
+
+# Cleanup all files under /etc/yum.repos.d
+# Only work when provider is files
+cleanup_repo()
+{
+  sudo mkdir ~/repo_backup
+  sudo mv -f /etc/yum.repos.d/* ~/repo_backup
+  echo "Cleanup all files under /etc/yum.reps.d"
+}
+
+### Add repo directly by files
+file_repo()
+{
+  ### Clean up repo files
+  cleanup_repo
+  ### Add centos base repo directly by files
+  sudo ls /etc/yum.repos.d/compass.repo
+  if [ "$?" != "0" ]; then
+      download -u $REPO_MIRRORS compass.repo
+      cp -f /opt/compass.repo /etc/yum.repos.d/compass.repo
+      if [ "$?" != "0" ]; then
+          echo "failed to install compass mirrors!"
+      fi
+  else
+      echo "compass mirrors is already installed"
+  fi
+}
+
+if [ "$REPO_PROVIDER" == "rpm" ]; then
+  rpm_repo
+elif [ "$REPO_PROVIDER" == "file" ]; then
+  file_repo
 fi
 
-sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/epel.repo
+yum_update()
+{
+  sudo yum clean all
+  sudo yum makecache
+  if [ "$?" != "0" ]; then
+    echo "you have bad yum repos!"
+    exit 1
+  fi
+}
 
-sudo rpm -q atomic-release
-if [ "$?" == "0" ]; then
-    sudo rpm -e atomic-release
+yum_update
+
+# Prepare pip
+install_pip()
+{
+    mkdir -p ~/.pip
+    cp $COMPASSDIR/misc/pip.conf ~/.pip
+    sudo sed -i "s#INDEX_URL#${PIP_INDEX_URL}#g" ~/.pip/pip.conf
+    sudo sed -i "s#TRUSTED_HOST#${PIP_TRUSTED_HOST}#g" ~/.pip/pip.conf
+}
+
+if [ "" != $PIP_INDEX_URL ]; then
+    install_pip
 fi
-
-### Add remi repo
-sudo rpm -q remi-release
-if [ "$?" != "0" ]; then
-    sudo rpm -Uvh $REMI >& /dev/null
-    if [ "$?" != "0" ]; then
-        echo "failed to install remi-release"
-        exit 1
-    else
-        echo "successfully installed remi-release"
-    fi
-else
-    echo "remi-release is already installed"
-fi 
-
-# sed -i 's/^mirrorlist=https/mirrorlist=http/g' /etc/yum.repos.d/atomic.repo
 
 ### Trap any error code with related filename and line.
 errtrap()

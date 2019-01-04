@@ -57,7 +57,7 @@ class HDManager(object):
         plugin = utils.load_module(req_obj, plugin_dir, host, credential)
         if not plugin:
             # No plugin found!
-            # TODO(Grace): add more code to catch excpetion or unexpected state
+            # TODO(Grace): add more code to catch exception or unexpected state
             logging.error('no plugin %s to load from %s', req_obj, plugin_dir)
             return None
 

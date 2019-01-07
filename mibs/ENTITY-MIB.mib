@@ -627,7 +627,7 @@ ENTITY-MIB DEFINITIONS ::= BEGIN
         DESCRIPTION
             "The value of this object uniquely identifies the logical
             entity. The value should be a small positive integer; index
-            values for different logical entities are are not
+            values for different logical entities are not
             necessarily contiguous."
         ::= { entLogicalEntry 1 }
     

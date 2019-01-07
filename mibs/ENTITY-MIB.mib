@@ -321,7 +321,7 @@ ENTITY-MIB DEFINITIONS ::= BEGIN
             any external numbering or clearly visible ordering, then
             user documentation or other external reference material
             should be used to determine the parent-relative position. If
-            this is not possible, then the the agent should assign a
+            this is not possible, then the agent should assign a
             consistent (but possibly arbitrary) ordering to a given set
             of 'sibling' components, perhaps based on internal
             representation of the components.

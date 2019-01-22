@@ -2549,7 +2549,7 @@
             MAX-ACCESS read-only
             STATUS current
             DESCRIPTION
-                "Multiplex Section Unavaliable Seconds."
+                "Multiplex Section Unavailable Seconds."
             ::= { hwSDHRsMsPerfCurrentEntry 10 }
 
         
@@ -2589,7 +2589,7 @@
             MAX-ACCESS read-only
             STATUS current
             DESCRIPTION
-                "Multiplex Section Far end Unavaliable Seconds."
+                "Multiplex Section Far end Unavailable Seconds."
             ::= { hwSDHRsMsPerfCurrentEntry 14 }
 
         
@@ -2676,7 +2676,7 @@
             MAX-ACCESS read-only
             STATUS current
             DESCRIPTION
-                "Multiplex Section Far end Unavaliable Seconds."
+                "Multiplex Section Far end Unavailable Seconds."
             ::= { hwSDHHpPerfCurrentEntry 4 }
 
         
@@ -2706,7 +2706,7 @@
             MAX-ACCESS read-only
             STATUS current
             DESCRIPTION
-                "Higher order Path Unavaliable Seconds."
+                "Higher order Path Unavailable Seconds."
             ::= { hwSDHHpPerfCurrentEntry 7 }
 
         
@@ -2746,7 +2746,7 @@
             MAX-ACCESS read-only
             STATUS current
             DESCRIPTION
-                "Higher order Path Far end Unavaliable Seconds."
+                "Higher order Path Far end Unavailable Seconds."
             ::= { hwSDHHpPerfCurrentEntry 11 }
 
         

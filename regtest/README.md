@@ -9,4 +9,4 @@ compass-daily-2 | regtest8.conf | dev branch
 compass-periodic-check-5 | regtest10.conf | none
 compass-weekly | regtest3.conf | both
 
-The above example shows the relationship. The direcotry `ansible` is for ansible installer's regtest only.
+The above example shows the relationship. The directory `ansible` is for ansible installer's regtest only.

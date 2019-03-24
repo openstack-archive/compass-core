@@ -47,7 +47,7 @@ VBoxManage storageattach storage --storagectl "storage-IDE" --port 0 --device 0 
 # compass
 # get latest ansible code
 cd $SCRIPT_DIR
-git clone -b dev/experimental git://git.openstack.org/openstack/compass-adapters.git
+git clone -b dev/experimental https://git.openstack.org/openstack/compass-adapters.git
 cp -r compass-adapters/ansible/openstack_juno compass-adapters/ansible/openstack_juno_plumgrid
 vagrant box list |grep compass
 if [ "$?" != "0" ]; then

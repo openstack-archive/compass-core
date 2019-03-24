@@ -24,7 +24,7 @@
   <concurrentBuild>true</concurrentBuild>
   <builders>
     <hudson.tasks.Shell>
-      <command>/home/jenkins/script/gerrit-git-prep.sh https://review.openstack.org git://git.openstack.org</command>
+      <command>/home/jenkins/script/gerrit-git-prep.sh https://review.openstack.org https://git.openstack.org</command>
     </hudson.tasks.Shell>
     <hudson.tasks.Shell>
       <command>/home/jenkins/script/run-docs.sh</command>

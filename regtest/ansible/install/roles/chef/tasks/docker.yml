@@ -1,4 +1,0 @@
----
-
-- name: hello world
-  shell: echo hello world

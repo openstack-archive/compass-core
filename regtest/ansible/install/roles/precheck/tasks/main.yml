@@ -1,7 +1,0 @@
----
-
-- include: no-docker.yml
-  when: not dockerized
-
-- include: docker.yml
-  when: dockerized

@@ -1,8 +1,0 @@
-Origin: ppa
-Label: ppa_repo
-Suite: stable
-Codename: ppa
-Version: 0.1
-Architectures: i386 amd64 source
-Components: main
-Description: ppa repo

@@ -1,2 +1,0 @@
-[allinone]
-xc-ansible-test1 ansible_ssh_host=10.145.89.128 ansible_ssh_user=root ansible_ssh_pass=root type=allinone

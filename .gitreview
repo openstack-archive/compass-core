@@ -1,5 +1,0 @@
-[gerrit]
-host=review.openstack.org
-port=29418
-project=openstack/compass-core.git
-defaultbranch=master

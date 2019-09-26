@@ -1,6 +1,0 @@
-# [chefnodes]
-# xc-precise-server ansible_ssh_host=10.145.89.133 ansible_ssh_user=root ansible_ssh_pass=root type=chef
-[cobblernodes]
-xc-precise-server ansible_ssh_host=10.145.89.133 ansible_ssh_user=root ansible_ssh_pass=root type=cobbler
-[compassnodes]
-xc-precise-server ansible_ssh_host=10.145.89.133 ansible_ssh_user=root ansible_ssh_pass=root type=compass

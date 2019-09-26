@@ -1,7 +1,0 @@
-[run]
-branch = True
-source = compass
-omit = compass/tests/*
-
-[report]
-ignore_errors = True

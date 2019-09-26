@@ -1,8 +1,0 @@
-{
-  "name": "compass",
-  "public_key": null,
-  "validator": false,
-  "admin": true,
-  "json_class": "Chef::ApiClient",
-  "chef_type": "client"
-}

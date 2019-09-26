@@ -1,5 +1,0 @@
-DEFAULT_LOGLEVEL = 'info'
-DEFAULT_LOGDIR = '/var/log/compass'
-DEFAULT_LOGINTERVAL = 6
-DEFAULT_LOGINTERVAL_UNIT = 'h'
-DEFAULT_LOGFORMAT = '%(asctime)s - %(filename)s - %(lineno)d - %(levelname)s - %(message)s'
